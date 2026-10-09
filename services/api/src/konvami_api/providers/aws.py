@@ -1,0 +1,45 @@
+"""Small adapters over AWS services the backend uses besides the database."""
+
+import json
+from collections.abc import Callable
+from typing import Any, Protocol
+from uuid import UUID
+
+from konvami_api.domain.voice import CallPurpose
+
+
+class LambdaClient(Protocol):
+    def invoke(self, **kwargs: Any) -> dict[str, Any]: ...
+
+
+class SecretsClient(Protocol):
+    def get_secret_value(self, **kwargs: Any) -> dict[str, Any]: ...
+
+
+class LambdaCallStarter:
+    """Starts the call worker as its own Lambda invocation, which outlives the API request."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, call_id: str, user_id: UUID, purpose: CallPurpose) -> None:
+        # The worker reads the learner and the purpose from the recorded session, so a forged
+        # invocation cannot point a call at someone else's data.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"call_id": call_id}).encode(),
+        )
+
+
+def cached_secret(secrets: SecretsClient, secret_id: str) -> Callable[[], str]:
+    """A reader for one secret: fetched on first use, then kept for the life of the container."""
+    cache: list[str] = []
+
+    def read() -> str:
+        if not cache:
+            cache.append(secrets.get_secret_value(SecretId=secret_id)["SecretString"])
+        return cache[0]
+
+    return read

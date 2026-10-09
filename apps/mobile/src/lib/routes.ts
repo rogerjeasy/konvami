@@ -33,8 +33,33 @@ export const ROUTES = {
   newPassword: '/new-password',
   /** 3.8 Password updated. */
   passwordUpdated: '/password-updated',
-  /** Where a signed-in user lands. A placeholder until onboarding and the home screen exist. */
+  /** 4.1 Talk with Mia: the spoken setup. */
+  onboardingTalk: '/onboarding/talk',
+  /** 4.2 Onboarding form, one route per essential question (spec §6.1.1 step 3). */
+  onboardingLanguage: '/onboarding/language',
+  onboardingExplanations: '/onboarding/explanations',
+  onboardingGoals: '/onboarding/goals',
+  onboardingLevel: '/onboarding/level',
+  onboardingCourse: '/onboarding/course',
+  /** 4.3 Review: "Here's what I noted". */
+  onboardingReview: '/onboarding/review',
+  /** 4.4 Placement intro, 4.5 the spoken test, 4.6 its result. */
+  onboardingPlacement: '/onboarding/placement',
+  onboardingPlacementTalk: '/onboarding/placement/talk',
+  onboardingPlacementResult: '/onboarding/placement/result',
+  /** 4.7 Starter partners (one of them is edited at `partnerRoute(id)`). */
+  onboardingPartners: '/onboarding/partners',
+  /** 4.8 Ready: the summary before entering the app. */
+  onboardingReady: '/onboarding/ready',
+  /**
+   * Where a signed-in user lands: it continues onboarding where they left off. The app's home
+   * screen replaces its last stop when it is built.
+   */
   home: '/home',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;
+
+/** 4.7 Edit one starter partner: their name and look. */
+export const partnerRoute = (id: string) =>
+  ({ pathname: '/onboarding/partners/[id]', params: { id } }) as const satisfies Href;

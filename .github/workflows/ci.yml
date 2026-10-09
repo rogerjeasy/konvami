@@ -29,6 +29,34 @@ jobs:
       - run: pnpm format:check
       - run: pnpm turbo run lint typecheck test
 
+  backend:
+    name: Backend lint, types, tests, generated client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pipx install poetry==2.5.1
+      - run: poetry install --no-interaction
+      - run: poetry run ruff check .
+      - run: poetry run ruff format --check .
+      - run: poetry run mypy
+      - run: poetry run pytest
+      # The TypeScript client is generated from the API's schema; a stale copy fails here.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
+      - run: pnpm api:generate && git diff --exit-code packages/api-client
+        working-directory: .
+
   terraform:
     name: Terraform fmt + validate
     runs-on: ubuntu-latest

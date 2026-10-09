@@ -11,3 +11,11 @@ docs/superpowers/
 **/.terraform/
 # The design canvas copy is reference material, kept byte for byte.
 docs/design/canvas-*/
+# Generated from the backend's OpenAPI schema (pnpm api:generate).
+packages/api-client/openapi.json
+packages/api-client/src/schema.ts
+# Python tooling folders
+**/.venv
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache

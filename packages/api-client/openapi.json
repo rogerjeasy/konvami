@@ -1,0 +1,1453 @@
+{
+  "components": {
+    "schemas": {
+      "CallPurpose": {
+        "enum": [
+          "onboarding",
+          "placement"
+        ],
+        "title": "CallPurpose",
+        "type": "string"
+      },
+      "CatalogOut": {
+        "additionalProperties": false,
+        "properties": {
+          "examLevels": {
+            "items": {
+              "enum": [
+                "A1",
+                "A2",
+                "B1",
+                "B2",
+                "C1",
+                "C2"
+              ],
+              "type": "string"
+            },
+            "title": "Examlevels",
+            "type": "array"
+          },
+          "explanationLanguages": {
+            "items": {
+              "$ref": "#/components/schemas/NamedLanguageOut"
+            },
+            "title": "Explanationlanguages",
+            "type": "array"
+          },
+          "explanationUsages": {
+            "items": {
+              "enum": [
+                "never",
+                "when_stuck",
+                "for_grammar",
+                "freely"
+              ],
+              "type": "string"
+            },
+            "title": "Explanationusages",
+            "type": "array"
+          },
+          "goalReasons": {
+            "items": {
+              "enum": [
+                "travel",
+                "work",
+                "study",
+                "exam",
+                "living_abroad",
+                "family_friends",
+                "culture",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Goalreasons",
+            "type": "array"
+          },
+          "languages": {
+            "items": {
+              "$ref": "#/components/schemas/LanguageOut"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
+          "startingLevels": {
+            "items": {
+              "enum": [
+                "A0",
+                "A1",
+                "A2",
+                "B1",
+                "B2",
+                "C1",
+                "C2"
+              ],
+              "type": "string"
+            },
+            "title": "Startinglevels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "languages",
+          "explanationLanguages",
+          "startingLevels",
+          "examLevels",
+          "goalReasons",
+          "explanationUsages"
+        ],
+        "title": "CatalogOut",
+        "type": "object"
+      },
+      "ChangeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Field",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "ChangeIn",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ExamOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "enum": [
+                "A1",
+                "A2",
+                "B1",
+                "B2",
+                "C1",
+                "C2"
+              ],
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "levels"
+        ],
+        "title": "ExamOut",
+        "type": "object"
+      },
+      "FieldOut": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "source",
+          "updatedAt"
+        ],
+        "title": "FieldOut",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LanguageOut": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "exams": {
+            "items": {
+              "$ref": "#/components/schemas/ExamOut"
+            },
+            "title": "Exams",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "available",
+          "exams"
+        ],
+        "title": "LanguageOut",
+        "type": "object"
+      },
+      "LookModel": {
+        "additionalProperties": false,
+        "description": "A portrait's parts and colors. The app draws exactly these names.",
+        "properties": {
+          "backdrop": {
+            "enum": [
+              "stone",
+              "mist",
+              "sand",
+              "slate"
+            ],
+            "title": "Backdrop",
+            "type": "string"
+          },
+          "beard": {
+            "title": "Beard",
+            "type": "boolean"
+          },
+          "glasses": {
+            "title": "Glasses",
+            "type": "boolean"
+          },
+          "hair": {
+            "enum": [
+              "short",
+              "parted",
+              "bob",
+              "long",
+              "bun",
+              "curls",
+              "bald"
+            ],
+            "title": "Hair",
+            "type": "string"
+          },
+          "hairColor": {
+            "enum": [
+              "black",
+              "espresso",
+              "chestnut",
+              "auburn",
+              "blond",
+              "silver"
+            ],
+            "title": "Haircolor",
+            "type": "string"
+          },
+          "skin": {
+            "enum": [
+              "porcelain",
+              "sand",
+              "honey",
+              "chestnut",
+              "umber"
+            ],
+            "title": "Skin",
+            "type": "string"
+          },
+          "top": {
+            "enum": [
+              "teal",
+              "graphite",
+              "stone",
+              "amber"
+            ],
+            "title": "Top",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skin",
+          "hair",
+          "hairColor",
+          "top",
+          "backdrop",
+          "glasses",
+          "beard"
+        ],
+        "title": "LookModel",
+        "type": "object"
+      },
+      "NamedLanguageOut": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "NamedLanguageOut",
+        "type": "object"
+      },
+      "OnboardingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "placement": {
+            "$ref": "#/components/schemas/PlacementStatus"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/Stage"
+          }
+        },
+        "required": [
+          "stage",
+          "missing",
+          "placement"
+        ],
+        "title": "OnboardingOut",
+        "type": "object"
+      },
+      "PersonaOut": {
+        "additionalProperties": false,
+        "properties": {
+          "age": {
+            "title": "Age",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "look": {
+            "$ref": "#/components/schemas/LookModel"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "buddy",
+              "teacher",
+              "exam_coach"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "tagline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagline"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "name",
+          "age",
+          "origin",
+          "tagline",
+          "look"
+        ],
+        "title": "PersonaOut",
+        "type": "object"
+      },
+      "PersonaPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "look": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "PersonaPatch",
+        "type": "object"
+      },
+      "PersonasOut": {
+        "additionalProperties": false,
+        "properties": {
+          "personas": {
+            "items": {
+              "$ref": "#/components/schemas/PersonaOut"
+            },
+            "title": "Personas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "personas"
+        ],
+        "title": "PersonasOut",
+        "type": "object"
+      },
+      "PlacementDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "use": {
+            "enum": [
+              "measured",
+              "self"
+            ],
+            "title": "Use",
+            "type": "string"
+          }
+        },
+        "required": [
+          "use"
+        ],
+        "title": "PlacementDecision",
+        "type": "object"
+      },
+      "PlacementOut": {
+        "additionalProperties": false,
+        "properties": {
+          "differs": {
+            "title": "Differs",
+            "type": "boolean"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlacementResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "selfAssessed": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A0",
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2",
+                  "C1",
+                  "C2"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selfassessed"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlacementStatus"
+          }
+        },
+        "required": [
+          "status",
+          "selfAssessed",
+          "differs",
+          "result"
+        ],
+        "title": "PlacementOut",
+        "type": "object"
+      },
+      "PlacementResultOut": {
+        "additionalProperties": false,
+        "properties": {
+          "levels": {
+            "additionalProperties": {
+              "enum": [
+                "A0",
+                "A1",
+                "A2",
+                "B1",
+                "B2",
+                "C1",
+                "C2"
+              ],
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "object"
+          },
+          "measuredAt": {
+            "format": "date-time",
+            "title": "Measuredat",
+            "type": "string"
+          },
+          "overall": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Overall",
+            "type": "string"
+          },
+          "weakAreas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Weakareas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "levels",
+          "overall",
+          "weakAreas",
+          "measuredAt"
+        ],
+        "title": "PlacementResultOut",
+        "type": "object"
+      },
+      "PlacementStatus": {
+        "enum": [
+          "not_started",
+          "in_progress",
+          "assessing",
+          "measured",
+          "inconclusive",
+          "decided",
+          "skipped"
+        ],
+        "title": "PlacementStatus",
+        "type": "string"
+      },
+      "ProfileOut": {
+        "additionalProperties": false,
+        "properties": {
+          "global": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldOut"
+            },
+            "title": "Global",
+            "type": "object"
+          },
+          "languages": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/FieldOut"
+              },
+              "type": "object"
+            },
+            "title": "Languages",
+            "type": "object"
+          },
+          "targetLanguage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetlanguage"
+          }
+        },
+        "required": [
+          "targetLanguage",
+          "global",
+          "languages"
+        ],
+        "title": "ProfileOut",
+        "type": "object"
+      },
+      "ProfilePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeIn"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "ProfilePatch",
+        "type": "object"
+      },
+      "Source": {
+        "description": "Where a value came from (spec \u00a711.2).",
+        "enum": [
+          "asked",
+          "measured",
+          "inferred_confirmed"
+        ],
+        "title": "Source",
+        "type": "string"
+      },
+      "Stage": {
+        "enum": [
+          "essentials",
+          "review",
+          "placement",
+          "partners",
+          "ready",
+          "done"
+        ],
+        "title": "Stage",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VoiceCallIn": {
+        "additionalProperties": false,
+        "properties": {
+          "purpose": {
+            "$ref": "#/components/schemas/CallPurpose"
+          },
+          "sdp": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Sdp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purpose",
+          "sdp"
+        ],
+        "title": "VoiceCallIn",
+        "type": "object"
+      },
+      "VoiceCallOut": {
+        "additionalProperties": false,
+        "properties": {
+          "callId": {
+            "title": "Callid",
+            "type": "string"
+          },
+          "maxSeconds": {
+            "title": "Maxseconds",
+            "type": "integer"
+          },
+          "sdp": {
+            "title": "Sdp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "callId",
+          "sdp",
+          "maxSeconds"
+        ],
+        "title": "VoiceCallOut",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Konvami API",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/catalog": {
+      "get": {
+        "operationId": "getCatalog",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Catalog"
+      }
+    },
+    "/v1/onboarding": {
+      "get": {
+        "operationId": "getOnboarding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Onboarding"
+      }
+    },
+    "/v1/onboarding/complete": {
+      "post": {
+        "operationId": "completeOnboarding",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Complete Onboarding"
+      }
+    },
+    "/v1/onboarding/essentials/confirm": {
+      "post": {
+        "operationId": "confirmEssentials",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Confirm Essentials"
+      }
+    },
+    "/v1/onboarding/partners/confirm": {
+      "post": {
+        "operationId": "confirmPartners",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Confirm Partners"
+      }
+    },
+    "/v1/personas": {
+      "get": {
+        "operationId": "getPersonas",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonasOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Personas"
+      }
+    },
+    "/v1/personas/starter": {
+      "post": {
+        "operationId": "proposeStarterPersonas",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonasOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Propose Starter Personas"
+      }
+    },
+    "/v1/personas/{persona_id}": {
+      "delete": {
+        "operationId": "removePersona",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "persona_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Persona Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonasOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Persona"
+      },
+      "patch": {
+        "operationId": "changePersona",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "persona_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Persona Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonaPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonaOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Change Persona"
+      }
+    },
+    "/v1/placement": {
+      "get": {
+        "operationId": "getPlacement",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Placement"
+      }
+    },
+    "/v1/placement/decision": {
+      "post": {
+        "operationId": "decidePlacement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Placement"
+      }
+    },
+    "/v1/placement/skip": {
+      "post": {
+        "operationId": "skipPlacement",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Skip Placement"
+      }
+    },
+    "/v1/profile": {
+      "get": {
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Profile"
+      },
+      "patch": {
+        "operationId": "updateProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Update Profile"
+      }
+    },
+    "/v1/voice/calls": {
+      "post": {
+        "operationId": "startVoiceCall",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceCallIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceCallOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Start Voice Call"
+      }
+    }
+  }
+}

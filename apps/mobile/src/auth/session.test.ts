@@ -237,3 +237,36 @@ describe('resetPassword', () => {
     expect(session.getState().status).toBe('signedOut');
   });
 });
+
+describe('access token for API calls', () => {
+  it('gives a signed-in user a token the service accepts', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+
+    const token = await session.getAccessToken();
+
+    expect((await provider.getUser(token)).email).toBe(EMAIL);
+  });
+
+  it('renews a token that is about to expire', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    const first = await session.getAccessToken();
+    const now = Date.now();
+    // The fake's tokens last an hour; 59 minutes 30 seconds later is inside the renewal margin.
+    jest.spyOn(Date, 'now').mockReturnValue(now + 59.5 * 60 * 1000);
+
+    const second = await session.getAccessToken();
+
+    expect(second).not.toBe(first);
+    expect(provider.calls.at(-1)?.[0]).toBe('refresh');
+    jest.restoreAllMocks();
+  });
+
+  it('refuses when nobody is signed in', async () => {
+    const { session } = setup();
+    await session.restore();
+
+    await expect(session.getAccessToken()).rejects.toMatchObject({ code: 'notAuthorized' });
+  });
+});

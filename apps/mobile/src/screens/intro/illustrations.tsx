@@ -65,7 +65,7 @@ export function SpeakIllustration({ play }: SceneProps) {
     <Illustration>
       <Reveal play={play} delay={staggerDelay(SPEAK.persona)} style={{ alignSelf: 'center' }}>
         <Card className="flex-row items-center gap-2.5 rounded-pill py-2 pl-2 pr-3.5">
-          <PersonaAvatar name={SAMPLE.persona.name} />
+          <PersonaAvatar look={SAMPLE.persona.look} />
           <View className="shrink">
             <Text variant="label" maxFontSizeMultiplier={MAX_SCALE}>
               {SAMPLE.persona.name}
@@ -448,7 +448,7 @@ export function MemoryIllustration({ play }: SceneProps) {
 
       <Reveal play={play} delay={staggerDelay(PROGRESS.memory)}>
         <Card className="flex-row gap-3 p-3.5">
-          <PersonaAvatar name={SAMPLE.persona.name} />
+          <PersonaAvatar look={SAMPLE.persona.look} />
           <View className="flex-1 gap-0.5">
             <Text variant="captionStrong" tone="primary" maxFontSizeMultiplier={MAX_SCALE}>
               {t('illustration.remembers', { name: SAMPLE.persona.name })}

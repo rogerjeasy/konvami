@@ -35,6 +35,11 @@ export interface SessionStore {
     signOutOthers: boolean;
   }): Promise<void>;
   signOut(): Promise<void>;
+  /**
+   * A working access token for calls to the Konvami API, renewed when needed. Fails with
+   * `notAuthorized` when nobody is signed in.
+   */
+  getAccessToken(): Promise<string>;
 }
 
 // An access token this close to its end (ms) is renewed before use, so a call never starts with
@@ -114,6 +119,7 @@ export function createSessionStore(provider: AuthProvider): SessionStore {
     },
 
     signIn,
+    getAccessToken: accessToken,
 
     async resetPassword({ email, code, newPassword, signOutOthers }) {
       await provider.confirmPasswordReset(email, code, newPassword);

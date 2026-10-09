@@ -34,3 +34,11 @@ export function monthNames(locale: string, width: 'long' | 'short' = 'long'): st
     format.format(new Date(Date.UTC(2024, month, 1))),
   );
 }
+
+/** A calendar date ("2027-06-15") written in full: "June 15, 2027", "15. Juni 2027". */
+export function formatDate(locale: string, isoDate: string): string {
+  // Read as UTC and written as UTC, so the calendar day never shifts with the device time zone.
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(
+    new Date(`${isoDate}T00:00:00Z`),
+  );
+}

@@ -20,8 +20,8 @@ never shares them: separate tenants, separate data stores.
 
 ```
 infra/
-├─ envs/dev/        Konvami dev: wires the modules (budget, auth; more per feature)
-└─ modules/         reusable modules (budget, auth, …)
+├─ envs/dev/        Konvami dev: wires the modules (budget, auth, database, secret, api)
+└─ modules/         reusable modules (budget, auth, database, secret, api, …)
 ```
 
 ## Signing in
@@ -37,6 +37,7 @@ export AWS_PROFILE=nc-dev
 cd infra/envs/dev
 cp terraform.tfvars.example terraform.tfvars   # once; gitignored, fill in real values
 terraform init                                 # once per machine
+(cd ../../../services/api && poetry run python -m tools.build_lambda)   # the API package
 terraform plan -out=tfplan                     # read what will change
 terraform apply tfplan                         # apply exactly that plan
 terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (no drift)
@@ -53,10 +54,31 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
   Cognito's built-in email sender is used (enough for dev; a public launch needs Amazon SES with
   Konvami's own domain). After applying, write the app's settings with
   `terraform output -raw mobile_env > ../../../apps/mobile/.env` and restart the dev server.
-- **Next, in build order (spec §10):** Sign in with Apple and Google on the user pool → RDS PostgreSQL +
-  pgvector → FastAPI on Lambda + API Gateway → S3 audio + CloudFront signed URLs → Secrets
-  Manager (OpenAI, ElevenLabs) → SQS / Step Functions post-session pipeline → CloudWatch, X-Ray.
-  Each arrives as a module in `modules/` plus a few lines in `envs/dev/main.tf`.
+- **Database (`modules/database`):** the Aurora Serverless v2 PostgreSQL cluster `kv-dev-db`
+  (PostgreSQL 18, pgvector available), in its own private network with no route in or out. It is
+  reached only through the RDS Data API, so Lambda needs no VPC and no NAT. In dev it pauses after
+  5 idle minutes and costs storage only; the first query afterwards takes about 15 seconds
+  (`min_capacity = 0.5` keeps an environment awake). RDS creates and rotates the master password in
+  Secrets Manager. Before a public launch, give the API its own database role with fewer rights.
+- **API (`modules/api`):** `services/api` (FastAPI) on the Lambda function `kv-dev-api`, behind an
+  API Gateway HTTP API that checks the user pool's access token on every route. A second function,
+  `kv-dev-api-migrate`, applies the SQL migrations in
+  `services/api/src/konvami_api/persistence/migrations/`; Terraform invokes it whenever the package
+  changes, and a failing migration fails the apply. Build the package before planning (see above).
+- **Voice calls:** the secret `kv-dev-openai-api-key` (`modules/secret`) and the function
+  `kv-dev-call-worker` (in `modules/api`). The API creates each live call at OpenAI with the key
+  from the secret and starts the worker, which joins the call from the server, runs the persona's
+  tools and ends the call at its time limit. The key comes from `openai_api_key` in the gitignored
+  `terraform.tfvars`; it is written to Secrets Manager and never to state. To rotate it, change
+  the value and raise `openai_api_key_version` by one. Voice models and limits are the `voice`
+  variable. After a placement test's call the same worker has the transcript assessed, so a call
+  may last 780 seconds at most.
+- **Text models:** the `text_models` variable names the model that assesses a placement test and
+  the one that writes the starter partners. They use the same OpenAI key. With an empty name a
+  job uses its fallback (the examiner's impression, the language pack's built-in partners).
+- **Next, in build order (spec §10):** Sign in with Apple and Google on the user pool → S3 audio +
+  CloudFront signed URLs → SQS / Step Functions post-session pipeline → CloudWatch dashboards,
+  X-Ray. Each arrives as a module in `modules/` plus a few lines in `envs/dev/main.tf`.
 
 ## Rules
 

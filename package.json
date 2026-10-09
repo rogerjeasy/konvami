@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:secrets": "sh scripts/check-no-secrets.sh",
-    "brand:export": "node scripts/export-brand-assets.ts"
+    "brand:export": "node scripts/export-brand-assets.ts",
+    "api:generate": "cd services/api && poetry run python -m tools.export_openapi && pnpm --filter @konvami/api-client generate"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

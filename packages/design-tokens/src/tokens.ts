@@ -95,24 +95,68 @@ const dark: Palette = {
   scrim: 'rgba(0,0,0,0.6)',
 };
 
-/** Fixed brand colors: the same in both themes. Used by the logo and persona avatars only. */
+/** Fixed brand colors: the same in both themes. Used by the logo and the greeting bubble. */
 export const brand = {
   tile: '#0F766E',
   face: '#134E4A',
   bubble: '#FFFFFF',
   tongue: '#F472B6',
   tongueLine: '#DB2777',
-  /** Persona avatar placeholder (until real avatars exist). */
-  avatar: '#0F766E',
-  onAvatar: '#FFFFFF',
-  /** The setup guide's avatar (Mia), warmer than a practice persona's. */
-  guide: '#B45309',
-  onGuide: '#FFFFFF',
   /** Text inside the white greeting bubble, which stays white in both themes. */
   onBubble: '#141716',
   /** The knob of a switch: white in both themes. */
   thumb: '#FFFFFF',
 } as const;
+
+/**
+ * Persona avatars (spec §6.20): illustrated portraits drawn from a few parts and colors. Fixed
+ * colors, the same in both themes, like a photograph would be. A persona's look is a small
+ * config of these names (`AvatarLook` in the app), never raw colors.
+ */
+export const avatar = {
+  /** Skin: the lit tone and the shadow tone (neck, ears, under the hairline). */
+  skin: {
+    porcelain: { base: '#F1D3BF', shade: '#DDB49B' },
+    sand: { base: '#E3BC98', shade: '#CB9E78' },
+    honey: { base: '#CB9A70', shade: '#B07F56' },
+    chestnut: { base: '#A26F49', shade: '#875A39' },
+    umber: { base: '#6B442B', shade: '#553421' },
+  },
+  hair: {
+    black: '#221C19',
+    espresso: '#3D2B21',
+    chestnut: '#6A452F',
+    auburn: '#8B4A2B',
+    blond: '#C7A268',
+    silver: '#A3A5A2',
+  },
+  /** Clothing, within the app's palette: teal, graphite, stone, amber. */
+  top: {
+    teal: '#0F766E',
+    graphite: '#2F3534',
+    stone: '#C9C5BD',
+    amber: '#B45309',
+  },
+  /** The round ground behind a portrait. */
+  backdrop: {
+    stone: '#E7E5E0',
+    mist: '#D4E7E3',
+    sand: '#F0E4D3',
+    slate: '#D9DFDE',
+  },
+  /** Brows, lashes and irises. */
+  feature: '#231B17',
+  eyeWhite: '#FFFFFF',
+  lip: '#B4574F',
+  /** The inside of an open mouth. */
+  mouth: '#5B211F',
+  glasses: '#2F3534',
+} as const;
+
+export type AvatarSkin = keyof typeof avatar.skin;
+export type AvatarHairColor = keyof typeof avatar.hair;
+export type AvatarTop = keyof typeof avatar.top;
+export type AvatarBackdrop = keyof typeof avatar.backdrop;
 
 /** Other companies' logo colors, drawn exactly as their brand rules require. */
 export const thirdParty = {
@@ -208,6 +252,14 @@ export const size = {
   iconLg: 24,
   avatarSm: 38,
   avatarMd: 46,
+  /** A partner's portrait on their card. */
+  avatarLg: 64,
+  /** A partner's portrait while their look is edited. */
+  avatarXl: 132,
+  /** The round badge that shows a measured level. */
+  levelBadge: 92,
+  /** A round color choice (inside a 44 pt touch target). */
+  swatch: 34,
   /** Rounded tile behind a screen's lead icon (2.4 Verify email). */
   iconTile: 72,
   /** Round back / close button in a screen header. */
@@ -279,6 +331,10 @@ export const motion = {
   brandMoment: 1600,
   /** Ambient loops: the voice orb breathing, greetings floating, the orbit turning. */
   breathe: 2400,
+  /** An avatar blinks once in this time. */
+  blink: 4200,
+  /** How fast an avatar's mouth follows the voice: one audio-level reading. */
+  lipSync: 90,
   float: 3200,
   orbit: 60000,
   /** Cubic-bezier control points (CSS order). Never ease-in on UI. */

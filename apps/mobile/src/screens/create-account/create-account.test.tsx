@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { createFakeApi } from '@/test/fake-api';
 import { FAKE_CODE } from '@/test/fake-auth-provider';
 import { createTestAuth, renderScreen } from '@/test/render';
 import { AgeCheckScreen } from './age-check';
@@ -423,13 +424,21 @@ describe('2.7 All set', () => {
     expect(screen.getByText('Mia · your setup guide')).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Start talking with Mia' }));
-    expect(router.replace).toHaveBeenCalledWith('/home');
+    expect(router.push).toHaveBeenCalledWith('/onboarding/talk');
   });
 
   it('offers the form instead of talking', async () => {
     const auth = await signedIn();
     await renderScreen(<AllSetScreen />, { auth });
     await fireEvent.press(screen.getByRole('button', { name: 'Set up with a form instead' }));
-    expect(router.replace).toHaveBeenCalledWith('/home');
+    expect(router.push).toHaveBeenCalledWith('/onboarding/language');
+  });
+
+  it('starts loading the setup data while the user reads, so the next screen is ready', async () => {
+    const auth = await signedIn();
+    const api = createFakeApi();
+    await renderScreen(<AllSetScreen />, { auth, api });
+
+    await waitFor(() => expect(api.calls).toContainEqual(['getOnboarding']));
   });
 });

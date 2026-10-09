@@ -1,4 +1,4 @@
-import { UpcomingScreen } from '@/screens/upcoming';
+import { HomeScreen } from '@/screens/home';
 
-// Where a signed-in user lands; a placeholder until onboarding and the home screen are built.
-export default UpcomingScreen;
+// Where a signed-in user lands: it continues onboarding where they left off.
+export default HomeScreen;

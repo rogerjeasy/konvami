@@ -53,3 +53,63 @@ variable "github_deploy" {
   })
   default = null
 }
+
+variable "web_preview_origins" {
+  description = "Browser origins allowed to call the API: the Expo web preview used for development and visual checks."
+  type        = list(string)
+  default     = ["http://localhost:8081"]
+}
+
+variable "openai_api_key" {
+  description = "The OpenAI API key. Set it in terraform.tfvars (gitignored) or TF_VAR_openai_api_key. It goes to Secrets Manager and is never written to state or plans."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+variable "openai_api_key_version" {
+  description = "Increase by one after changing openai_api_key, so the new key is stored."
+  type        = number
+  default     = 1
+}
+
+variable "voice" {
+  description = <<-EOT
+    Voice models and limits for live calls (see modules/api). The spoken setup and the placement
+    test run on the flagship model: on the same scripted setup conversation (2026-10-09) the
+    efficient model (gpt-realtime-2.1-mini) narrated its saving and blurred questions, the
+    flagship did neither, and a test's result depends on the examiner's ear. It costs about
+    three times as much per call (roughly $0.10–0.25 per setup, $1–3 per test); change a model
+    to the mini one to trade that quality for cost.
+  EOT
+  type = object({
+    models              = map(string)
+    max_seconds         = map(number)
+    voice               = string
+    transcription_model = string
+    daily_call_limit    = number
+  })
+  default = {
+    models              = { onboarding = "gpt-realtime-2.1", placement = "gpt-realtime-2.1" }
+    max_seconds         = { onboarding = 480, placement = 720 }
+    voice               = "marin"
+    transcription_model = "gpt-transcribe"
+    daily_call_limit    = 10
+  }
+}
+
+variable "text_models" {
+  description = <<-EOT
+    Text models for background work (see modules/api): the stronger one reads a placement
+    test's transcript, where accuracy decides the learner's level; the small one writes the
+    starter partners (about 7 seconds on 2026-10-09).
+  EOT
+  type = object({
+    assessment = string
+    personas   = string
+  })
+  default = {
+    assessment = "gpt-6.1-sol"
+    personas   = "gpt-6-luna"
+  }
+}
