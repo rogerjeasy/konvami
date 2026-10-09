@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Splash</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Lexend:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.k-light{--bg:#FFFFFF;--text:#141716;--frame:rgba(20,23,22,0.12);--splash:#0F766E;color-scheme:light}
+.k-dark{--bg:#0E1111;--text:#F1F4F3;--frame:rgba(255,255,255,0.10);--splash:#0E1111;color-scheme:dark}
+</style>
+</helmet>
+<div style="width: 860px; height: 844px; display: flex; gap: 80px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width: 390px; height: 844px; flex-shrink: 0; position: relative; overflow: hidden; border-radius: 44px; box-shadow: 0 0 0 1px var(--frame); background: var(--splash); font-family: Inter, system-ui, sans-serif">
+  <div style="position: absolute; top: 300px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 22px">
+    <img src="/_blob/8c88340739610abac04bd4e970352528" alt="Konvami" style="width: 120px; height: 120px; display: block">
+    <img src="/_blob/76c887908a86e37c4a4351e783071fb5" alt="Konvami" style="height: 32px; width: auto; display: block">
+    <div style="font-size: 16px; color: rgba(255,255,255,0.86)">Your conversation friend</div>
+  </div>
+  <div style="position: absolute; bottom: 64px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px">
+    <span style="width: 7px; height: 7px; border-radius: 50%; background: #FFFFFF"></span>
+    <span style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5)"></span>
+    <span style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.25)"></span>
+  </div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [
+        { cls: 'k-light', k: 'l', wordmark: '/_blob/79ad230f275d652bd63fcaf6ee753d52' },
+        { cls: 'k-dark', k: 'd', wordmark: '/_blob/76c887908a86e37c4a4351e783071fb5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

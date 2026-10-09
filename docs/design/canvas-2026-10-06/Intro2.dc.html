@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Intro: mistakes become lessons</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Lexend:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+.k-light{--bg:#FFFFFF;--surface:#F5F5F4;--field:#F7F7F6;--field-border:#E1E3E0;--border:#E7E7E4;--text:#141716;--text-2:#4B5250;--text-3:#646B69;--primary:#0F766E;--on-primary:#FFFFFF;--primary-soft:#E7F2F0;--primary-text:#0D5F58;--focus:rgba(15,118,110,0.16);--warn-soft:#FEF3C7;--warn-text:#92400E;--warn-icon:#D97706;--success:#15803D;--success-soft:#ECF6EF;--danger:#B91C1C;--danger-border:#DC2626;--danger-soft:#FEF2F2;--danger-title:#991B1B;--apple-bg:#000000;--apple-fg:#FFFFFF;--btn2-bg:#FFFFFF;--track:#E1E3E0;--chip:#FFFFFF;--shadow:rgba(20,23,22,0.08);--frame:rgba(20,23,22,0.12);--disabled-bg:#E1E3E0;--disabled-fg:#6F7674;--avatar-ink:#141716;--avatar-ink-fg:#FFFFFF;--splash:#0F766E;color-scheme:light}
+.k-dark{--bg:#0E1111;--surface:#171B1B;--field:#171B1B;--field-border:#2C3332;--border:#262C2B;--text:#F1F4F3;--text-2:#B3BCB9;--text-3:#929B98;--primary:#14B8A6;--on-primary:#042F2C;--primary-soft:#10302C;--primary-text:#5EEAD4;--focus:rgba(20,184,166,0.25);--warn-soft:#2B2210;--warn-text:#FCD34D;--warn-icon:#F59E0B;--success:#4ADE80;--success-soft:#0F2918;--danger:#F87171;--danger-border:#EF4444;--danger-soft:#2A1414;--danger-title:#FECACA;--apple-bg:#FFFFFF;--apple-fg:#000000;--btn2-bg:#171B1B;--track:#2C3332;--chip:#1D2222;--shadow:rgba(0,0,0,0.45);--frame:rgba(255,255,255,0.10);--disabled-bg:#252B2A;--disabled-fg:#7D8684;--avatar-ink:#F1F4F3;--avatar-ink-fg:#0E1111;--splash:#0E1111;color-scheme:dark}
+</style>
+</helmet>
+<div style="width: 860px; height: 844px; display: flex; gap: 80px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width: 390px; height: 844px; flex-shrink: 0; position: relative; overflow: hidden; border-radius: 44px; box-shadow: 0 0 0 1px var(--frame); background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif">
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 500px; background: var(--surface); border-radius: 0 0 32px 32px">
+    <div style="position: absolute; top: 54px; right: 16px">
+      <button type="button" style="height: 44px; padding: 0 14px; border: 0; background: transparent; color: var(--text-2); font-size: 16px; font-weight: 600">Skip</button>
+    </div>
+
+    <div style="position: absolute; top: 118px; left: 20px; right: 20px; display: flex; flex-direction: column; gap: 12px">
+      <div style="align-self: flex-end; max-width: 290px; padding: 12px 14px; background: var(--primary); color: var(--on-primary); border-radius: 18px 18px 6px 18px; font-size: 15px; font-weight: 500; line-height: 21px">Ich <span style="text-decoration: underline; text-decoration-color: #F59E0B; text-decoration-thickness: 3px; text-underline-offset: 4px">habe</span> gestern nach Hause gegangen.</div>
+
+      <div style="padding: 16px; background: var(--chip); border: 1px solid var(--border); border-radius: 18px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-text); font-size: 12.5px; font-weight: 600">Let’s polish this</span>
+          <span style="font-size: 12px; color: var(--text-3)">Perfekt · sein</span>
+        </div>
+        <div style="font-size: 17px; font-weight: 600; line-height: 24px">Ich <span style="background: var(--primary-soft); color: var(--primary-text); padding: 1px 6px; border-radius: 6px">bin</span> gestern nach Hause gegangen.</div>
+        <div style="font-size: 13.5px; line-height: 19px; color: var(--text-2)">Verbs of movement like <em>gehen</em> take <strong style="color: var(--text)">sein</strong>, not <em>haben</em>, in the past tense.</div>
+        <div style="display: flex; align-items: center; gap: 10px; padding-top: 2px">
+          <button type="button" aria-label="Play your recording" style="width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; padding: 0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>
+          </button>
+          <div style="flex-grow: 1; display: flex; align-items: center; gap: 2px">
+            <span style="width: 3px; height: 8px; border-radius: 2px; background: var(--primary)"></span><span style="width: 3px; height: 14px; border-radius: 2px; background: var(--primary)"></span><span style="width: 3px; height: 18px; border-radius: 2px; background: var(--primary)"></span><span style="width: 3px; height: 10px; border-radius: 2px; background: var(--primary)"></span><span style="width: 3px; height: 16px; border-radius: 2px; background: var(--primary)"></span><span style="width: 3px; height: 12px; border-radius: 2px; background: var(--track)"></span><span style="width: 3px; height: 18px; border-radius: 2px; background: var(--track)"></span><span style="width: 3px; height: 8px; border-radius: 2px; background: var(--track)"></span><span style="width: 3px; height: 14px; border-radius: 2px; background: var(--track)"></span><span style="width: 3px; height: 10px; border-radius: 2px; background: var(--track)"></span><span style="width: 3px; height: 16px; border-radius: 2px; background: var(--track)"></span><span style="width: 3px; height: 6px; border-radius: 2px; background: var(--track)"></span>
+          </div>
+          <span style="font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums">0:04</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--chip); border: 1px solid var(--border); border-radius: 16px">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--primary-soft); color: var(--primary-text); display: flex; align-items: center; justify-content: center">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <div style="flex-grow: 1">
+          <div style="font-size: 12px; font-weight: 600; color: var(--primary-text)">New word saved</div>
+          <div style="font-size: 15px; font-weight: 600">das Konzert <span style="font-weight: 400; color: var(--text-3)">· the concert</span></div>
+        </div>
+        <span style="color: var(--success)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 536px; left: 28px; right: 28px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; gap: 6px">
+      <span style="width: 6px; height: 6px; border-radius: 3px; background: var(--track)"></span>
+      <span style="width: 22px; height: 6px; border-radius: 3px; background: var(--primary)"></span>
+      <span style="width: 6px; height: 6px; border-radius: 3px; background: var(--track)"></span>
+    </div>
+    <h1 style="margin: 4px 0 0; font-family: Lexend, sans-serif; font-weight: 600; font-size: 28px; line-height: 34px; letter-spacing: -0.02em">Mistakes become lessons</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 24px; color: var(--text-2)">Gentle corrections, explained in your language. Every tip links back to your own voice.</p>
+  </div>
+
+  <div style="position: absolute; left: 24px; right: 24px; bottom: 42px">
+    <button type="button" style="width: 100%; height: 54px; border: 0; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600">Continue</button>
+  </div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [
+        { cls: 'k-light', k: 'l', wordmark: '/_blob/79ad230f275d652bd63fcaf6ee753d52' },
+        { cls: 'k-dark', k: 'd', wordmark: '/_blob/76c887908a86e37c4a4351e783071fb5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

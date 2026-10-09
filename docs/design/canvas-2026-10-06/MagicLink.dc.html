@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign-in link sent</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Lexend:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+.k-light{--bg:#FFFFFF;--surface:#F5F5F4;--field:#F7F7F6;--field-border:#E1E3E0;--border:#E7E7E4;--text:#141716;--text-2:#4B5250;--text-3:#646B69;--primary:#0F766E;--on-primary:#FFFFFF;--primary-soft:#E7F2F0;--primary-text:#0D5F58;--focus:rgba(15,118,110,0.16);--warn-soft:#FEF3C7;--warn-text:#92400E;--warn-icon:#D97706;--success:#15803D;--success-soft:#ECF6EF;--danger:#B91C1C;--danger-border:#DC2626;--danger-soft:#FEF2F2;--danger-title:#991B1B;--apple-bg:#000000;--apple-fg:#FFFFFF;--btn2-bg:#FFFFFF;--track:#E1E3E0;--chip:#FFFFFF;--shadow:rgba(20,23,22,0.08);--frame:rgba(20,23,22,0.12);--disabled-bg:#E1E3E0;--disabled-fg:#6F7674;--avatar-ink:#141716;--avatar-ink-fg:#FFFFFF;--splash:#0F766E;color-scheme:light}
+.k-dark{--bg:#0E1111;--surface:#171B1B;--field:#171B1B;--field-border:#2C3332;--border:#262C2B;--text:#F1F4F3;--text-2:#B3BCB9;--text-3:#929B98;--primary:#14B8A6;--on-primary:#042F2C;--primary-soft:#10302C;--primary-text:#5EEAD4;--focus:rgba(20,184,166,0.25);--warn-soft:#2B2210;--warn-text:#FCD34D;--warn-icon:#F59E0B;--success:#4ADE80;--success-soft:#0F2918;--danger:#F87171;--danger-border:#EF4444;--danger-soft:#2A1414;--danger-title:#FECACA;--apple-bg:#FFFFFF;--apple-fg:#000000;--btn2-bg:#171B1B;--track:#2C3332;--chip:#1D2222;--shadow:rgba(0,0,0,0.45);--frame:rgba(255,255,255,0.10);--disabled-bg:#252B2A;--disabled-fg:#7D8684;--avatar-ink:#F1F4F3;--avatar-ink-fg:#0E1111;--splash:#0E1111;color-scheme:dark}
+</style>
+</helmet>
+<div style="width: 860px; height: 844px; display: flex; gap: 80px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width: 390px; height: 844px; flex-shrink: 0; position: relative; overflow: hidden; border-radius: 44px; box-shadow: 0 0 0 1px var(--frame); background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif">
+  <div style="position: absolute; top: 54px; left: 16px">
+    <button type="button" aria-label="Back" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; padding: 0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+  </div>
+
+  <div style="position: absolute; top: 136px; left: 0; right: 0; height: 200px">
+    <div style="position: absolute; width: 192px; height: 192px; border-radius: 50%; background: var(--surface); top: 0; left: 99px"></div>
+    <div style="position: absolute; width: 132px; height: 96px; top: 52px; left: 129px; border-radius: 14px; background: var(--bg); border: 1px solid var(--field-border); color: var(--primary); overflow: hidden; box-sizing: border-box">
+      <svg width="130" height="94" viewBox="0 0 130 94" fill="none" style="display: block"><path d="M10 12l55 40 55-40" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div style="position: absolute; top: 30px; left: 236px; width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: var(--on-primary); border: 4px solid var(--bg); display: flex; align-items: center; justify-content: center; box-sizing: border-box">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 368px; left: 28px; right: 28px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center">
+    <h1 style="margin: 0; font-family: Lexend, sans-serif; font-weight: 600; font-size: 28px; line-height: 34px; letter-spacing: -0.02em">Your link is on its way</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 24px; color: var(--text-2)">We sent a secure sign-in link to<br><strong style="color: var(--text); font-weight: 600">amara.diallo@mail.com</strong></p>
+  </div>
+
+  <div style="position: absolute; top: 500px; left: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: var(--surface)">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0">1</span>
+      <span style="font-size: 14.5px">Open the email on this iPhone</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0">2</span>
+      <span style="font-size: 14.5px">Tap <strong style="font-weight: 600">Sign in to Konvami</strong>. That’s it.</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3); padding-left: 2px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      The link expires in 15 minutes
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 24px; right: 24px; bottom: 32px; display: flex; flex-direction: column; gap: 6px">
+    <button type="button" style="width: 100%; height: 54px; border: 0; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M22 7l-10 7L2 7"/></svg>
+      Open Mail app
+    </button>
+    <button type="button" disabled style="width: 100%; height: 44px; border: 0; background: transparent; color: var(--text-3); font-size: 15px; font-weight: 500">Resend link in <span style="font-variant-numeric: tabular-nums; font-weight: 600">0:38</span></button>
+  </div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [
+        { cls: 'k-light', k: 'l', wordmark: '/_blob/79ad230f275d652bd63fcaf6ee753d52' },
+        { cls: 'k-dark', k: 'd', wordmark: '/_blob/76c887908a86e37c4a4351e783071fb5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

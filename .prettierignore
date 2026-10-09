@@ -1,0 +1,13 @@
+pnpm-lock.yaml
+**/dist
+**/.expo
+**/ios
+**/android
+infra/**/.terraform
+**/expo-env.d.ts
+design/
+.playwright-mcp/
+docs/superpowers/
+**/.terraform/
+# The design canvas copy is reference material, kept byte for byte.
+docs/design/canvas-*/

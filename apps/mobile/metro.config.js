@@ -1,0 +1,10 @@
+// Expo's default Metro config already handles pnpm workspaces; NativeWind adds Tailwind.
+const { getDefaultConfig } = require('expo/metro-config');
+const { withNativeWind } = require('nativewind/metro');
+
+const config = getDefaultConfig(__dirname);
+
+module.exports = withNativeWind(config, {
+  input: './global.css',
+  configPath: './tailwind.config.ts',
+});

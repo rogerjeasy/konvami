@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Konvami brand and UI kit</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Lexend:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+.k-light{--bg:#FFFFFF;--surface:#F5F5F4;--field:#F7F7F6;--field-border:#E1E3E0;--border:#E7E7E4;--text:#141716;--text-2:#4B5250;--text-3:#646B69;--primary:#0F766E;--on-primary:#FFFFFF;--primary-soft:#E7F2F0;--primary-text:#0D5F58;--focus:rgba(15,118,110,0.16);--warn-soft:#FEF3C7;--warn-text:#92400E;--success:#15803D;--success-soft:#ECF6EF;--danger:#B91C1C;--danger-soft:#FEF2F2;--btn2-bg:#FFFFFF;color-scheme:light}
+.k-dark{--bg:#0E1111;--surface:#171B1B;--field:#171B1B;--field-border:#2C3332;--border:#262C2B;--text:#F1F4F3;--text-2:#B3BCB9;--text-3:#929B98;--primary:#14B8A6;--on-primary:#042F2C;--primary-soft:#10302C;--primary-text:#5EEAD4;--focus:rgba(20,184,166,0.25);--warn-soft:#2B2210;--warn-text:#FCD34D;--success:#4ADE80;--success-soft:#0F2918;--danger:#F87171;--danger-soft:#2A1414;--btn2-bg:#171B1B;color-scheme:dark}
+</style>
+</helmet>
+<div class="k-light" style="width: 1000px; height: 660px; box-sizing: border-box; padding: 40px 44px; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; display: flex; flex-direction: column; gap: 26px">
+  <div style="display: flex; align-items: center; justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <img src="/_blob/680f9b435d08b9b1fc02a176bfc8b0a3" alt="" style="width: 40px; height: 40px; display: block">
+      <img src="/_blob/79ad230f275d652bd63fcaf6ee753d52" alt="Konvami" style="height: 24px; width: auto; display: block">
+    </div>
+    <div style="font-size: 12px; font-weight: 600; color: var(--text-3); letter-spacing: 0.1em; text-transform: uppercase">Brand &amp; UI kit · v2 · light + dark</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 36px; flex-grow: 1">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <div style="height: 236px; border-radius: 20px; background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px">
+        <img src="/_blob/680f9b435d08b9b1fc02a176bfc8b0a3" alt="Konvami app icon" style="width: 128px; height: 128px; display: block">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-2)">App icon</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+        <div style="height: 120px; border-radius: 18px; background: #0E1111; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px">
+          <img src="/_blob/8c88340739610abac04bd4e970352528" alt="Mark on dark" style="width: 50px; height: 50px; display: block">
+          <img src="/_blob/76c887908a86e37c4a4351e783071fb5" alt="Wordmark white" style="height: 16px; width: auto; display: block">
+        </div>
+        <div style="height: 120px; border-radius: 18px; background: #0F766E; display: flex; align-items: center; justify-content: center">
+          <img src="/_blob/61205f083a4ecb05a606bb0f71a9ed5b" alt="Mono mark" style="width: 64px; height: 64px; display: block">
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 20px; color: var(--text-2)">Same speech-bubble mark, now on a solid teal tile. No gradient. The pink tongue is the only playful accent, and it lives only in the logo.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 22px">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-3); letter-spacing: 0.1em; text-transform: uppercase">Light theme</div>
+        <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #0F766E"></div><div style="font-size: 12px; font-weight: 600">Primary</div><div style="font-size: 11px; color: var(--text-3)">#0F766E</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #141716"></div><div style="font-size: 12px; font-weight: 600">Text</div><div style="font-size: 11px; color: var(--text-3)">#141716</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #4B5250"></div><div style="font-size: 12px; font-weight: 600">Text 2</div><div style="font-size: 11px; color: var(--text-3)">#4B5250</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #F5F5F4; box-shadow: inset 0 0 0 1px #E1E3E0"></div><div style="font-size: 12px; font-weight: 600">Surface</div><div style="font-size: 11px; color: var(--text-3)">#F5F5F4</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #E7E7E4"></div><div style="font-size: 12px; font-weight: 600">Border</div><div style="font-size: 11px; color: var(--text-3)">#E7E7E4</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #FFFFFF; box-shadow: inset 0 0 0 1px #E1E3E0"></div><div style="font-size: 12px; font-weight: 600">Background</div><div style="font-size: 11px; color: var(--text-3)">#FFFFFF</div></div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-3); letter-spacing: 0.1em; text-transform: uppercase">Dark theme</div>
+        <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #14B8A6"></div><div style="font-size: 12px; font-weight: 600">Primary</div><div style="font-size: 11px; color: var(--text-3)">#14B8A6</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #F1F4F3; box-shadow: inset 0 0 0 1px #E1E3E0"></div><div style="font-size: 12px; font-weight: 600">Text</div><div style="font-size: 11px; color: var(--text-3)">#F1F4F3</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #B3BCB9"></div><div style="font-size: 12px; font-weight: 600">Text 2</div><div style="font-size: 11px; color: var(--text-3)">#B3BCB9</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #171B1B"></div><div style="font-size: 12px; font-weight: 600">Surface</div><div style="font-size: 11px; color: var(--text-3)">#171B1B</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #262C2B"></div><div style="font-size: 12px; font-weight: 600">Border</div><div style="font-size: 11px; color: var(--text-3)">#262C2B</div></div>
+          <div style="display: flex; flex-direction: column; gap: 5px"><div style="height: 44px; border-radius: 10px; background: #0E1111"></div><div style="font-size: 12px; font-weight: 600">Background</div><div style="font-size: 11px; color: var(--text-3)">#0E1111</div></div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: baseline; gap: 18px">
+        <div style="font-family: Lexend, sans-serif; font-weight: 600; font-size: 30px; letter-spacing: -0.02em; line-height: 36px">Speak first.</div>
+        <div style="font-size: 12.5px; color: var(--text-3)">Lexend SemiBold · titles</div>
+        <div style="font-size: 16px; color: var(--text-2)">Inter · interface text</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+        <div class="k-light" style="padding: 16px; border-radius: 16px; background: var(--bg); border: 1px solid var(--border); color: var(--text); display: flex; flex-direction: column; gap: 10px">
+          <button type="button" style="height: 48px; border: 0; border-radius: 12px; background: var(--primary); color: var(--on-primary); font-size: 15px; font-weight: 600">Primary action</button>
+          <button type="button" style="height: 48px; border: 1px solid var(--field-border); border-radius: 12px; background: var(--btn2-bg); color: var(--text); font-size: 15px; font-weight: 600">Secondary</button>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap">
+            <span style="height: 26px; padding: 0 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-text); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Let’s polish this</span>
+            <span style="height: 26px; padding: 0 10px; border-radius: 999px; background: var(--success-soft); color: var(--success); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Saved</span>
+            <span style="height: 26px; padding: 0 10px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Error</span>
+          </div>
+        </div>
+        <div class="k-dark" style="padding: 16px; border-radius: 16px; background: var(--bg); border: 1px solid var(--border); color: var(--text); display: flex; flex-direction: column; gap: 10px">
+          <button type="button" style="height: 48px; border: 0; border-radius: 12px; background: var(--primary); color: var(--on-primary); font-size: 15px; font-weight: 600">Primary action</button>
+          <button type="button" style="height: 48px; border: 1px solid var(--field-border); border-radius: 12px; background: var(--btn2-bg); color: var(--text); font-size: 15px; font-weight: 600">Secondary</button>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap">
+            <span style="height: 26px; padding: 0 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-text); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Let’s polish this</span>
+            <span style="height: 26px; padding: 0 10px; border-radius: 999px; background: var(--success-soft); color: var(--success); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Saved</span>
+            <span style="height: 26px; padding: 0 10px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">Error</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1000,"height":660}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

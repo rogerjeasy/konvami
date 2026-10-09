@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI data consent</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Lexend:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+.k-light{--bg:#FFFFFF;--surface:#F5F5F4;--field:#F7F7F6;--field-border:#E1E3E0;--border:#E7E7E4;--text:#141716;--text-2:#4B5250;--text-3:#646B69;--primary:#0F766E;--on-primary:#FFFFFF;--primary-soft:#E7F2F0;--primary-text:#0D5F58;--focus:rgba(15,118,110,0.16);--warn-soft:#FEF3C7;--warn-text:#92400E;--warn-icon:#D97706;--success:#15803D;--success-soft:#ECF6EF;--danger:#B91C1C;--danger-border:#DC2626;--danger-soft:#FEF2F2;--danger-title:#991B1B;--apple-bg:#000000;--apple-fg:#FFFFFF;--btn2-bg:#FFFFFF;--track:#E1E3E0;--chip:#FFFFFF;--shadow:rgba(20,23,22,0.08);--frame:rgba(20,23,22,0.12);--disabled-bg:#E1E3E0;--disabled-fg:#6F7674;--avatar-ink:#141716;--avatar-ink-fg:#FFFFFF;--splash:#0F766E;color-scheme:light}
+.k-dark{--bg:#0E1111;--surface:#171B1B;--field:#171B1B;--field-border:#2C3332;--border:#262C2B;--text:#F1F4F3;--text-2:#B3BCB9;--text-3:#929B98;--primary:#14B8A6;--on-primary:#042F2C;--primary-soft:#10302C;--primary-text:#5EEAD4;--focus:rgba(20,184,166,0.25);--warn-soft:#2B2210;--warn-text:#FCD34D;--warn-icon:#F59E0B;--success:#4ADE80;--success-soft:#0F2918;--danger:#F87171;--danger-border:#EF4444;--danger-soft:#2A1414;--danger-title:#FECACA;--apple-bg:#FFFFFF;--apple-fg:#000000;--btn2-bg:#171B1B;--track:#2C3332;--chip:#1D2222;--shadow:rgba(0,0,0,0.45);--frame:rgba(255,255,255,0.10);--disabled-bg:#252B2A;--disabled-fg:#7D8684;--avatar-ink:#F1F4F3;--avatar-ink-fg:#0E1111;--splash:#0E1111;color-scheme:dark}
+</style>
+</helmet>
+<div style="width: 860px; height: 844px; display: flex; gap: 80px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width: 390px; height: 844px; flex-shrink: 0; position: relative; overflow: hidden; border-radius: 44px; box-shadow: 0 0 0 1px var(--frame); background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif">
+  <div style="position: absolute; top: 54px; left: 16px; right: 16px; height: 44px; display: flex; align-items: center; gap: 14px">
+    <button type="button" aria-label="Back" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div style="flex-grow: 1; display: flex; gap: 6px">
+      <span style="flex-grow: 1; height: 4px; border-radius: 2px; background: var(--primary)"></span>
+      <span style="flex-grow: 1; height: 4px; border-radius: 2px; background: var(--primary)"></span>
+      <span style="flex-grow: 1; height: 4px; border-radius: 2px; background: var(--primary)"></span>
+      <span style="flex-grow: 1; height: 4px; border-radius: 2px; background: var(--primary)"></span>
+    </div>
+    <div style="width: 44px; text-align: right; font-size: 13px; font-weight: 600; color: var(--text-3)">4 of 4</div>
+  </div>
+
+  <div style="position: absolute; top: 122px; left: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px">
+    <h1 style="margin: 0; font-family: Lexend, sans-serif; font-weight: 600; font-size: 26px; line-height: 32px; letter-spacing: -0.02em">How Konvami uses AI</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 22px; color: var(--text-2)">Konvami uses trusted AI providers to listen, reply and give feedback. Here’s exactly what each one receives.</p>
+  </div>
+
+  <div style="position: absolute; top: 246px; left: 20px; right: 20px; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px; overflow: hidden">
+    <div style="padding: 14px; display: flex; gap: 12px; background: var(--bg)">
+      <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>
+      </div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span style="font-size: 15px; font-weight: 600">OpenAI</span>
+          <span style="height: 20px; padding: 0 7px; border-radius: 5px; background: var(--surface); color: var(--text-2); font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; letter-spacing: 0.05em">REQUIRED</span>
+        </div>
+        <div style="font-size: 13px; line-height: 18px; color: var(--text-2)">Live voice conversations and corrections</div>
+        <div style="font-size: 12px; color: var(--text-3)">Receives: voice · transcripts · learning profile</div>
+      </div>
+      <button type="button" role="switch" aria-checked="true" aria-label="OpenAI, required" disabled style="width: 51px; height: 31px; border-radius: 999px; border: 0; background: var(--primary); opacity: 0.5; padding: 2px; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; align-self: center">
+        <span style="width: 27px; height: 27px; border-radius: 50%; background: #FFFFFF"></span>
+      </button>
+    </div>
+    <div style="height: 1px; background: var(--border)"></div>
+    <div style="padding: 14px; display: flex; gap: 12px; background: var(--bg)">
+      <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+      </div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span style="font-size: 15px; font-weight: 600">ElevenLabs</span>
+          <span style="height: 20px; padding: 0 7px; border-radius: 5px; background: var(--primary-soft); color: var(--primary-text); font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; letter-spacing: 0.05em">OPTIONAL</span>
+        </div>
+        <div style="font-size: 13px; line-height: 18px; color: var(--text-2)">Premium, natural persona voices</div>
+        <div style="font-size: 12px; color: var(--text-3)">Receives: your persona’s replies (text)</div>
+      </div>
+      <button type="button" role="switch" aria-checked="true" aria-label="ElevenLabs" style="width: 51px; height: 31px; border-radius: 999px; border: 0; background: var(--primary); padding: 2px; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; align-self: center">
+        <span style="width: 27px; height: 27px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span>
+      </button>
+    </div>
+    <div style="height: 1px; background: var(--border)"></div>
+    <div style="padding: 14px; display: flex; gap: 12px; background: var(--bg)">
+      <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--surface); color: var(--text); display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+      </div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span style="font-size: 15px; font-weight: 600">AWS Bedrock</span>
+          <span style="height: 20px; padding: 0 7px; border-radius: 5px; background: var(--primary-soft); color: var(--primary-text); font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; letter-spacing: 0.05em">OPTIONAL</span>
+        </div>
+        <div style="font-size: 13px; line-height: 18px; color: var(--text-2)">Session reports and flashcards</div>
+        <div style="font-size: 12px; color: var(--text-3)">Receives: transcripts</div>
+      </div>
+      <button type="button" role="switch" aria-checked="true" aria-label="AWS Bedrock" style="width: 51px; height: 31px; border-radius: 999px; border: 0; background: var(--primary); padding: 2px; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; align-self: center">
+        <span style="width: 27px; height: 27px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span>
+      </button>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 600px; left: 20px; right: 20px; display: flex; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface); color: var(--text-2)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    <div style="font-size: 13px; line-height: 19px">Your partners are always AI and never claim to be human. Change these choices anytime in Settings › Privacy.</div>
+  </div>
+
+  <div style="position: absolute; left: 24px; right: 24px; bottom: 32px; display: flex; flex-direction: column; gap: 6px">
+    <button type="button" style="width: 100%; height: 54px; border: 0; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600">Agree and continue</button>
+    <button type="button" style="width: 100%; height: 44px; border: 0; background: transparent; color: var(--primary); font-size: 15px; font-weight: 600">Read the full privacy notice</button>
+  </div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [
+        { cls: 'k-light', k: 'l', wordmark: '/_blob/79ad230f275d652bd63fcaf6ee753d52' },
+        { cls: 'k-dark', k: 'd', wordmark: '/_blob/76c887908a86e37c4a4351e783071fb5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

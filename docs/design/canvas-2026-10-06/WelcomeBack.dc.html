@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome back with Face ID</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Lexend:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+.k-light{--bg:#FFFFFF;--surface:#F5F5F4;--field:#F7F7F6;--field-border:#E1E3E0;--border:#E7E7E4;--text:#141716;--text-2:#4B5250;--text-3:#646B69;--primary:#0F766E;--on-primary:#FFFFFF;--primary-soft:#E7F2F0;--primary-text:#0D5F58;--focus:rgba(15,118,110,0.16);--warn-soft:#FEF3C7;--warn-text:#92400E;--warn-icon:#D97706;--success:#15803D;--success-soft:#ECF6EF;--danger:#B91C1C;--danger-border:#DC2626;--danger-soft:#FEF2F2;--danger-title:#991B1B;--apple-bg:#000000;--apple-fg:#FFFFFF;--btn2-bg:#FFFFFF;--track:#E1E3E0;--chip:#FFFFFF;--shadow:rgba(20,23,22,0.08);--frame:rgba(20,23,22,0.12);--disabled-bg:#E1E3E0;--disabled-fg:#6F7674;--avatar-ink:#141716;--avatar-ink-fg:#FFFFFF;--splash:#0F766E;color-scheme:light}
+.k-dark{--bg:#0E1111;--surface:#171B1B;--field:#171B1B;--field-border:#2C3332;--border:#262C2B;--text:#F1F4F3;--text-2:#B3BCB9;--text-3:#929B98;--primary:#14B8A6;--on-primary:#042F2C;--primary-soft:#10302C;--primary-text:#5EEAD4;--focus:rgba(20,184,166,0.25);--warn-soft:#2B2210;--warn-text:#FCD34D;--warn-icon:#F59E0B;--success:#4ADE80;--success-soft:#0F2918;--danger:#F87171;--danger-border:#EF4444;--danger-soft:#2A1414;--danger-title:#FECACA;--apple-bg:#FFFFFF;--apple-fg:#000000;--btn2-bg:#171B1B;--track:#2C3332;--chip:#1D2222;--shadow:rgba(0,0,0,0.45);--frame:rgba(255,255,255,0.10);--disabled-bg:#252B2A;--disabled-fg:#7D8684;--avatar-ink:#F1F4F3;--avatar-ink-fg:#0E1111;--splash:#0E1111;color-scheme:dark}
+a{color:var(--primary);font-weight:600;text-decoration:none}a:hover{text-decoration:underline}
+</style>
+</helmet>
+<div style="width: 860px; height: 844px; display: flex; gap: 80px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width: 390px; height: 844px; flex-shrink: 0; position: relative; overflow: hidden; border-radius: 44px; box-shadow: 0 0 0 1px var(--frame); background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif">
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 430px; background: var(--surface); border-radius: 0 0 32px 32px"></div>
+
+  <div style="position: absolute; top: 64px; left: 0; right: 0; display: flex; justify-content: center">
+    <img src="{{t.wordmark}}" alt="Konvami" style="height: 22px; width: auto; display: block">
+  </div>
+
+  <div style="position: absolute; top: 134px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 14px">
+    <div style="width: 108px; height: 108px; border-radius: 50%; background: var(--bg); box-shadow: 0 0 0 1px var(--border); display: flex; align-items: center; justify-content: center">
+      <div style="width: 94px; height: 94px; border-radius: 50%; background: var(--avatar-ink); color: var(--avatar-ink-fg); display: flex; align-items: center; justify-content: center; font-family: Lexend, sans-serif; font-weight: 600; font-size: 32px">AD</div>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px">
+      <h1 style="margin: 0; font-family: Lexend, sans-serif; font-weight: 600; font-size: 26px; line-height: 32px; letter-spacing: -0.02em">Hi again, Amara</h1>
+      <div style="font-size: 15px; color: var(--text-2)">amara.diallo@mail.com</div>
+    </div>
+    <span style="display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-text); font-size: 13px; font-weight: 600">
+      <span style="color: var(--warn-icon); display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3.5 5 5.8 5 11a5 5 0 0 1-10 0c0-2.4 1.2-3.9 2.4-5 .2 1.6 1 2.6 2.1 3C11 8.5 11.3 5 12 2z"/></svg></span>
+      12-day streak
+    </span>
+  </div>
+
+  <div style="position: absolute; top: 458px; left: 24px; right: 24px; display: flex; gap: 12px; padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg)">
+    <div style="width: 38px; height: 38px; border-radius: 50%; background: #0F766E; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-family: Lexend, sans-serif; font-weight: 600; font-size: 16px; flex-shrink: 0">L</div>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <div style="font-size: 12px; font-weight: 600; color: var(--primary-text)">Lena is waiting</div>
+      <div style="font-size: 15px; line-height: 21px; font-weight: 500">„Und? Wie war das Konzert am Samstag?“</div>
+      <div style="font-size: 12.5px; color: var(--text-3)">“So? How was the concert on Saturday?”</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 24px; right: 24px; bottom: 32px; display: flex; flex-direction: column; gap: 6px">
+    <button type="button" style="width: 100%; height: 54px; border: 0; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H5a2 2 0 0 0-2 2v2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M17 21h2a2 2 0 0 0 2-2v-2"/><path d="M9 9v1"/><path d="M15 9v1"/><path d="M12 9v4h-1"/><path d="M9 16c1.5 1 4.5 1 6 0"/></svg>
+      Continue with Face ID
+    </button>
+    <button type="button" style="width: 100%; height: 44px; border: 0; background: transparent; color: var(--primary); font-size: 15px; font-weight: 600">Use password instead</button>
+    <div style="text-align: center; font-size: 14px; color: var(--text-3); margin-top: 4px">Not Amara? <a href="#">Switch account</a></div>
+  </div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [
+        { cls: 'k-light', k: 'l', wordmark: '/_blob/79ad230f275d652bd63fcaf6ee753d52' },
+        { cls: 'k-dark', k: 'd', wordmark: '/_blob/76c887908a86e37c4a4351e783071fb5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

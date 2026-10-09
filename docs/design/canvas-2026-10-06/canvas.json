@@ -1,0 +1,212 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-06T17:30:00Z"
+  },
+  "title": "Konvami — Welcome & Auth Screens",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1000,
+      "h": 660,
+      "title": "Brand & UI kit"
+    },
+    "Splash.dc.html": {
+      "x": 1080,
+      "y": 0,
+      "w": 860,
+      "h": 844,
+      "title": "1.1 Splash · light / dark"
+    },
+    "Intro1.dc.html": {
+      "x": 2020,
+      "y": 0,
+      "w": 860,
+      "h": 844,
+      "title": "1.2 Intro · Speak · light / dark"
+    },
+    "Intro2.dc.html": {
+      "x": 2960,
+      "y": 0,
+      "w": 860,
+      "h": 844,
+      "title": "1.3 Intro · Corrections · light / dark"
+    },
+    "Intro3.dc.html": {
+      "x": 3900,
+      "y": 0,
+      "w": 860,
+      "h": 844,
+      "title": "1.4 Intro · Progress · light / dark"
+    },
+    "Welcome.dc.html": {
+      "x": 4840,
+      "y": 0,
+      "w": 860,
+      "h": 844,
+      "title": "1.5 Welcome · light / dark"
+    },
+    "AgeGate.dc.html": {
+      "x": 0,
+      "y": 1444,
+      "w": 860,
+      "h": 844,
+      "title": "2.1 Age check · light / dark"
+    },
+    "SignUp.dc.html": {
+      "x": 940,
+      "y": 1444,
+      "w": 860,
+      "h": 844,
+      "title": "2.2 Create account · light / dark"
+    },
+    "EmailSignUp.dc.html": {
+      "x": 1880,
+      "y": 1444,
+      "w": 860,
+      "h": 844,
+      "title": "2.3 Sign up with email · light / dark"
+    },
+    "VerifyCode.dc.html": {
+      "x": 2820,
+      "y": 1444,
+      "w": 860,
+      "h": 844,
+      "title": "2.4 Verify email · light / dark"
+    },
+    "AIConsent.dc.html": {
+      "x": 3760,
+      "y": 1444,
+      "w": 860,
+      "h": 844,
+      "title": "2.5 AI data consent · light / dark"
+    },
+    "MicPermission.dc.html": {
+      "x": 4700,
+      "y": 1444,
+      "w": 860,
+      "h": 844,
+      "title": "2.6 Microphone · light / dark"
+    },
+    "AccountReady.dc.html": {
+      "x": 5640,
+      "y": 1444,
+      "w": 860,
+      "h": 844,
+      "title": "2.7 All set · light / dark"
+    },
+    "SignIn.dc.html": {
+      "x": 0,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.1 Sign in · light / dark"
+    },
+    "SignInError.dc.html": {
+      "x": 940,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.2 Sign in · error · light / dark"
+    },
+    "WelcomeBack.dc.html": {
+      "x": 1880,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.3 Welcome back · Face ID · light / dark"
+    },
+    "MagicLink.dc.html": {
+      "x": 2820,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.4 Sign-in link sent · light / dark"
+    },
+    "ForgotPassword.dc.html": {
+      "x": 3760,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.5 Forgot password · light / dark"
+    },
+    "ResetSent.dc.html": {
+      "x": 4700,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.6 Reset link sent · light / dark"
+    },
+    "NewPassword.dc.html": {
+      "x": 5640,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.7 New password · light / dark"
+    },
+    "ResetSuccess.dc.html": {
+      "x": 6580,
+      "y": 2888,
+      "w": 860,
+      "h": 844,
+      "title": "3.8 Password updated · light / dark"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Splash.dc.html",
+    "Intro1.dc.html",
+    "Intro2.dc.html",
+    "Intro3.dc.html",
+    "Welcome.dc.html",
+    "AgeGate.dc.html",
+    "SignUp.dc.html",
+    "EmailSignUp.dc.html",
+    "VerifyCode.dc.html",
+    "AIConsent.dc.html",
+    "MicPermission.dc.html",
+    "AccountReady.dc.html",
+    "SignIn.dc.html",
+    "SignInError.dc.html",
+    "WelcomeBack.dc.html",
+    "MagicLink.dc.html",
+    "ForgotPassword.dc.html",
+    "ResetSent.dc.html",
+    "NewPassword.dc.html",
+    "ResetSuccess.dc.html"
+  ],
+  "notes": {
+    "rowA": {
+      "x": 0,
+      "y": -300,
+      "text": "1 · Brand & first launch",
+      "kind": "title1",
+      "maxW": 5700,
+      "w": 240
+    },
+    "rowB": {
+      "x": 0,
+      "y": 1144,
+      "text": "2 · Create account",
+      "kind": "title1",
+      "maxW": 6500,
+      "w": 240
+    },
+    "rowC": {
+      "x": 0,
+      "y": 2588,
+      "text": "3 · Sign in & account recovery",
+      "kind": "title1",
+      "maxW": 7440,
+      "w": 240
+    }
+  },
+  "designSystems": [],
+  "attachments": {}
+}

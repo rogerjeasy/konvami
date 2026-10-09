@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Lexend:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+input::placeholder{color:var(--text-3)}
+.k-light{--bg:#FFFFFF;--surface:#F5F5F4;--field:#F7F7F6;--field-border:#E1E3E0;--border:#E7E7E4;--text:#141716;--text-2:#4B5250;--text-3:#646B69;--primary:#0F766E;--on-primary:#FFFFFF;--primary-soft:#E7F2F0;--primary-text:#0D5F58;--focus:rgba(15,118,110,0.16);--warn-soft:#FEF3C7;--warn-text:#92400E;--warn-icon:#D97706;--success:#15803D;--success-soft:#ECF6EF;--danger:#B91C1C;--danger-border:#DC2626;--danger-soft:#FEF2F2;--danger-title:#991B1B;--apple-bg:#000000;--apple-fg:#FFFFFF;--btn2-bg:#FFFFFF;--track:#E1E3E0;--chip:#FFFFFF;--shadow:rgba(20,23,22,0.08);--frame:rgba(20,23,22,0.12);--disabled-bg:#E1E3E0;--disabled-fg:#6F7674;--avatar-ink:#141716;--avatar-ink-fg:#FFFFFF;--splash:#0F766E;color-scheme:light}
+.k-dark{--bg:#0E1111;--surface:#171B1B;--field:#171B1B;--field-border:#2C3332;--border:#262C2B;--text:#F1F4F3;--text-2:#B3BCB9;--text-3:#929B98;--primary:#14B8A6;--on-primary:#042F2C;--primary-soft:#10302C;--primary-text:#5EEAD4;--focus:rgba(20,184,166,0.25);--warn-soft:#2B2210;--warn-text:#FCD34D;--warn-icon:#F59E0B;--success:#4ADE80;--success-soft:#0F2918;--danger:#F87171;--danger-border:#EF4444;--danger-soft:#2A1414;--danger-title:#FECACA;--apple-bg:#FFFFFF;--apple-fg:#000000;--btn2-bg:#171B1B;--track:#2C3332;--chip:#1D2222;--shadow:rgba(0,0,0,0.45);--frame:rgba(255,255,255,0.10);--disabled-bg:#252B2A;--disabled-fg:#7D8684;--avatar-ink:#F1F4F3;--avatar-ink-fg:#0E1111;--splash:#0E1111;color-scheme:dark}
+a{color:var(--primary);font-weight:600;text-decoration:none}a:hover{text-decoration:underline}
+</style>
+</helmet>
+<div style="width: 860px; height: 844px; display: flex; gap: 80px">
+<sc-for list="{{themes}}" as="t" hint-placeholder-count="2">
+<div class="{{t.cls}}" style="width: 390px; height: 844px; flex-shrink: 0; position: relative; overflow: hidden; border-radius: 44px; box-shadow: 0 0 0 1px var(--frame); background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif">
+  <div style="position: absolute; top: 54px; left: 16px; right: 16px; height: 44px; display: flex; align-items: center; justify-content: space-between">
+    <button type="button" aria-label="Back" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; padding: 0">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <img src="/_blob/680f9b435d08b9b1fc02a176bfc8b0a3" alt="Konvami" style="width: 32px; height: 32px; display: block">
+    <span style="width: 44px"></span>
+  </div>
+
+  <div style="position: absolute; top: 122px; left: 24px; right: 24px; display: flex; flex-direction: column; gap: 6px">
+    <h1 style="margin: 0; font-family: Lexend, sans-serif; font-weight: 600; font-size: 28px; line-height: 34px; letter-spacing: -0.02em">Welcome back</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 24px; color: var(--text-2)">Sign in to pick up where you left off.</p>
+  </div>
+
+  <div style="position: absolute; top: 216px; left: 24px; right: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+    <button type="button" aria-label="Sign in with Apple" style="height: 52px; border: 0; border-radius: 14px; background: var(--apple-bg); color: var(--apple-fg); font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16.37 1.43c0 1.14-.49 2.27-1.18 3.08-.74.9-1.99 1.57-2.990 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.57-2.27 1.21-2.98.8-.94 2.14-1.64 3.25-1.68.03.13.05.28.05.43zm4.56 15.71c-.03.07-.46 1.58-1.52 3.12-.94 1.34-1.94 2.71-3.43 2.71-1.52 0-1.9-.88-3.63-.88-1.7 0-2.3.91-3.67.91-1.38 0-2.33-1.26-3.43-2.8-1.29-1.82-2.32-4.63-2.32-7.28 0-4.28 2.8-6.55 5.55-6.55 1.45 0 2.68.95 3.6.95.87 0 2.22-1.01 3.9-1.01.61 0 2.890.06 4.37 2.19-.13.09-2.38 1.37-2.38 4.19 0 3.26 2.85 4.42 2.96 4.45z"/></svg>
+      Apple
+    </button>
+    <button type="button" aria-label="Sign in with Google" style="height: 52px; border: 1px solid var(--field-border); border-radius: 14px; background: var(--btn2-bg); color: var(--text); font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px">
+      <svg width="17" height="17" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.87 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.33-1.58-5.04-3.71H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.96 10.71A5.41 5.41 0 0 1 3.68 9c0-.59.1-1.17.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58A8.65 8.65 0 0 0 9 0 9 9 0 0 0 .96 4.96l3 2.33C4.67 5.16 6.66 3.58 9 3.58z"/></svg>
+      Google
+    </button>
+  </div>
+
+  <div style="position: absolute; top: 290px; left: 24px; right: 24px; display: flex; align-items: center; gap: 12px">
+    <span style="flex-grow: 1; height: 1px; background: var(--border)"></span>
+    <span style="font-size: 13px; color: var(--text-3)">or with email</span>
+    <span style="flex-grow: 1; height: 1px; background: var(--border)"></span>
+  </div>
+
+  <div style="position: absolute; top: 326px; left: 24px; right: 24px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="{{t.k}}-si-email" style="font-size: 13px; font-weight: 600">Email</label>
+      <div style="height: 52px; border-radius: 12px; border: 1px solid var(--field-border); background: var(--field); display: flex; align-items: center; padding: 0 16px; box-sizing: border-box">
+        <input id="{{t.k}}-si-email" type="email" value="amara.diallo@mail.com" autocomplete="username" style="border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--text); width: 100%">
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="{{t.k}}-si-pass" style="font-size: 13px; font-weight: 600">Password</label>
+      <div style="height: 52px; border-radius: 12px; border: 1.5px solid var(--primary); background: var(--bg); box-shadow: 0 0 0 4px var(--focus); display: flex; align-items: center; gap: 6px; padding: 0 4px 0 16px; box-sizing: border-box">
+        <input id="{{t.k}}-si-pass" type="password" placeholder="Enter your password" autocomplete="current-password" style="border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--text); width: 100%">
+        <button type="button" aria-label="Show password" style="width: 44px; height: 44px; border: 0; background: transparent; color: var(--text-3); display: flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 496px; right: 14px">
+    <button type="button" style="height: 44px; padding: 0 10px; border: 0; background: transparent; color: var(--primary); font-size: 15px; font-weight: 600">Forgot password?</button>
+  </div>
+
+  <div style="position: absolute; top: 556px; left: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px">
+    <button type="button" style="width: 100%; height: 54px; border: 0; border-radius: 14px; background: var(--primary); color: var(--on-primary); font-size: 17px; font-weight: 600">Sign in</button>
+    <button type="button" style="width: 100%; height: 48px; border: 0; background: transparent; color: var(--primary); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Email me a sign-in link instead
+    </button>
+  </div>
+
+  <div style="position: absolute; left: 24px; right: 24px; bottom: 44px; text-align: center; font-size: 15px; color: var(--text-2)">New to Konvami? <a href="#">Create an account</a></div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      themes: [
+        { cls: 'k-light', k: 'l', wordmark: '/_blob/79ad230f275d652bd63fcaf6ee753d52' },
+        { cls: 'k-dark', k: 'd', wordmark: '/_blob/76c887908a86e37c4a4351e783071fb5' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

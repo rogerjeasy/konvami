@@ -1,0 +1,27 @@
+{
+  "name": "konvami",
+  "private": true,
+  "type": "module",
+  "description": "Konvami: voice-first language partner (Expo app, Python backend, AWS infra)",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:secrets": "sh scripts/check-no-secrets.sh",
+    "brand:export": "node scripts/export-brand-assets.ts"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.4",
+    "typescript": "~6.0.3"
+  }
+}

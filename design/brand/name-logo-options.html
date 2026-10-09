@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Name & Logo Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@800&family=Poppins:wght@700&family=Quicksand:wght@700&family=Baloo+2:wght@800&family=Fredoka:wght@600&family=Manrope:wght@800&family=Playfair+Display:wght@700&family=Outfit:wght@700&family=Space+Grotesk:wght@700&family=Sora:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --text: #1c1b1a;
+    --muted: #6b6862;
+    --border: #e6e3dd;
+    --chip: #f0eee9;
+    --low: #15803d;
+    --med: #b45309;
+    --accent: #0e7490;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121212;
+      --surface: #1c1c1e;
+      --text: #f2f1ee;
+      --muted: #a19e98;
+      --border: #2e2e31;
+      --chip: #2a2a2d;
+      --low: #4ade80;
+      --med: #fbbf24;
+      --accent: #2dd4bf;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121212; --surface: #1c1c1e; --text: #f2f1ee; --muted: #a19e98;
+    --border: #2e2e31; --chip: #2a2a2d; --low: #4ade80; --med: #fbbf24; --accent: #2dd4bf;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: Inter, system-ui, -apple-system, sans-serif; line-height: 1.5;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 16px 64px; }
+  header h1 { font-size: clamp(28px, 4vw, 40px); margin: 0 0 8px; letter-spacing: -0.02em; }
+  header p { color: var(--muted); margin: 0; max-width: 760px; }
+  .picks { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 32px; }
+  .pick { background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+          padding: 6px 14px 6px 6px; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+  .pick svg { width: 30px; height: 30px; display: block; }
+  .pick span.rank { color: var(--muted); font-weight: 500; }
+  h2 { font-size: 20px; margin: 40px 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px;
+          display: flex; flex-direction: column; gap: 14px; position: relative; }
+  .card.top { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .num { position: absolute; top: 16px; right: 18px; font-weight: 700; color: var(--muted); font-size: 14px; }
+  .badge { position: absolute; top: 14px; left: 18px; background: var(--accent); color: #fff;
+           font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: .03em; text-transform: uppercase; }
+  :root[data-theme="dark"] .badge { color: #0b1f22; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .badge { color: #0b1f22; } }
+  .hero { display: flex; align-items: center; gap: 18px; margin-top: 14px; }
+  .hero svg.icon { width: 112px; height: 112px; flex: none; filter: drop-shadow(0 8px 18px rgba(0,0,0,.18)); }
+  .word { font-size: 34px; line-height: 1.1; -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .tagline { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .meaning { font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--chip); border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+  .risk { font-size: 13px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 12px; }
+  .risk b.low { color: var(--low); } .risk b.med { color: var(--med); }
+  .concept { font-size: 13px; color: var(--muted); }
+
+  .phone-row { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .phone { width: 300px; max-width: 100%; border-radius: 42px; padding: 14px; background: #0b0b0c; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  .screen { border-radius: 30px; padding: 46px 18px 28px; min-height: 520px;
+            background: radial-gradient(120% 80% at 20% 10%, #f0abfc 0%, transparent 55%),
+                        radial-gradient(120% 90% at 90% 90%, #67e8f9 0%, transparent 55%), #6366f1; }
+  .screen.dark { background: radial-gradient(120% 80% at 20% 10%, #312e81 0%, transparent 60%),
+                             radial-gradient(120% 90% at 90% 90%, #0f766e 0%, transparent 55%), #0b1020; }
+  .apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px 10px; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .app svg { width: 56px; height: 56px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.25)); }
+  .app span { color: #fff; font-size: 10.5px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,.4); white-space: nowrap; }
+  .sizes { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; flex: 1; min-width: 280px; }
+  .sizes table { border-collapse: collapse; width: 100%; }
+  .sizes td { padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 13px; }
+  .sizes td svg { display: block; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 28px; }
+  .toggle { position: fixed; top: 14px; right: 14px; background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  @media (max-width: 520px) {
+    .hero svg.icon { width: 84px; height: 84px; }
+    .word { font-size: 28px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<button class="toggle" id="themeToggle" type="button">Toggle theme</button>
+<div class="wrap">
+  <header>
+    <h1>Name &amp; logo options</h1>
+    <p>Ten names chosen to work in English, German, French and Italian, and to travel well across Switzerland, the EU and francophone Africa. Each one has a first-draft app icon. Name availability was screened with web searches in October 2026. Trademark and store-name checks are still needed for the finalists.</p>
+  </header>
+
+  <div class="picks" id="picks"></div>
+
+  <h2>All ten options</h2>
+  <div class="grid" id="grid"></div>
+
+  <h2>On a home screen</h2>
+  <div class="phone-row">
+    <div class="phone"><div class="screen"><div class="apps" id="home1"></div></div></div>
+    <div class="phone"><div class="screen dark"><div class="apps" id="home2"></div></div></div>
+    <div class="sizes">
+      <strong>Small-size legibility (notification, settings, tab)</strong>
+      <table id="sizes"></table>
+    </div>
+  </div>
+
+  <p class="note">These are first-draft concepts. Once you pick one, I'll refine it and export the full icon set: iOS 1024 px, Android adaptive icon (foreground and background), monochrome icon, splash screen and favicon.</p>
+</div>
+
+<script>
+const logos = [
+  {
+    id: "mondami", name: "Mondami", top: 1, font: "'Nunito', sans-serif", weight: 800,
+    grad: ["#2DD4BF", "#0E7490"],
+    tagline: "Your friend in every language.",
+    meaning: "Sounds like French “mon ami” (my friend), with “monde / mondo” (world) built in. A buddy from anywhere in the world.",
+    langs: ["FR mon ami", "IT mondo", "FR monde", "EN friendly"],
+    concept: "A globe that is also a smiling speech bubble: world + friend + talk.",
+    risk: ["low", "No app found. A UK company called “Mondami Ltd” exists, so check the trademark classes."],
+    svg: (p) => `
+      <circle cx="60" cy="56" r="30" fill="#fff"/>
+      <path d="M37 72 L29 95 L52 84 Z" fill="#fff"/>
+      <g fill="none" stroke="#0E7490" stroke-opacity=".28" stroke-width="2.4">
+        <ellipse cx="60" cy="56" rx="13" ry="30"/>
+        <path d="M31 48 H89 M31 64 H89"/>
+      </g>
+      <circle cx="49.5" cy="51" r="4" fill="#0E7490"/>
+      <circle cx="70.5" cy="51" r="4" fill="#0E7490"/>
+      <path d="M47 62 Q60 75 73 62" fill="none" stroke="#0E7490" stroke-width="5" stroke-linecap="round"/>`
+  },
+  {
+    id: "parlami", name: "Parlami", font: "'Poppins', sans-serif", weight: 700,
+    grad: ["#FF7A7A", "#D61F69"],
+    tagline: "Talk to me, in any language.",
+    meaning: "Italian for “talk to me”. Instantly understood by French speakers (“parle-moi”).",
+    langs: ["IT talk to me", "FR parle-moi"],
+    concept: "Two overlapping speech bubbles (you and your persona), with a voice waveform.",
+    risk: ["med", "Crowded “Parl-” space: Parlai (an AI tutor on WhatsApp), Parla, Parle."],
+    svg: (p) => `
+      <path d="M66 24 h22 a14 14 0 0 1 14 14 v12 a14 14 0 0 1 -14 14 h-2 l2 9 -12 -9 h-10 a14 14 0 0 1 -14 -14 v-12 a14 14 0 0 1 14 -14z" fill="#fff" fill-opacity=".38"/>
+      <path d="M34 44 h28 a16 16 0 0 1 16 16 v10 a16 16 0 0 1 -16 16 h-16 l-14 11 3 -11 h-1 a16 16 0 0 1 -16 -16 v-10 a16 16 0 0 1 16 -16z" fill="#fff"/>
+      <g fill="#D61F69">
+        <rect x="32" y="61" width="5" height="8" rx="2.5"/>
+        <rect x="40" y="57" width="5" height="16" rx="2.5"/>
+        <rect x="48" y="59" width="5" height="12" rx="2.5"/>
+        <rect x="56" y="62" width="5" height="6" rx="2.5"/>
+      </g>`
+  },
+  {
+    id: "linguami", name: "Linguami", top: 2, font: "'Quicksand', sans-serif", weight: 700,
+    grad: ["#8B5CF6", "#EC4899"],
+    tagline: "Language, with a friend.",
+    meaning: "“Lingua” (language, IT/Latin) + “ami” (friend, FR). Also reads as “lingua mi”: my language.",
+    langs: ["IT lingua", "FR ami", "DE Linguistik"],
+    concept: "A heart-shaped speech bubble holding a voice wave: a buddy who cares.",
+    risk: ["low", "No exact match. “Linguama” (an app for Nigerian languages) is similar."],
+    svg: (p) => `
+      <path d="M60 90 C34 74 22 60 22 46 C22 35 30 27 40 27 C48 27 55 31 60 38 C65 31 72 27 80 27 C90 27 98 35 98 46 C98 60 86 74 60 90Z" fill="#fff"/>
+      <path d="M33 68 L22 88 L46 79 Z" fill="#fff"/>
+      <g fill="#A855F7">
+        <rect x="45" y="48" width="5" height="10" rx="2.5"/>
+        <rect x="53" y="43" width="5" height="20" rx="2.5"/>
+        <rect x="61" y="45" width="5" height="16" rx="2.5"/>
+        <rect x="69" y="49" width="5" height="8" rx="2.5"/>
+      </g>`
+  },
+  {
+    id: "bavardo", name: "Bavardo", font: "'Baloo 2', sans-serif", weight: 800,
+    grad: ["#FBBF24", "#F97316"],
+    tagline: "Chat your way to fluency.",
+    meaning: "From French “bavarder” (to chat) and “bavard” (chatty), with a playful Italian ending.",
+    langs: ["FR bavarder", "IT -o ending"],
+    concept: "A cheerful, chatty bubble face with a wavy smile.",
+    risk: ["low", "No language app found. “Bavardio” is an unrelated customer-service platform."],
+    svg: (p) => `
+      <path d="M60 26 c20 0 36 13 36 30 s-16 30 -36 30 c-5 0 -10 -0.8 -14 -2.2 L28 92 l6 -14 C28 72 24 64.5 24 56 c0 -17 16 -30 36 -30z" fill="#fff"/>
+      <circle cx="48" cy="50" r="4.6" fill="#9A3412"/>
+      <circle cx="72" cy="50" r="4.6" fill="#9A3412"/>
+      <path d="M44 64 q4 6 8 0 t8 0 t8 0 t8 0" fill="none" stroke="#F97316" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>`
+  },
+  {
+    id: "verbuddy", name: "Verbuddy", font: "'Fredoka', sans-serif", weight: 600,
+    grad: ["#4338CA", "#6366F1"],
+    tagline: "Your verb-savvy buddy.",
+    meaning: "“Verb” + “buddy”. “Verb” is the same word in German, and close to French “verbe” and Italian “verbo”.",
+    langs: ["EN buddy", "DE Verb", "FR verbe", "IT verbo"],
+    concept: "A friendly chat bubble whose smile is a “V” (and a check mark: you got it right).",
+    risk: ["low", "Only a school gamification project on GitHub (“VerBuddy”)."],
+    svg: (p) => `
+      <path d="M30 30 h60 a12 12 0 0 1 12 12 v32 a12 12 0 0 1 -12 12 h-30 l-16 12 4 -12 h-18 a12 12 0 0 1 -12 -12 v-32 a12 12 0 0 1 12 -12z" fill="#fff"/>
+      <circle cx="46" cy="50" r="5.5" fill="#84CC16"/>
+      <circle cx="74" cy="50" r="5.5" fill="#84CC16"/>
+      <path d="M48 62 L60 74 L72 62" fill="none" stroke="#4338CA" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`
+  },
+  {
+    id: "parolino", name: "parolino", font: "'Manrope', sans-serif", weight: 800,
+    grad: ["#10B981", "#047857"],
+    tagline: "Every little word counts.",
+    meaning: "Italian “parola / parolina” (word / little word), French “parole” (speech).",
+    langs: ["IT parola", "FR parole"],
+    concept: "A lowercase “p” whose bowl is a speech bubble, mid-sentence (typing dots).",
+    risk: ["med", "“Paroloni” (a word-of-the-day app) is similar. Parolino SRL is an Italian food company."],
+    svg: (p) => `
+      <rect x="32" y="38" width="13" height="58" rx="6.5" fill="#fff"/>
+      <circle cx="62" cy="55" r="19.5" fill="none" stroke="#fff" stroke-width="13"/>
+      <path d="M74 68 L92 84 L70 78 Z" fill="#fff"/>
+      <g fill="#fff"><circle cx="56" cy="55" r="2.6"/><circle cx="62.5" cy="55" r="2.6"/><circle cx="69" cy="55" r="2.6"/></g>`
+  },
+  {
+    id: "raconti", name: "Raconti", font: "'Playfair Display', serif", weight: 700,
+    grad: ["#9F1239", "#4C0519"],
+    tagline: "Tell me your story.",
+    meaning: "French “raconte(r)” (to tell) and Italian “racconti” (stories). Every conversation is a story.",
+    langs: ["FR raconter", "IT racconti"],
+    concept: "An open book whose story rises out loud as sound waves.",
+    risk: ["low", "No app found (only a Corsican story book of that name)."],
+    svg: (p) => `
+      <defs><linearGradient id="${p}pg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FEF3C7"/><stop offset="1" stop-color="#FCD34D"/></linearGradient></defs>
+      <path d="M22 86 C35 79 48 79 60 86 V52 C48 45 35 45 22 52 Z" fill="url(#${p}pg)"/>
+      <path d="M98 86 C85 79 72 79 60 86 V52 C72 45 85 45 98 52 Z" fill="#FDE68A"/>
+      <path d="M60 52 V86" stroke="#9F1239" stroke-opacity=".35" stroke-width="2"/>
+      <path d="M48 40 Q60 28 72 40" fill="none" stroke="#FDE68A" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M40 30 Q60 12 80 30" fill="none" stroke="#FDE68A" stroke-opacity=".55" stroke-width="4.5" stroke-linecap="round"/>`
+  },
+  {
+    id: "kamarado", name: "Kamarado", font: "'Outfit', sans-serif", weight: 700,
+    grad: ["#2563EB", "#38BDF8"],
+    tagline: "A friend to talk to.",
+    meaning: "Esperanto for “friend / comrade”. Esperanto is the language designed to belong to everyone.",
+    langs: ["Esperanto", "DE Kamerad", "FR camarade", "IT camerata"],
+    concept: "Two people facing each other with a shared speech bubble: real conversation.",
+    risk: ["med", "A Shopware plugin and a game studio use the name, but no language app does."],
+    svg: (p) => `
+      <circle cx="37" cy="52" r="10" fill="#fff"/>
+      <path d="M19 94 C19 75 27 66 37 66 C47 66 55 75 55 94 Z" fill="#fff"/>
+      <circle cx="83" cy="52" r="10" fill="#fff" fill-opacity=".9"/>
+      <path d="M65 94 C65 75 73 66 83 66 C93 66 101 75 101 94 Z" fill="#fff" fill-opacity=".9"/>
+      <path d="M50 22 h20 a9 9 0 0 1 9 9 v4 a9 9 0 0 1 -9 9 h-6 l-4 6 -4 -6 h-6 a9 9 0 0 1 -9 -9 v-4 a9 9 0 0 1 9 -9z" fill="#FDE047"/>
+      <g fill="#2563EB"><circle cx="53" cy="33" r="2.4"/><circle cx="60" cy="33" r="2.4"/><circle cx="67" cy="33" r="2.4"/></g>`
+  },
+  {
+    id: "persolingo", name: "Persolingo", top: 3, font: "'Space Grotesk', sans-serif", weight: 700,
+    grad: ["#1F2937", "#0B0F19"],
+    tagline: "Design your persona. Speak your language.",
+    meaning: "“Persona” + “lingo”. It names the app's signature feature: tutors you design yourself.",
+    langs: ["EN/DE/FR/IT persona", "EN lingo"],
+    concept: "Three overlapping voices (personas) blending into one: many characters, one learner.",
+    risk: ["low", "No exact match. The “Porolingo” app series is similar."],
+    svg: (p) => `
+      <g style="mix-blend-mode:screen">
+        <circle cx="60" cy="47" r="22" fill="#F43F5E" fill-opacity=".92"/>
+        <circle cx="46" cy="70" r="22" fill="#3B82F6" fill-opacity=".92"/>
+        <circle cx="74" cy="70" r="22" fill="#FACC15" fill-opacity=".92"/>
+      </g>
+      <g fill="#fff">
+        <rect x="52" y="58" width="3.6" height="10" rx="1.8"/>
+        <rect x="58.2" y="55" width="3.6" height="16" rx="1.8"/>
+        <rect x="64.4" y="58" width="3.6" height="10" rx="1.8"/>
+      </g>`
+  },
+  {
+    id: "avalingo", name: "Avalingo", font: "'Sora', sans-serif", weight: 600,
+    grad: ["#0F172A", "#1E3A8A"],
+    tagline: "Face-to-face language practice.",
+    meaning: "“Avatar” + “lingo”. Highlights the realistic animated tutors.",
+    langs: ["EN avatar", "EN lingo"],
+    concept: "A speaking profile, with the voice flowing out as waves.",
+    risk: ["med", "“AvoLingo” exists on the App Store, which is close."],
+    svg: (p) => `
+      <defs><linearGradient id="${p}hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset="1" stop-color="#F59E0B"/></linearGradient></defs>
+      <path d="M42 96 V82 C32 77 27 67 27 56 C27 38 41 25 57 25 C72 25 82 36 82 49 L88 61 C89 63 88 65 86 65 H82 V73 C82 77 79 79 75 79 H64 V96 Z" fill="url(#${p}hg)"/>
+      <path d="M92 60 Q97 67 92 74" fill="none" stroke="#FDE68A" stroke-width="4" stroke-linecap="round"/>
+      <path d="M99 53 Q107 67 99 81" fill="none" stroke="#FDE68A" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/>`
+  }
+];
+
+let uid = 0;
+function icon(l, cls = "icon") {
+  const p = `${l.id}${++uid}`;
+  return `<svg class="${cls}" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${l.name} icon">
+    <defs><linearGradient id="${p}bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${l.grad[0]}"/><stop offset="1" stop-color="${l.grad[1]}"/></linearGradient></defs>
+    <rect width="120" height="120" rx="27" fill="url(#${p}bg)"/>${l.svg(p)}</svg>`;
+}
+function wordGradient(l) {
+  // Dark brand gradients (Persolingo, Avalingo) need a brighter text gradient to stay readable in dark mode.
+  if (l.id === "persolingo") return "linear-gradient(90deg,#F43F5E,#3B82F6 55%,#EAB308)";
+  if (l.id === "avalingo") return "linear-gradient(90deg,#F59E0B,#3B82F6)";
+  if (l.id === "raconti") return "linear-gradient(90deg,#BE123C,#D97706)";
+  return `linear-gradient(90deg,${l.grad[0]},${l.grad[1]})`;
+}
+
+document.getElementById("grid").innerHTML = logos.map((l, i) => `
+  <article class="card ${l.top ? "top" : ""}">
+    ${l.top ? `<span class="badge">Top pick #${l.top}</span>` : ""}
+    <span class="num">#${i + 1}</span>
+    <div class="hero">
+      ${icon(l)}
+      <div>
+        <div class="word" style="font-family:${l.font};font-weight:${l.weight};background-image:${wordGradient(l)}">${l.name}</div>
+        <div class="tagline">${l.tagline}</div>
+      </div>
+    </div>
+    <div class="meaning">${l.meaning}</div>
+    <div class="chips">${l.langs.map(x => `<span class="chip">${x}</span>`).join("")}</div>
+    <div class="concept"><strong>Logo idea:</strong> ${l.concept}</div>
+    <div class="risk"><b class="${l.risk[0]}">${l.risk[0] === "low" ? "Low" : "Medium"} name risk.</b> ${l.risk[1]}</div>
+  </article>`).join("");
+
+document.getElementById("picks").innerHTML = logos.filter(l => l.top).sort((a, b) => a.top - b.top)
+  .map(l => `<div class="pick">${icon(l, "")}<span>${l.name}</span><span class="rank">top pick #${l.top}</span></div>`).join("");
+
+const home = l => `<div class="app">${icon(l, "")}<span>${l.name.charAt(0).toUpperCase() + l.name.slice(1)}</span></div>`;
+document.getElementById("home1").innerHTML = logos.map(home).join("");
+document.getElementById("home2").innerHTML = logos.map(home).join("");
+
+document.getElementById("sizes").innerHTML = logos.map(l => `
+  <tr><td style="width:40%">${l.name}</td>
+    <td>${icon(l, "").replace("<svg", '<svg width="40" height="40"')}</td>
+    <td>${icon(l, "").replace("<svg", '<svg width="24" height="24"')}</td>
+    <td>${icon(l, "").replace("<svg", '<svg width="16" height="16"')}</td></tr>`).join("");
+
+const btn = document.getElementById("themeToggle");
+btn.addEventListener("click", () => {
+  const root = document.documentElement;
+  const isDark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = isDark ? "light" : "dark";
+});
+</script>
+</body>
+</html>

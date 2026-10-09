@@ -1,0 +1,53 @@
+# Dependencies and build output
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+coverage/
+
+# Expo / React Native
+.expo/
+apps/mobile/ios/
+apps/mobile/android/
+web-build/
+.metro-health-check*
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+*.orig.*
+
+# Environment and secrets: only *.example files are ever committed
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+
+# Python (backend)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Terraform
+infra/**/.terraform/
+infra/**/*.tfstate
+infra/**/*.tfstate.*
+infra/**/*.tfvars
+!infra/**/*.tfvars.example
+infra/**/.build/
+**/tfplan
+
+# OS / editors / local tooling
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log
+.playwright-mcp/
+.superpowers/

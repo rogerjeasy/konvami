@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Konvami Brand Guide</title>
+<link rel="icon" href="png/web/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f7fb; --surface: #ffffff; --text: #17162b; --muted: #66657a; --border: #e5e4ef;
+    --chip: #f0effa; --accent: #4f46e5; --code-bg: #f3f2fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1020; --surface: #141a2e; --text: #eef0ff; --muted: #a3a8c3; --border: #252d48;
+      --chip: #1d2540; --accent: #8b87ff; --code-bg: #10162a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1020; --surface: #141a2e; --text: #eef0ff; --muted: #a3a8c3; --border: #252d48;
+    --chip: #1d2540; --accent: #8b87ff; --code-bg: #10162a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; line-height: 1.55; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 16px 72px; }
+  h1, h2, h3 { font-family: Lexend, Inter, sans-serif; font-weight: 600; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(30px, 4.5vw, 44px); margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 14px; }
+  h3 { font-size: 15px; margin: 0 0 6px; }
+  p.lead { color: var(--muted); max-width: 760px; margin: 0; }
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+  .panel { border-radius: 22px; padding: 36px 28px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); }
+  .panel.light { background: #ffffff; }
+  .panel.dark { background: #0b1020; border-color: #0b1020; }
+  .panel img { width: 100%; max-width: 440px; height: auto; display: block; }
+  .story { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 20px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .sw { border-radius: 16px; overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
+  .sw .c { height: 84px; }
+  .sw .t { padding: 10px 12px; font-size: 13px; }
+  .sw .t b { display: block; font-size: 14px; }
+  .sw .t code { font-family: "JetBrains Mono", monospace; color: var(--muted); font-size: 12px; }
+  .assets { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .asset { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .thumb { height: 150px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+           background-color: #eceaf5; background-image: linear-gradient(45deg,#e1dfee 25%,transparent 25%),linear-gradient(-45deg,#e1dfee 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e1dfee 75%),linear-gradient(-45deg,transparent 75%,#e1dfee 75%);
+           background-size: 16px 16px; background-position: 0 0,0 8px,8px -8px,-8px 0; }
+  .thumb.dark { background: #1f2333; }
+  .thumb.indigo { background: #4f46e5; }
+  .thumb img { max-width: 82%; max-height: 82%; display: block; }
+  .thumb img.circle { border-radius: 50%; }
+  .thumb img.ios { border-radius: 22.5%; }
+  .asset .name { font-weight: 600; font-size: 14px; }
+  .asset code { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--muted); word-break: break-all; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .rules ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+  .rules li { margin: 4px 0; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; overflow-x: auto;
+        font-family: "JetBrains Mono", monospace; font-size: 12.5px; line-height: 1.6; margin: 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .toggle { position: fixed; top: 14px; right: 14px; background: var(--surface); color: var(--text); border: 1px solid var(--border);
+            border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+  .type-sample { font-family: Lexend, sans-serif; }
+  @media (max-width: 760px) { .hero, .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<button class="toggle" id="themeToggle" type="button">Toggle theme</button>
+<div class="wrap">
+  <h1>Konvami brand guide</h1>
+  <p class="lead">Konvami: <em>Konversation</em> + <em>ami</em>. Your conversation friend, in every language. This page holds the logo, colours, type and every exported asset for the iOS and Android apps, the stores and the web console.</p>
+
+  <div class="hero">
+    <div class="panel light"><img src="svg/konvami-lockup-gradient.svg" alt="Konvami logo, gradient wordmark"></div>
+    <div class="panel dark"><img src="svg/konvami-lockup-white.svg" alt="Konvami logo, white wordmark"></div>
+  </div>
+
+  <h2>The idea</h2>
+  <div class="story">
+    <div class="card"><h3>The name</h3><p>German <em>Konversation</em> + French <em>ami</em> (friend). Short, easy to say in English, German, French and Italian, and free on every check (stores, companies, trademarks, domains).</p></div>
+    <div class="card"><h3>The face</h3><p>A speech bubble that smiles back: your persona is a buddy, not a textbook. It listens, chats and laughs with you.</p></div>
+    <div class="card"><h3>The tongue</h3><p>In French (<em>langue</em>) and Italian (<em>lingua</em>), “tongue” and “language” are the same word. The playful tongue says: let's speak, and don't be afraid of mistakes.</p></div>
+  </div>
+
+  <h2>Colours</h2>
+  <div class="swatches">
+    <div class="sw"><div class="c" style="background:#14B8A6"></div><div class="t"><b>Konvami Teal</b><code>#14B8A6</code></div></div>
+    <div class="sw"><div class="c" style="background:#4F46E5"></div><div class="t"><b>Konvami Indigo</b><code>#4F46E5</code></div></div>
+    <div class="sw"><div class="c" style="background:linear-gradient(135deg,#14B8A6,#4F46E5)"></div><div class="t"><b>Brand gradient</b><code>135° teal → indigo</code></div></div>
+    <div class="sw"><div class="c" style="background:#4338CA"></div><div class="t"><b>Face Ink</b><code>#4338CA</code></div></div>
+    <div class="sw"><div class="c" style="background:#F472B6"></div><div class="t"><b>Tongue Pink</b><code>#F472B6</code></div></div>
+    <div class="sw"><div class="c" style="background:#1E1B4B"></div><div class="t"><b>Deep Ink (text)</b><code>#1E1B4B</code></div></div>
+    <div class="sw"><div class="c" style="background:#0B1020"></div><div class="t"><b>Night (dark bg)</b><code>#0B1020</code></div></div>
+    <div class="sw"><div class="c" style="background:#EEF2FF"></div><div class="t"><b>Mist (light bg)</b><code>#EEF2FF</code></div></div>
+  </div>
+
+  <h2>Typography</h2>
+  <div class="two">
+    <div class="card"><h3>Wordmark and headings: Lexend SemiBold</h3><p class="type-sample" style="font-size:30px;color:var(--text);font-weight:600">Hallo! Salut! Ciao!</p><p>The wordmark SVGs are converted to outlines, so they never depend on the font being installed. Lexend was designed to improve reading fluency, a good fit for a learning app. Licence: SIL Open Font License.</p></div>
+    <div class="card"><h3>Interface text: Inter</h3><p style="font-size:18px;color:var(--text);font-family:Inter">Wie war dein Wochenende? Erzähl mal!</p><p>Excellent legibility at small sizes, with full support for German, French and Italian accents (ä ö ü ß é è à ç). Licence: SIL Open Font License.</p></div>
+  </div>
+
+  <h2>Exported assets</h2>
+  <div class="assets" id="assets"></div>
+
+  <h2>Usage rules</h2>
+  <div class="rules">
+    <div class="card"><h3>Do</h3><ul>
+      <li>Keep clear space around the icon of at least ¼ of its height.</li>
+      <li>Use the white wordmark on dark or photo backgrounds, and the gradient or ink version on light ones.</li>
+      <li>Use the monochrome mark wherever the system recolours icons (Android themed icons, notifications).</li>
+      <li>Minimum sizes: icon 16 px, lockup 96 px wide.</li>
+    </ul></div>
+    <div class="card"><h3>Don't</h3><ul>
+      <li>Stretch, rotate or skew the logo.</li>
+      <li>Recolour the face or remove the tongue in full-colour versions.</li>
+      <li>Put the gradient icon on busy, similarly coloured backgrounds.</li>
+      <li>Retype the wordmark in another font. Use the SVG files.</li>
+    </ul></div>
+  </div>
+
+  <h2>Expo configuration</h2>
+  <div class="two">
+    <pre>// app.config.ts (excerpt)
+export default {
+  name: "Konvami",
+  slug: "konvami",
+  icon: "./assets/brand/ios/icon-1024.png",
+  ios: {
+    bundleIdentifier: "app.konvami",
+  },
+  android: {
+    package: "app.konvami",
+    adaptiveIcon: {
+      foregroundImage: "./assets/brand/android/adaptive-foreground-1024.png",
+      backgroundImage: "./assets/brand/android/adaptive-background-1024.png",
+      monochromeImage: "./assets/brand/android/adaptive-monochrome-1024.png",
+    },
+  },
+  web: { favicon: "./assets/brand/web/favicon-48.png" },
+  plugins: [
+    ["expo-splash-screen", {
+      image: "./assets/brand/splash/splash-icon-1024.png",
+      imageWidth: 180,
+      backgroundColor: "#4F46E5",
+      dark: { backgroundColor: "#0B1020" },
+    }],
+    ["expo-notifications", {
+      icon: "./assets/brand/android/notification-icon-96.png",
+      color: "#4F46E5",
+    }],
+  ],
+};</pre>
+    <pre>// tailwind.config.js (NativeWind / web console)
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        konvami: {
+          teal:   "#14B8A6",
+          indigo: "#4F46E5",
+          ink:    "#4338CA",
+          tongue: "#F472B6",
+          deep:   "#1E1B4B",
+          night:  "#0B1020",
+          mist:   "#EEF2FF",
+        },
+      },
+      fontFamily: {
+        display: ["Lexend_600SemiBold", "Lexend"],
+        sans:    ["Inter_400Regular", "Inter"],
+      },
+      backgroundImage: {
+        "konvami-gradient":
+          "linear-gradient(135deg, #14B8A6, #4F46E5)",
+      },
+    },
+  },
+};
+
+/* shadcn/ui CSS variables (web console) */
+:root {
+  --primary: 243 75% 59%;   /* #4F46E5 */
+  --accent:  173 80% 40%;   /* #14B8A6 */
+}</pre>
+  </div>
+</div>
+
+<script>
+const assets = [
+  ["App Store / iOS icon", "png/ios/icon-1024.png", "1024×1024, no transparency", "ios"],
+  ["Android adaptive (composed)", "png/store/play-store-icon-512.png", "Foreground + background, launcher mask", "circle"],
+  ["Adaptive foreground", "png/android/adaptive-foreground-1024.png", "1024×1024, transparent, inside the 66% safe zone", "indigo"],
+  ["Adaptive background", "png/android/adaptive-background-1024.png", "1024×1024 gradient", ""],
+  ["Themed icon (monochrome)", "png/android/adaptive-monochrome-1024.png", "Android 13+ themed icons", ""],
+  ["Notification icon", "png/android/notification-icon-96.png", "96×96, white on transparent", "dark"],
+  ["Splash icon", "png/splash/splash-icon-1024.png", "On #4F46E5 (light) / #0B1020 (dark)", "indigo"],
+  ["Google Play icon", "png/store/play-store-icon-512.png", "512×512, Google applies the mask", ""],
+  ["Favicon & web", "png/web/icon-512.png", "favicon.ico, 16/32/48, apple-touch 180, PWA 192/512", ""],
+  ["Lockup (gradient)", "png/marketing/lockup-gradient.png", "1425×400 · SVG available", ""],
+  ["Lockup (white)", "png/marketing/lockup-white.png", "For dark backgrounds", "dark"],
+  ["Tinted mark", "png/marketing/mark-tinted-1024.png", "Single-colour gradient mark for print/merch", ""],
+];
+document.getElementById("assets").innerHTML = assets.map(([n, src, note, cls]) => `
+  <div class="asset">
+    <div class="thumb ${cls === "dark" ? "dark" : cls === "indigo" ? "indigo" : ""}">
+      <img src="${src}" alt="${n}" class="${cls === "circle" ? "circle" : cls === "ios" ? "ios" : ""}">
+    </div>
+    <div class="name">${n}</div>
+    <div style="font-size:13px;color:var(--muted)">${note}</div>
+    <code>${src}</code>
+  </div>`).join("");
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const r = document.documentElement;
+  const dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark";
+});
+</script>
+</body>
+</html>

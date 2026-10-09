@@ -1,0 +1,77 @@
+import '../../global.css';
+import '@/i18n';
+import { useEffect, useState } from 'react';
+import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+// One import per weight: the package root would bundle every font file.
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { Lexend_600SemiBold } from '@expo-google-fonts/lexend/600SemiBold';
+import { AuthServicesProvider, authServices } from '@/auth';
+import { followPhoneLanguage, loadPreferences } from '@/preferences';
+import { SignUpDraftProvider } from '@/screens/create-account/draft';
+import { AccessDraftProvider } from '@/screens/sign-in/draft';
+import { ThemeProvider, useTheme } from '@/theme';
+
+// The native splash stays up until fonts, saved preferences and the saved session are ready, so
+// nothing flickers and a signed-in user never sees the signed-out screens.
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Lexend_600SemiBold,
+  });
+  const [prefsReady, setPrefsReady] = useState(false);
+  useEffect(() => {
+    // Neither call throws: a broken store means defaults and signed out, never a stuck splash.
+    Promise.all([loadPreferences(), authServices.session.restore()]).finally(() =>
+      setPrefsReady(true),
+    );
+    return followPhoneLanguage();
+  }, []);
+
+  const ready = (fontsLoaded || Boolean(fontError)) && prefsReady;
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
+
+  if (!ready) return null;
+
+  return (
+    <ThemeProvider>
+      <AuthServicesProvider services={authServices}>
+        <SignUpDraftProvider>
+          <AccessDraftProvider>
+            <StatusBar style="auto" />
+            <RootStack />
+          </AccessDraftProvider>
+        </SignUpDraftProvider>
+      </AuthServicesProvider>
+    </ThemeProvider>
+  );
+}
+
+function RootStack() {
+  const { color } = useTheme();
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
+      <Stack.Screen name="index" options={{ animation: 'none' }} />
+      <Stack.Screen name="intro" options={{ animation: 'fade' }} />
+      <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
+      {/* Reached by replacing the screen before them: a fade reads as "next", not "back". */}
+      <Stack.Screen name="ai-consent" options={{ animation: 'fade' }} />
+      <Stack.Screen name="all-set" options={{ animation: 'fade' }} />
+      <Stack.Screen name="home" options={{ animation: 'fade' }} />
+      <Stack.Screen name="welcome-back" options={{ animation: 'fade' }} />
+      <Stack.Screen name="password-updated" options={{ animation: 'fade' }} />
+    </Stack>
+  );
+}

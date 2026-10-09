@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored). Never commit real values.
+
+budget_alert_emails = ["you@example.com"]
+
+# budget = { target_usd = 150, ceiling_usd = 250 }
+
+# github_deploy = {
+#   repository     = "<owner>/konvami"
+#   subject_prefix = "repo:<owner>@<owner-id>/konvami@<repo-id>"
+#   environment    = "dev"
+# }
