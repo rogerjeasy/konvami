@@ -744,6 +744,11 @@ export const de: Translation = {
   account: {
     title: 'Konto',
   },
+  screenError: {
+    title: 'Etwas ist schiefgelaufen',
+    body: 'Dieser Bildschirm konnte nicht angezeigt werden. Bitte versuch es noch einmal.',
+    home: 'Zurück zum Start',
+  },
   upcoming: {
     title: 'Kommt als Nächstes',
     body: 'Dieser Bildschirm gehört zum nächsten Bauschritt.',

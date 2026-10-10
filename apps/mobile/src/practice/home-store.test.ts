@@ -65,6 +65,23 @@ describe('home store', () => {
     expect(store.getState().phase).toBe('ready');
   });
 
+  it('counts a client that breaks instead of answering as a failed load', async () => {
+    const clock = { now: 1_000_000 };
+    const broken = {
+      getHome: () => {
+        throw new TypeError('undefined is not a function');
+      },
+    };
+    const store = createHomeStore(broken, {
+      timeZone: () => 'Europe/Zurich',
+      now: () => clock.now,
+    });
+
+    await store.load();
+
+    expect(store.getState()).toMatchObject({ phase: 'failed', error: 'unknown' });
+  });
+
   it('keeps showing what it has while it refreshes', async () => {
     const { api, store } = setup();
     await store.load();

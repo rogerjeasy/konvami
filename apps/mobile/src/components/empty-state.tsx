@@ -28,7 +28,7 @@ export function EmptyState({
       </Reveal>
       <Reveal delay={staggerDelay(1)}>
         <View className="items-center gap-2">
-          <Text variant="heading" className="text-center">
+          <Text variant="heading" accessibilityRole="header" className="text-center">
             {title}
           </Text>
           <Text tone="muted" className="text-center">
