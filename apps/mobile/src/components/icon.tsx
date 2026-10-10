@@ -46,6 +46,14 @@ const ICONS = {
       <Path d="M12 18v4" />
     </>
   ),
+  micOff: (
+    <>
+      <Path d="M1 1l22 22" />
+      <Path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+      <Path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+      <Path d="M12 19v4M8 23h8" />
+    </>
+  ),
   volume: (
     <>
       <Path d="M11 5L6 9H2v6h4l5 4V5z" />
@@ -130,6 +138,73 @@ const ICONS = {
     </>
   ),
   close: <Path d="M18 6L6 18M6 6l12 12" />,
+  chevronRight: <Path d="M9 18l6-6-6-6" />,
+  barChart: <Path d="M12 20V10M18 20V4M6 20v-4" />,
+  message: <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+  target: (
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Circle cx="12" cy="12" r="6" />
+      <Circle cx="12" cy="12" r="2" />
+    </>
+  ),
+  compass: (
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" />
+    </>
+  ),
+  briefcase: (
+    <>
+      <Rect x="2" y="7" width="20" height="14" rx="2" />
+      <Path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </>
+  ),
+  award: (
+    <>
+      <Circle cx="12" cy="8" r="7" />
+      <Path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
+    </>
+  ),
+  home: (
+    <>
+      <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <Path d="M9 22V12h6v10" />
+    </>
+  ),
+  users: (
+    <>
+      <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <Circle cx="9" cy="7" r="4" />
+      <Path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
+  ),
+  film: (
+    <>
+      <Rect x="2" y="2" width="20" height="20" rx="2.18" />
+      <Path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5" />
+    </>
+  ),
+  plusCircle: (
+    <>
+      <Circle cx="12" cy="12" r="10" />
+      <Path d="M12 8v8M8 12h8" />
+    </>
+  ),
+  edit: <Path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />,
+  calendar: (
+    <>
+      <Rect x="3" y="4" width="18" height="18" rx="2" />
+      <Path d="M16 2v4M8 2v4M3 10h18" />
+    </>
+  ),
+  refresh: (
+    <>
+      <Path d="M23 4v6h-6" />
+      <Path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </>
+  ),
   check: <Path d="M20 6L9 17l-5-5" />,
   book: (
     <>

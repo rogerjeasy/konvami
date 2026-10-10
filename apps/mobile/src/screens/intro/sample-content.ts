@@ -1,10 +1,21 @@
+import type { AvatarLook } from '@/components/avatar/look';
+
 /**
  * Sample learner content shown in the intro illustrations: a German learner talking with the
  * persona Lena. This is target-language demo content, not UI copy, so it is not translated
  * (the glosses and labels around it are, in src/i18n). Numbers are illustrative, not user data.
  */
 export const SAMPLE = {
-  persona: { name: 'Lena' },
+  persona: {
+    name: 'Lena',
+    look: {
+      skin: 'sand',
+      hair: 'long',
+      hairColor: 'chestnut',
+      top: 'teal',
+      backdrop: 'mist',
+    } satisfies AvatarLook,
+  },
   chat: {
     personaLine: 'Na, wie war dein Wochenende?',
     learnerLine: 'Super! Ich war auf einem Konzert.',

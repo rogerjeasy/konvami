@@ -15,9 +15,11 @@
     "doctor": "expo-doctor"
   },
   "dependencies": {
+    "@config-plugins/react-native-webrtc": "^15.0.2",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/lexend": "^0.4.1",
     "@expo/metro-runtime": "~57.0.16",
+    "@konvami/api-client": "workspace:*",
     "@konvami/design-tokens": "workspace:*",
     "expo": "~57.0.27",
     "expo-audio": "~57.0.5",
@@ -45,6 +47,7 @@
     "react-native-screens": "~4.26.2",
     "react-native-svg": "15.15.4",
     "react-native-web": "^0.21.3",
+    "react-native-webrtc": "^124.0.8",
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {

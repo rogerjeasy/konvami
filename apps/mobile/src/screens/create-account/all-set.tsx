@@ -18,6 +18,7 @@ import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { heroDrawingSize, ILLUSTRATION_MAX_FONT_SCALE } from '@/lib/layout';
 import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
+import { useOnboardingStore } from '@/onboarding/services';
 import { useTheme } from '@/theme';
 import { SETUP } from './sample-content';
 
@@ -79,24 +80,31 @@ function GreetingIllustration({ name }: { name: string }) {
 
 /**
  * 2.7 All set: the account is ready. From here the setup guide tunes the app to the learner
- * (spec §6.1); until that conversation exists, both buttons lead to the placeholder.
+ * (spec §6.1), by voice (4.1) or with the form (4.2).
  */
 export function AllSetScreen() {
   const { t } = useTranslation();
   const { color } = useTheme();
   const { status, user } = useSession();
+  const onboarding = useOnboardingStore();
 
   // One success haptic, with the celebration it belongs to.
   useEffect(() => {
     if (status === 'signedIn') successFeedback();
   }, [status]);
 
+  // Loaded while the user reads, so the first question is ready when they tap. On dev this
+  // also wakes a paused database.
+  useEffect(() => {
+    if (status === 'signedIn') void onboarding.load();
+  }, [status, onboarding]);
+
   if (status !== 'signedIn' || !user) return <Redirect href={ROUTES.welcome} />;
 
   const guide = SETUP.guide.name;
   const start = () => {
     commitFeedback();
-    router.replace(ROUTES.home);
+    router.push(ROUTES.onboardingTalk);
   };
 
   return (
@@ -116,7 +124,7 @@ export function AllSetScreen() {
           </Reveal>
           <Reveal delay={staggerDelay(ORDER.guide)}>
             <Card className="mt-2 flex-row items-center gap-3 bg-bg p-3.5">
-              <PersonaAvatar name={guide} tone="guide" diameter={size.avatarMd} />
+              <PersonaAvatar look={SETUP.guide.look} diameter={size.avatarMd} />
               <View className="flex-1 gap-0.5">
                 <Text variant="labelMedium">{t('allSet.guide', { name: guide })}</Text>
                 <Text variant="small" tone="subtle">
@@ -156,7 +164,7 @@ export function AllSetScreen() {
             <TextButton
               tone="primary"
               label={t('allSet.form')}
-              onPress={() => router.replace(ROUTES.home)}
+              onPress={() => router.push(ROUTES.onboardingLanguage)}
             />
           </Reveal>
         </>

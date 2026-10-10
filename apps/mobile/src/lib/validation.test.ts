@@ -1,7 +1,6 @@
 import {
   ageBracket,
   ageOn,
-  daysInMonth,
   isEmail,
   isOldEnough,
   isVerificationCode,
@@ -56,17 +55,6 @@ describe('ageBracket', () => {
     [101, '65+'],
   ] as const)('puts %i in %s', (age, bracket) => {
     expect(ageBracket(age)).toBe(bracket);
-  });
-});
-
-describe('daysInMonth', () => {
-  it('knows month lengths and leap years', () => {
-    expect(daysInMonth(2026, 1)).toBe(31);
-    expect(daysInMonth(2026, 4)).toBe(30);
-    expect(daysInMonth(2026, 2)).toBe(28);
-    expect(daysInMonth(2024, 2)).toBe(29);
-    expect(daysInMonth(1900, 2)).toBe(28);
-    expect(daysInMonth(2000, 2)).toBe(29);
   });
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  avatar,
   brand,
   color,
   contrastRatio,
@@ -56,14 +57,26 @@ it('keeps the splash text readable on the light splash', () => {
   expect(contrastRatio(color.light.onSplash, color.light.splash)).toBeGreaterThanOrEqual(4.5);
 });
 
-it('keeps the avatar initial readable', () => {
-  expect(contrastRatio(brand.onAvatar, brand.avatar)).toBeGreaterThanOrEqual(4.5);
-});
-
-it('keeps the setup guide initial readable', () => {
-  expect(contrastRatio(brand.onGuide, brand.guide)).toBeGreaterThanOrEqual(4.5);
-});
-
 it('keeps the greeting bubble text readable', () => {
   expect(contrastRatio(brand.onBubble, brand.bubble)).toBeGreaterThanOrEqual(4.5);
+});
+
+describe('avatar palette', () => {
+  it('shades every skin tone darker than its base, so shadows read as shadows', () => {
+    for (const [name, tone] of Object.entries(avatar.skin)) {
+      const lighter = contrastRatio(tone.base, '#000000');
+      const darker = contrastRatio(tone.shade, '#000000');
+      expect([name, darker < lighter]).toEqual([name, true]);
+    }
+  });
+
+  it('keeps the eyes visible on every skin tone (dark iris on light skin, eye white on dark)', () => {
+    for (const [name, tone] of Object.entries(avatar.skin)) {
+      const visible = Math.max(
+        contrastRatio(avatar.feature, tone.base),
+        contrastRatio(avatar.eyeWhite, tone.base),
+      );
+      expect([name, visible >= 3]).toEqual([name, true]);
+    }
+  });
 });

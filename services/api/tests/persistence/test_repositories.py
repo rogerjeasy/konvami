@@ -1,0 +1,470 @@
+"""The contract every repository keeps. It runs against PostgreSQL and against the in-memory
+fakes, so tests that use the fakes are testing something the real database also does.
+"""
+
+import json
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta, timezone
+from typing import Any
+from uuid import UUID
+
+import pytest
+
+from konvami_api.domain.live_call import Turn
+from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
+from konvami_api.domain.personas import Persona, PersonaRepository
+from konvami_api.domain.placement import PlacementRepository, PlacementResult
+from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
+from konvami_api.domain.voice import (
+    CallPurpose,
+    FinishedCall,
+    VoiceSession,
+    VoiceSessionRepository,
+)
+from konvami_api.persistence.repositories import (
+    SqlOnboardingRepository,
+    SqlPersonaRepository,
+    SqlPlacementRepository,
+    SqlProfileRepository,
+    SqlVoiceSessionRepository,
+)
+from konvami_api.persistence.sql import SqlClient
+from tests.fakes import (
+    InMemoryOnboardingRepository,
+    InMemoryPersonaRepository,
+    InMemoryPlacementRepository,
+    InMemoryProfileRepository,
+    InMemoryVoiceSessionRepository,
+)
+
+USER = UUID("11111111-1111-4111-8111-111111111111")
+OTHER_USER = UUID("22222222-2222-4222-8222-222222222222")
+NOON = datetime(2026, 10, 9, 12, 0, 0, 123456, tzinfo=UTC)
+
+# (scope, field, old value, new value) of each logged change, oldest first.
+History = Callable[[UUID], list[tuple[str, str, Any, Any]]]
+
+
+@dataclass
+class Profiles:
+    repository: ProfileRepository
+    history: History
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def profiles(request: pytest.FixtureRequest) -> Profiles:
+    if request.param == "memory":
+        fake = InMemoryProfileRepository()
+        return Profiles(
+            fake,
+            lambda user: [(c.scope, c.field, c.old_value, c.new_value) for c in fake.history(user)],
+        )
+    db: SqlClient = request.getfixturevalue("db")
+
+    def history(user: UUID) -> list[tuple[str, str, Any, Any]]:
+        rows = db.execute(
+            "SELECT scope, field, old_value::text AS old, new_value::text AS new"
+            " FROM profile_change WHERE user_id = CAST(:user AS uuid) ORDER BY id",
+            {"user": str(user)},
+        )
+        return [
+            (row["scope"], row["field"], json.loads(row["old"]), json.loads(row["new"]))
+            for row in rows
+        ]
+
+    return Profiles(SqlProfileRepository(db), history)
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def onboarding(request: pytest.FixtureRequest) -> OnboardingRepository:
+    if request.param == "memory":
+        return InMemoryOnboardingRepository()
+    return SqlOnboardingRepository(request.getfixturevalue("db"))
+
+
+def change(
+    field: str,
+    new: Any,
+    *,
+    old: Any = None,
+    scope: str = "de",
+    source: Source = Source.ASKED,
+    origin: Origin = Origin.FORM,
+    at: datetime = NOON,
+) -> ChangeRecord:
+    return ChangeRecord(scope, field, old, new, source, origin, at)
+
+
+def test_an_unknown_user_has_an_empty_profile(profiles: Profiles) -> None:
+    assert profiles.repository.load(USER).fields == {}
+
+
+def test_saved_values_are_read_back_with_source_and_time(profiles: Profiles) -> None:
+    profiles.repository.save(
+        USER,
+        [
+            change("target_language", "de", scope="global"),
+            change("goals", {"reasons": ["work", "exam"], "note": "Zürich: «Grüezi»"}),
+            change("self_assessed_level", "A2", source=Source.MEASURED, origin=Origin.SYSTEM),
+        ],
+    )
+
+    fields = profiles.repository.load(USER).fields
+    assert set(fields) == {
+        ("global", "target_language"),
+        ("de", "goals"),
+        ("de", "self_assessed_level"),
+    }
+    assert fields[("de", "goals")].value == {
+        "reasons": ["work", "exam"],
+        "note": "Zürich: «Grüezi»",
+    }
+    assert fields[("de", "goals")].source is Source.ASKED
+    assert fields[("de", "goals")].updated_at == NOON
+    assert fields[("de", "self_assessed_level")].source is Source.MEASURED
+
+
+def test_the_answer_none_is_stored_as_an_answer(profiles: Profiles) -> None:
+    profiles.repository.save(USER, [change("exam", None)])
+
+    fields = profiles.repository.load(USER).fields
+    assert ("de", "exam") in fields
+    assert fields[("de", "exam")].value is None
+
+
+def test_a_later_save_replaces_the_value(profiles: Profiles) -> None:
+    later = NOON + timedelta(days=1)
+    profiles.repository.save(USER, [change("self_assessed_level", "A2")])
+    profiles.repository.save(USER, [change("self_assessed_level", "B1", old="A2", at=later)])
+
+    stored = profiles.repository.load(USER).fields[("de", "self_assessed_level")]
+    assert (stored.value, stored.updated_at) == ("B1", later)
+
+
+def test_two_changes_to_one_field_in_one_save_keep_the_last(profiles: Profiles) -> None:
+    profiles.repository.save(
+        USER,
+        [
+            change("self_assessed_level", "A2"),
+            change("course", None),
+            change("self_assessed_level", "B1", old="A2"),
+        ],
+    )
+
+    assert profiles.repository.load(USER).fields[("de", "self_assessed_level")].value == "B1"
+    assert profiles.history(USER) == [
+        ("de", "self_assessed_level", None, "A2"),
+        ("de", "course", None, None),
+        ("de", "self_assessed_level", "A2", "B1"),
+    ]
+
+
+def test_times_are_read_back_in_utc_whatever_zone_they_were_saved_in(profiles: Profiles) -> None:
+    zurich = timezone(timedelta(hours=2))
+    profiles.repository.save(
+        USER, [change("course", None, at=datetime(2026, 10, 9, 14, 0, tzinfo=zurich))]
+    )
+
+    stored = profiles.repository.load(USER).fields[("de", "course")].updated_at
+    assert stored == datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
+    assert stored.utcoffset() == timedelta(0)
+
+
+def test_profiles_do_not_leak_between_users(profiles: Profiles) -> None:
+    profiles.repository.save(USER, [change("self_assessed_level", "A2")])
+
+    assert profiles.repository.load(OTHER_USER).fields == {}
+    assert profiles.history(OTHER_USER) == []
+
+
+def test_saving_nothing_is_allowed(profiles: Profiles) -> None:
+    profiles.repository.save(USER, [])
+
+    assert profiles.repository.load(USER).fields == {}
+
+
+def test_a_user_who_has_not_started_has_the_default_onboarding_state(
+    onboarding: OnboardingRepository,
+) -> None:
+    assert onboarding.load(USER) == OnboardingState()
+
+
+def test_onboarding_progress_is_read_back(onboarding: OnboardingRepository) -> None:
+    state = OnboardingState(essentials_confirmed_at=NOON, placement=PlacementStatus.SKIPPED)
+
+    onboarding.save(USER, state)
+
+    assert onboarding.load(USER) == state
+    assert onboarding.load(OTHER_USER) == OnboardingState()
+
+
+def test_onboarding_progress_can_be_updated(onboarding: OnboardingRepository) -> None:
+    onboarding.save(USER, OnboardingState(essentials_confirmed_at=NOON))
+    onboarding.save(
+        USER, OnboardingState(essentials_confirmed_at=NOON, placement=PlacementStatus.SKIPPED)
+    )
+
+    assert onboarding.load(USER).placement is PlacementStatus.SKIPPED
+
+
+# --- Voice sessions --------------------------------------------------------------------------
+
+
+@dataclass
+class Sessions:
+    repository: VoiceSessionRepository
+    # (outcome, usage, [(speaker, text)]) of a finished call, or None while it runs.
+    result: Callable[[str], tuple[str, dict[str, int], list[tuple[str, str]]] | None]
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def sessions(request: pytest.FixtureRequest) -> Sessions:
+    if request.param == "memory":
+        fake = InMemoryVoiceSessionRepository()
+
+        def from_memory(call_id: str) -> tuple[str, dict[str, int], list[tuple[str, str]]] | None:
+            done = fake.finished.get(call_id)
+            if done is None:
+                return None
+            return done.outcome, dict(done.usage), [(t.speaker, t.text) for t in done.turns]
+
+        return Sessions(fake, from_memory)
+    db: SqlClient = request.getfixturevalue("db")
+
+    def from_database(call_id: str) -> tuple[str, dict[str, int], list[tuple[str, str]]] | None:
+        rows = db.execute(
+            "SELECT outcome, CAST(usage AS text) AS usage FROM voice_session"
+            " WHERE call_id = :call_id AND ended_at IS NOT NULL",
+            {"call_id": call_id},
+        )
+        if not rows:
+            return None
+        turns = db.execute(
+            "SELECT speaker, text FROM voice_turn WHERE call_id = :call_id ORDER BY position",
+            {"call_id": call_id},
+        )
+        return (
+            rows[0]["outcome"],
+            json.loads(rows[0]["usage"]),
+            [(turn["speaker"], turn["text"]) for turn in turns],
+        )
+
+    return Sessions(SqlVoiceSessionRepository(db), from_database)
+
+
+def session(call_id: str, user: UUID = USER, at: datetime = NOON) -> VoiceSession:
+    return VoiceSession(call_id, user, CallPurpose.ONBOARDING, "gpt-realtime-2.1-mini", at)
+
+
+USAGE = {
+    "input_text_tokens": 238,
+    "input_audio_tokens": 26,
+    "cached_input_tokens": 128,
+    "output_text_tokens": 60,
+    "output_audio_tokens": 182,
+}
+
+
+def test_a_started_call_can_be_found_by_its_id(sessions: Sessions) -> None:
+    sessions.repository.started(session("rtc_1"))
+
+    assert sessions.repository.get("rtc_1") == session("rtc_1")
+    assert sessions.repository.get("rtc_other") is None
+
+
+def test_calls_are_counted_per_learner_from_a_point_in_time(sessions: Sessions) -> None:
+    sessions.repository.started(session("rtc_1", at=NOON - timedelta(hours=30)))
+    sessions.repository.started(session("rtc_2", at=NOON - timedelta(hours=2)))
+    sessions.repository.started(session("rtc_3", at=NOON))
+    sessions.repository.started(session("rtc_4", user=OTHER_USER, at=NOON))
+
+    assert sessions.repository.count_since(USER, NOON - timedelta(hours=24)) == 2
+    assert sessions.repository.count_since(USER, NOON) == 1
+    assert sessions.repository.count_since(OTHER_USER, NOON - timedelta(hours=24)) == 1
+
+
+def test_a_finished_call_keeps_its_outcome_usage_and_what_was_said(sessions: Sessions) -> None:
+    sessions.repository.started(session("rtc_1"))
+    assert sessions.result("rtc_1") is None
+
+    sessions.repository.finish(
+        "rtc_1",
+        FinishedCall(
+            ended_at=NOON + timedelta(minutes=4),
+            outcome="finished",
+            usage=USAGE,
+            turns=(
+                Turn("persona", "Bonjour Amara ! On continue en français ?"),
+                Turn("learner", "Oui, « très bien »."),
+                Turn("persona", "Parfait."),
+            ),
+        ),
+    )
+
+    assert sessions.result("rtc_1") == (
+        "finished",
+        USAGE,
+        [
+            ("persona", "Bonjour Amara ! On continue en français ?"),
+            ("learner", "Oui, « très bien »."),
+            ("persona", "Parfait."),
+        ],
+    )
+
+
+def test_a_call_without_a_word_can_be_finished(sessions: Sessions) -> None:
+    sessions.repository.started(session("rtc_1"))
+
+    sessions.repository.finish(
+        "rtc_1", FinishedCall(ended_at=NOON, outcome="closed", usage=USAGE, turns=())
+    )
+
+    assert sessions.result("rtc_1") == ("closed", USAGE, [])
+
+
+def test_finishing_an_unknown_call_stores_nothing(sessions: Sessions) -> None:
+    sessions.repository.finish(
+        "rtc_ghost",
+        FinishedCall(ended_at=NOON, outcome="closed", usage=USAGE, turns=(Turn("learner", "Hi"),)),
+    )
+
+    assert sessions.result("rtc_ghost") is None
+    assert sessions.repository.get("rtc_ghost") is None
+
+
+# --- Placement results -----------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def placements(request: pytest.FixtureRequest) -> PlacementRepository:
+    if request.param == "memory":
+        return InMemoryPlacementRepository()
+    return SqlPlacementRepository(request.getfixturevalue("db"))
+
+
+RESULT = PlacementResult(
+    levels={
+        "speaking": "B1",
+        "listening": "B1",
+        "grammar": "A2",
+        "vocabulary": "A2",
+        "pronunciation": "B2",
+    },
+    overall="B1",
+    weak_areas=("Perfekt avec « sein » : ich bin gegangen", "L’ordre des mots après « weil »"),
+    measured_at=NOON,
+)
+
+
+def test_a_learner_without_a_test_has_no_result(placements: PlacementRepository) -> None:
+    assert placements.load(USER, "de") is None
+
+
+def test_a_result_is_read_back_as_it_was_stored(placements: PlacementRepository) -> None:
+    placements.save(USER, "de", RESULT)
+
+    assert placements.load(USER, "de") == RESULT
+    assert placements.load(USER, "fr") is None
+    assert placements.load(OTHER_USER, "de") is None
+
+
+def test_a_later_test_replaces_the_earlier_result(placements: PlacementRepository) -> None:
+    placements.save(USER, "de", RESULT)
+    later = PlacementResult(
+        levels=dict.fromkeys(RESULT.levels, "B2"),
+        overall="B2",
+        weak_areas=(),
+        measured_at=NOON + timedelta(days=30),
+    )
+
+    placements.save(USER, "de", later)
+
+    assert placements.load(USER, "de") == later
+
+
+# --- Personas and the last onboarding steps --------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def personas(request: pytest.FixtureRequest) -> PersonaRepository:
+    if request.param == "memory":
+        return InMemoryPersonaRepository()
+    return SqlPersonaRepository(request.getfixturevalue("db"))
+
+
+def persona(number: int, name: str, tagline: str | None = "Bavarde et curieuse") -> Persona:
+    return Persona(
+        id=UUID(f"aaaaaaaa-aaaa-4aaa-8aaa-{number:012d}"),
+        role="buddy",
+        name=name,
+        gender="female",
+        age=27,
+        origin="Leipzig",
+        tagline=tagline,
+        backstory="Lena arbeitet als Grafikerin in Leipzig und hat eine Katze namens Krümel.",
+        look={
+            "skin": "sand",
+            "hair": "long",
+            "hair_color": "chestnut",
+            "top": "teal",
+            "backdrop": "mist",
+            "glasses": False,
+            "beard": False,
+        },
+        voice="marin",
+    )
+
+
+def test_personas_are_read_back_in_the_order_they_were_added(personas: PersonaRepository) -> None:
+    personas.add(USER, "de", [persona(2, "Lena"), persona(1, "Jonas", tagline=None)])
+    personas.add(USER, "de", [persona(3, "Frau Weber")])
+
+    stored = personas.for_learner(USER, "de")
+
+    assert stored == [
+        persona(2, "Lena"),
+        persona(1, "Jonas", tagline=None),
+        persona(3, "Frau Weber"),
+    ]
+    assert personas.for_learner(USER, "fr") == []
+    assert personas.for_learner(OTHER_USER, "de") == []
+
+
+def test_a_persona_can_be_changed_by_its_owner_only(personas: PersonaRepository) -> None:
+    personas.add(USER, "de", [persona(1, "Lena"), persona(2, "Jonas")])
+    renamed = persona(1, "Lena Marie")
+
+    assert personas.update(OTHER_USER, renamed) is False
+    assert personas.for_learner(USER, "de")[0].name == "Lena"
+
+    assert personas.update(USER, renamed) is True
+    assert [p.name for p in personas.for_learner(USER, "de")] == ["Lena Marie", "Jonas"]
+
+
+def test_changing_a_persona_that_does_not_exist_reports_it(personas: PersonaRepository) -> None:
+    assert personas.update(USER, persona(9, "Nobody")) is False
+    assert personas.for_learner(USER, "de") == []
+
+
+def test_a_persona_can_be_removed_by_its_owner_only(personas: PersonaRepository) -> None:
+    personas.add(USER, "de", [persona(1, "Lena"), persona(2, "Jonas")])
+
+    assert personas.remove(OTHER_USER, persona(1, "Lena").id) is False
+    assert personas.remove(USER, persona(1, "Lena").id) is True
+    assert personas.remove(USER, persona(1, "Lena").id) is False
+
+    assert [p.name for p in personas.for_learner(USER, "de")] == ["Jonas"]
+
+
+def test_the_last_onboarding_steps_are_read_back(onboarding: OnboardingRepository) -> None:
+    state = OnboardingState(
+        essentials_confirmed_at=NOON,
+        placement=PlacementStatus.DECIDED,
+        partners_confirmed_at=NOON + timedelta(minutes=5),
+        completed_at=NOON + timedelta(minutes=6),
+    )
+
+    onboarding.save(USER, state)
+
+    assert onboarding.load(USER) == state

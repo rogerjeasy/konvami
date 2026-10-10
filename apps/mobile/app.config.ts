@@ -32,6 +32,9 @@ const config: ExpoConfig = {
       monochromeImage: './assets/brand/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+    // The WebRTC plugin below declares every permission the library can use. Konvami sends
+    // voice only: it never opens the camera and never draws over other apps.
+    blockedPermissions: ['android.permission.CAMERA', 'android.permission.SYSTEM_ALERT_WINDOW'],
   },
   web: {
     bundler: 'metro',
@@ -72,6 +75,18 @@ const config: ExpoConfig = {
         // Shown by iOS in the microphone prompt (after screen 2.6 explains it in the app language).
         microphonePermission:
           'Konvami uses the microphone during a practice session so your conversation partner can hear you and reply. It is never on in the background.',
+      },
+    ],
+    [
+      // Live voice calls (spec §10.2). A native module: voice works in development and store
+      // builds, not in Expo Go, where the voice screen offers the form instead.
+      '@config-plugins/react-native-webrtc',
+      {
+        // The same sentence as expo-audio above: iOS shows one microphone prompt for both.
+        microphonePermission:
+          'Konvami uses the microphone during a practice session so your conversation partner can hear you and reply. It is never on in the background.',
+        // Required by the plugin; the camera is never requested (see blockedPermissions).
+        cameraPermission: 'Konvami does not use the camera.',
       },
     ],
   ],

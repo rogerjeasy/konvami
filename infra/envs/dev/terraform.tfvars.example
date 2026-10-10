@@ -9,3 +9,8 @@ budget_alert_emails = ["you@example.com"]
 #   subject_prefix = "repo:<owner>@<owner-id>/konvami@<repo-id>"
 #   environment    = "dev"
 # }
+
+# The OpenAI API key (voice calls, text models). Stored in AWS Secrets Manager by Terraform and
+# never written to state. After changing it, also raise openai_api_key_version by one.
+openai_api_key = "sk-..."
+# openai_api_key_version = 1

@@ -12,10 +12,12 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { Lexend_600SemiBold } from '@expo-google-fonts/lexend/600SemiBold';
 import { AuthServicesProvider, authServices } from '@/auth';
+import { OnboardingProvider, onboardingStore } from '@/onboarding';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
 import { ThemeProvider, useTheme } from '@/theme';
+import { createAppVoiceEngine, VoiceProvider } from '@/voice';
 
 // The native splash stays up until fonts, saved preferences and the saved session are ready, so
 // nothing flickers and a signed-in user never sees the signed-out screens.
@@ -48,12 +50,16 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthServicesProvider services={authServices}>
-        <SignUpDraftProvider>
-          <AccessDraftProvider>
-            <StatusBar style="auto" />
-            <RootStack />
-          </AccessDraftProvider>
-        </SignUpDraftProvider>
+        <OnboardingProvider store={onboardingStore}>
+          <VoiceProvider createEngine={createAppVoiceEngine}>
+            <SignUpDraftProvider>
+              <AccessDraftProvider>
+                <StatusBar style="auto" />
+                <RootStack />
+              </AccessDraftProvider>
+            </SignUpDraftProvider>
+          </VoiceProvider>
+        </OnboardingProvider>
       </AuthServicesProvider>
     </ThemeProvider>
   );
@@ -72,6 +78,13 @@ function RootStack() {
       <Stack.Screen name="home" options={{ animation: 'fade' }} />
       <Stack.Screen name="welcome-back" options={{ animation: 'fade' }} />
       <Stack.Screen name="password-updated" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding/review" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding/talk" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding/placement/index" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding/placement/talk" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding/placement/result" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding/partners/index" options={{ animation: 'fade' }} />
+      <Stack.Screen name="onboarding/ready" options={{ animation: 'fade' }} />
     </Stack>
   );
 }

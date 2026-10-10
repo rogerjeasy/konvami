@@ -1,0 +1,60 @@
+[project]
+name = "konvami-api"
+version = "0.1.0"
+description = "Konvami backend: profile, onboarding and voice-call API (FastAPI on Lambda)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.142,<1",
+    "pydantic>=2.13,<3",
+    "mangum>=0.22,<1",
+    "httpx>=0.28,<1",
+    "websockets>=15,<17",
+]
+
+[tool.poetry]
+packages = [{ include = "konvami_api", from = "src" }]
+
+# boto3 is provided by the Lambda runtime, so it is a development dependency only.
+[tool.poetry.group.dev.dependencies]
+boto3 = "^1.43"
+mypy = "^2.4"
+pixeltable-pgserver = "^0.6"
+psycopg = { version = "^3.3", extras = ["binary"] }
+pytest = "^9.1"
+ruff = "^0.16"
+
+[build-system]
+requires = ["poetry-core>=2.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF", "PT", "DTZ", "T20"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert, build fixed SQL for their own throwaway schemas, and quote learner text with
+# its real punctuation.
+"tests/**" = ["S101", "S608", "RUF001"]
+# Queries here are assembled from constants in the same file; every value is a bound parameter.
+"src/konvami_api/persistence/repositories.py" = ["S608"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["src", "tests", "tools"]
+mypy_path = "src"
+
+# The AWS SDK ships no type information.
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*"]
+ignore_missing_imports = true

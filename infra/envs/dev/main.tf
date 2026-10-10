@@ -4,9 +4,10 @@
 # (profile nc-dev), the Terraform state bucket, and the GitHub OIDC identity provider.
 # Everything below is Konvami's own, named kv-<env>-*, tagged Project=konvami.
 #
-# Build order as features arrive (spec §10): budget alerts (now) → cognito (2 · Create account)
-# → database (RDS PostgreSQL + pgvector) → api (FastAPI on Lambda + API Gateway) → s3 audio +
-# CloudFront → secrets (OpenAI, ElevenLabs) → sqs/step functions (post-session pipeline).
+# Build order as features arrive (spec §10): budget alerts → cognito (2 · Create account) →
+# database (Aurora PostgreSQL) and api (FastAPI on Lambda + API Gateway) (4 · Onboarding) →
+# secrets (OpenAI, ElevenLabs) and voice calls → s3 audio + CloudFront → sqs/step functions
+# (post-session pipeline).
 
 locals {
   name = "kv-${var.environment}"
@@ -33,4 +34,40 @@ module "auth" {
   source = "../../modules/auth"
 
   name = local.name
+}
+
+# PostgreSQL for the profile and everything after it. Pauses when idle (onboarding design O1).
+module "database" {
+  source = "../../modules/database"
+
+  name = local.name
+}
+
+# The OpenAI API key, read by the API and the call worker at run time.
+module "openai_key" {
+  source = "../../modules/secret"
+
+  name          = "${local.name}-openai-api-key"
+  description   = "OpenAI API key for Konvami's voice calls and text models (${var.environment})"
+  value         = var.openai_api_key
+  value_version = var.openai_api_key_version
+}
+
+# The API: FastAPI on Lambda behind API Gateway, accepting the user pool's access tokens.
+# Build the package first: cd services/api && poetry run python -m tools.build_lambda
+module "api" {
+  source = "../../modules/api"
+
+  name        = local.name
+  package_dir = "${path.root}/../../../services/api/dist/lambda"
+  database    = module.database
+  auth = {
+    user_pool_id  = module.auth.user_pool_id
+    user_pool_arn = module.auth.user_pool_arn
+    client_id     = module.auth.client_id
+  }
+  openai_secret_arn    = module.openai_key.arn
+  voice                = var.voice
+  text_models          = var.text_models
+  cors_allowed_origins = var.web_preview_origins
 }

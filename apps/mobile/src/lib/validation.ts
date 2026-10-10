@@ -3,6 +3,8 @@
  * (the Cognito password policy in infra/modules/auth) enforces the same password rules.
  */
 
+import type { CalendarDate } from './dates';
+
 /** Minimum age to use Konvami (spec decision D16). */
 export const MINIMUM_AGE = 16;
 
@@ -14,12 +16,8 @@ const PASSWORD_LONG_LENGTH = 12;
 /** Digits in the email verification code Cognito sends. */
 export const CODE_LENGTH = 6;
 
-/** A calendar date as the user picks it: month is 1–12. */
-export interface BirthDate {
-  year: number;
-  month: number;
-  day: number;
-}
+/** A birthday, as picked on the date wheels. */
+export type BirthDate = CalendarDate;
 
 export type AgeBracket = '16-17' | '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+';
 
@@ -33,11 +31,6 @@ const BRACKETS: readonly [number, AgeBracket][] = [
   [18, '18-24'],
   [MINIMUM_AGE, '16-17'],
 ];
-
-export function daysInMonth(year: number, month: number): number {
-  // Day 0 of the next month is the last day of this one.
-  return new Date(year, month, 0).getDate();
-}
 
 /** Full years between `birth` and `today`, in the device's time zone. */
 export function ageOn(birth: BirthDate, today: Date): number {
