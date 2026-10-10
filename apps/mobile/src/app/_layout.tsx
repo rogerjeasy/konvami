@@ -17,9 +17,13 @@ import { PracticeProvider, practiceServices } from '@/practice';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
 import { ProfileProvider, profileServices } from '@/profile';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
+import { ScreenBoundary } from '@/screens/error';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
 import { ThemeProvider, useTheme } from '@/theme';
 import { createAppVoiceEngine, VoiceProvider } from '@/voice';
+
+// What shows when this layout itself breaks; each screen has its own boundary (`RootStack`).
+export { AppError as ErrorBoundary } from '@/screens/error';
 
 // The native splash stays up until fonts, saved preferences and the saved session are ready, so
 // nothing flickers and a signed-in user never sees the signed-out screens.
@@ -74,7 +78,11 @@ export default function RootLayout() {
 function RootStack() {
   const { color } = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
+    <Stack
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}
+      // A screen that breaks shows a plain message in its place, and the rest of the app goes on.
+      screenLayout={({ children }) => <ScreenBoundary>{children}</ScreenBoundary>}
+    >
       <Stack.Screen name="index" options={{ animation: 'none' }} />
       <Stack.Screen name="intro" options={{ animation: 'fade' }} />
       <Stack.Screen name="welcome" options={{ animation: 'fade' }} />

@@ -60,6 +60,16 @@ The tab bar lies along the bottom on phones and stands at the side above the `wi
 At large text sizes only the open tab keeps its name. Switching tabs only fades the mark behind
 the icon (AGENTS.md 2b.4); Today's entrance plays once, when the tabs mount.
 
+### When something breaks
+
+A learner never sees an error's own text or a trace. Every screen sits in an error boundary
+(`ScreenBoundary`, put around each screen by the root stack): a screen that breaks is replaced by
+"Something went wrong" with "Try again" and "Back to the start". Inside the tabs the open tab has
+its own boundary, so the tab bar stays and is the way out. The root layout exports `AppError` as
+the router's `ErrorBoundary` for the case that the layout itself breaks. In a development build
+React Native also shows its own red overlay or a toast on top; that is the developer tooling and
+is not part of a store build.
+
 ## 4. Backend
 
 | Change | What |

@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Redirect } from 'expo-router';
+import { Redirect, usePathname } from 'expo-router';
 import { TabList, Tabs, TabSlot, TabTrigger } from 'expo-router/ui';
 import { useTranslation } from 'react-i18next';
 import type { IconName } from '@/components/icon';
@@ -8,6 +8,7 @@ import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { ROUTES } from '@/lib/routes';
 import { OnboardingGate } from '@/onboarding/gate';
 import { routeForOnboarding } from '@/onboarding/routing';
+import { ScreenBoundary } from '@/screens/error';
 
 /** The tabs in their order (spec §14.1). `name` is the route file in `src/app/(tabs)`. */
 const TABS = [
@@ -22,6 +23,7 @@ const TABS = [
 function Shell() {
   const { t } = useTranslation();
   const { split } = useScreenLayout();
+  const pathname = usePathname();
   const bar = (
     <TabList asChild>
       <TabBar label={t('tabs.label')} side={split}>
@@ -36,7 +38,11 @@ function Shell() {
   return (
     <Tabs style={{ flex: 1, flexDirection: split ? 'row' : 'column' }}>
       {split ? bar : null}
-      <TabSlot style={{ flex: 1 }} />
+      {/* A tab that breaks leaves the bar standing: it is the way out, and opening another tab
+          (a new address) clears the error. */}
+      <ScreenBoundary leave={false} resetKey={pathname}>
+        <TabSlot style={{ flex: 1 }} />
+      </ScreenBoundary>
       {split ? null : bar}
     </Tabs>
   );

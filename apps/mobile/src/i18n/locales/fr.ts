@@ -1035,6 +1035,11 @@ export const fr: Translation = {
       },
     },
   },
+  screenError: {
+    title: 'Un problème est survenu',
+    body: 'Cet écran n’a pas pu s’afficher. Réessaie, s’il te plaît.',
+    home: 'Retour au début',
+  },
   upcoming: {
     title: 'Bientôt disponible',
     body: 'Cet écran fait partie de la prochaine étape.',
