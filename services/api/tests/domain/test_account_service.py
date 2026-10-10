@@ -203,3 +203,22 @@ def test_a_deleted_account_is_remembered_as_deleted() -> None:
     assert setup.accounts.is_deleted(USER) is True
     assert setup.accounts.is_deleted(OTHER_USER) is False
     assert setup.records.deleted_at[USER] == NOON
+
+
+def test_when_the_sign_in_cannot_be_removed_the_account_is_not_left_half_deleted() -> None:
+    """Its data is gone, but the account still exists: it must not be treated as deleted (every
+    change refused), and deleting it again must work."""
+    setup = Setup()
+    setup.directory.fail_delete = True
+
+    with pytest.raises(RuntimeError):
+        setup.accounts.delete(USER)
+
+    assert USER in setup.directory.accounts
+    assert setup.accounts.is_deleted(USER) is False
+
+    setup.directory.fail_delete = False
+    setup.accounts.delete(USER)
+
+    assert USER not in setup.directory.accounts
+    assert setup.accounts.is_deleted(USER) is True

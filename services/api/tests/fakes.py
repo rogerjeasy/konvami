@@ -100,6 +100,7 @@ class InMemoryVoiceSessionRepository:
 class FakeAccountDirectory:
     def __init__(self, accounts: dict[UUID, Account] | None = None) -> None:
         self.accounts = accounts or {}
+        self.fail_delete = False
 
     def get(self, user_id: UUID) -> Account:
         if user_id not in self.accounts:
@@ -107,6 +108,8 @@ class FakeAccountDirectory:
         return self.accounts[user_id]
 
     def delete(self, user_id: UUID) -> None:
+        if self.fail_delete:
+            raise RuntimeError("the identity provider did not answer")
         self.accounts.pop(user_id, None)
 
 
@@ -140,6 +143,9 @@ class InMemoryAccountRepository:
 
     def is_deleted(self, user_id: UUID) -> bool:
         return user_id in self.deleted_at
+
+    def restore(self, user_id: UUID) -> None:
+        self.deleted_at.pop(user_id, None)
 
 
 class InMemoryFileStore:

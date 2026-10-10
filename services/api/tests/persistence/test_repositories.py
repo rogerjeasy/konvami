@@ -858,6 +858,88 @@ def test_a_deletion_is_forgotten_once_no_token_of_the_account_can_still_work(
     assert accounts.is_deleted(OTHER_USER) is True
 
 
+def test_a_remembered_deletion_can_be_taken_back(accounts: AccountRepository) -> None:
+    """For an account whose sign-in could not be removed: it still exists."""
+    accounts.delete(USER, NOON)
+
+    accounts.restore(USER)
+    accounts.restore(OTHER_USER)
+
+    assert accounts.is_deleted(USER) is False
+    accounts.set_picture_key(USER, PICTURE)
+    assert accounts.picture_key(USER) == PICTURE
+
+
+def _second_connection(postgres_uri: str, db: SqlClient, **options: Any) -> psycopg.Connection[Any]:
+    """Another connection to the test's own schema."""
+    schema = db.execute("SELECT current_schema() AS name")[0]["name"]
+    connection = psycopg.connect(postgres_uri, **options)
+    connection.execute(f'SET search_path TO "{schema}"')
+    connection.commit()
+    return connection
+
+
+@pytest.mark.parametrize("stored_before", [True, False], ids=["a known learner", "a new learner"])
+def test_a_write_that_arrives_while_the_account_is_being_deleted_is_refused(
+    db: SqlClient, postgres_uri: str, stored_before: bool
+) -> None:
+    """A deletion and a write for the same account never overlap: the write waits until the
+    deletion is through, and then finds the account deleted. Without that, a request already
+    on its way could put the account's row back."""
+    if stored_before:
+        SqlProfileRepository(db).save(USER, [change("goals", {"reasons": ["work"]})])
+    deleting = _second_connection(postgres_uri, db)
+    writing = _second_connection(postgres_uri, db, autocommit=True)
+    try:
+        # The deletion has done its work but is not through yet.
+        SqlAccountRepository(LocalSqlClient(deleting)).delete(USER, NOON)
+
+        def write() -> None:
+            SqlOnboardingRepository(LocalSqlClient(writing)).save(USER, OnboardingState())
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            attempt = pool.submit(write)
+            # The write is waiting, not done.
+            with pytest.raises(TimeoutError):
+                attempt.result(timeout=0.5)
+            deleting.commit()
+            with pytest.raises(psycopg.Error):
+                attempt.result(timeout=10)
+    finally:
+        deleting.close()
+        writing.close()
+
+    assert db.execute("SELECT count(*) AS users FROM app_user") == [{"users": 0}]
+    assert db.execute("SELECT count(*) AS rows FROM onboarding") == [{"rows": 0}]
+
+
+def test_a_deletion_waits_for_a_write_that_is_under_way_and_then_removes_it(
+    db: SqlClient, postgres_uri: str
+) -> None:
+    writing = _second_connection(postgres_uri, db)
+    deleting = _second_connection(postgres_uri, db, autocommit=True)
+    try:
+        # A first write for a new learner, not through yet.
+        SqlOnboardingRepository(LocalSqlClient(writing)).save(USER, OnboardingState())
+
+        def delete() -> None:
+            SqlAccountRepository(LocalSqlClient(deleting)).delete(USER, NOON)
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            deletion = pool.submit(delete)
+            with pytest.raises(TimeoutError):
+                deletion.result(timeout=0.5)
+            writing.commit()
+            deletion.result(timeout=10)
+    finally:
+        writing.close()
+        deleting.close()
+
+    assert db.execute("SELECT count(*) AS users FROM app_user") == [{"users": 0}]
+    assert db.execute("SELECT count(*) AS rows FROM onboarding") == [{"rows": 0}]
+    assert SqlAccountRepository(db).is_deleted(USER) is True
+
+
 def test_nothing_can_be_stored_again_for_a_deleted_learner(db: SqlClient) -> None:
     """The database itself refuses: whatever the layers above let through, a deleted account
     gets no rows back."""
@@ -868,12 +950,11 @@ def test_nothing_can_be_stored_again_for_a_deleted_learner(db: SqlClient) -> Non
         lambda: SqlOnboardingRepository(db).save(USER, OnboardingState()),
         lambda: SqlPersonaRepository(db).add(USER, "de", [persona(1, "Lena")]),
         lambda: SqlDraftLog(db).reserve(USER, TODAY, 5),
+        lambda: SqlAccountRepository(db).set_picture_key(USER, PICTURE),
     ]
     for write in writes:
         with pytest.raises(psycopg.Error):
             write()
-    # A photo's place is the learner's own row, which is simply not made again.
-    SqlAccountRepository(db).set_picture_key(USER, PICTURE)
 
     assert db.execute("SELECT count(*) AS users FROM app_user") == [{"users": 0}]
     # Another learner is stored as before.

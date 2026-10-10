@@ -70,7 +70,7 @@ Talk (5.2) gains a "New partner" button and a way to edit each partner.
 | `domain/voices.py` | A voice's sample: from the bucket, or spoken and stored on first request |
 | `domain/personas.py` | Create, draft from a description, templates, change every field, duplicate; personality and teaching settings |
 | `domain/practice.py` | A partner's instructions use occupation, personality, form of address, conversation style, correction settings, level, focus and explanation settings |
-| Migrations `0006`, `0007` | `app_user.picture_key`; `persona.occupation`, `personality`, `teaching`; `persona_draft_day` (the daily limit); `deleted_user` |
+| Migrations `0006`–`0008` | `app_user.picture_key`; `persona.occupation`, `personality`, `teaching`; `persona_draft_day` (the daily limit); `deleted_user`; the lock that keeps a deletion and a write apart |
 | `GET /v1/account` · `POST /v1/account/picture/upload` · `POST /v1/account/picture` · `DELETE /v1/account/picture` · `DELETE /v1/account` | The photo and account deletion |
 | `POST /v1/personas` · `POST /v1/personas/draft` · `GET /v1/personas/templates` · `PATCH /v1/personas/{id}` · `POST /v1/personas/{id}/duplicate` | Persona Studio |
 | `GET /v1/voices/{voice}/sample` | A signed address of the sample |
@@ -117,6 +117,17 @@ partner's new personality and correction settings.
 | The limit of 20 drafts a day was counted, then checked: requests arriving together could pass it | One row per learner and UTC day (`persona_draft_day`), raised and checked in one statement; a test sends twelve requests at once and five get through. The day is now the calendar day in UTC, not the last 24 hours |
 
 Migration `0007_account_safety`.
+
+## 4d. What the review of those fixes found (2026-10-10)
+
+| Finding | Fix |
+| --- | --- |
+| The guard against storing for a deleted account could be raced: a write already on its way while the account was being deleted could put its row back | A deletion and a write for the same account take the same lock in the database (migration `0008_deletion_lock`: a trigger on `app_user`, which every write passes through, and a function that deletes). A write that waited then finds the account deleted and fails as a whole; a deletion that waited removes what the write stored. Tested with two connections held open against each other |
+| A deletion cut off after the data was gone, but before the sign-in was removed, could not be repeated: the account was remembered as deleted, so the deletion itself was refused | Deleting is the one change that is never refused for a remembered deletion. And when removing the sign-in fails, the deletion is not remembered: the account still exists, emptied, and works |
+| A sign-in time that is not a number that fits | Refused like a missing one, instead of an error |
+
+Migration files may now hold a function body between `$$` and `$$`
+(`persistence/migrations/__init__.py`).
 
 ## 5. Not in this feature
 

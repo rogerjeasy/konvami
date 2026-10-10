@@ -3,7 +3,8 @@
 Rules for a migration file, because the Data API runs one statement per call and has no
 transaction around a file:
 
-- every statement ends with `;` at the end of a line, and contains no other semicolon;
+- every statement ends with `;` at the end of a line, and no line inside a statement ends with
+  one, except inside a function body between `$$` and `$$`;
 - comments stand on their own lines (`-- ...`);
 - statements can be run again safely (`IF NOT EXISTS`), so a migration that failed half-way can
   be fixed and re-run.
@@ -23,9 +24,21 @@ class MigrationError(Exception):
         self.migration = migration
 
 
+# Opens and closes a function body, whose commands end with semicolons of their own.
+_BODY_QUOTE = "$$"
+
+
 def split_statements(sql: str) -> list[str]:
     lines = [line for line in sql.splitlines() if not line.strip().startswith("--")]
-    statements = "\n".join(lines).split(";\n")
+    statements: list[str] = []
+    pending = ""
+    for piece in "\n".join(lines).split(";\n"):
+        pending = f"{pending};\n{piece}" if pending else piece
+        # An odd number of quotes: the piece ended inside a function body.
+        if pending.count(_BODY_QUOTE) % 2 == 0:
+            statements.append(pending)
+            pending = ""
+    statements.append(pending)
     return [text for statement in statements if (text := statement.strip().removesuffix(";"))]
 
 

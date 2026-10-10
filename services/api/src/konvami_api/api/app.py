@@ -245,6 +245,15 @@ def _router(services: Services) -> APIRouter:
     def remove_picture(user: CurrentUser) -> AccountOut:
         return AccountOut.of(services.accounts.remove_picture(user))
 
+    return router
+
+
+def _deletion_router(services: Services) -> APIRouter:
+    """Deleting the account, apart from the other routes: it is the one change that must also
+    be possible for an account already remembered as deleted, to finish a deletion that was cut
+    off before the sign-in was removed."""
+    router = APIRouter(prefix="/v1", responses=NOT_AUTHENTICATED)
+
     @router.delete(
         "/account",
         operation_id="deleteAccount",
@@ -265,4 +274,5 @@ def create_app(services: Services) -> FastAPI:
     app = FastAPI(title="Konvami API", version="1", docs_url=None, redoc_url=None, openapi_url=None)
     install_error_handlers(app)
     app.include_router(_router(services))
+    app.include_router(_deletion_router(services))
     return app

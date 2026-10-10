@@ -858,7 +858,7 @@ export const fr: Translation = {
         'Ton compte et toutes tes données seront supprimés immédiatement. Cette action est irréversible.',
       confirmYes: 'Supprimer définitivement',
       confirmNo: 'Garder mon compte',
-      failed: 'Ton compte n’a pas pu être supprimé. Rien n’a été modifié. Réessaie.',
+      failed: 'Ton compte n’a pas pu être supprimé entièrement. Réessaie.',
     },
   },
   partners: {

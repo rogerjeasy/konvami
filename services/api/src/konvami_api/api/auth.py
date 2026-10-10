@@ -28,8 +28,9 @@ RECENT_SIGN_IN_SECONDS = 300
 CLOCK_SKEW_SECONDS = 60
 
 
-def recently_signed_in(request: Request) -> None:
-    """Refuses a caller who did not sign in with their password moments ago. A token that was
+def recently_signed_in(request: Request, _: CurrentUser) -> None:
+    """Refuses a caller who did not sign in with their password moments ago (someone who is not
+    signed in at all is refused first, as everywhere). A token that was
     stolen, or kept alive by refreshing, carries the time of the original sign-in (`auth_time`)
     and is not enough for what cannot be undone."""
     context = request.scope.get("aws.event", {}).get("requestContext", {})
@@ -38,7 +39,8 @@ def recently_signed_in(request: Request) -> None:
         signed_in_at = int(float(claims["auth_time"]))
         # When API Gateway received the request, in milliseconds.
         now = int(context["timeEpoch"]) // 1000
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, OverflowError):
+        # No time, or one that is not a time: not a recent sign-in.
         raise ApiError(403, "recent_sign_in_required") from None
     if not -CLOCK_SKEW_SECONDS <= now - signed_in_at <= RECENT_SIGN_IN_SECONDS:
         raise ApiError(403, "recent_sign_in_required")

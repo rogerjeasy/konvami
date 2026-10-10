@@ -858,7 +858,7 @@ export const it: Translation = {
         'Il tuo account e tutti i tuoi dati verranno eliminati subito. Non si può annullare.',
       confirmYes: 'Elimina per sempre',
       confirmNo: 'Tieni il mio account',
-      failed: 'Non è stato possibile eliminare il tuo account. Non è cambiato nulla. Riprova.',
+      failed: 'Non è stato possibile eliminare del tutto il tuo account. Riprova.',
     },
   },
   partners: {

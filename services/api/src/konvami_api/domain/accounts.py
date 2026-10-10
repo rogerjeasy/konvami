@@ -107,6 +107,9 @@ class AccountRepository(Protocol):
 
     def is_deleted(self, user_id: UUID) -> bool: ...
 
+    def restore(self, user_id: UUID) -> None:
+        """Forgets that the account was deleted (its data stays deleted): it exists after all."""
+
 
 @dataclass(frozen=True)
 class AccountView:
@@ -202,7 +205,13 @@ class AccountService:
         self._files.remove_all(_user_folder(user_id))
         self._files.remove_all(_upload_folder(user_id))
         self._records.delete(user_id, self._clock())
-        self._directory.delete(user_id)
+        try:
+            self._directory.delete(user_id)
+        except Exception:
+            # The sign-in is still there, so the account is: emptied, but not deleted. It must
+            # not be refused as deleted, and the learner can ask again.
+            self._records.restore(user_id)
+            raise
 
     def is_deleted(self, user_id: UUID) -> bool:
         """Whether this account was deleted. Its last access token outlives it by up to an
