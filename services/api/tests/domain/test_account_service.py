@@ -222,3 +222,33 @@ def test_when_the_sign_in_cannot_be_removed_the_account_is_not_left_half_deleted
 
     assert USER not in setup.directory.accounts
     assert setup.accounts.is_deleted(USER) is True
+
+
+def test_a_sign_in_that_was_removed_although_the_answer_got_lost_counts_as_deleted() -> None:
+    """The identity provider did the work but its answer never arrived. The account is gone:
+    the deletion succeeded and stays remembered, so its last token can store nothing."""
+    setup = Setup()
+    setup.directory.fail_delete = "after"
+
+    setup.accounts.delete(USER)
+
+    assert USER not in setup.directory.accounts
+    assert setup.accounts.is_deleted(USER) is True
+
+
+def test_when_nobody_can_say_whether_the_sign_in_is_gone_the_deletion_stays_remembered() -> None:
+    """Not knowing is not a reason to let the account store things again. The learner is told
+    it failed and can ask again, which is never refused."""
+    setup = Setup()
+    setup.directory.fail_delete = True
+    setup.directory.fail_get = True
+
+    with pytest.raises(RuntimeError):
+        setup.accounts.delete(USER)
+
+    assert setup.accounts.is_deleted(USER) is True
+
+    setup.directory.fail_delete = False
+    setup.directory.fail_get = False
+    setup.accounts.delete(USER)
+    assert USER not in setup.directory.accounts

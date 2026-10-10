@@ -123,7 +123,7 @@ Migration `0007_account_safety`.
 | Finding | Fix |
 | --- | --- |
 | The guard against storing for a deleted account could be raced: a write already on its way while the account was being deleted could put its row back | A deletion and a write for the same account take the same lock in the database (migration `0008_deletion_lock`: a trigger on `app_user`, which every write passes through, and a function that deletes). A write that waited then finds the account deleted and fails as a whole; a deletion that waited removes what the write stored. Tested with two connections held open against each other |
-| A deletion cut off after the data was gone, but before the sign-in was removed, could not be repeated: the account was remembered as deleted, so the deletion itself was refused | Deleting is the one change that is never refused for a remembered deletion. And when removing the sign-in fails, the deletion is not remembered: the account still exists, emptied, and works |
+| A deletion cut off after the data was gone, but before the sign-in was removed, could not be repeated: the account was remembered as deleted, so the deletion itself was refused | Deleting is the one change that is never refused for a remembered deletion. When removing the sign-in fails, the account is looked up: if it is gone (only the answer was lost), the deletion succeeded; if it still exists, the deletion is no longer remembered and the emptied account works; if nobody can say, the deletion stays remembered and can be asked for again |
 | A sign-in time that is not a number that fits | Refused like a missing one, instead of an error |
 
 Migration files may now hold a function body between `$$` and `$$`

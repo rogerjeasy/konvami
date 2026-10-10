@@ -100,14 +100,21 @@ class InMemoryVoiceSessionRepository:
 class FakeAccountDirectory:
     def __init__(self, accounts: dict[UUID, Account] | None = None) -> None:
         self.accounts = accounts or {}
-        self.fail_delete = False
+        # True: deleting fails and changes nothing. "after": the account is deleted, but the
+        # answer is lost on the way, so the caller sees a failure all the same.
+        self.fail_delete: bool | str = False
+        self.fail_get = False
 
     def get(self, user_id: UUID) -> Account:
+        if self.fail_get:
+            raise RuntimeError("the identity provider did not answer")
         if user_id not in self.accounts:
             raise AccountNotFound
         return self.accounts[user_id]
 
     def delete(self, user_id: UUID) -> None:
+        if self.fail_delete == "after":
+            self.accounts.pop(user_id, None)
         if self.fail_delete:
             raise RuntimeError("the identity provider did not answer")
         self.accounts.pop(user_id, None)

@@ -208,10 +208,25 @@ class AccountService:
         try:
             self._directory.delete(user_id)
         except Exception:
-            # The sign-in is still there, so the account is: emptied, but not deleted. It must
-            # not be refused as deleted, and the learner can ask again.
-            self._records.restore(user_id)
+            if self._sign_in_is_gone(user_id):
+                # The work was done and only the answer was lost: the account is deleted.
+                return
             raise
+
+    def _sign_in_is_gone(self, user_id: UUID) -> bool:
+        """After a failed removal of the sign-in: what became of the account. When it is known
+        to exist still, the deletion is no longer remembered (the account is emptied, not
+        deleted, and must work). When nobody can say, the deletion stays remembered: not
+        knowing is no reason to let a deleted account store things again, and the learner can
+        ask for the deletion again, which is never refused."""
+        try:
+            self._directory.get(user_id)
+        except AccountNotFound:
+            return True
+        except Exception:
+            return False
+        self._records.restore(user_id)
+        return False
 
     def is_deleted(self, user_id: UUID) -> bool:
         """Whether this account was deleted. Its last access token outlives it by up to an
