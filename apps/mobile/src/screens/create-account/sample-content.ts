@@ -21,10 +21,3 @@ export const SETUP = {
   /** The greeting on the All set screen. */
   greeting: (name: string) => (name ? `Hallo, ${name}!` : 'Hallo!'),
 } as const;
-
-/** The AI providers named on 2.5. Company names are never translated. */
-export const AI_PROVIDER = {
-  openai: 'OpenAI',
-  elevenlabs: 'ElevenLabs',
-  bedrock: 'AWS Bedrock',
-} as const;

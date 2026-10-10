@@ -18,6 +18,8 @@ from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
+from konvami_api.domain.speech import SpeechTask
+from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -103,6 +105,82 @@ class FakeAccountDirectory:
         if user_id not in self.accounts:
             raise AccountNotFound
         return self.accounts[user_id]
+
+    def delete(self, user_id: UUID) -> None:
+        self.accounts.pop(user_id, None)
+
+
+class InMemoryAccountRepository:
+    def __init__(self) -> None:
+        self.pictures: dict[UUID, str] = {}
+        self.deleted: list[UUID] = []
+        self.fail_delete = False
+
+    def picture_key(self, user_id: UUID) -> str | None:
+        return self.pictures.get(user_id)
+
+    def set_picture_key(self, user_id: UUID, key: str | None) -> None:
+        if key is None:
+            self.pictures.pop(user_id, None)
+        else:
+            self.pictures[user_id] = key
+
+    def delete(self, user_id: UUID) -> None:
+        if self.fail_delete:
+            raise RuntimeError("the database did not answer")
+        self.pictures.pop(user_id, None)
+        self.deleted.append(user_id)
+
+
+class InMemoryFileStore:
+    """Files in a dict. `save` also stands in for the app sending a file with an upload form."""
+
+    def __init__(self) -> None:
+        self.files: dict[str, tuple[bytes, str]] = {}
+        # Every upload form handed out, as the arguments it was asked with.
+        self.forms: list[dict[str, Any]] = []
+
+    def keys(self) -> list[str]:
+        return sorted(self.files)
+
+    def upload_form(
+        self, key: str, *, content_type: str, max_bytes: int, expires_seconds: int
+    ) -> UploadForm:
+        self.forms.append(
+            {
+                "key": key,
+                "content_type": content_type,
+                "max_bytes": max_bytes,
+                "expires_seconds": expires_seconds,
+            }
+        )
+        return UploadForm("https://files.test/", {"key": key, "Content-Type": content_type})
+
+    def stat(self, key: str) -> StoredFile | None:
+        stored = self.files.get(key)
+        return StoredFile(size=len(stored[0]), content_type=stored[1]) if stored else None
+
+    def read_start(self, key: str, count: int) -> bytes:
+        return self.files[key][0][:count]
+
+    def read(self, key: str) -> bytes:
+        return self.files[key][0]
+
+    def save(self, key: str, body: bytes, content_type: str) -> None:
+        self.files[key] = (body, content_type)
+
+    def move(self, source: str, destination: str) -> None:
+        self.files[destination] = self.files.pop(source)
+
+    def address(self, key: str, expires_seconds: int) -> str:
+        return f"https://files.test/{key}?expires={expires_seconds}"
+
+    def remove(self, key: str) -> None:
+        self.files.pop(key, None)
+
+    def remove_all(self, prefix: str) -> None:
+        for key in [key for key in self.files if key.startswith(prefix)]:
+            del self.files[key]
 
 
 class FakeVoiceProvider:
@@ -263,3 +341,28 @@ class InMemoryConversationRepository:
             )
         newest_first = sorted(days.values(), key=lambda d: d.day, reverse=True)
         return ActivityDays(now.astimezone(zone).date(), tuple(newest_first))
+
+
+class InMemoryDraftLog:
+    def __init__(self) -> None:
+        self.drafts: list[tuple[UUID, datetime]] = []
+
+    def add(self, user_id: UUID, at: datetime) -> None:
+        self.drafts.append((user_id, at))
+
+    def count_since(self, user_id: UUID, since: datetime) -> int:
+        return sum(1 for owner, at in self.drafts if owner == user_id and at >= since)
+
+
+class FakeSpeechModel:
+    """Answers with bytes that name the voice, and records what it was asked to say."""
+
+    def __init__(self) -> None:
+        self.tasks: list[SpeechTask] = []
+        self.fail: Exception | None = None
+
+    def speak(self, task: SpeechTask) -> bytes:
+        if self.fail:
+            raise self.fail
+        self.tasks.append(task)
+        return f"mp3:{task.voice}".encode()

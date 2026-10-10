@@ -4,17 +4,18 @@ fakes, so tests that use the fakes are testing something the real database also 
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
 import pytest
 
+from konvami_api.domain.accounts import AccountRepository
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
-from konvami_api.domain.personas import Persona, PersonaRepository
+from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
 from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
 from konvami_api.domain.voice import (
@@ -24,7 +25,9 @@ from konvami_api.domain.voice import (
     VoiceSessionRepository,
 )
 from konvami_api.persistence.repositories import (
+    SqlAccountRepository,
     SqlConversationRepository,
+    SqlDraftLog,
     SqlOnboardingRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
@@ -33,7 +36,9 @@ from konvami_api.persistence.repositories import (
 )
 from konvami_api.persistence.sql import SqlClient
 from tests.fakes import (
+    InMemoryAccountRepository,
     InMemoryConversationRepository,
+    InMemoryDraftLog,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -460,6 +465,101 @@ def test_a_persona_can_be_removed_by_its_owner_only(personas: PersonaRepository)
     assert [p.name for p in personas.for_learner(USER, "de")] == ["Jonas"]
 
 
+PERSONALITY = {
+    "warmth": 5,
+    "playfulness": 2,
+    "talkativeness": 4,
+    "curiosity": 3,
+    "humour": 1,
+    "form_of_address": "formal",
+    "style": "stories",
+}
+TEACHING = {
+    "correction_timing": "immediate",
+    "strictness": "everything",
+    "explanation_usage": None,
+    "level": "B1",
+    "focus": "Dativ und Perfekt",
+    "speed": 0.9,
+}
+
+
+def test_a_persona_keeps_its_occupation_personality_and_teaching(
+    personas: PersonaRepository,
+) -> None:
+    greta = replace(
+        persona(1, "Greta"),
+        occupation="Marketing-Managerin",
+        personality=PERSONALITY,
+        teaching=TEACHING,
+    )
+    personas.add(USER, "de", [greta, persona(2, "Lena")])
+
+    stored = personas.for_learner(USER, "de")
+
+    assert stored == [greta, persona(2, "Lena")]
+    assert (stored[1].occupation, stored[1].personality, stored[1].teaching) == ("", {}, {})
+
+
+def test_every_part_of_a_persona_can_be_replaced(personas: PersonaRepository) -> None:
+    personas.add(USER, "de", [persona(1, "Lena"), persona(2, "Jonas")])
+    changed = Persona(
+        id=persona(1, "Lena").id,
+        role="teacher",
+        name="Greta",
+        gender="male",
+        age=44,
+        origin="Wien",
+        tagline=None,
+        backstory="Greta unterrichtet in Wien.",
+        look={**persona(1, "Lena").look, "hair": "bun", "glasses": True},
+        voice="coral",
+        occupation="Lehrerin",
+        personality=PERSONALITY,
+        teaching=TEACHING,
+    )
+
+    assert personas.update(USER, changed) is True
+
+    assert personas.for_learner(USER, "de") == [changed, persona(2, "Jonas")]
+
+
+def test_settings_of_their_own_can_be_taken_from_a_persona_again(
+    personas: PersonaRepository,
+) -> None:
+    greta = replace(persona(1, "Greta"), personality=PERSONALITY, teaching=TEACHING)
+    personas.add(USER, "de", [greta])
+
+    personas.update(USER, persona(1, "Greta"))
+
+    assert personas.for_learner(USER, "de") == [persona(1, "Greta")]
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def drafts(request: pytest.FixtureRequest) -> DraftLog:
+    if request.param == "memory":
+        return InMemoryDraftLog()
+    return SqlDraftLog(request.getfixturevalue("db"))
+
+
+def test_drafts_are_counted_per_learner_from_a_point_in_time(drafts: DraftLog) -> None:
+    drafts.add(USER, NOON - timedelta(hours=25))
+    drafts.add(USER, NOON - timedelta(hours=24))
+    drafts.add(USER, NOON)
+    drafts.add(OTHER_USER, NOON)
+
+    assert drafts.count_since(USER, NOON - timedelta(hours=24)) == 2
+    assert drafts.count_since(OTHER_USER, NOON - timedelta(hours=24)) == 1
+    assert drafts.count_since(USER, NOON + timedelta(seconds=1)) == 0
+
+
+def test_two_drafts_at_the_same_moment_both_count(drafts: DraftLog) -> None:
+    drafts.add(USER, NOON)
+    drafts.add(USER, NOON)
+
+    assert drafts.count_since(USER, NOON) == 2
+
+
 def test_the_last_onboarding_steps_are_read_back(onboarding: OnboardingRepository) -> None:
     state = OnboardingState(
         essentials_confirmed_at=NOON,
@@ -664,3 +764,82 @@ def test_removing_a_partner_keeps_their_conversations(db: SqlClient) -> None:
     kept = practice.conversations.listed(USER, 10, None)
     assert [(c.id, c.persona_id, c.seconds) for c in kept] == [("rtc_1", None, 300)]
     assert practice.conversations.partner_history(USER) == {}
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def accounts(request: pytest.FixtureRequest) -> AccountRepository:
+    if request.param == "memory":
+        return InMemoryAccountRepository()
+    return SqlAccountRepository(request.getfixturevalue("db"))
+
+
+PICTURE = f"users/{USER}/picture/aaaaaaaa-aaaa-4aaa-8aaa-000000000001.jpg"
+
+
+def test_a_learner_starts_without_a_picture(accounts: AccountRepository) -> None:
+    assert accounts.picture_key(USER) is None
+
+
+def test_a_picture_is_kept_per_learner_and_can_be_replaced(accounts: AccountRepository) -> None:
+    accounts.set_picture_key(USER, PICTURE)
+    assert accounts.picture_key(USER) == PICTURE
+    assert accounts.picture_key(OTHER_USER) is None
+
+    newer = PICTURE.replace("000000000001", "000000000002")
+    accounts.set_picture_key(USER, newer)
+
+    assert accounts.picture_key(USER) == newer
+
+
+def test_a_picture_can_be_taken_away(accounts: AccountRepository) -> None:
+    accounts.set_picture_key(USER, PICTURE)
+
+    accounts.set_picture_key(USER, None)
+
+    assert accounts.picture_key(USER) is None
+
+
+def test_a_deleted_learner_has_no_picture_left(accounts: AccountRepository) -> None:
+    accounts.set_picture_key(USER, PICTURE)
+    accounts.set_picture_key(OTHER_USER, PICTURE.replace(str(USER), str(OTHER_USER)))
+
+    accounts.delete(USER)
+
+    assert accounts.picture_key(USER) is None
+    assert accounts.picture_key(OTHER_USER) is not None
+
+
+def test_deleting_a_learner_who_stored_nothing_is_not_an_error(accounts: AccountRepository) -> None:
+    accounts.delete(USER)
+
+
+def test_deleting_a_learner_deletes_everything_stored_for_them(db: SqlClient) -> None:
+    """Every table that holds a learner's data hangs on `app_user`, so one deletion empties
+    them all. A new table without that link fails here."""
+    for user in (USER, OTHER_USER):
+        SqlProfileRepository(db).save(user, [change("goals", {"reasons": ["work"]})])
+        SqlOnboardingRepository(db).save(user, OnboardingState(essentials_confirmed_at=NOON))
+        SqlPlacementRepository(db).save(
+            user, "de", PlacementResult({"speaking": "A2"}, "A2", ("Dativ",), NOON)
+        )
+    practice = Practice(
+        SqlVoiceSessionRepository(db), SqlPersonaRepository(db), SqlConversationRepository(db)
+    )
+    practice.personas.add(USER, "de", [LENA])
+    talked(practice, "rtc_1", at=NOON)
+    owned = [
+        row["table_name"]
+        for row in db.execute(
+            "SELECT table_name FROM information_schema.columns "
+            "WHERE table_schema = current_schema() AND column_name = 'user_id'"
+        )
+    ]
+    assert len(owned) >= 6
+
+    SqlAccountRepository(db).delete(USER)
+
+    for table in owned:
+        rows = db.execute(f"SELECT CAST(user_id AS text) AS user_id FROM {table}")
+        assert str(USER) not in {row["user_id"] for row in rows}, table
+    assert db.execute("SELECT count(*) AS turns FROM voice_turn") == [{"turns": 0}]
+    assert db.execute("SELECT CAST(id AS text) AS id FROM app_user") == [{"id": str(OTHER_USER)}]

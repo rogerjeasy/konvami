@@ -8,6 +8,7 @@ import {
   type HomePartner,
   type Onboarding,
   type Persona,
+  type PersonaDraft,
   type Placement,
   type PlacementResult,
   type PlacementStatus,
@@ -16,6 +17,7 @@ import {
   type ProfileSource,
   type TranscriptTurn,
 } from '@konvami/api-client';
+import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
 
 /**
  * An in-memory `ApiClient` for tests. It keeps a profile the way the server does (one value per
@@ -91,15 +93,28 @@ export const FAKE_RESULT: PlacementResult = {
   measuredAt: FAKE_NOW,
 };
 
+const BALANCED: Persona['personality'] = {
+  warmth: 3,
+  playfulness: 3,
+  talkativeness: 3,
+  curiosity: 3,
+  humour: 3,
+  formOfAddress: 'auto',
+  style: 'questions',
+};
+
 /** The partners the server proposes, as the German pack's built-in ones (no tagline). */
 export const FAKE_PERSONAS: Persona[] = [
   {
     id: '7b1c2f0e-6c1b-4a8e-9a55-0d2f6a1c9e11',
     role: 'buddy',
     name: 'Lena',
+    gender: 'female',
     age: 27,
     origin: 'Berlin',
+    occupation: '',
     tagline: null,
+    backstory: 'Lena arbeitet als Grafikerin in Berlin und hat eine Katze namens Krümel.',
     look: {
       skin: 'sand',
       hair: 'bob',
@@ -109,14 +124,20 @@ export const FAKE_PERSONAS: Persona[] = [
       glasses: false,
       beard: false,
     },
+    voice: 'marin',
+    personality: BALANCED,
+    teaching: ROLE_TEACHING.buddy,
   },
   {
     id: '1d0f8a52-3c7e-4f0b-8a41-5b9e2c7d4a22',
     role: 'teacher',
     name: 'Jonas',
+    gender: 'male',
     age: 34,
     origin: 'Zürich',
+    occupation: 'Deutschlehrer',
     tagline: 'Clear explanations and plenty of patience.',
+    backstory: 'Jonas unterrichtet Deutsch in Zürich und segelt am Wochenende.',
     look: {
       skin: 'honey',
       hair: 'short',
@@ -126,14 +147,20 @@ export const FAKE_PERSONAS: Persona[] = [
       glasses: true,
       beard: true,
     },
+    voice: 'cedar',
+    personality: BALANCED,
+    teaching: ROLE_TEACHING.teacher,
   },
   {
     id: 'c4e9b7a1-2f6d-4d3c-9b18-6a0f1e8d5c33',
     role: 'exam_coach',
     name: 'Frau Weber',
+    gender: 'female',
     age: 52,
     origin: 'Wien',
+    occupation: 'Prüferin',
     tagline: null,
+    backstory: 'Frau Weber ist Prüferin für Sprachzertifikate in Wien.',
     look: {
       skin: 'porcelain',
       hair: 'bun',
@@ -143,8 +170,69 @@ export const FAKE_PERSONAS: Persona[] = [
       glasses: true,
       beard: false,
     },
+    voice: 'sage',
+    personality: BALANCED,
+    teaching: ROLE_TEACHING.exam_coach,
   },
 ];
+
+/** What the server writes from any description: a teacher from Hamburg with her own settings. */
+export const FAKE_DRAFT: PersonaDraft = {
+  role: 'teacher',
+  name: 'Greta',
+  gender: 'female',
+  age: 30,
+  origin: 'Hamburg',
+  occupation: 'Marketing-Managerin',
+  tagline: 'Friendly and precise, loves sailing.',
+  backstory: 'Greta arbeitet im Marketing in Hamburg und segelt jedes Wochenende.',
+  look: {
+    skin: 'honey',
+    hair: 'bob',
+    hairColor: 'auburn',
+    top: 'amber',
+    backdrop: 'sand',
+    glasses: true,
+    beard: false,
+  },
+  voice: 'coral',
+  personality: {
+    warmth: 5,
+    playfulness: 2,
+    talkativeness: 4,
+    curiosity: 3,
+    humour: 1,
+    formOfAddress: 'formal',
+    style: 'stories',
+  },
+  teaching: {
+    correctionTiming: 'immediate',
+    strictness: 'everything',
+    explanationUsage: null,
+    level: null,
+    focus: 'Dativ und Perfekt',
+    speed: 0.9,
+  },
+};
+
+/** The language pack's ready-made partners: the three starter ones and a debate partner. */
+export const FAKE_TEMPLATES: PersonaDraft[] = [
+  ...FAKE_PERSONAS.map(draftOf),
+  {
+    ...draftOf(FAKE_PERSONAS[0]!),
+    name: 'Mara',
+    age: 34,
+    occupation: 'Journalistin',
+    backstory: 'Mara ist Journalistin in Berlin und diskutiert leidenschaftlich gern.',
+    voice: 'coral',
+    personality: { ...BALANCED, curiosity: 5, formOfAddress: 'informal', style: 'debate' },
+  },
+];
+
+/** As on the server (services/api: domain/personas.py). */
+const MAX_PARTNERS = 12;
+const DRAFTS_PER_DAY = 20;
+const FILES = 'https://files.test';
 
 export interface FakeApi extends ApiClient {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
@@ -187,6 +275,12 @@ export interface FakeApi extends ApiClient {
   ): Conversation;
   /** Ends a call recorded with `ended: false`. */
   finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
+  /** Whether `deleteAccount` was called (and went through). */
+  readonly deleted: boolean;
+  /** The upload ids handed out so far, in order. */
+  readonly uploads: readonly string[];
+  /** Gives the learner a photo, as if one had been uploaded earlier. */
+  havePicture(): void;
 }
 
 export function createFakeApi(): FakeApi {
@@ -203,6 +297,11 @@ export function createFakeApi(): FakeApi {
   let completed = false;
   /** Every practice call, with what was said in it. */
   const practice: { conversation: Conversation; turns: TranscriptTurn[] }[] = [];
+  let picture: string | null = null;
+  const uploads: string[] = [];
+  let deleted = false;
+  let drafts = 0;
+  let created = 0;
   let gate: Promise<void> = Promise.resolve();
   const methodGates = new Map<keyof ApiClient, Promise<void>>();
 
@@ -390,8 +489,31 @@ export function createFakeApi(): FakeApi {
     };
   }
 
+  const account = () => ({ picture: picture ? { url: picture } : null });
+
+  /** A new partner at the end of the list, unless the list is full. */
+  function add(fields: PersonaDraft): Persona {
+    if (!target()) throw new ApiError('no_language', 409);
+    if ((personas ?? []).length >= MAX_PARTNERS) throw new ApiError('too_many', 409);
+    if (!fields.name.trim()) throw new ApiError('invalid_value', 422);
+    created += 1;
+    const added: Persona = {
+      ...fields,
+      id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(created).padStart(12, '0')}`,
+    };
+    personas = [...(personas ?? []), added];
+    return added;
+  }
+
   return {
     calls,
+    get deleted() {
+      return deleted;
+    },
+    uploads,
+    havePicture() {
+      picture = `${FILES}/users/amara/picture/earlier.jpg`;
+    },
     failNext: (method, code, field) =>
       void failures.set(method, new ApiError(code, code === 'network' ? 0 : 422, field ?? null)),
     answer: apply,
@@ -479,6 +601,12 @@ export function createFakeApi(): FakeApi {
     async updateProfile(changes) {
       await record('updateProfile', changes);
       apply(changes);
+      // Whatever the form sends is, from now on, what the learner told us.
+      for (const change of changes) {
+        if (change.field !== 'target_language') {
+          sources.delete(`${change.scope ?? target()}/${change.field}`);
+        }
+      }
       return profile();
     },
     async getOnboarding() {
@@ -553,10 +681,81 @@ export function createFakeApi(): FakeApi {
     },
     async changePersona(id, change) {
       await record('changePersona', id, change);
-      const changed = { ...persona(id), ...change };
+      const current = persona(id);
+      const role = change.role ?? current.role;
+      const changed: Persona = {
+        ...current,
+        ...change,
+        // Null hands the settings back to the role, as on the server.
+        personality:
+          change.personality === null ? BALANCED : (change.personality ?? current.personality),
+        teaching:
+          change.teaching === null ? ROLE_TEACHING[role] : (change.teaching ?? current.teaching),
+      };
       if (!changed.name.trim()) throw new ApiError('invalid_value', 422, 'name');
       personas = (personas ?? []).map((candidate) => (candidate.id === id ? changed : candidate));
       return changed;
+    },
+    async createPersona(fields) {
+      await record('createPersona', fields);
+      return add({
+        ...fields,
+        occupation: fields.occupation ?? '',
+        tagline: fields.tagline ?? null,
+        personality: fields.personality ?? BALANCED,
+        teaching: fields.teaching ?? ROLE_TEACHING[fields.role],
+      });
+    },
+    async draftPersona(description) {
+      await record('draftPersona', description);
+      if (drafts >= DRAFTS_PER_DAY) throw new ApiError('draft_limit', 429);
+      drafts += 1;
+      return FAKE_DRAFT;
+    },
+    async getPersonaTemplates() {
+      await record('getPersonaTemplates');
+      return target() ? FAKE_TEMPLATES : [];
+    },
+    async duplicatePersona(id) {
+      await record('duplicatePersona', id);
+      const original = persona(id);
+      const names = new Set((personas ?? []).map(({ name }) => name));
+      let number = 2;
+      while (names.has(`${original.name} ${number}`)) number += 1;
+      return add({ ...draftOf(original), name: `${original.name} ${number}` });
+    },
+    async getVoiceSample(voice) {
+      await record('getVoiceSample', voice);
+      return `${FILES}/voices/de/${voice}.mp3`;
+    },
+    async getAccount() {
+      await record('getAccount');
+      return account();
+    },
+    async startPictureUpload() {
+      await record('startPictureUpload');
+      const uploadId = `bbbbbbbb-bbbb-4bbb-8bbb-${String(uploads.length + 1).padStart(12, '0')}`;
+      uploads.push(uploadId);
+      return {
+        uploadId,
+        url: `${FILES}/`,
+        fields: { key: `uploads/amara/${uploadId}.jpg`, 'Content-Type': 'image/jpeg' },
+      };
+    },
+    async confirmPicture(uploadId) {
+      await record('confirmPicture', uploadId);
+      if (!uploads.includes(uploadId)) throw new ApiError('upload_not_found', 404);
+      picture = `${FILES}/users/amara/picture/${uploadId}.jpg`;
+      return account();
+    },
+    async removePicture() {
+      await record('removePicture');
+      picture = null;
+      return account();
+    },
+    async deleteAccount() {
+      await record('deleteAccount');
+      deleted = true;
     },
     async removePersona(id) {
       await record('removePersona', id);

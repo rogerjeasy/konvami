@@ -60,9 +60,24 @@ def test_text_models_are_read_per_job() -> None:
 def test_without_text_models_the_jobs_get_none_and_fall_back(missing: str | None) -> None:
     models = text_models(missing)
 
-    assert (models.assessment, models.personas) == ("", "")
+    assert (models.assessment, models.personas, models.speech) == ("", "", "")
 
 
 def test_broken_text_model_settings_are_named_at_start_up() -> None:
     with pytest.raises(RuntimeError, match="KONVAMI_TEXT_MODELS"):
         text_models('{"assessment": 7}')
+
+
+def test_the_speech_model_is_read_with_the_text_models() -> None:
+    models = text_models(
+        '{"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna", "speech": "gpt-4o-mini-tts"}'
+    )
+
+    assert models.speech == "gpt-4o-mini-tts"
+
+
+def test_settings_written_before_there_was_a_speech_model_still_work() -> None:
+    models = text_models('{"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna"}')
+
+    # Without a speech model there are no voice samples; everything else works.
+    assert models.speech == ""

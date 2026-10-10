@@ -19,6 +19,7 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { callRoute, conversationRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
+import { useAccount } from '@/profile/services';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
 import { LevelCard } from './level-card';
@@ -29,6 +30,7 @@ import { WeekCard } from './week-card';
 function Header({ now }: { now: Date }) {
   const { t, i18n } = useTranslation();
   const { user } = useSession();
+  const { pictureUrl } = useAccount();
   const name = user?.firstName ?? '';
   const part = dayPart(now.getHours());
   return (
@@ -38,6 +40,7 @@ function Header({ now }: { now: Date }) {
       trailing={
         <AccountButton
           name={name}
+          pictureUrl={pictureUrl}
           label={t('today.account')}
           onPress={() => router.push(ROUTES.account)}
         />

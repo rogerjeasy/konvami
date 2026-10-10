@@ -6,8 +6,8 @@
 #
 # Build order as features arrive (spec §10): budget alerts → cognito (2 · Create account) →
 # database (Aurora PostgreSQL) and api (FastAPI on Lambda + API Gateway) (4 · Onboarding) →
-# secrets (OpenAI, ElevenLabs) and voice calls → s3 audio + CloudFront → sqs/step functions
-# (post-session pipeline).
+# secrets (OpenAI, ElevenLabs) and voice calls → media bucket (6 · Profile: photos, voice
+# samples) → s3 audio + CloudFront → sqs/step functions (post-session pipeline).
 
 locals {
   name = "kv-${var.environment}"
@@ -53,6 +53,14 @@ module "openai_key" {
   value_version = var.openai_api_key_version
 }
 
+# Private files: learners' photos and the voices' samples (profile design P2–P4, P9).
+module "media" {
+  source = "../../modules/media"
+
+  name                 = local.name
+  cors_allowed_origins = var.web_preview_origins
+}
+
 # The API: FastAPI on Lambda behind API Gateway, accepting the user pool's access tokens.
 # Build the package first: cd services/api && poetry run python -m tools.build_lambda
 module "api" {
@@ -66,7 +74,11 @@ module "api" {
     user_pool_arn = module.auth.user_pool_arn
     client_id     = module.auth.client_id
   }
-  openai_secret_arn    = module.openai_key.arn
+  openai_secret_arn = module.openai_key.arn
+  media_bucket = {
+    name = module.media.bucket
+    arn  = module.media.arn
+  }
   voice                = var.voice
   text_models          = var.text_models
   cors_allowed_origins = var.web_preview_origins

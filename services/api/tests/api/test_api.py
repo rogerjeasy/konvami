@@ -352,22 +352,17 @@ def test_starter_partners_are_proposed_with_their_looks(
     assert response.status == 200
     personas = response.body["personas"]
     assert [(p["role"], p["name"]) for p in personas] == [("buddy", "Lena"), ("teacher", "Jonas")]
-    assert personas[0] == {
-        "id": personas[0]["id"],
-        "role": "buddy",
-        "name": "Lena",
-        "age": 27,
-        "origin": "Leipzig",
-        "tagline": None,
-        "look": {
-            "skin": "sand",
-            "hair": "long",
-            "hairColor": "chestnut",
-            "top": "teal",
-            "backdrop": "mist",
-            "glasses": False,
-            "beard": False,
-        },
+    # Everything else a partner carries is checked with Persona Studio (test_studio_api.py).
+    lena = personas[0]
+    assert (lena["age"], lena["origin"], lena["tagline"]) == (27, "Leipzig", None)
+    assert lena["look"] == {
+        "skin": "sand",
+        "hair": "long",
+        "hairColor": "chestnut",
+        "top": "teal",
+        "backdrop": "mist",
+        "glasses": False,
+        "beard": False,
     }
     assert call("GET", "/v1/personas").body == response.body
 

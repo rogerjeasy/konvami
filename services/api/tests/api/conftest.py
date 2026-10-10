@@ -9,7 +9,7 @@ import pytest
 from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
-from konvami_api.domain.accounts import Account
+from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
@@ -20,11 +20,16 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
+from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakeSpeechModel,
     FakeVoiceProvider,
     FixedClock,
+    InMemoryAccountRepository,
     InMemoryConversationRepository,
+    InMemoryDraftLog,
+    InMemoryFileStore,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -140,11 +145,42 @@ def calls() -> InMemoryVoiceSessionRepository:
 
 
 @pytest.fixture
+def files() -> InMemoryFileStore:
+    """The stored files, for tests that upload one or look at what is left."""
+    return InMemoryFileStore()
+
+
+@pytest.fixture
+def directory() -> FakeAccountDirectory:
+    """The accounts as the identity provider holds them."""
+    return FakeAccountDirectory(
+        {
+            UUID(USER): Account("Amara", "fr", voice_consent=True),
+            UUID(OTHER_USER): Account("Jonas", "de", voice_consent=False),
+        }
+    )
+
+
+@pytest.fixture
+def account_records() -> InMemoryAccountRepository:
+    return InMemoryAccountRepository()
+
+
+@pytest.fixture
+def speech() -> FakeSpeechModel:
+    return FakeSpeechModel()
+
+
+@pytest.fixture
 def services(
     clock: FixedClock,
     voice_provider: FakeVoiceProvider,
     text_model: ScriptedTextModel,
     calls: InMemoryVoiceSessionRepository,
+    files: InMemoryFileStore,
+    directory: FakeAccountDirectory,
+    account_records: InMemoryAccountRepository,
+    speech: FakeSpeechModel,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -163,6 +199,8 @@ def services(
         repository=InMemoryPersonaRepository(),
         text_model=text_model,
         model="gpt-6-luna",
+        drafts=InMemoryDraftLog(),
+        clock=clock,
     )
     conversations = ConversationService(InMemoryConversationRepository(calls), personas)
     voice = VoiceCallService(
@@ -178,12 +216,7 @@ def services(
                 conversations=conversations,
             ),
         },
-        accounts=FakeAccountDirectory(
-            {
-                UUID(USER): Account("Amara", "fr", voice_consent=True),
-                UUID(OTHER_USER): Account("Jonas", "de", voice_consent=False),
-            }
-        ),
+        accounts=directory,
         provider=voice_provider,
         sessions=calls,
         starter=RecordingCallStarter(),
@@ -197,7 +230,28 @@ def services(
         conversations=conversations,
         clock=clock,
     )
-    return Services(CATALOG, profiles, onboarding, voice, placement, personas, conversations, home)
+    # Upload ids in the order they are handed out: ...0001, ...0002, and so on.
+    upload_ids = (UUID(f"aaaaaaaa-aaaa-4aaa-8aaa-{number:012d}") for number in range(1, 100))
+    accounts = AccountService(
+        records=account_records,
+        files=files,
+        directory=directory,
+        new_id=lambda: next(upload_ids),
+    )
+    return Services(
+        catalog=CATALOG,
+        profiles=profiles,
+        onboarding=onboarding,
+        voice=voice,
+        placement=placement,
+        personas=personas,
+        conversations=conversations,
+        home=home,
+        accounts=accounts,
+        voices=VoiceSampleService(
+            profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
+        ),
+    )
 
 
 @pytest.fixture

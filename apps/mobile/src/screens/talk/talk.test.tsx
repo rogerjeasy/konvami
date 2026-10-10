@@ -72,6 +72,22 @@ describe('5.2 Talk', () => {
     });
   });
 
+  it('leads to designing a new partner', async () => {
+    await open();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'New partner' }));
+
+    expect(router.push).toHaveBeenCalledWith('/account/partners/new');
+  });
+
+  it('leads to changing the partners', async () => {
+    await open();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Edit my partners' }));
+
+    expect(router.push).toHaveBeenCalledWith('/account/partners');
+  });
+
   it('says so when the partners cannot be loaded and tries again', async () => {
     const api = inApp();
     api.failNext('getHome', 'network');

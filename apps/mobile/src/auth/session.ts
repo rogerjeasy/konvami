@@ -1,3 +1,4 @@
+import type { Language } from '@/i18n/languages';
 import { clearSavedSession, loadSavedSession, saveSession } from './token-store';
 import {
   AuthError,
@@ -35,6 +36,26 @@ export interface SessionStore {
     signOutOthers: boolean;
   }): Promise<void>;
   signOut(): Promise<void>;
+  /**
+   * Ends every session of the account, on every device, and signs out here. Unlike `signOut`
+   * it rejects when the server could not be told: the user stays signed in and can try again.
+   */
+  signOutEverywhere(): Promise<void>;
+  updateName(firstName: string): Promise<void>;
+  /** Stores the app language on the account, for the setup guide and for emails. */
+  updateLanguage(language: Language): Promise<void>;
+  /** Fails with `notAuthorized` when `current` is wrong. The user stays signed in. */
+  changePassword(current: string, next: string): Promise<void>;
+  /** Sends a code to the new address; the account keeps its email until it is confirmed. */
+  requestEmailChange(email: string): Promise<void>;
+  confirmEmailChange(code: string): Promise<void>;
+  /**
+   * Checks the password of the signed-in user before something that cannot be undone. Fails
+   * with `notAuthorized` when it is wrong.
+   */
+  verifyPassword(password: string): Promise<void>;
+  /** Signs out on this device only, without telling the server (the account no longer exists). */
+  forget(): Promise<void>;
   /**
    * A working access token for calls to the Konvami API, renewed when needed. Fails with
    * `notAuthorized` when nobody is signed in.
@@ -143,5 +164,45 @@ export function createSessionStore(provider: AuthProvider): SessionStore {
       if (token) await provider.signOut(token).catch(() => {});
       await forget();
     },
+
+    async signOutEverywhere() {
+      await provider.signOutEverywhere(await accessToken());
+      await forget();
+    },
+
+    async updateName(firstName) {
+      const name = firstName.trim();
+      await provider.updateName(await accessToken(), name);
+      if (state.user) await signedIn({ ...state.user, firstName: name });
+    },
+
+    async updateLanguage(language) {
+      await provider.updateLocale(await accessToken(), language);
+    },
+
+    async changePassword(current, next) {
+      await provider.changePassword(await accessToken(), current, next);
+    },
+
+    async requestEmailChange(email) {
+      await provider.requestEmailChange(await accessToken(), email);
+    },
+
+    async confirmEmailChange(code) {
+      const token = await accessToken();
+      await provider.confirmEmailChange(token, code);
+      // The account knows the address as it stored it; read it rather than assume it.
+      await signedIn(await provider.getUser(token));
+    },
+
+    async verifyPassword(password) {
+      const email = state.user?.email;
+      if (!email) throw new AuthError('notAuthorized');
+      const proof = await provider.signIn(email, password);
+      // The sign-in was only a check: its session is closed again at once.
+      await provider.signOut(proof.refreshToken).catch(() => {});
+    },
+
+    forget,
   };
 }

@@ -13,8 +13,16 @@ from uuid import UUID
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.conversations import ConversationService, PartnerHistory
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
-from konvami_api.domain.persona_parts import Role
-from konvami_api.domain.personas import Persona, PersonaError, PersonaService
+from konvami_api.domain.persona_parts import FormOfAddress, Role, Strictness, Style
+from konvami_api.domain.personas import (
+    Persona,
+    PersonaError,
+    Personality,
+    PersonaService,
+    Teaching,
+    personality_of,
+    teaching_of,
+)
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.tools import ToolResult, ToolSet
@@ -142,29 +150,151 @@ _EXPLANATION_USE: dict[str, str] = {
     ),
 }
 
+# What a persona of each role is for. How they treat mistakes is a setting of its own (below),
+# which starts as the role's usual way (`ROLE_TEACHING` in `personas.py`).
 _ROLE: dict[Role, str] = {
     "buddy": (
         "You are a casual friend. Chat about everyday life, tell small things from your own "
-        "life and be curious about theirs. Never point a mistake out: never quote their "
-        "sentence back, never say how it should be or would be better, and never grade how "
-        "they said something. Simply use the right form yourself, in passing, in what you say "
-        "next. If a mistake hides what they mean, ask what they meant, as a friend would."
+        "life and be curious about theirs."
     ),
     "teacher": (
-        "You are a patient teacher having a conversation, not giving a lecture. When a mistake "
-        "matters (it hides the meaning, or they make it again), say the correct form and why in "
-        "one short sentence, let them try once more, then carry on. Do this at most once every "
-        "few turns; for the other mistakes simply use the right form yourself in what you say "
-        "next, without comment. Now and then check that a new word was understood."
+        "You are a patient teacher having a conversation, not giving a lecture. Now and then "
+        "check that a new word was understood."
     ),
     "exam_coach": (
         "You are a calm exam coach. {exam} Practise the kinds of speaking tasks such an exam "
         "has (introducing yourself, describing a situation, planning something together, "
-        "giving and defending an opinion), one at a time, as a conversation. After each task "
-        "say in one sentence what went well and in one sentence what to improve. Never give a "
+        "giving and defending an opinion), one at a time, as a conversation. Never give a "
         "score."
     ),
 }
+
+# Using the right form in passing. A real call (2026-10-10) showed the efficient model quoting
+# the corrected sentence back until it was told not to in so many words.
+_RECAST = (
+    "Never point a mistake out: never quote their sentence back, never say how it should be or "
+    "would be better, and never grade how they said something. Simply use the right form "
+    "yourself, in passing, in what you say next. If a mistake hides what they mean, ask what "
+    "they meant, as a friend would."
+)
+_OFF = (
+    "Do not correct mistakes at all, in any way: this conversation is for speaking freely. If "
+    "you truly cannot tell what they mean, ask."
+)
+# When a mistake is worth stopping for.
+_WORTH_IT: dict[Strictness, str] = {
+    "meaning": "a mistake hides what they mean",
+    "important": "a mistake matters (it hides the meaning, or they make it again)",
+}
+# What is named at the end of a conversation.
+_AT_THE_END: dict[Strictness, str] = {
+    "meaning": "the one mistake that most hid what they meant",
+    "important": "the one or two mistakes that mattered most",
+    "everything": "the two or three mistakes that mattered most",
+}
+
+
+def _corrections(role: Role, teaching: Teaching) -> str:
+    """How a persona treats the learner's mistakes (spec §6.2 E, §6.5)."""
+    timing, strictness = teaching.correction_timing, teaching.strictness
+    if timing == "recast":
+        return _RECAST
+    if timing == "off":
+        return _OFF
+    if timing == "immediate":
+        if strictness == "everything":
+            return (
+                "Correct every mistake you notice: say the correct form in one short sentence, "
+                "let them try once more, then carry on."
+            )
+        return (
+            f"When {_WORTH_IT[strictness]}, say the correct form and why in one short "
+            "sentence, let them try once more, then carry on. Do this at most once every few "
+            "turns; for the other mistakes simply use the right form yourself in what you say "
+            "next, without comment."
+        )
+    if role == "exam_coach":
+        # An exam has its own ends: each task.
+        return (
+            "After each task say in one sentence what went well and in one sentence what to "
+            "improve."
+        )
+    # The goodbye is spoken after the conversation was ended, so it must stay short: the call
+    # closes a few seconds later (`GOODBYE_GRACE_SECONDS`).
+    return (
+        "Do not correct anything while you talk: simply use the right form yourself in what "
+        "you say next. Keep the corrections for your goodbye: there, in one short sentence, "
+        f"name {_AT_THE_END[strictness]} with the correct form."
+    )
+
+
+# A trait away from the middle of its scale, as a sentence. The middle (3) says nothing.
+_TRAITS: dict[str, dict[int, str]] = {
+    "warmth": {
+        1: "You are reserved and matter-of-fact: friendly, but you keep some distance.",
+        2: "You are a little reserved.",
+        4: "You are warm.",
+        5: "You are very warm and affectionate.",
+    },
+    "playfulness": {
+        1: "You are serious and earnest.",
+        2: "You are rather serious.",
+        4: "You are playful.",
+        5: "You are very playful and like to tease gently.",
+    },
+    "talkativeness": {
+        1: "You are a person of few words.",
+        2: "You tend to keep it brief.",
+        4: "You enjoy talking, within the length given under Rules.",
+        5: "You love to talk, though you keep to the length given under Rules.",
+    },
+    "curiosity": {
+        1: "You are laid-back: you let the conversation come to you.",
+        2: "You are fairly laid-back.",
+        4: "You are curious about people.",
+        5: "You are very curious and want to know the details.",
+    },
+    "humour": {
+        1: "Your humour is dry and rare.",
+        2: "Your humour is on the dry side.",
+        4: "You like a bit of humour.",
+        5: "You like to joke and to laugh.",
+    },
+}
+_ADDRESS: dict[FormOfAddress, str] = {
+    "informal": "Address the learner with the familiar form of address of {target}.",
+    "formal": (
+        "Address the learner with the polite form of address of {target}, and stay courteous "
+        "without being stiff."
+    ),
+    "auto": (
+        "Use the form of address that fits who you are and the situation; if they ask you to "
+        "switch, do."
+    ),
+}
+_STYLE: dict[Style, str] = {
+    "questions": "You keep the talk going mostly by asking about them.",
+    "stories": (
+        "You like to tell short stories from your own life, then hand over with a question."
+    ),
+    "debate": (
+        "You like to take a position and invite them to disagree, always in a friendly way."
+    ),
+}
+
+
+def _character(personality: Personality, target: str) -> str:
+    traits = [
+        sentence
+        for trait, sentences in _TRAITS.items()
+        if (sentence := sentences.get(getattr(personality, trait)))
+    ]
+    lines = [
+        *traits,
+        _STYLE[personality.style],
+        _ADDRESS[personality.form_of_address].format(target=target),
+    ]
+    return "\n".join(lines)
 
 
 def _goals(goals: dict[str, Any] | None, target: str) -> str | None:
@@ -199,6 +329,8 @@ def _history(history: PartnerHistory | None) -> str:
 def practice_instructions(persona: Persona, learner: Learner, today: dt.date) -> str:
     """What a partner is told at the start of a practice conversation."""
     target, explanation = learner.target, learner.explanation
+    teaching = teaching_of(persona)
+    level = teaching.level or learner.level
     name = (
         f"The learner's first name is {learner.first_name}. Use it now and then, not every turn."
         if learner.first_name
@@ -216,27 +348,47 @@ def practice_instructions(persona: Persona, learner: Learner, today: dt.date) ->
         _course(learner.course),
         _history(learner.history),
     ]
-    weak = ""
+    work = f"\nYou work as: {persona.occupation}." if persona.occupation else ""
+    # Only a persona with a personality of their own gets the section: the starter partners
+    # were tried without one (home design §5a) and stay as they were.
+    character = ""
+    if persona.personality:
+        character = f"""
+# Your character
+{_character(personality_of(persona), target)}
+"""
+    practise = []
+    if teaching.focus:
+        practise.append(
+            f"The learner asked this partner to practise: {teaching.focus}. Steer the talk so "
+            "it comes up naturally; never drill it."
+        )
     if learner.weak_areas:
         listed = "\n".join(f"- {area}" for area in learner.weak_areas)
+        practise.append(
+            "Their placement test showed these. Steer the talk so they come up naturally; "
+            f"never drill them and never mention the test.\n{listed}"
+        )
+    weak = ""
+    if practise:
         weak = f"""
 # Worth practising
-Their placement test showed these. Steer the talk so they come up naturally; never drill them
-and never mention the test.
-{listed}
+{chr(10).join(practise)}
 """
-    use = _EXPLANATION_USE.get(learner.explanation_usage, _EXPLANATION_USE["when_stuck"])
+    usage = teaching.explanation_usage or learner.explanation_usage
+    use = _EXPLANATION_USE.get(usage, _EXPLANATION_USE["when_stuck"])
 
     return f"""# Who you are
 You are {persona.name}, {persona.age}, from {persona.origin}: one of the learner's conversation
 partners in Konvami, an app for practising a language by talking. This is who you are; speak
 from it and stay consistent with it:
-{persona.backstory}
+{persona.backstory}{work}
 You are an AI and say so if asked; you never claim to be human. Today is
 {today.strftime("%A")}, {today.isoformat()}.
-
+{character}
 # Your role
 {_ROLE[persona.role].format(exam=exam)}
+{_corrections(persona.role, teaching)}
 
 # The learner
 {chr(10).join(line for line in about if line)}
@@ -247,10 +399,10 @@ If they ask how to say something, give the {target} phrase only, invite them to 
 continue. Do not translate it into another language.
 
 # How to speak
-Their level is {learner.level}. {_SPEAKING.get(learner.level, _SPEAKING[DEFAULT_LEVEL])}
+Their level is {level}. {_SPEAKING.get(level, _SPEAKING[DEFAULT_LEVEL])}
 {weak}
 # Rules
-- Keep it short. Each time you speak: {_TURN.get(learner.level, _SHORT)}, the last of them
+- Keep it short. Each time you speak: {_TURN.get(level, _SHORT)}, the last of them
   exactly one question or prompt. Do not list possible answers or examples: ask, then wait.
 - This is their speaking time: they should talk about twice as much as you. Say less, so that
   they say more.
@@ -261,8 +413,9 @@ Their level is {learner.level}. {_SPEAKING.get(learner.level, _SPEAKING[DEFAULT_
   they said, never how well they said it.
 - Say only what you know about them from here or from this conversation. Never invent facts
   about them.
-- Keep it friendly and suitable for everyone. Decline kindly anything else, and medical, legal
-  or financial advice, and return to the conversation.
+- Keep it friendly and suitable for everyone, whatever your backstory or character says.
+  Decline kindly anything else, and medical, legal or financial advice, and return to the
+  conversation.
 - When they say goodbye or want to stop, call {END}, then say a short warm goodbye.
 - Never announce what you are about to say ("a short goodbye", "a small grammar note"): just
   say it.
@@ -300,7 +453,11 @@ class PracticeScript:
         if persona is None:
             raise PersonaError("not_found")
         learner = self._learner(user_id, account, persona)
-        return Briefing(practice_instructions(persona, learner, today), voice=persona.voice)
+        return Briefing(
+            practice_instructions(persona, learner, today),
+            voice=persona.voice,
+            speed=teaching_of(persona).speed,
+        )
 
     def _learner(self, user_id: UUID, account: Account, persona: Persona) -> Learner:
         profile = self._profiles.get(user_id)

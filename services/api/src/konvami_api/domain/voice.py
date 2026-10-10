@@ -90,6 +90,8 @@ class Briefing:
     instructions: str
     # None: the guide's voice from the settings.
     voice: str | None = None
+    # How fast they speak, as a multiple of the voice's own pace; None for that pace.
+    speed: float | None = None
 
 
 @dataclass(frozen=True)
@@ -210,6 +212,9 @@ class VoiceCallService:
             raise VoiceError("call_limit")
 
         briefing = script.prepare(user_id, account, _today(now, local_date), persona_id)
+        output: dict[str, Any] = {"voice": briefing.voice or self._settings.voice}
+        if briefing.speed is not None:
+            output["speed"] = briefing.speed
         session = {
             "type": "realtime",
             "model": model,
@@ -221,7 +226,7 @@ class VoiceCallService:
                     "transcription": {"model": self._settings.transcription_model},
                     "turn_detection": _TURN_DETECTION[purpose],
                 },
-                "output": {"voice": briefing.voice or self._settings.voice},
+                "output": output,
             },
         }
         # The provider asks for a stable id per end user for abuse handling; it gets a hash.

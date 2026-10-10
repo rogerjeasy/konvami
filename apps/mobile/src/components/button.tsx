@@ -7,6 +7,8 @@ import { useTheme, type ColorToken } from '@/theme';
 const LOOK = {
   primary: { box: 'bg-primary border-primary', tone: 'onPrimary', spinner: 'onPrimary' },
   secondary: { box: 'bg-secondary-bg border-field-border', tone: 'fg', spinner: 'fg' },
+  /** An action that deletes for good. Outlined, so it never outweighs a screen's way out. */
+  danger: { box: 'bg-danger-soft border-danger-border', tone: 'danger', spinner: 'danger' },
   /** "Continue with Apple": black in light mode, white in dark. */
   apple: { box: 'bg-apple-bg border-apple-bg', tone: 'onApple', spinner: 'appleFg' },
 } as const satisfies Record<string, { box: string; tone: string; spinner: ColorToken }>;
@@ -15,7 +17,7 @@ export type ButtonVariant = keyof typeof LOOK;
 
 /**
  * Full-width action button (54 pt, design token `size.buttonHeight`). `primary` is the one main
- * action on a screen; `secondary` the alternative. Shrinks slightly while pressed. Labels wrap
+ * action on a screen; `secondary` the alternative; `danger` deletes. Shrinks slightly while pressed. Labels wrap
  * instead of overflowing at large text sizes, so the button grows in height rather than clipping.
  *
  * `loading` shows a spinner beside the label and blocks presses, so a request is never sent twice.

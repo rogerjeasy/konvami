@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from konvami_api.domain.accounts import AccountView, PictureUpload
 from konvami_api.domain.catalog import (
     CEFR_LEVELS,
     EXPLANATION_USAGES,
@@ -29,8 +30,32 @@ from konvami_api.domain.conversations import (
 from konvami_api.domain.home import HomeView
 from konvami_api.domain.live_call import Speaker
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
-from konvami_api.domain.persona_parts import Backdrop, Hair, HairColor, Role, Skin, Top
-from konvami_api.domain.personas import NAME_MAX, Persona
+from konvami_api.domain.persona_parts import (
+    Backdrop,
+    CorrectionTiming,
+    FormOfAddress,
+    Gender,
+    Hair,
+    HairColor,
+    Role,
+    Skin,
+    Strictness,
+    Style,
+    Top,
+    Voice,
+)
+from konvami_api.domain.personas import (
+    BACKSTORY_MAX,
+    DESCRIPTION_MAX,
+    NAME_MAX,
+    ROLE_TEACHING,
+    Persona,
+    PersonaFields,
+    Personality,
+    Teaching,
+    personality_of,
+    teaching_of,
+)
 from konvami_api.domain.placement import PlacementView
 from konvami_api.domain.profile import GLOBAL_SCOPE, Profile, Source
 from konvami_api.domain.voice import CallPurpose, CallStarted
@@ -223,16 +248,100 @@ class LookModel(ApiModel):
     beard: bool
 
 
+def teaching_of_role(role: Role) -> Teaching:
+    return ROLE_TEACHING[role]
+
+
+class PersonalityModel(ApiModel):
+    """How a persona comes across. Each trait is a point from 1 to 5 between two poles."""
+
+    # Reserved (1) to warm (5).
+    warmth: int
+    # Serious (1) to playful (5).
+    playfulness: int
+    # Concise (1) to talkative (5).
+    talkativeness: int
+    # Laid-back (1) to curious (5).
+    curiosity: int
+    # Dry (1) to humorous (5).
+    humour: int
+    form_of_address: FormOfAddress
+    style: Style
+
+    @classmethod
+    def of(cls, personality: Personality) -> "PersonalityModel":
+        return cls.model_validate(personality.model_dump())
+
+
+class TeachingModel(ApiModel):
+    """How a persona treats mistakes and adapts to the learner. Every key is always present;
+    null means "as the learner's profile says" (or, for speed, the voice's own pace)."""
+
+    correction_timing: CorrectionTiming
+    strictness: Strictness
+    explanation_usage: ExplanationUsage | None
+    level: StartingLevel | None
+    focus: str | None
+    speed: float | None
+
+    @classmethod
+    def of(cls, teaching: Teaching) -> "TeachingModel":
+        return cls.model_validate(teaching.model_dump())
+
+
+class PersonaDraftOut(ApiModel):
+    """A persona that is not saved: a template, or one written from a description."""
+
+    role: Role
+    name: str
+    gender: Gender
+    age: int
+    origin: str
+    occupation: str
+    tagline: str | None
+    backstory: str
+    look: LookModel
+    voice: Voice
+    personality: PersonalityModel
+    teaching: TeachingModel
+
+    @classmethod
+    def of(cls, fields: PersonaFields) -> "PersonaDraftOut":
+        return cls(
+            role=fields.role,
+            name=fields.name,
+            gender=fields.gender,
+            age=fields.age,
+            origin=fields.origin,
+            occupation=fields.occupation,
+            tagline=fields.tagline,
+            backstory=fields.backstory,
+            look=LookModel.model_validate(fields.look.model_dump()),
+            voice=fields.voice,
+            # Without settings of their own: what their role does.
+            personality=PersonalityModel.of(fields.personality or Personality()),
+            teaching=TeachingModel.of(fields.teaching or teaching_of_role(fields.role)),
+        )
+
+
 class PersonaOut(ApiModel):
     id: UUID
     role: Role
     name: str
+    gender: Gender
     age: int
     origin: str
+    # What they do for a living, in a few words; may be empty.
+    occupation: str
     # One line about the persona in the learner's explanation language; null for a built-in
     # partner, for which the app shows its own line for the role.
     tagline: str | None
+    backstory: str
     look: LookModel
+    voice: Voice
+    # Their own settings or, without any, what their role does.
+    personality: PersonalityModel
+    teaching: TeachingModel
 
     @classmethod
     def of(cls, persona: Persona) -> "PersonaOut":
@@ -240,10 +349,16 @@ class PersonaOut(ApiModel):
             id=persona.id,
             role=persona.role,
             name=persona.name,
+            gender=persona.gender,
             age=persona.age,
             origin=persona.origin,
+            occupation=persona.occupation,
             tagline=persona.tagline,
+            backstory=persona.backstory,
             look=LookModel.model_validate(persona.look),
+            voice=persona.voice,  # type: ignore[arg-type]
+            personality=PersonalityModel.of(personality_of(persona)),
+            teaching=TeachingModel.of(teaching_of(persona)),
         )
 
 
@@ -255,9 +370,61 @@ class PersonasOut(ApiModel):
         return cls(personas=[PersonaOut.of(persona) for persona in personas])
 
 
+class PersonaTemplatesOut(ApiModel):
+    templates: list[PersonaDraftOut]
+
+    @classmethod
+    def of(cls, templates: list[PersonaFields]) -> "PersonaTemplatesOut":
+        return cls(templates=[PersonaDraftOut.of(template) for template in templates])
+
+
+# Lengths are checked by the domain, which answers `invalid_value`; these only bound a request.
+_TEXT_LIMIT = BACKSTORY_MAX * 2
+
+
+class PersonaIn(ApiModel):
+    """A new persona. Personality and teaching left out (or null): as their role does."""
+
+    role: Role
+    name: str = Field(max_length=NAME_MAX * 2)
+    gender: Gender
+    age: int
+    origin: str = Field(max_length=_TEXT_LIMIT)
+    occupation: str = Field(default="", max_length=_TEXT_LIMIT)
+    tagline: str | None = Field(default=None, max_length=_TEXT_LIMIT)
+    backstory: str = Field(max_length=_TEXT_LIMIT)
+    look: LookModel
+    voice: Voice
+    personality: PersonalityModel | None = None
+    teaching: TeachingModel | None = None
+
+
 class PersonaPatch(ApiModel):
+    """The parts of a persona to change; the ones left out stay. Personality or teaching set
+    to null go back to what the persona's role does."""
+
+    role: Role | None = None
     name: str | None = Field(default=None, max_length=NAME_MAX * 2)
+    gender: Gender | None = None
+    age: int | None = None
+    origin: str | None = Field(default=None, max_length=_TEXT_LIMIT)
+    occupation: str | None = Field(default=None, max_length=_TEXT_LIMIT)
+    tagline: str | None = Field(default=None, max_length=_TEXT_LIMIT)
+    backstory: str | None = Field(default=None, max_length=_TEXT_LIMIT)
     look: LookModel | None = None
+    voice: Voice | None = None
+    personality: PersonalityModel | None = None
+    teaching: TeachingModel | None = None
+
+
+class PersonaDescription(ApiModel):
+    # Who the learner would like to talk to, in their own words.
+    description: str = Field(max_length=DESCRIPTION_MAX * 2)
+
+
+class VoiceSampleOut(ApiModel):
+    # A short-lived address of the voice's sample (MP3).
+    url: str
 
 
 class ConversationOut(ApiModel):
@@ -424,3 +591,39 @@ class HomeOut(ApiModel):
             activity=ActivityOut.of(home.activity),
             recent=[ConversationOut.of(conversation) for conversation in home.recent],
         )
+
+
+class PictureOut(ApiModel):
+    # A short-lived address of the photo. The app reads the account again for a new one.
+    url: str
+
+
+class AccountOut(ApiModel):
+    """What the backend keeps for an account. Name and email live with the identity provider."""
+
+    picture: PictureOut | None
+
+    @classmethod
+    def of(cls, view: AccountView) -> "AccountOut":
+        return cls(picture=PictureOut(url=view.picture_url) if view.picture_url else None)
+
+
+class PictureUploadOut(ApiModel):
+    """How to send a photo: a form POST to `url` with `fields`, then the JPEG as `file`."""
+
+    upload_id: UUID
+    url: str
+    fields: dict[str, str]
+
+    @classmethod
+    def of(cls, upload: PictureUpload) -> "PictureUploadOut":
+        return cls(upload_id=upload.upload_id, url=upload.form.url, fields=dict(upload.form.fields))
+
+
+class PictureConfirm(ApiModel):
+    # The `uploadId` the form was given with.
+    upload_id: UUID
+
+
+class AccountDeletedOut(ApiModel):
+    deleted: Literal[True] = True

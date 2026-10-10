@@ -158,6 +158,118 @@ describe('api client', () => {
     expect(calls[2]?.body).toEqual({ name: 'Leni' });
   });
 
+  it('reads the account, sends a photo in two steps and removes it', async () => {
+    const upload = {
+      uploadId: 'aaaaaaaa-aaaa-4aaa-8aaa-000000000001',
+      url: 'https://files.example.test/',
+      fields: { key: 'uploads/u/a.jpg', 'Content-Type': 'image/jpeg' },
+    };
+    const withPicture = { picture: { url: 'https://files.example.test/users/u/a.jpg?sig=1' } };
+    const { fetch, calls } = fakeFetch(
+      json(200, { picture: null }),
+      json(200, upload),
+      json(200, withPicture),
+      json(200, { picture: null }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getAccount()).toEqual({ picture: null });
+    expect(await api.startPictureUpload()).toEqual(upload);
+    expect(await api.confirmPicture(upload.uploadId)).toEqual(withPicture);
+    expect(await api.removePicture()).toEqual({ picture: null });
+
+    expect(calls.map((call) => `${call.method} ${new URL(call.url).pathname}`)).toEqual([
+      'GET /v1/account',
+      'POST /v1/account/picture/upload',
+      'POST /v1/account/picture',
+      'DELETE /v1/account/picture',
+    ]);
+    expect(calls[2]?.body).toEqual({ uploadId: upload.uploadId });
+  });
+
+  it('deletes the account', async () => {
+    const { fetch, calls } = fakeFetch(json(200, { deleted: true }));
+
+    await expect(client(fetch).api.deleteAccount()).resolves.toBeUndefined();
+
+    expect(calls[0]).toMatchObject({
+      url: 'https://api.example.test/v1/account',
+      method: 'DELETE',
+    });
+  });
+
+  it('creates, drafts, copies partners and reads the templates', async () => {
+    const draft = {
+      role: 'teacher',
+      name: 'Greta',
+      gender: 'female',
+      age: 30,
+      origin: 'Hamburg',
+      occupation: 'Marketing-Managerin',
+      tagline: null,
+      backstory: 'Greta segelt jedes Wochenende.',
+      look: {
+        skin: 'honey',
+        hair: 'bob',
+        hairColor: 'auburn',
+        top: 'amber',
+        backdrop: 'sand',
+        glasses: true,
+        beard: false,
+      },
+      voice: 'coral',
+      personality: {
+        warmth: 5,
+        playfulness: 2,
+        talkativeness: 4,
+        curiosity: 3,
+        humour: 1,
+        formOfAddress: 'formal',
+        style: 'stories',
+      },
+      teaching: {
+        correctionTiming: 'immediate',
+        strictness: 'everything',
+        explanationUsage: null,
+        level: 'B1',
+        focus: 'Dativ',
+        speed: 0.9,
+      },
+    } as const;
+    const greta = { id: '9d1c2f0e-6c1b-4a8e-9a55-0d2f6a1c9e55', ...draft };
+    const { fetch, calls } = fakeFetch(
+      json(200, draft),
+      json(200, { templates: [draft] }),
+      json(200, greta),
+      json(200, { ...greta, id: 'copy', name: 'Greta 2' }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.draftPersona('A friendly woman from Hamburg')).toEqual(draft);
+    expect(await api.getPersonaTemplates()).toEqual([draft]);
+    expect(await api.createPersona(draft)).toEqual(greta);
+    expect((await api.duplicatePersona(greta.id)).name).toBe('Greta 2');
+
+    expect(calls.map((call) => `${call.method} ${new URL(call.url).pathname}`)).toEqual([
+      'POST /v1/personas/draft',
+      'GET /v1/personas/templates',
+      'POST /v1/personas',
+      `POST /v1/personas/${greta.id}/duplicate`,
+    ]);
+    expect(calls[0]?.body).toEqual({ description: 'A friendly woman from Hamburg' });
+    expect(calls[2]?.body).toEqual(draft);
+  });
+
+  it('reads the address of a voice’s sample', async () => {
+    const { fetch, calls } = fakeFetch(json(200, { url: 'https://files.example.test/coral.mp3' }));
+
+    expect(await client(fetch).api.getVoiceSample('coral')).toBe(
+      'https://files.example.test/coral.mp3',
+    );
+
+    expect(new URL(calls[0]!.url).pathname).toBe('/v1/voices/coral/sample');
+  });
+
   it('confirms the partners and completes onboarding', async () => {
     const stage = { stage: 'done', missing: [], placement: 'decided' };
     const { fetch, calls } = fakeFetch(json(200, stage), json(200, stage));

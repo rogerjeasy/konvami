@@ -112,14 +112,18 @@ variable "text_models" {
   description = <<-EOT
     Text models for background work (see modules/api): the stronger one reads a placement
     test's transcript, where accuracy decides the learner's level; the small one writes the
-    starter partners (about 7 seconds on 2026-10-09).
+    starter partners (about 7 seconds on 2026-10-09) and drafts a partner from a description.
+    speech is the model that speaks a voice's sample in Persona Studio: one sentence per voice
+    and language, once, a fraction of a cent each.
   EOT
   type = object({
     assessment = string
     personas   = string
+    speech     = optional(string, "gpt-4o-mini-tts")
   })
   default = {
     assessment = "gpt-6.1-sol"
     personas   = "gpt-6-luna"
+    speech     = "gpt-4o-mini-tts"
   }
 }

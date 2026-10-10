@@ -223,3 +223,197 @@ def test_a_tool_the_partner_does_not_have_changes_nothing() -> None:
 
     assert not result.finished
     assert result.output == {"done": False, "reason": "unknown_tool"}
+
+
+# --- A partner the learner designed (Persona Studio, spec §6.2) -----------------------------------
+
+LOOK = {
+    "skin": "honey",
+    "hair": "bob",
+    "hair_color": "auburn",
+    "top": "amber",
+    "backdrop": "sand",
+    "glasses": True,
+    "beard": False,
+}
+BALANCED = {
+    "warmth": 3,
+    "playfulness": 3,
+    "talkativeness": 3,
+    "curiosity": 3,
+    "humour": 3,
+    "form_of_address": "auto",
+    "style": "questions",
+}
+USUAL = {
+    "correction_timing": "recast",
+    "strictness": "meaning",
+    "explanation_usage": None,
+    "level": None,
+    "focus": None,
+    "speed": None,
+}
+
+
+def designed(world: World, **changes: object):  # type: ignore[no-untyped-def]
+    """The briefing of a partner made in Persona Studio, for a learner at A2."""
+    world.onboard()
+    fields = {
+        "role": "buddy",
+        "name": "Greta",
+        "gender": "female",
+        "age": 30,
+        "origin": "Hamburg",
+        "backstory": "Greta segelt jedes Wochenende auf der Elbe.",
+        "look": LOOK,
+        "voice": "coral",
+        **changes,
+    }
+    greta = world.personas.create(USER, fields)
+    return world.practice.prepare(USER, world.accounts.get(USER), TODAY, greta.id)
+
+
+def test_a_partner_is_told_what_they_do_for_a_living() -> None:
+    text = designed(World(), occupation="Marketing-Managerin").instructions
+
+    assert "You are Greta, 30, from Hamburg" in text
+    assert "You work as: Marketing-Managerin." in text
+
+
+def test_a_partner_without_an_occupation_is_not_given_one() -> None:
+    assert "You work as" not in designed(World()).instructions
+
+
+@pytest.mark.parametrize(
+    ("trait", "value", "expected"),
+    [
+        ("warmth", 5, "very warm and affectionate"),
+        ("warmth", 4, "warm"),
+        ("warmth", 2, "a little reserved"),
+        ("warmth", 1, "reserved and matter-of-fact"),
+        ("playfulness", 5, "very playful"),
+        ("playfulness", 1, "serious and earnest"),
+        ("talkativeness", 5, "love to talk"),
+        ("talkativeness", 1, "few words"),
+        ("curiosity", 5, "very curious"),
+        ("curiosity", 1, "laid-back"),
+        ("humour", 5, "joke"),
+        ("humour", 1, "dry"),
+    ],
+)
+def test_a_partner_is_told_their_character(trait: str, value: int, expected: str) -> None:
+    text = designed(World(), personality={**BALANCED, trait: value}).instructions
+
+    assert "# Your character" in text
+    assert expected in text
+
+
+def test_a_trait_in_the_middle_is_not_mentioned() -> None:
+    text = designed(World(), personality=BALANCED).instructions
+
+    for word in ("reserved", "playful", "love to talk", "few words", "laid-back", "dry"):
+        assert word not in text
+
+
+@pytest.mark.parametrize(
+    ("form", "expected"),
+    [
+        ("informal", "familiar form of address"),
+        ("formal", "polite form of address"),
+        ("auto", "form of address that fits"),
+    ],
+)
+def test_a_partner_addresses_the_learner_as_they_were_designed_to(form: str, expected: str) -> None:
+    text = designed(World(), personality={**BALANCED, "form_of_address": form}).instructions
+
+    assert expected in text
+
+
+@pytest.mark.parametrize(
+    ("style", "expected"),
+    [
+        ("questions", "asking about them"),
+        ("stories", "short stories from your own life"),
+        ("debate", "invite them to disagree"),
+    ],
+)
+def test_a_partner_keeps_the_talk_going_in_their_own_way(style: str, expected: str) -> None:
+    text = designed(World(), personality={**BALANCED, "style": style}).instructions
+
+    assert expected in text
+
+
+def test_a_starter_partner_has_no_character_section() -> None:
+    assert "# Your character" not in instructions(World())
+
+
+def test_a_friend_who_corrects_at_once_says_so_instead_of_recasting() -> None:
+    teaching = {**USUAL, "correction_timing": "immediate", "strictness": "important"}
+
+    text = designed(World(), teaching=teaching).instructions
+
+    assert "casual friend" in text
+    assert "say the correct form and why in one short sentence" in text
+    assert "Never point a mistake out" not in text
+
+
+def test_a_strict_partner_corrects_every_mistake() -> None:
+    teaching = {**USUAL, "correction_timing": "immediate", "strictness": "everything"}
+
+    text = designed(World(), teaching=teaching).instructions
+
+    assert "Correct every mistake you notice" in text
+
+
+def test_a_partner_can_keep_corrections_for_the_end() -> None:
+    teaching = {**USUAL, "correction_timing": "end", "strictness": "important"}
+
+    text = designed(World(), teaching=teaching).instructions
+
+    assert "Do not correct anything while you talk" in text
+    # The goodbye is the one moment after which nothing is cut off (the call ends by itself).
+    assert "Keep the corrections for your goodbye" in text
+    assert "Never point a mistake out" not in text
+
+
+def test_a_partner_can_leave_mistakes_alone_entirely() -> None:
+    text = designed(World(), teaching={**USUAL, "correction_timing": "off"}).instructions
+
+    assert "Do not correct mistakes at all" in text
+    assert "say the correct form" not in text
+
+
+def test_a_teacher_can_be_made_to_recast_like_a_friend() -> None:
+    text = designed(World(), role="teacher", teaching=USUAL).instructions
+
+    assert "patient teacher" in text
+    assert "Never point a mistake out" in text
+    assert "say the correct form and why in one short sentence" not in text
+
+
+def test_a_partner_can_use_another_amount_of_the_explanation_language() -> None:
+    world = World()
+
+    text = designed(world, teaching={**USUAL, "explanation_usage": "never"}).instructions
+
+    # The learner's profile says "when stuck"; this partner was told never to switch.
+    assert "Never switch to French" in text
+
+
+def test_a_partner_can_be_fixed_to_a_level() -> None:
+    text = designed(World(), teaching={**USUAL, "level": "C1"}).instructions
+
+    assert "Their level is C1" in text
+    assert "at most four sentences" in text
+
+
+def test_a_partner_steers_towards_what_the_learner_asked_to_practise() -> None:
+    text = designed(World(), teaching={**USUAL, "focus": "Dativ und Perfekt"}).instructions
+
+    assert "The learner asked this partner to practise: Dativ und Perfekt" in text
+    assert "never drill" in text
+
+
+def test_a_partner_speaks_at_the_pace_they_were_given() -> None:
+    assert designed(World(), teaching={**USUAL, "speed": 0.8}).speed == 0.8
+    assert designed(World()).speed is None

@@ -102,4 +102,19 @@ export interface AuthProvider {
   confirmPasswordReset(email: string, code: string, newPassword: string): Promise<void>;
   /** Signs the account out on every device, this one included (all refresh tokens stop working). */
   signOutEverywhere(accessToken: string): Promise<void>;
+  updateName(accessToken: string, firstName: string): Promise<void>;
+  /** Stores the app language on the account, for the setup guide and for emails. */
+  updateLocale(accessToken: string, locale: Language): Promise<void>;
+  /**
+   * Fails with `notAuthorized` when `current` is wrong, `invalidPassword` when `next` breaks
+   * the rules and `passwordReused` for a recent password.
+   */
+  changePassword(accessToken: string, current: string, next: string): Promise<void>;
+  /**
+   * Sends a code to the new address. The account keeps its email until `confirmEmailChange`.
+   * Fails with `emailTaken` when another account signs in with that address.
+   */
+  requestEmailChange(accessToken: string, email: string): Promise<void>;
+  /** Fails with `invalidCode` or `expiredCode`. */
+  confirmEmailChange(accessToken: string, code: string): Promise<void>;
 }
