@@ -23,40 +23,34 @@ from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile, Source
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from konvami_api.persistence.sql import SqlClient, epoch_micros, from_epoch_micros
 
-# A deleted account is not created again (its last access token may still be in use). The
-# statement that follows then has no owner to refer to and fails as a whole.
-_NOT_DELETED = "NOT EXISTS (SELECT 1 FROM deleted_user WHERE id = CAST(:user_id AS uuid))"
-
-_ENSURE_USER = f"""
+# Every write for a learner begins by making sure their `app_user` row is there. A trigger on
+# that table (migration 0008) takes the account's lock and refuses the row, and with it the
+# whole statement, when the account was deleted: its last access token may still be in use.
+_ENSURE_USER = """
     owner AS (
-        INSERT INTO app_user (id)
-        SELECT CAST(:user_id AS uuid) WHERE {_NOT_DELETED}
-        ON CONFLICT (id) DO NOTHING
+        INSERT INTO app_user (id) VALUES (CAST(:user_id AS uuid)) ON CONFLICT (id) DO NOTHING
     )
 """
 
 _LOAD_PICTURE = "SELECT picture_key FROM app_user WHERE id = CAST(:user_id AS uuid)"
 
-_SAVE_PICTURE = f"""
+_SAVE_PICTURE = """
     INSERT INTO app_user (id, picture_key)
-    SELECT CAST(:user_id AS uuid), CAST(:picture_key AS text) WHERE {_NOT_DELETED}
+    VALUES (CAST(:user_id AS uuid), CAST(:picture_key AS text))
     ON CONFLICT (id) DO UPDATE SET picture_key = EXCLUDED.picture_key
 """
 
-# Every table of a learner's data refers to the `app_user` row with ON DELETE CASCADE. The
-# deletion is remembered, and deletions remembered long enough are forgotten, all at once.
+# Deletes the learner's rows and remembers the deletion, under the account's lock, so that no
+# write for the same account overlaps with it (migration 0008).
 _DELETE_USER = """
-    WITH gone AS (
-        DELETE FROM app_user WHERE id = CAST(:user_id AS uuid)
-    ),
-    forgotten AS (
-        DELETE FROM deleted_user
-        WHERE deleted_at < CAST(:forget_before AS timestamptz) AND id <> CAST(:user_id AS uuid)
-    )
-    INSERT INTO deleted_user (id, deleted_at)
-    VALUES (CAST(:user_id AS uuid), CAST(:deleted_at AS timestamptz))
-    ON CONFLICT (id) DO UPDATE SET deleted_at = EXCLUDED.deleted_at
+    SELECT delete_app_user(
+        CAST(:user_id AS uuid),
+        CAST(:deleted_at AS timestamptz),
+        CAST(:forget_before AS timestamptz)
+    ) AS done
 """
+
+_FORGET_DELETION = "DELETE FROM deleted_user WHERE id = CAST(:user_id AS uuid)"
 
 _IS_DELETED = "SELECT 1 AS gone FROM deleted_user WHERE id = CAST(:user_id AS uuid)"
 
@@ -346,6 +340,9 @@ class SqlAccountRepository:
 
     def is_deleted(self, user_id: UUID) -> bool:
         return bool(self._client.execute(_IS_DELETED, {"user_id": str(user_id)}))
+
+    def restore(self, user_id: UUID) -> None:
+        self._client.execute(_FORGET_DELETION, {"user_id": str(user_id)})
 
 
 class SqlProfileRepository:

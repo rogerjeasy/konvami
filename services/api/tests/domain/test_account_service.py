@@ -203,3 +203,52 @@ def test_a_deleted_account_is_remembered_as_deleted() -> None:
     assert setup.accounts.is_deleted(USER) is True
     assert setup.accounts.is_deleted(OTHER_USER) is False
     assert setup.records.deleted_at[USER] == NOON
+
+
+def test_when_the_sign_in_cannot_be_removed_the_account_is_not_left_half_deleted() -> None:
+    """Its data is gone, but the account still exists: it must not be treated as deleted (every
+    change refused), and deleting it again must work."""
+    setup = Setup()
+    setup.directory.fail_delete = True
+
+    with pytest.raises(RuntimeError):
+        setup.accounts.delete(USER)
+
+    assert USER in setup.directory.accounts
+    assert setup.accounts.is_deleted(USER) is False
+
+    setup.directory.fail_delete = False
+    setup.accounts.delete(USER)
+
+    assert USER not in setup.directory.accounts
+    assert setup.accounts.is_deleted(USER) is True
+
+
+def test_a_sign_in_that_was_removed_although_the_answer_got_lost_counts_as_deleted() -> None:
+    """The identity provider did the work but its answer never arrived. The account is gone:
+    the deletion succeeded and stays remembered, so its last token can store nothing."""
+    setup = Setup()
+    setup.directory.fail_delete = "after"
+
+    setup.accounts.delete(USER)
+
+    assert USER not in setup.directory.accounts
+    assert setup.accounts.is_deleted(USER) is True
+
+
+def test_when_nobody_can_say_whether_the_sign_in_is_gone_the_deletion_stays_remembered() -> None:
+    """Not knowing is not a reason to let the account store things again. The learner is told
+    it failed and can ask again, which is never refused."""
+    setup = Setup()
+    setup.directory.fail_delete = True
+    setup.directory.fail_get = True
+
+    with pytest.raises(RuntimeError):
+        setup.accounts.delete(USER)
+
+    assert setup.accounts.is_deleted(USER) is True
+
+    setup.directory.fail_delete = False
+    setup.directory.fail_get = False
+    setup.accounts.delete(USER)
+    assert USER not in setup.directory.accounts

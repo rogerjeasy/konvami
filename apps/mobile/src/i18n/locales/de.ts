@@ -861,8 +861,7 @@ export const de: Translation = {
         'Dein Konto und alle deine Daten werden jetzt sofort gelöscht. Das lässt sich nicht rückgängig machen.',
       confirmYes: 'Endgültig löschen',
       confirmNo: 'Konto behalten',
-      failed:
-        'Dein Konto konnte nicht gelöscht werden. Es wurde nichts geändert. Bitte versuche es noch einmal.',
+      failed: 'Dein Konto konnte nicht vollständig gelöscht werden. Bitte versuche es noch einmal.',
     },
   },
   partners: {

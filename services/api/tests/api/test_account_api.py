@@ -1,6 +1,12 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
-from tests.api.conftest import OTHER_USER, USER, Call
+import pytest
+from starlette.requests import Request
+
+from konvami_api.api.auth import recently_signed_in
+from konvami_api.api.errors import ApiError
+from tests.api.conftest import OTHER_USER, USER, Call, http_api_event
 from tests.fakes import FakeAccountDirectory, InMemoryAccountRepository, InMemoryFileStore
 
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
@@ -147,3 +153,29 @@ def test_the_last_token_of_a_deleted_account_can_store_nothing(
     }
     # Other accounts are not affected.
     assert call("PATCH", "/v1/profile", changes, subject=OTHER_USER).status == 200
+
+
+def test_a_deletion_left_half_done_can_be_finished(
+    call: Call, directory: FakeAccountDirectory, account_records: InMemoryAccountRepository
+) -> None:
+    """The data is gone and remembered as deleted, but the sign-in is still there (the request
+    was cut off between the two). Asking again must finish the job, not be refused."""
+    account_records.delete(UUID(USER), datetime(2026, 10, 9, 11, 59, tzinfo=UTC))
+    assert UUID(USER) in directory.accounts
+
+    response = call("DELETE", "/v1/account")
+
+    assert response.status == 200
+    assert UUID(USER) not in directory.accounts
+
+
+@pytest.mark.parametrize("auth_time", ["1e999", "nan", "", "yesterday", None, [], "-1"])
+def test_a_sign_in_time_that_cannot_be_read_is_a_refusal(auth_time: object) -> None:
+    event = http_api_event("DELETE", "/v1/account", None, USER)
+    event["requestContext"]["authorizer"]["jwt"]["claims"]["auth_time"] = auth_time
+    request = Request({"type": "http", "aws.event": event})
+
+    with pytest.raises(ApiError) as error:
+        recently_signed_in(request, UUID(USER))
+
+    assert (error.value.status, error.value.code) == (403, "recent_sign_in_required")

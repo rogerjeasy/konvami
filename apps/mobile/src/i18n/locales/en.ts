@@ -846,7 +846,7 @@ export const en = {
         'Your account and all your data will be deleted right now. This cannot be undone.',
       confirmYes: 'Delete forever',
       confirmNo: 'Keep my account',
-      failed: 'Your account couldn’t be deleted. Nothing was changed. Please try again.',
+      failed: 'Your account couldn’t be deleted completely. Please try again.',
     },
   },
   partners: {
