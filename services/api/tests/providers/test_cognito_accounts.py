@@ -4,6 +4,7 @@ from uuid import UUID
 
 import boto3
 import pytest
+from botocore.exceptions import ClientError
 from botocore.stub import Stubber
 
 from konvami_api.domain.accounts import Account, AccountNotFound
@@ -83,3 +84,26 @@ def test_a_deleted_account_is_reported_as_not_found(stub: Stubber) -> None:
 
     with pytest.raises(AccountNotFound):
         CognitoAccounts(stub.client, POOL).get(USER)
+
+
+def test_an_account_is_deleted_from_the_user_pool_by_its_subject(stub: Stubber) -> None:
+    stub.add_response("admin_delete_user", {}, {"UserPoolId": POOL, "Username": str(USER)})
+
+    CognitoAccounts(stub.client, POOL).delete(USER)
+
+
+def test_deleting_an_account_that_is_already_gone_is_not_an_error(stub: Stubber) -> None:
+    stub.add_client_error(
+        "admin_delete_user", service_error_code="UserNotFoundException", http_status_code=400
+    )
+
+    CognitoAccounts(stub.client, POOL).delete(USER)
+
+
+def test_a_deletion_the_user_pool_refuses_is_reported(stub: Stubber) -> None:
+    stub.add_client_error(
+        "admin_delete_user", service_error_code="TooManyRequestsException", http_status_code=400
+    )
+
+    with pytest.raises(ClientError):
+        CognitoAccounts(stub.client, POOL).delete(USER)

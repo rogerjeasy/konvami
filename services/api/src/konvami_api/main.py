@@ -14,6 +14,7 @@ from typing import Any
 from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
+from konvami_api.domain.accounts import AccountService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
@@ -24,10 +25,13 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
+from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.repositories import (
+    SqlAccountRepository,
     SqlConversationRepository,
+    SqlDraftLog,
     SqlOnboardingRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
@@ -38,7 +42,9 @@ from konvami_api.persistence.sql import SqlClient
 from konvami_api.providers.aws import LambdaCallStarter, LambdaClient, SecretsClient, cached_secret
 from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
 from konvami_api.providers.openai_realtime import OpenAiRealtime
+from konvami_api.providers.openai_speech import OpenAiSpeech
 from konvami_api.providers.openai_text import OpenAiText
+from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
 from konvami_api.settings import TEXT_MODELS_VARIABLE, VOICE_VARIABLE, text_models, voice_settings
 from konvami_api.worker import follow_call
 
@@ -51,6 +57,8 @@ _DB_SETTINGS = {
 _USER_POOL = "KONVAMI_USER_POOL_ID"
 _OPENAI_SECRET = "KONVAMI_OPENAI_SECRET_ARN"  # noqa: S105 - the name of a setting
 _CALL_WORKER = "KONVAMI_CALL_WORKER"
+# The private bucket for photos and voice samples (infra/modules/media).
+_MEDIA_BUCKET = "KONVAMI_MEDIA_BUCKET"
 
 # Each attempt waits about 20 seconds for a paused database; waking takes about 15.
 MIGRATION_ATTEMPTS = 4
@@ -64,6 +72,7 @@ class Clients:
     cognito: CognitoIdp
     functions: LambdaClient
     secrets: SecretsClient
+    s3: S3
 
 
 @dataclass(frozen=True)
@@ -112,8 +121,11 @@ def build_backend(
         repository=SqlPersonaRepository(sql),
         text_model=text,
         model=models.personas,
+        drafts=SqlDraftLog(sql),
+        clock=_now,
     )
     conversations = ConversationService(SqlConversationRepository(sql), personas)
+    directory = CognitoAccounts(clients.cognito, environment.get(_USER_POOL, ""))
     voice = VoiceCallService(
         settings=voice_settings(environment.get(VOICE_VARIABLE)),
         scripts={
@@ -127,7 +139,7 @@ def build_backend(
                 conversations=conversations,
             ),
         },
-        accounts=CognitoAccounts(clients.cognito, environment.get(_USER_POOL, "")),
+        accounts=directory,
         provider=realtime,
         sessions=SqlVoiceSessionRepository(sql),
         starter=LambdaCallStarter(clients.functions, environment.get(_CALL_WORKER, "")),
@@ -141,8 +153,23 @@ def build_backend(
         conversations=conversations,
         clock=_now,
     )
+    files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
+    accounts = AccountService(
+        records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
+    )
     services = Services(
-        CATALOG, profiles, onboarding, voice, placement, personas, conversations, home
+        catalog=CATALOG,
+        profiles=profiles,
+        onboarding=onboarding,
+        voice=voice,
+        placement=placement,
+        personas=personas,
+        conversations=conversations,
+        home=home,
+        accounts=accounts,
+        voices=VoiceSampleService(
+            profiles=profiles, files=files, speech=OpenAiSpeech(openai_key), model=models.speech
+        ),
     )
     return Backend(services, realtime)
 
@@ -163,6 +190,7 @@ def _clients() -> Clients:
         cognito=boto3.client("cognito-idp"),
         functions=boto3.client("lambda"),
         secrets=boto3.client("secretsmanager"),
+        s3=s3_client(),
     )
 
 

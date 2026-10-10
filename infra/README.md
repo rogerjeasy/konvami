@@ -20,8 +20,8 @@ never shares them: separate tenants, separate data stores.
 
 ```
 infra/
-├─ envs/dev/        Konvami dev: wires the modules (budget, auth, database, secret, api)
-└─ modules/         reusable modules (budget, auth, database, secret, api, …)
+├─ envs/dev/        Konvami dev: wires the modules (budget, auth, database, secret, media, api)
+└─ modules/         reusable modules (budget, auth, database, secret, media, api, …)
 ```
 
 ## Signing in
@@ -78,6 +78,15 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
 - **Text models:** the `text_models` variable names the model that assesses a placement test and
   the one that writes the starter partners. They use the same OpenAI key. With an empty name a
   job uses its fallback (the examiner's impression, the language pack's built-in partners).
+- **Files (`modules/media`):** the private bucket `kv-dev-media-<account id>` for learners'
+  photos (6.2 Personal) and the voices' samples (6.6 Persona Studio). Nothing in it is public:
+  the API signs a short-lived upload form (JPEG only, at most 1 MB) or a short-lived address, so
+  the app never holds credentials. A photo is uploaded under `uploads/` and moved under
+  `users/<id>/` once the API has checked it; what stays under `uploads/` is deleted after a day.
+  No versioning, so deleting an account really deletes its files. The API's role may use this
+  bucket and delete a user from the pool (the last step of deleting an account). The web
+  preview's origins are allowed to send and read files (CORS); native apps need none.
+  `text_models.speech` names the model that speaks a voice's sample.
 - **Next, in build order (spec §10):** Sign in with Apple and Google on the user pool → S3 audio +
   CloudFront signed URLs → SQS / Step Functions post-session pipeline → CloudWatch dashboards,
   X-Ray. Each arrives as a module in `modules/` plus a few lines in `envs/dev/main.tf`.

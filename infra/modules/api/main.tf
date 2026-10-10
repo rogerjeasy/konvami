@@ -30,6 +30,7 @@ locals {
     KONVAMI_USER_POOL_ID      = var.auth.user_pool_id
     KONVAMI_OPENAI_SECRET_ARN = var.openai_secret_arn
     KONVAMI_CALL_WORKER       = local.call_worker_name
+    KONVAMI_MEDIA_BUCKET      = var.media_bucket.name
     KONVAMI_VOICE             = jsonencode(var.voice)
     KONVAMI_TEXT_MODELS       = jsonencode(var.text_models)
   }
@@ -90,11 +91,28 @@ data "aws_iam_policy_document" "api" {
     resources = [var.openai_secret_arn]
   }
 
-  # Name, language and AI consent of the caller, before a voice call is created.
+  # Name, language and AI consent of the caller, before a voice call is created; and the last
+  # step of deleting an account (profile design P5).
   statement {
-    sid       = "ReadAccounts"
-    actions   = ["cognito-idp:AdminGetUser"]
+    sid       = "ReadAndDeleteAccounts"
+    actions   = ["cognito-idp:AdminGetUser", "cognito-idp:AdminDeleteUser"]
     resources = [var.auth.user_pool_arn]
+  }
+
+  # Photos and voice samples. The functions sign the upload forms and addresses the app uses,
+  # so what they may do here is also the most the app can ever do.
+  statement {
+    sid       = "UseMediaFiles"
+    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+    resources = ["${var.media_bucket.arn}/*"]
+  }
+
+  # Listing finds every file of an account that is deleted. It also makes S3 answer "not
+  # found" for a missing file; without it the answer is "forbidden", which would be an error.
+  statement {
+    sid       = "ListMediaFiles"
+    actions   = ["s3:ListBucket"]
+    resources = [var.media_bucket.arn]
   }
 
   statement {

@@ -11,6 +11,8 @@ const DEFAULT_TIMEOUT_MS = 15000;
 
 const ERROR_CODES: Record<string, AuthErrorCode> = {
   UsernameExistsException: 'emailTaken',
+  // A changed email address that another account already signs in with.
+  AliasExistsException: 'emailTaken',
   InvalidPasswordException: 'invalidPassword',
   PasswordHistoryPolicyViolationException: 'passwordReused',
   InvalidParameterException: 'invalidParameter',
@@ -35,7 +37,9 @@ export type CognitoOperation =
   | 'RevokeToken'
   | 'ForgotPassword'
   | 'ConfirmForgotPassword'
-  | 'GlobalSignOut';
+  | 'GlobalSignOut'
+  | 'ChangePassword'
+  | 'VerifyUserAttribute';
 
 export type CognitoCall = <T = Record<string, unknown>>(
   operation: CognitoOperation,

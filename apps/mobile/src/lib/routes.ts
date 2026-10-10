@@ -62,8 +62,24 @@ export const ROUTES = {
   library: '/library',
   learn: '/learn',
   progress: '/progress',
-  /** 5.9 Account: who is signed in, and the way out. */
+  /** 6.1 Profile: who the learner is, and the way to everything about their account. */
   account: '/account',
+  /** 6.2 Personal: name, photo, app language. */
+  accountPersonal: '/account/personal',
+  /** 6.3 Learning: what the app knows about the learner's learning. */
+  accountLearning: '/account/learning',
+  /** 6.4 My partners, 6.5 New partner and 6.6 Persona Studio for a partner still to be added. */
+  accountPartners: '/account/partners',
+  accountNewPartner: '/account/partners/new',
+  accountStudio: '/account/partners/studio',
+  /** 6.7 Privacy and AI. */
+  accountPrivacy: '/account/privacy',
+  /** 6.8 Security, with its two forms. */
+  accountSecurity: '/account/security',
+  accountPassword: '/account/security/password',
+  accountEmail: '/account/security/email',
+  /** 6.9 Delete account. */
+  accountDelete: '/account/delete',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;
@@ -83,3 +99,7 @@ export const conversationRoute = (id: string) =>
 /** 5.4 What a conversation that has just ended added up to. */
 export const conversationDoneRoute = (id: string) =>
   ({ pathname: '/conversations/[id]/done', params: { id } }) as const satisfies Href;
+
+/** 6.6 Persona Studio for one of the learner's partners. */
+export const studioRoute = (id: string) =>
+  ({ pathname: '/account/partners/[id]', params: { id } }) as const satisfies Href;

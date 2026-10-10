@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from konvami_api.domain.accounts import Account
+from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
@@ -25,11 +25,16 @@ from konvami_api.domain.voice import (
     VoiceSession,
     VoiceSettings,
 )
+from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakeSpeechModel,
     FakeVoiceProvider,
     FixedClock,
+    InMemoryAccountRepository,
     InMemoryConversationRepository,
+    InMemoryDraftLog,
+    InMemoryFileStore,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -90,6 +95,8 @@ class World:
             repository=InMemoryPersonaRepository(),
             text_model=self.text,
             model="gpt-6-luna",
+            drafts=InMemoryDraftLog(),
+            clock=self.clock,
         )
         self.accounts = FakeAccountDirectory(
             {
@@ -129,6 +136,17 @@ class World:
             personas=self.personas,
             placement=self.placement,
             conversations=self.conversations,
+            clock=self.clock,
+        )
+        self.files = InMemoryFileStore()
+        self.speech = FakeSpeechModel()
+        self.voices = VoiceSampleService(
+            profiles=self.profiles, files=self.files, speech=self.speech, model="gpt-4o-mini-tts"
+        )
+        self.account = AccountService(
+            records=InMemoryAccountRepository(),
+            files=self.files,
+            directory=self.accounts,
             clock=self.clock,
         )
         self._calls = 0

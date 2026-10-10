@@ -12,6 +12,7 @@ from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.text import TextModelError
 from tests.fakes import (
     FixedClock,
+    InMemoryDraftLog,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryProfileRepository,
@@ -61,6 +62,8 @@ class Setup:
             repository=self.repository,
             text_model=self.text,
             model="gpt-6-luna",
+            drafts=InMemoryDraftLog(),
+            clock=clock,
         )
         self.profiles.apply(
             USER,
@@ -189,6 +192,8 @@ def test_partners_are_proposed_only_at_that_stage_of_onboarding() -> None:
         repository=InMemoryPersonaRepository(),
         text_model=ScriptedTextModel(),
         model="gpt-6-luna",
+        drafts=InMemoryDraftLog(),
+        clock=clock,
     )
 
     with pytest.raises(OnboardingError) as error:

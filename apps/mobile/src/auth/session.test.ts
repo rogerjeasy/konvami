@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { createFakeAuthProvider } from '@/test/fake-auth-provider';
+import { createFakeAuthProvider, FAKE_CODE } from '@/test/fake-auth-provider';
 import { createSessionStore } from './session';
 import { loadSavedSession, saveSession } from './token-store';
 
@@ -268,5 +268,179 @@ describe('access token for API calls', () => {
     await session.restore();
 
     await expect(session.getAccessToken()).rejects.toMatchObject({ code: 'notAuthorized' });
+  });
+});
+
+describe('changing the account', () => {
+  it('changes the first name on the account, on the signed-in user and in the saved session', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+
+    await session.updateName('Amara Sophie');
+
+    expect(session.getState().user?.firstName).toBe('Amara Sophie');
+    expect((await loadSavedSession())?.user.firstName).toBe('Amara Sophie');
+    const afterRestart = createSessionStore(provider);
+    await afterRestart.restore();
+    expect(afterRestart.getState().user?.firstName).toBe('Amara Sophie');
+  });
+
+  it('keeps the old name when the account could not be changed', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    provider.failNext('updateName', 'network');
+
+    await expect(session.updateName('Amara Sophie')).rejects.toMatchObject({ code: 'network' });
+
+    expect(session.getState().user?.firstName).toBe('Amara');
+  });
+
+  it('stores the app language on the account', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+
+    await session.updateLanguage('fr');
+
+    expect(provider.calls.at(-1)?.[0]).toBe('updateLocale');
+    expect(provider.calls.at(-1)?.[2]).toBe('fr');
+  });
+
+  it('changes the password, after which only the new one signs in', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+
+    await session.changePassword(PASSWORD, 'Winter2027?');
+
+    expect(session.getState().status).toBe('signedIn');
+    await expect(provider.signIn(EMAIL, PASSWORD)).rejects.toMatchObject({ code: 'notAuthorized' });
+    await expect(provider.signIn(EMAIL, 'Winter2027?')).resolves.toBeDefined();
+  });
+
+  it('refuses a password change when the current password is wrong', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+
+    await expect(session.changePassword('wrong', 'Winter2027?')).rejects.toMatchObject({
+      code: 'notAuthorized',
+    });
+
+    await expect(provider.signIn(EMAIL, PASSWORD)).resolves.toBeDefined();
+  });
+
+  it('changes the email address only once the code sent to it is confirmed', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+
+    await session.requestEmailChange('amara@newmail.com');
+    expect(session.getState().user?.email).toBe(EMAIL);
+
+    await session.confirmEmailChange(FAKE_CODE);
+
+    expect(session.getState().user?.email).toBe('amara@newmail.com');
+    expect((await loadSavedSession())?.user.email).toBe('amara@newmail.com');
+    await expect(provider.signIn('amara@newmail.com', PASSWORD)).resolves.toBeDefined();
+    await expect(provider.signIn(EMAIL, PASSWORD)).rejects.toMatchObject({ code: 'notAuthorized' });
+  });
+
+  it('keeps the email address when the code is wrong', async () => {
+    const { session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    await session.requestEmailChange('amara@newmail.com');
+
+    await expect(session.confirmEmailChange('000000')).rejects.toMatchObject({
+      code: 'invalidCode',
+    });
+
+    expect(session.getState().user?.email).toBe(EMAIL);
+  });
+
+  it('refuses an email address another account signs in with', async () => {
+    const { provider, session } = setup();
+    provider.addAccount('taken@mail.com', PASSWORD);
+    await session.signIn(EMAIL, PASSWORD);
+
+    await expect(session.requestEmailChange('taken@mail.com')).rejects.toMatchObject({
+      code: 'emailTaken',
+    });
+  });
+});
+
+describe('signOutEverywhere', () => {
+  it('ends every session of the account, this one included', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    const otherDevice = createSessionStore(provider);
+    await otherDevice.signIn(EMAIL, PASSWORD);
+
+    await session.signOutEverywhere();
+
+    expect(session.getState()).toEqual({ status: 'signedOut', user: null });
+    expect(await loadSavedSession()).toBeNull();
+    expect(provider.liveRefreshTokens.size).toBe(0);
+  });
+
+  it('stays signed in when the server could not be told', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    provider.failNext('signOutEverywhere', 'network');
+
+    await expect(session.signOutEverywhere()).rejects.toMatchObject({ code: 'network' });
+
+    // Unlike a plain sign-out, this one is only worth something if the server did it.
+    expect(session.getState().status).toBe('signedIn');
+  });
+});
+
+describe('signing in again before something that cannot be undone', () => {
+  it('continues on a session opened with the password just typed, and closes the old one', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    const before = await session.getAccessToken();
+    const sessions = provider.liveRefreshTokens.size;
+
+    await expect(session.reauthenticate(PASSWORD)).resolves.toBeUndefined();
+
+    // The server only accepts a token from a sign-in made moments ago.
+    const after = await session.getAccessToken();
+    expect(after).not.toBe(before);
+    expect(provider.calls.filter(([method]) => method === 'signIn')).toHaveLength(2);
+    expect(provider.liveRefreshTokens.size).toBe(sessions);
+    expect(session.getState().status).toBe('signedIn');
+  });
+
+  it('saves the new session, so the next launch does not start from the closed one', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+
+    await session.reauthenticate(PASSWORD);
+
+    const afterRestart = createSessionStore(provider);
+    await afterRestart.restore();
+    expect(afterRestart.getState().status).toBe('signedIn');
+  });
+
+  it('refuses a wrong password and keeps the session as it was', async () => {
+    const { session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    const before = await session.getAccessToken();
+
+    await expect(session.reauthenticate('wrong')).rejects.toMatchObject({ code: 'notAuthorized' });
+
+    expect(await session.getAccessToken()).toBe(before);
+    expect(session.getState().status).toBe('signedIn');
+  });
+});
+
+describe('after the account was deleted', () => {
+  it('forgets the session on the device without asking the server', async () => {
+    const { provider, session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    const calls = provider.calls.length;
+
+    await session.forget();
+
+    expect(session.getState()).toEqual({ status: 'signedOut', user: null });
+    expect(await loadSavedSession()).toBeNull();
+    expect(provider.calls.length).toBe(calls);
   });
 });

@@ -4,7 +4,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { motion, size, space } from '@konvami/design-tokens';
-import { Icon } from '@/components/icon';
+import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
 import { Animate } from '@/components/motion';
 import { slideUpKeyframes } from '@/lib/motion';
@@ -107,6 +107,35 @@ export function ChoiceRow({
       {selected ? (
         <Icon name="check" color={color.primaryText} size={space.xl} strokeWidth={2.4} />
       ) : null}
+    </Pressable>
+  );
+}
+
+/** One thing to do with what the sheet is about ("Make a copy", "Remove"). */
+export function ActionRow({
+  icon,
+  label,
+  danger = false,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  /** The action deletes something. */
+  danger?: boolean;
+  onPress: () => void;
+}) {
+  const { color } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="min-h-field flex-row items-center gap-3.5 rounded-field px-4 py-3 active:opacity-pressed"
+    >
+      <Icon name={icon} color={danger ? color.danger : color.fg} size={size.iconMd} />
+      <Text variant="label" tone={danger ? 'danger' : 'fg'} className="shrink">
+        {label}
+      </Text>
     </Pressable>
   );
 }

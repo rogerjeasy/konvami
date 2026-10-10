@@ -42,6 +42,10 @@ class LanguagePack:
     exams: tuple[ExamFormat, ...] = ()
     # The partners offered when none can be written for a learner (see `domain/personas.py`).
     starter_personas: tuple[PersonaTemplate, ...] = ()
+    # More ready-made partners for Persona Studio, after the starter ones (spec §6.2 Templates).
+    persona_templates: tuple[PersonaTemplate, ...] = ()
+    # What a voice says as its sample in Persona Studio: a partner's first words.
+    voice_sample: str = ""
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
@@ -75,6 +79,7 @@ class Catalog:
 GERMAN = LanguagePack(
     code="de",
     available=True,
+    voice_sample="Hallo! Schön, dich kennenzulernen. Worüber möchtest du heute sprechen?",
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),
         ExamFormat("telc", "telc Deutsch", CEFR_LEVELS),
@@ -145,6 +150,72 @@ GERMAN = LanguagePack(
                 "beard": False,
             },
             voice="sage",
+        ),
+    ),
+    persona_templates=(
+        PersonaTemplate(
+            role="buddy",
+            name="Mara",
+            gender="female",
+            age=34,
+            origin="Berlin",
+            occupation="Journalistin",
+            backstory=(
+                "Mara ist Journalistin in Berlin und schreibt über Stadtleben und Kultur. "
+                "Sie fährt überall mit dem Fahrrad hin, diskutiert leidenschaftlich gern und "
+                "hat zu fast allem eine Meinung."
+            ),
+            look={
+                "skin": "chestnut",
+                "hair": "curls",
+                "hair_color": "black",
+                "top": "amber",
+                "backdrop": "stone",
+                "glasses": False,
+                "beard": False,
+            },
+            voice="coral",
+            personality={
+                "warmth": 3,
+                "playfulness": 4,
+                "talkativeness": 4,
+                "curiosity": 5,
+                "humour": 4,
+                "form_of_address": "informal",
+                "style": "debate",
+            },
+        ),
+        PersonaTemplate(
+            role="buddy",
+            name="Herr Bauer",
+            gender="male",
+            age=68,
+            origin="Wien",
+            occupation="Pensionierter Lehrer",
+            backstory=(
+                "Herr Bauer war vierzig Jahre lang Geschichtslehrer in Wien und ist jetzt in "
+                "Pension. Er sitzt gern im Kaffeehaus, liest jeden Tag drei Zeitungen und "
+                "erzählt gern von früher."
+            ),
+            look={
+                "skin": "porcelain",
+                "hair": "short",
+                "hair_color": "silver",
+                "top": "stone",
+                "backdrop": "sand",
+                "glasses": True,
+                "beard": False,
+            },
+            voice="ash",
+            personality={
+                "warmth": 4,
+                "playfulness": 2,
+                "talkativeness": 4,
+                "curiosity": 3,
+                "humour": 2,
+                "form_of_address": "formal",
+                "style": "stories",
+            },
         ),
     ),
 )

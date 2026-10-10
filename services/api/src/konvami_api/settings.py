@@ -45,8 +45,10 @@ class TextModels:
 
     # Reads a placement test's transcript: accuracy matters.
     assessment: str
-    # Writes the starter partners.
+    # Writes the starter partners and drafts a partner from a description.
     personas: str
+    # Speaks a voice's sample (Persona Studio). Not a text model, but set the same way.
+    speech: str = ""
 
 
 class _TextModels(BaseModel):
@@ -54,6 +56,8 @@ class _TextModels(BaseModel):
 
     assessment: str
     personas: str
+    # Left out by settings written before voice samples existed.
+    speech: str = ""
 
 
 def text_models(raw: str | None) -> TextModels:
@@ -64,4 +68,4 @@ def text_models(raw: str | None) -> TextModels:
         models = _TextModels.model_validate(json.loads(raw))
     except (ValueError, ValidationError) as error:
         raise RuntimeError(f"{TEXT_MODELS_VARIABLE} is not valid") from error
-    return TextModels(assessment=models.assessment, personas=models.personas)
+    return TextModels(assessment=models.assessment, personas=models.personas, speech=models.speech)

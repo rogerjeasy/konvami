@@ -384,6 +384,17 @@ def test_a_practice_call_has_the_partners_voice_instructions_and_time_limit() ->
     assert session["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
 
 
+def test_a_partner_given_a_pace_speaks_at_it() -> None:
+    world = World()
+    _, jonas = world.onboard()
+    teaching = {"correction_timing": "immediate", "strictness": "important", "speed": 0.8}
+    world.personas.change(USER, jonas.id, teaching=teaching)
+
+    world.voice.start(USER, CallPurpose.PRACTICE, OFFER, jonas.id)
+
+    assert world.provider.created[0][1]["audio"]["output"] == {"voice": "cedar", "speed": 0.8}
+
+
 def test_a_practice_call_is_recorded_with_its_partner() -> None:
     world = World()
     lena, _ = world.onboard()

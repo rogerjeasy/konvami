@@ -203,6 +203,20 @@ describe('5.1 Today', () => {
     expect(router.push).toHaveBeenCalledWith('/account');
   });
 
+  it('shows the learner’s photo on the way to the account, once they have one', async () => {
+    const api = inApp();
+    api.havePicture();
+
+    await open(api);
+
+    // The photo is decorative; the button around it is what a screen reader meets.
+    const photo = await screen.findByTestId('user-photo-image', { includeHiddenElements: true });
+    expect(photo).toHaveProp('source', {
+      uri: 'https://files.test/users/amara/picture/earlier.jpg',
+    });
+    expect(screen.getByRole('button', { name: 'Your account' })).toBeTruthy();
+  });
+
   it('says so when the day cannot be loaded and tries again', async () => {
     const api = inApp();
     api.failNext('getHome', 'unknown');

@@ -34,6 +34,8 @@ export function createFakeAuthProvider(): FakeAuthProvider {
   const refreshTokens = new Map<string, string>();
   const accessTokens = new Map<string, string>();
   const failures = new Map<keyof AuthProvider, AuthErrorCode>();
+  /** New email addresses waiting for their code, by the account's current email. */
+  const pendingEmails = new Map<string, string>();
   const calls: unknown[][] = [];
   let counter = 0;
 
@@ -140,6 +142,43 @@ export function createFakeAuthProvider(): FakeAuthProvider {
       const email = accessTokens.get(accessToken);
       if (!email) throw new AuthError('notAuthorized');
       for (const [token, owner] of refreshTokens) if (owner === email) refreshTokens.delete(token);
+    },
+    async updateName(accessToken, firstName) {
+      record('updateName', accessToken, firstName);
+      accountFor(accessToken).user.firstName = firstName.trim();
+    },
+    async updateLocale(accessToken, locale) {
+      record('updateLocale', accessToken, locale);
+      accountFor(accessToken);
+    },
+    async changePassword(accessToken, current, next) {
+      record('changePassword', accessToken, current, next);
+      const account = accountFor(accessToken);
+      if (account.password !== current) throw new AuthError('notAuthorized');
+      if (next === current) throw new AuthError('passwordReused');
+      account.password = next;
+    },
+    async requestEmailChange(accessToken, email) {
+      record('requestEmailChange', accessToken, email);
+      const account = accountFor(accessToken);
+      const wanted = email.trim().toLowerCase();
+      if (accounts.has(wanted)) throw new AuthError('emailTaken');
+      pendingEmails.set(account.user.email, wanted);
+    },
+    async confirmEmailChange(accessToken, code) {
+      record('confirmEmailChange', accessToken, code);
+      const account = accountFor(accessToken);
+      const current = account.user.email;
+      const wanted = pendingEmails.get(current);
+      if (!wanted || code !== FAKE_CODE) throw new AuthError('invalidCode');
+      pendingEmails.delete(current);
+      accounts.delete(current);
+      account.user.email = wanted;
+      accounts.set(wanted, account);
+      // The account's sessions go on under its new address.
+      for (const tokens of [accessTokens, refreshTokens]) {
+        for (const [token, owner] of tokens) if (owner === current) tokens.set(token, wanted);
+      }
     },
   };
 }

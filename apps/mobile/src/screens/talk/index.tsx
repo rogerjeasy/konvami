@@ -5,15 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { HomePartner } from '@konvami/api-client';
 import { useSession } from '@/auth';
-import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
-import { PersonaAvatar } from '@/components/persona-avatar';
+import { PersonaSummary } from '@/components/persona-summary';
 import { TabHeader, TabScreen } from '@/components/tab-screen';
 import { Text } from '@/components/text';
+import { TextButton } from '@/components/text-button';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
@@ -32,28 +32,13 @@ function PartnerCard({ partner, now }: { partner: HomePartner; now: Date }) {
   const { persona, lastTalkedAt } = partner;
   return (
     <Card className="gap-3.5 p-4">
-      <View className="flex-row items-start gap-3.5">
-        <PersonaAvatar look={persona.look} diameter={size.avatarLg} />
-        <View className="flex-1 gap-1">
-          <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
-            <Text variant="heading" className="shrink">
-              {persona.name}
-            </Text>
-            <Badge label={t(`onboarding.partners.roles.${persona.role}`)} />
-          </View>
-          <Text variant="small" tone="subtle">
-            {t('onboarding.partners.ageOrigin', { age: persona.age, origin: persona.origin })}
-          </Text>
-          <Text variant="callout" tone="muted">
-            {persona.tagline ?? t(`onboarding.partners.roleLines.${persona.role}`)}
-          </Text>
-          <Text variant="small" tone="subtle">
-            {lastTalkedAt
-              ? t('talk.last', { when: relativeDayPhrase(t, i18n.language, lastTalkedAt, now) })
-              : t('talk.never')}
-          </Text>
-        </View>
-      </View>
+      <PersonaSummary persona={persona}>
+        <Text variant="small" tone="subtle">
+          {lastTalkedAt
+            ? t('talk.last', { when: relativeDayPhrase(t, i18n.language, lastTalkedAt, now) })
+            : t('talk.never')}
+        </Text>
+      </PersonaSummary>
       <Button
         variant="secondary"
         label={t('talk.start')}
@@ -69,8 +54,8 @@ function PartnerCard({ partner, now }: { partner: HomePartner; now: Date }) {
 }
 
 /**
- * 5.2 Talk: the learner's partners (spec §14.1). Choosing one starts a conversation with them.
- * Creating and changing partners belongs to Persona Studio, which comes later.
+ * 5.2 Talk: the learner's partners (spec §14.1). Choosing one starts a conversation with them;
+ * the buttons under them lead to Persona Studio (6.4–6.6), where partners are made and changed.
  */
 export function TalkScreen() {
   const { t } = useTranslation();
@@ -78,6 +63,7 @@ export function TalkScreen() {
   const { home: store, clock } = usePracticeServices();
   const home = useHome();
   const { split } = useScreenLayout();
+  const { color } = useTheme();
   const signedIn = status === 'signedIn';
 
   useEffect(() => {
@@ -113,6 +99,23 @@ export function TalkScreen() {
               <PartnerCard partner={partner} now={now} />
             </Reveal>
           ))}
+          <Reveal
+            delay={staggerDelay(home.data.partners.length + 1)}
+            style={split ? { width: '100%' } : undefined}
+          >
+            <View className="gap-1 pt-2">
+              <Button
+                variant="secondary"
+                label={t('talk.newPartner')}
+                leading={<Icon name="plus" color={color.fg} size={size.iconMd} />}
+                onPress={() => router.push(ROUTES.accountNewPartner)}
+              />
+              <TextButton
+                label={t('talk.manage')}
+                onPress={() => router.push(ROUTES.accountPartners)}
+              />
+            </View>
+          </Reveal>
         </View>
       ) : (
         <LoadState

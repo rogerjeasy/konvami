@@ -9,7 +9,7 @@ import pytest
 from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
-from konvami_api.domain.accounts import Account
+from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
@@ -20,11 +20,16 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
+from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakeSpeechModel,
     FakeVoiceProvider,
     FixedClock,
+    InMemoryAccountRepository,
     InMemoryConversationRepository,
+    InMemoryDraftLog,
+    InMemoryFileStore,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -44,9 +49,21 @@ class Response:
     body: Any
 
 
-def http_api_event(method: str, target: str, body: Any, subject: str | None) -> dict[str, Any]:
+# When every test request arrives (the event's `timeEpoch`), in seconds.
+REQUEST_TIME = 1791547200
+
+
+def http_api_event(
+    method: str,
+    target: str,
+    body: Any,
+    subject: str | None,
+    signed_in_seconds_ago: int = 0,
+) -> dict[str, Any]:
     """An API Gateway HTTP API (payload 2.0) event, as Lambda gets it behind a JWT authorizer.
-    `target` is the path, with its query string if it has one."""
+    `target` is the path, with its query string if it has one. `signed_in_seconds_ago`: how
+    long ago the caller typed their password (the token's `auth_time`); a token that was only
+    refreshed since keeps the old time."""
     path, _, query = target.partition("?")
     context: dict[str, Any] = {
         "accountId": "503002144480",
@@ -64,7 +81,7 @@ def http_api_event(method: str, target: str, body: Any, subject: str | None) -> 
         "routeKey": "$default",
         "stage": "$default",
         "time": "09/Oct/2026:12:00:00 +0000",
-        "timeEpoch": 1791547200000,
+        "timeEpoch": REQUEST_TIME * 1000,
     }
     if subject is not None:
         context["authorizer"] = {
@@ -77,6 +94,7 @@ def http_api_event(method: str, target: str, body: Any, subject: str | None) -> 
                     "iss": "https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_pool",
                     "exp": "1791550800",
                     "iat": "1791547200",
+                    "auth_time": str(REQUEST_TIME - signed_in_seconds_ago),
                     "username": subject,
                 },
                 "scopes": None,
@@ -140,11 +158,42 @@ def calls() -> InMemoryVoiceSessionRepository:
 
 
 @pytest.fixture
+def files() -> InMemoryFileStore:
+    """The stored files, for tests that upload one or look at what is left."""
+    return InMemoryFileStore()
+
+
+@pytest.fixture
+def directory() -> FakeAccountDirectory:
+    """The accounts as the identity provider holds them."""
+    return FakeAccountDirectory(
+        {
+            UUID(USER): Account("Amara", "fr", voice_consent=True),
+            UUID(OTHER_USER): Account("Jonas", "de", voice_consent=False),
+        }
+    )
+
+
+@pytest.fixture
+def account_records() -> InMemoryAccountRepository:
+    return InMemoryAccountRepository()
+
+
+@pytest.fixture
+def speech() -> FakeSpeechModel:
+    return FakeSpeechModel()
+
+
+@pytest.fixture
 def services(
     clock: FixedClock,
     voice_provider: FakeVoiceProvider,
     text_model: ScriptedTextModel,
     calls: InMemoryVoiceSessionRepository,
+    files: InMemoryFileStore,
+    directory: FakeAccountDirectory,
+    account_records: InMemoryAccountRepository,
+    speech: FakeSpeechModel,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -163,6 +212,8 @@ def services(
         repository=InMemoryPersonaRepository(),
         text_model=text_model,
         model="gpt-6-luna",
+        drafts=InMemoryDraftLog(),
+        clock=clock,
     )
     conversations = ConversationService(InMemoryConversationRepository(calls), personas)
     voice = VoiceCallService(
@@ -178,12 +229,7 @@ def services(
                 conversations=conversations,
             ),
         },
-        accounts=FakeAccountDirectory(
-            {
-                UUID(USER): Account("Amara", "fr", voice_consent=True),
-                UUID(OTHER_USER): Account("Jonas", "de", voice_consent=False),
-            }
-        ),
+        accounts=directory,
         provider=voice_provider,
         sessions=calls,
         starter=RecordingCallStarter(),
@@ -197,7 +243,29 @@ def services(
         conversations=conversations,
         clock=clock,
     )
-    return Services(CATALOG, profiles, onboarding, voice, placement, personas, conversations, home)
+    # Upload ids in the order they are handed out: ...0001, ...0002, and so on.
+    upload_ids = (UUID(f"aaaaaaaa-aaaa-4aaa-8aaa-{number:012d}") for number in range(1, 100))
+    accounts = AccountService(
+        records=account_records,
+        files=files,
+        directory=directory,
+        clock=clock,
+        new_id=lambda: next(upload_ids),
+    )
+    return Services(
+        catalog=CATALOG,
+        profiles=profiles,
+        onboarding=onboarding,
+        voice=voice,
+        placement=placement,
+        personas=personas,
+        conversations=conversations,
+        home=home,
+        accounts=accounts,
+        voices=VoiceSampleService(
+            profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
+        ),
+    )
 
 
 @pytest.fixture
@@ -205,8 +273,16 @@ def call(services: Services) -> Call:
     """Calls the API the way API Gateway does: through the Lambda handler, as a signed-in user."""
     handler = Mangum(create_app(services), lifespan="off")
 
-    def _call(method: str, path: str, body: Any = None, *, subject: str | None = USER) -> Response:
-        result = handler(http_api_event(method, path, body, subject), None)  # type: ignore[arg-type]
+    def _call(
+        method: str,
+        path: str,
+        body: Any = None,
+        *,
+        subject: str | None = USER,
+        signed_in_seconds_ago: int = 0,
+    ) -> Response:
+        event = http_api_event(method, path, body, subject, signed_in_seconds_ago)
+        result = handler(event, None)  # type: ignore[arg-type]
         text = result.get("body") or ""
         return Response(result["statusCode"], json.loads(text) if text else None)
 

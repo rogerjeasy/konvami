@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+from konvami_api.domain.accounts import DELETION_MEMORY
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -22,11 +23,42 @@ from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile, Source
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from konvami_api.persistence.sql import SqlClient, epoch_micros, from_epoch_micros
 
-_ENSURE_USER = """
+# A deleted account is not created again (its last access token may still be in use). The
+# statement that follows then has no owner to refer to and fails as a whole.
+_NOT_DELETED = "NOT EXISTS (SELECT 1 FROM deleted_user WHERE id = CAST(:user_id AS uuid))"
+
+_ENSURE_USER = f"""
     owner AS (
-        INSERT INTO app_user (id) VALUES (CAST(:user_id AS uuid)) ON CONFLICT (id) DO NOTHING
+        INSERT INTO app_user (id)
+        SELECT CAST(:user_id AS uuid) WHERE {_NOT_DELETED}
+        ON CONFLICT (id) DO NOTHING
     )
 """
+
+_LOAD_PICTURE = "SELECT picture_key FROM app_user WHERE id = CAST(:user_id AS uuid)"
+
+_SAVE_PICTURE = f"""
+    INSERT INTO app_user (id, picture_key)
+    SELECT CAST(:user_id AS uuid), CAST(:picture_key AS text) WHERE {_NOT_DELETED}
+    ON CONFLICT (id) DO UPDATE SET picture_key = EXCLUDED.picture_key
+"""
+
+# Every table of a learner's data refers to the `app_user` row with ON DELETE CASCADE. The
+# deletion is remembered, and deletions remembered long enough are forgotten, all at once.
+_DELETE_USER = """
+    WITH gone AS (
+        DELETE FROM app_user WHERE id = CAST(:user_id AS uuid)
+    ),
+    forgotten AS (
+        DELETE FROM deleted_user
+        WHERE deleted_at < CAST(:forget_before AS timestamptz) AND id <> CAST(:user_id AS uuid)
+    )
+    INSERT INTO deleted_user (id, deleted_at)
+    VALUES (CAST(:user_id AS uuid), CAST(:deleted_at AS timestamptz))
+    ON CONFLICT (id) DO UPDATE SET deleted_at = EXCLUDED.deleted_at
+"""
+
+_IS_DELETED = "SELECT 1 AS gone FROM deleted_user WHERE id = CAST(:user_id AS uuid)"
 
 _LOAD_PROFILE = f"""
     SELECT scope, field, CAST(value AS text) AS value, source,
@@ -92,26 +124,41 @@ _SAVE_ONBOARDING = f"""
 _ADD_PERSONAS = f"""
     WITH {_ENSURE_USER}
     INSERT INTO persona
-        (id, user_id, language, role, name, gender, age, origin, tagline, backstory, look, voice)
+        (id, user_id, language, role, name, gender, age, origin, tagline, backstory, look, voice,
+         occupation, personality, teaching)
     SELECT CAST(item ->> 'id' AS uuid), CAST(:user_id AS uuid), :language, item ->> 'role',
            item ->> 'name', item ->> 'gender', CAST(item ->> 'age' AS integer),
            item ->> 'origin', item ->> 'tagline', item ->> 'backstory', item -> 'look',
-           item ->> 'voice'
+           item ->> 'voice', item ->> 'occupation', item -> 'personality', item -> 'teaching'
     FROM jsonb_array_elements(CAST(:personas AS jsonb)) WITH ORDINALITY AS t (item, position)
     ORDER BY position
 """
 
 _LIST_PERSONAS = """
     SELECT CAST(id AS text) AS id, role, name, gender, age, origin, tagline, backstory,
-           CAST(look AS text) AS look, voice
+           CAST(look AS text) AS look, voice, occupation,
+           CAST(personality AS text) AS personality, CAST(teaching AS text) AS teaching
     FROM persona
     WHERE user_id = CAST(:user_id AS uuid) AND language = :language
     ORDER BY position
 """
 
+# The changed persona arrives as one JSON object: every field but its id and its place.
 _UPDATE_PERSONA = """
     UPDATE persona
-    SET name = :name, look = CAST(:look AS jsonb)
+    SET role = item ->> 'role',
+        name = item ->> 'name',
+        gender = item ->> 'gender',
+        age = CAST(item ->> 'age' AS integer),
+        origin = item ->> 'origin',
+        tagline = item ->> 'tagline',
+        backstory = item ->> 'backstory',
+        look = item -> 'look',
+        voice = item ->> 'voice',
+        occupation = item ->> 'occupation',
+        personality = item -> 'personality',
+        teaching = item -> 'teaching'
+    FROM (SELECT CAST(:persona AS jsonb) AS item) AS input
     WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
     RETURNING 1 AS changed
 """
@@ -120,6 +167,18 @@ _REMOVE_PERSONA = """
     DELETE FROM persona
     WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
     RETURNING 1 AS removed
+"""
+
+# Counts one more draft for the day, unless the limit is reached: the row is locked while it is
+# raised, so requests arriving together are counted one after the other. No row comes back
+# when the limit stands.
+_RESERVE_DRAFT = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO persona_draft_day (user_id, day, drafts)
+    VALUES (CAST(:user_id AS uuid), CAST(:day AS date), 1)
+    ON CONFLICT (user_id, day) DO UPDATE SET drafts = persona_draft_day.drafts + 1
+        WHERE persona_draft_day.drafts < :limit
+    RETURNING drafts
 """
 
 _START_SESSION = f"""
@@ -261,6 +320,32 @@ def _moment(micros: int | None) -> dt.datetime | None:
 
 def _iso(moment: dt.datetime | None) -> str | None:
     return None if moment is None else moment.isoformat()
+
+
+class SqlAccountRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def picture_key(self, user_id: UUID) -> str | None:
+        rows = self._client.execute(_LOAD_PICTURE, {"user_id": str(user_id)})
+        key: str | None = rows[0]["picture_key"] if rows else None
+        return key
+
+    def set_picture_key(self, user_id: UUID, key: str | None) -> None:
+        self._client.execute(_SAVE_PICTURE, {"user_id": str(user_id), "picture_key": key})
+
+    def delete(self, user_id: UUID, at: dt.datetime) -> None:
+        self._client.execute(
+            _DELETE_USER,
+            {
+                "user_id": str(user_id),
+                "deleted_at": at.isoformat(),
+                "forget_before": (at - DELETION_MEMORY).isoformat(),
+            },
+        )
+
+    def is_deleted(self, user_id: UUID) -> bool:
+        return bool(self._client.execute(_IS_DELETED, {"user_id": str(user_id)}))
 
 
 class SqlProfileRepository:
@@ -412,6 +497,23 @@ class SqlPlacementRepository:
         )
 
 
+def _persona_fields(persona: Persona) -> dict[str, Any]:
+    return {
+        "role": persona.role,
+        "name": persona.name,
+        "gender": persona.gender,
+        "age": persona.age,
+        "origin": persona.origin,
+        "tagline": persona.tagline,
+        "backstory": persona.backstory,
+        "look": persona.look,
+        "voice": persona.voice,
+        "occupation": persona.occupation,
+        "personality": persona.personality,
+        "teaching": persona.teaching,
+    }
+
+
 class SqlPersonaRepository:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
@@ -419,21 +521,7 @@ class SqlPersonaRepository:
     def add(self, user_id: UUID, language: str, personas: Sequence[Persona]) -> None:
         if not personas:
             return
-        payload = [
-            {
-                "id": str(persona.id),
-                "role": persona.role,
-                "name": persona.name,
-                "gender": persona.gender,
-                "age": persona.age,
-                "origin": persona.origin,
-                "tagline": persona.tagline,
-                "backstory": persona.backstory,
-                "look": persona.look,
-                "voice": persona.voice,
-            }
-            for persona in personas
-        ]
+        payload = [{"id": str(persona.id), **_persona_fields(persona)} for persona in personas]
         self._client.execute(
             _ADD_PERSONAS,
             {"user_id": str(user_id), "language": language, "personas": json.dumps(payload)},
@@ -453,6 +541,9 @@ class SqlPersonaRepository:
                 backstory=row["backstory"],
                 look=json.loads(row["look"]),
                 voice=row["voice"],
+                occupation=row["occupation"],
+                personality=json.loads(row["personality"]),
+                teaching=json.loads(row["teaching"]),
             )
             for row in rows
         ]
@@ -463,8 +554,7 @@ class SqlPersonaRepository:
             {
                 "id": str(persona.id),
                 "user_id": str(user_id),
-                "name": persona.name,
-                "look": json.dumps(persona.look),
+                "persona": json.dumps(_persona_fields(persona)),
             },
         )
         return bool(rows)
@@ -472,6 +562,19 @@ class SqlPersonaRepository:
     def remove(self, user_id: UUID, persona_id: UUID) -> bool:
         rows = self._client.execute(
             _REMOVE_PERSONA, {"id": str(persona_id), "user_id": str(user_id)}
+        )
+        return bool(rows)
+
+
+class SqlDraftLog:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def reserve(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        if limit < 1:
+            return False
+        rows = self._client.execute(
+            _RESERVE_DRAFT, {"user_id": str(user_id), "day": day.isoformat(), "limit": limit}
         )
         return bool(rows)
 

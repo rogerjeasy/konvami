@@ -26,8 +26,26 @@ export type PlacementResult = Schemas['PlacementResultOut'];
 export type PlacementChoice = Schemas['PlacementDecision']['use'];
 export type Persona = Schemas['PersonaOut'];
 export type PersonaRole = Persona['role'];
+export type PersonaGender = Persona['gender'];
+export type PersonaVoice = Persona['voice'];
 export type PersonaLook = Schemas['LookModel'];
-export type PersonaChange = { name?: string; look?: PersonaLook };
+/** How a persona comes across: five traits from 1 to 5, a form of address and a style. */
+export type PersonaPersonality = Schemas['PersonalityModel'];
+/** How a persona treats mistakes and adapts to the learner. */
+export type PersonaTeaching = Schemas['TeachingModel'];
+/** A persona that is not saved: a template, or one written from a description. */
+export type PersonaDraft = Schemas['PersonaDraftOut'];
+/** A new persona. Personality and teaching left out: as their role does. */
+export type PersonaInput = Schemas['PersonaIn'];
+/**
+ * The parts of a persona to change; the ones left out stay. `personality` or `teaching` set to
+ * null go back to what the persona's role does.
+ */
+export type PersonaChange = Partial<PersonaInput>;
+/** What the backend keeps for an account: the learner's photo. */
+export type Account = Schemas['AccountOut'];
+/** How to send a photo: a form POST to `url` with `fields`, then the JPEG as `file`. */
+export type PictureUpload = Schemas['PictureUploadOut'];
 export type Home = Schemas['HomeOut'];
 export type HomeLevel = Schemas['HomeLevelOut'];
 export type HomeExam = Schemas['HomeExamOut'];
@@ -94,8 +112,32 @@ export interface ApiClient {
    */
   proposeStarterPersonas(): Promise<Persona[]>;
   getPersonas(): Promise<Persona[]>;
-  /** Renames a partner or gives them another look. Fails with `invalid_value` or `not_found`. */
+  /** Changes any part of a partner. Fails with `invalid_value` or `not_found`. */
   changePersona(id: string, change: PersonaChange): Promise<Persona>;
+  /** Adds a partner. Fails with `invalid_value`, `too_many` (12 at most) or `no_language`. */
+  createPersona(persona: PersonaInput): Promise<Persona>;
+  /**
+   * A partner written from the learner's description; nothing is saved. It can take a few
+   * seconds. Fails with `invalid_value`, `draft_limit` (20 a day) or `writer_unavailable`.
+   */
+  draftPersona(description: string): Promise<PersonaDraft>;
+  /** Ready-made partners of the language being learned. */
+  getPersonaTemplates(): Promise<PersonaDraft[]>;
+  /** A copy of a partner under the same name with the next free number. */
+  duplicatePersona(id: string): Promise<Persona>;
+  /**
+   * A short-lived address of a voice's sample (MP3). The first request for a voice can take a
+   * few seconds. Fails with `voice_unavailable`.
+   */
+  getVoiceSample(voice: PersonaVoice): Promise<string>;
+  getAccount(): Promise<Account>;
+  /** A form to send one photo with. It becomes the learner's photo with `confirmPicture`. */
+  startPictureUpload(): Promise<PictureUpload>;
+  /** Fails with `upload_not_found` or, for a file that is not a JPEG, `invalid_picture`. */
+  confirmPicture(uploadId: string): Promise<Account>;
+  removePicture(): Promise<Account>;
+  /** Deletes the account and everything stored for it. This cannot be undone. */
+  deleteAccount(): Promise<void>;
   /** Removes a partner and returns the ones that remain. */
   removePersona(id: string): Promise<Persona[]>;
   /** Fails with `no_partners` when none is left. */
@@ -207,6 +249,23 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getPersonas: () => personas(request('GET', '/v1/personas')),
     changePersona: (id, change) => request('PATCH', personaPath(id), change),
     removePersona: (id) => personas(request('DELETE', personaPath(id))),
+    createPersona: (persona) => request('POST', '/v1/personas', persona),
+    draftPersona: (description) => request('POST', '/v1/personas/draft', { description }),
+    getPersonaTemplates: async () =>
+      (await request<Schemas['PersonaTemplatesOut']>('GET', '/v1/personas/templates')).templates,
+    duplicatePersona: (id) => request('POST', `${personaPath(id)}/duplicate`),
+    getVoiceSample: async (voice) =>
+      (
+        await request<Schemas['VoiceSampleOut']>(
+          'GET',
+          `/v1/voices/${encodeURIComponent(voice)}/sample`,
+        )
+      ).url,
+    getAccount: () => request('GET', '/v1/account'),
+    startPictureUpload: () => request('POST', '/v1/account/picture/upload'),
+    confirmPicture: (uploadId) => request('POST', '/v1/account/picture', { uploadId }),
+    removePicture: () => request('DELETE', '/v1/account/picture'),
+    deleteAccount: async () => void (await request('DELETE', '/v1/account')),
     confirmPartners: () => request('POST', '/v1/onboarding/partners/confirm'),
     completeOnboarding: () => request('POST', '/v1/onboarding/complete'),
     startVoiceCall: (purpose, sdp, details = {}) =>

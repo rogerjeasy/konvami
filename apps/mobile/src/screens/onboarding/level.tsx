@@ -5,14 +5,17 @@ import { Reveal } from '@/components/motion';
 import { OptionCard } from '@/components/option-card';
 import { stepFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
+import { practiceLevel } from '@/onboarding/answers';
 import { languageInText } from '@/onboarding/names';
 import type { OnboardingData } from '@/onboarding/store';
-import { StepFrame, StepGate } from './step';
+import { StepFrame, StepGate, useEditOrigin } from './step';
 
 function LevelForm({ data }: { data: OnboardingData }) {
   const { t } = useTranslation();
   const { catalog, essentials } = data;
-  const [level, setLevel] = useState(essentials.selfAssessedLevel);
+  // In the profile, long after the placement test, "my level" is the one practice runs at.
+  const settled = useEditOrigin() === 'profile';
+  const [level, setLevel] = useState(settled ? practiceLevel(data) : essentials.selfAssessedLevel);
   const language = languageInText(catalog, essentials.targetLanguage ?? '', t);
   return (
     <StepFrame
@@ -20,7 +23,11 @@ function LevelForm({ data }: { data: OnboardingData }) {
       title={t('onboarding.level.title', { language })}
       body={t('onboarding.level.body')}
       complete={level !== null}
-      changes={() => [{ field: 'self_assessed_level', value: level }]}
+      changes={() => [
+        { field: 'self_assessed_level', value: level },
+        // During the setup the starting level is settled later, with the placement test.
+        ...(settled ? [{ field: 'starting_level', value: level }] : []),
+      ]}
     >
       <View accessibilityRole="radiogroup" className="gap-2.5">
         {catalog.startingLevels.map((option, i) => (

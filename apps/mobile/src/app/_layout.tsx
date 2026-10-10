@@ -15,6 +15,7 @@ import { AuthServicesProvider, authServices } from '@/auth';
 import { OnboardingProvider, onboardingStore } from '@/onboarding';
 import { PracticeProvider, practiceServices } from '@/practice';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
+import { ProfileProvider, profileServices } from '@/profile';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
 import { ScreenBoundary } from '@/screens/error';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
@@ -57,14 +58,16 @@ export default function RootLayout() {
       <AuthServicesProvider services={authServices}>
         <OnboardingProvider store={onboardingStore}>
           <PracticeProvider services={practiceServices}>
-            <VoiceProvider createEngine={createAppVoiceEngine}>
-              <SignUpDraftProvider>
-                <AccessDraftProvider>
-                  <StatusBar style="auto" />
-                  <RootStack />
-                </AccessDraftProvider>
-              </SignUpDraftProvider>
-            </VoiceProvider>
+            <ProfileProvider services={profileServices}>
+              <VoiceProvider createEngine={createAppVoiceEngine}>
+                <SignUpDraftProvider>
+                  <AccessDraftProvider>
+                    <StatusBar style="auto" />
+                    <RootStack />
+                  </AccessDraftProvider>
+                </SignUpDraftProvider>
+              </VoiceProvider>
+            </ProfileProvider>
           </PracticeProvider>
         </OnboardingProvider>
       </AuthServicesProvider>
