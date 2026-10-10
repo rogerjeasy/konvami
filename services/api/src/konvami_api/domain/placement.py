@@ -32,7 +32,7 @@ from konvami_api.domain.onboarding import (
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.text import TextModel, TextModelError, TextTask
 from konvami_api.domain.tools import ToolResult, ToolSet
-from konvami_api.domain.voice import FinishedCall
+from konvami_api.domain.voice import Briefing, FinishedCall
 
 Skill = Literal["speaking", "listening", "grammar", "vocabulary", "pronunciation"]
 SKILLS: tuple[Skill, ...] = get_args(Skill)
@@ -427,9 +427,11 @@ class PlacementScript:
     def __init__(self, placement: PlacementService) -> None:
         self._placement = placement
 
-    def prepare(self, user_id: UUID, account: Account, today: dt.date) -> str:
+    def prepare(
+        self, user_id: UUID, account: Account, today: dt.date, persona_id: UUID | None
+    ) -> Briefing:
         self._placement.check(user_id)
-        return self._placement.instructions(user_id, first_name=account.first_name)
+        return Briefing(self._placement.instructions(user_id, first_name=account.first_name))
 
     def tools(self, user_id: UUID) -> PlacementTools:
         return PlacementTools()

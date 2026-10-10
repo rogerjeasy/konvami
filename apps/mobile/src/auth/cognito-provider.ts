@@ -51,6 +51,13 @@ export function createCognitoProvider({
     };
   }
 
+  async function setAttribute(accessToken: string, name: string, value: string) {
+    await call('UpdateUserAttributes', {
+      AccessToken: accessToken,
+      UserAttributes: [{ Name: name, Value: value }],
+    });
+  }
+
   const resendCode = async (email: string) => {
     await call('ResendConfirmationCode', { ClientId: clientId, Username: normalise(email) });
   };
@@ -115,10 +122,7 @@ export function createCognitoProvider({
 
     async saveAiConsent(accessToken, choices) {
       const at = now();
-      await call('UpdateUserAttributes', {
-        AccessToken: accessToken,
-        UserAttributes: [{ Name: ATTRIBUTE.aiConsent, Value: encodeAiConsent(choices, at) }],
-      });
+      await setAttribute(accessToken, ATTRIBUTE.aiConsent, encodeAiConsent(choices, at));
       return {
         version: AI_CONSENT_VERSION,
         at: at.toISOString(),
@@ -152,6 +156,32 @@ export function createCognitoProvider({
 
     async signOutEverywhere(accessToken) {
       await call('GlobalSignOut', { AccessToken: accessToken });
+    },
+
+    updateName: (accessToken, firstName) =>
+      setAttribute(accessToken, ATTRIBUTE.firstName, firstName.trim()),
+
+    updateLocale: (accessToken, locale) => setAttribute(accessToken, ATTRIBUTE.locale, locale),
+
+    async changePassword(accessToken, current, next) {
+      await call('ChangePassword', {
+        AccessToken: accessToken,
+        PreviousPassword: current,
+        ProposedPassword: next,
+      });
+    },
+
+    // The pool verifies a new address before it replaces the old one (infra/modules/auth), so
+    // this only sends the code; `confirmEmailChange` makes the change.
+    requestEmailChange: (accessToken, email) =>
+      setAttribute(accessToken, ATTRIBUTE.email, normalise(email)),
+
+    async confirmEmailChange(accessToken, code) {
+      await call('VerifyUserAttribute', {
+        AccessToken: accessToken,
+        AttributeName: ATTRIBUTE.email,
+        Code: code,
+      });
     },
   };
 }

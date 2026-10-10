@@ -11,8 +11,11 @@ export type { AudioLevels } from './rtc-session';
  * over WebRTC today) can change without touching a screen.
  */
 export interface VoiceEngine {
-  /** Sets the call up. Rejects with a `VoiceError`; nothing is left open when it does. */
-  start(): Promise<{ maxSeconds: number }>;
+  /**
+   * Sets the call up and returns its id and the time after which the server ends it. Rejects
+   * with a `VoiceError`; nothing is left open when it does.
+   */
+  start(): Promise<{ callId: string; maxSeconds: number }>;
   /** Ends the call and frees the microphone. Safe to call at any time, any number of times. */
   stop(): void;
   setMuted(muted: boolean): void;
@@ -75,7 +78,7 @@ export function createVoiceEngine({
         const call = await startCall(offer);
         if (stopped) throw new VoiceError('stopped');
         await next.accept(call.sdp);
-        return { maxSeconds: call.maxSeconds };
+        return { callId: call.callId, maxSeconds: call.maxSeconds };
       } catch (error) {
         next.close();
         if (session === next) session = null;

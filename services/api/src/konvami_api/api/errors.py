@@ -10,11 +10,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
+from konvami_api.domain.accounts import AccountError
+from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.voice import VoiceError
+from konvami_api.domain.voices import SampleError
 
 
 class ErrorDetail(BaseModel):
@@ -37,7 +40,18 @@ _HTTP_CODES = {404: "not_found", 405: "method_not_allowed"}
 # Why a voice call cannot start, as HTTP: not allowed, too many, or not possible right now.
 _VOICE_STATUS = {"not_authenticated": 401, "consent_required": 403, "call_limit": 429}
 _VOICE_UNAVAILABLE = 503
-_PERSONA_STATUS = {"invalid_value": 422, "not_found": 404, "no_partners": 409}
+_ACCOUNT_STATUS = {"upload_not_found": 404, "invalid_picture": 422}
+_PERSONA_STATUS = {
+    "invalid_value": 422,
+    "not_found": 404,
+    "no_partners": 409,
+    "no_language": 409,
+    "too_many": 409,
+    "draft_limit": 429,
+    "writer_unavailable": 503,
+}
+_SAMPLE_STATUS = {"no_language": 409}
+_UNAVAILABLE = 503
 
 
 def _response(
@@ -63,6 +77,18 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PersonaError)
     async def _persona_error(_: Request, error: PersonaError) -> JSONResponse:
         return _response(_PERSONA_STATUS.get(error.code, 422), error.code)
+
+    @app.exception_handler(AccountError)
+    async def _account_error(_: Request, error: AccountError) -> JSONResponse:
+        return _response(_ACCOUNT_STATUS.get(error.code, 422), error.code)
+
+    @app.exception_handler(SampleError)
+    async def _sample_error(_: Request, error: SampleError) -> JSONResponse:
+        return _response(_SAMPLE_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(ConversationError)
+    async def _conversation_error(_: Request, error: ConversationError) -> JSONResponse:
+        return _response(404, error.code)
 
     @app.exception_handler(VoiceError)
     async def _voice_error(_: Request, error: VoiceError) -> JSONResponse:

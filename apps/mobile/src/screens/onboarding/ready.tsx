@@ -6,6 +6,7 @@ import { size } from '@konvami/design-tokens';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
 import { useSession } from '@/auth';
 import { LogoMark } from '@/components/brand';
+import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { HeroLayout } from '@/components/hero-layout';
@@ -68,13 +69,7 @@ function SummaryRow({ label, value, badge }: { label: string; value: string; bad
         <Text variant="label" className="shrink">
           {value}
         </Text>
-        {badge ? (
-          <View className="rounded-sm bg-surface px-1.5 py-1">
-            <Text variant="badge" tone="muted">
-              {badge}
-            </Text>
-          </View>
-        ) : null}
+        {badge ? <Badge label={badge} tone="surface" /> : null}
       </View>
     </View>
   );

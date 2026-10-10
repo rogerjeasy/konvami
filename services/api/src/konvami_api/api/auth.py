@@ -21,3 +21,26 @@ def current_user(request: Request) -> UUID:
 
 
 CurrentUser = Annotated[UUID, Depends(current_user)]
+
+# How long ago the caller may have typed their password for an action that cannot be undone.
+RECENT_SIGN_IN_SECONDS = 300
+# The identity provider's clock and the gateway's may differ by a little.
+CLOCK_SKEW_SECONDS = 60
+
+
+def recently_signed_in(request: Request, _: CurrentUser) -> None:
+    """Refuses a caller who did not sign in with their password moments ago (someone who is not
+    signed in at all is refused first, as everywhere). A token that was
+    stolen, or kept alive by refreshing, carries the time of the original sign-in (`auth_time`)
+    and is not enough for what cannot be undone."""
+    context = request.scope.get("aws.event", {}).get("requestContext", {})
+    claims = context.get("authorizer", {}).get("jwt", {}).get("claims", {})
+    try:
+        signed_in_at = int(float(claims["auth_time"]))
+        # When API Gateway received the request, in milliseconds.
+        now = int(context["timeEpoch"]) // 1000
+    except (KeyError, TypeError, ValueError, OverflowError):
+        # No time, or one that is not a time: not a recent sign-in.
+        raise ApiError(403, "recent_sign_in_required") from None
+    if not -CLOCK_SKEW_SECONDS <= now - signed_in_at <= RECENT_SIGN_IN_SECONDS:
+        raise ApiError(403, "recent_sign_in_required")

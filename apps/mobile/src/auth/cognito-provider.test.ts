@@ -274,3 +274,85 @@ describe('password reset', () => {
     expect(calls[0]).toEqual({ operation: 'GlobalSignOut', body: { AccessToken: 'access-1' } });
   });
 });
+
+describe('changing the account', () => {
+  it('stores a new first name, trimmed', async () => {
+    const { provider, calls } = setup({ UpdateUserAttributes: () => ({}) });
+
+    await provider.updateName('access-1', '  Amara Sophie ');
+
+    expect(calls).toEqual([
+      {
+        operation: 'UpdateUserAttributes',
+        body: {
+          AccessToken: 'access-1',
+          UserAttributes: [{ Name: 'given_name', Value: 'Amara Sophie' }],
+        },
+      },
+    ]);
+  });
+
+  it('stores the app language on the account', async () => {
+    const { provider, calls } = setup({ UpdateUserAttributes: () => ({}) });
+
+    await provider.updateLocale('access-1', 'fr');
+
+    expect(calls[0]?.body).toEqual({
+      AccessToken: 'access-1',
+      UserAttributes: [{ Name: 'locale', Value: 'fr' }],
+    });
+  });
+
+  it('changes the password with the current one as proof', async () => {
+    const { provider, calls } = setup({ ChangePassword: () => ({}) });
+
+    await provider.changePassword('access-1', 'Sommer2026!', 'Winter2027?');
+
+    expect(calls).toEqual([
+      {
+        operation: 'ChangePassword',
+        body: {
+          AccessToken: 'access-1',
+          PreviousPassword: 'Sommer2026!',
+          ProposedPassword: 'Winter2027?',
+        },
+      },
+    ]);
+  });
+
+  it('reports a wrong current password', async () => {
+    const { provider } = setup({ ChangePassword: fail('notAuthorized') });
+
+    await expect(provider.changePassword('access-1', 'wrong', 'Winter2027?')).rejects.toMatchObject(
+      { code: 'notAuthorized' },
+    );
+  });
+
+  it('asks for a new email address, which sends a code to it', async () => {
+    const { provider, calls } = setup({
+      UpdateUserAttributes: () => ({
+        CodeDeliveryDetailsList: [{ AttributeName: 'email', DeliveryMedium: 'EMAIL' }],
+      }),
+    });
+
+    await provider.requestEmailChange('access-1', ' Amara@NewMail.com ');
+
+    expect(calls[0]?.body).toEqual({
+      AccessToken: 'access-1',
+      UserAttributes: [{ Name: 'email', Value: 'amara@newmail.com' }],
+    });
+  });
+
+  it('confirms the new email address with the code', async () => {
+    const { provider, calls } = setup({ VerifyUserAttribute: () => ({}) });
+
+    await provider.confirmEmailChange('access-1', '482915');
+
+    expect(calls).toEqual([
+      {
+        operation: 'VerifyUserAttribute',
+        body: { AccessToken: 'access-1', AttributeName: 'email', Code: '482915' },
+      },
+    ]);
+  });
+});

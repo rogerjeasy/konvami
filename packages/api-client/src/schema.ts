@@ -4,6 +4,59 @@
  */
 
 export interface paths {
+    "/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Account */
+        get: operations["getAccount"];
+        put?: never;
+        post?: never;
+        /** Delete Account */
+        delete: operations["deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/account/picture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Picture */
+        post: operations["confirmPicture"];
+        /** Remove Picture */
+        delete: operations["removePicture"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/account/picture/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Picture Upload */
+        post: operations["startPictureUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/catalog": {
         parameters: {
             query?: never;
@@ -13,6 +66,57 @@ export interface paths {
         };
         /** Get Catalog */
         get: operations["getCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversations */
+        get: operations["getConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Home */
+        get: operations["getHome"];
         put?: never;
         post?: never;
         delete?: never;
@@ -99,7 +203,25 @@ export interface paths {
         /** Get Personas */
         get: operations["getPersonas"];
         put?: never;
-        post?: never;
+        /** Create Persona */
+        post: operations["createPersona"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/personas/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft Persona */
+        post: operations["draftPersona"];
         delete?: never;
         options?: never;
         head?: never;
@@ -123,6 +245,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/personas/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Persona Templates */
+        get: operations["getPersonaTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/personas/{persona_id}": {
         parameters: {
             query?: never;
@@ -139,6 +278,23 @@ export interface paths {
         head?: never;
         /** Change Persona */
         patch: operations["changePersona"];
+        trace?: never;
+    };
+    "/v1/personas/{persona_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Persona */
+        post: operations["duplicatePersona"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/placement": {
@@ -227,15 +383,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/voices/{voice}/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Voice Sample */
+        get: operations["getVoiceSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountDeletedOut */
+        AccountDeletedOut: {
+            /**
+             * Deleted
+             * @default true
+             * @constant
+             */
+            deleted: true;
+        };
+        /**
+         * AccountOut
+         * @description What the backend keeps for an account. Name and email live with the identity provider.
+         */
+        AccountOut: {
+            picture: components["schemas"]["PictureOut"] | null;
+        };
+        /** ActivityOut */
+        ActivityOut: {
+            /** Conversations */
+            conversations: number;
+            /** Practisedtoday */
+            practisedToday: boolean;
+            /** Seconds */
+            seconds: number;
+            /** Streakdays */
+            streakDays: number;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Todayseconds */
+            todaySeconds: number;
+            /** Week */
+            week: components["schemas"]["DayOut"][];
+            /** Weekseconds */
+            weekSeconds: number;
+        };
         /**
          * CallPurpose
          * @enum {string}
          */
-        CallPurpose: "onboarding" | "placement";
+        CallPurpose: "onboarding" | "placement" | "practice";
         /** CatalogOut */
         CatalogOut: {
             /** Examlevels */
@@ -259,6 +470,40 @@ export interface components {
             scope?: string | null;
             /** Value */
             value?: unknown;
+        };
+        /** ConversationOut */
+        ConversationOut: {
+            /** Endedat */
+            endedAt: string | null;
+            /** Id */
+            id: string;
+            /** Learnerturns */
+            learnerTurns: number;
+            partner: components["schemas"]["PersonaOut"] | null;
+            /** Seconds */
+            seconds: number;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+        };
+        /** ConversationsOut */
+        ConversationsOut: {
+            /** Conversations */
+            conversations: components["schemas"]["ConversationOut"][];
+            /** Next */
+            next: string | null;
+        };
+        /** DayOut */
+        DayOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Seconds */
+            seconds: number;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -295,6 +540,59 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HomeExamOut */
+        HomeExamOut: {
+            /** Date */
+            date: string | null;
+            /** Daysleft */
+            daysLeft: number | null;
+            /** Name */
+            name: string | null;
+            /** Targetlevel */
+            targetLevel: ("A1" | "A2" | "B1" | "B2" | "C1" | "C2") | null;
+            /** Type */
+            type: string;
+        };
+        /** HomeLevelOut */
+        HomeLevelOut: {
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Skills */
+            skills: {
+                [key: string]: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            } | null;
+            source: components["schemas"]["Source"];
+        };
+        /**
+         * HomeOut
+         * @description The Today screen in one answer.
+         */
+        HomeOut: {
+            activity: components["schemas"]["ActivityOut"];
+            exam: components["schemas"]["HomeExamOut"] | null;
+            /** Focus */
+            focus: string[];
+            /** Language */
+            language: string;
+            level: components["schemas"]["HomeLevelOut"] | null;
+            /** Partners */
+            partners: components["schemas"]["HomePartnerOut"][];
+            /** Recent */
+            recent: components["schemas"]["ConversationOut"][];
+            /** Suggestedpartnerid */
+            suggestedPartnerId: string | null;
+        };
+        /** HomePartnerOut */
+        HomePartnerOut: {
+            /** Conversations */
+            conversations: number;
+            /** Lasttalkedat */
+            lastTalkedAt: string | null;
+            persona: components["schemas"]["PersonaOut"];
         };
         /** LanguageOut */
         LanguageOut: {
@@ -354,10 +652,97 @@ export interface components {
             placement: components["schemas"]["PlacementStatus"];
             stage: components["schemas"]["Stage"];
         };
+        /** PersonaDescription */
+        PersonaDescription: {
+            /** Description */
+            description: string;
+        };
+        /**
+         * PersonaDraftOut
+         * @description A persona that is not saved: a template, or one written from a description.
+         */
+        PersonaDraftOut: {
+            /** Age */
+            age: number;
+            /** Backstory */
+            backstory: string;
+            /**
+             * Gender
+             * @enum {string}
+             */
+            gender: "female" | "male";
+            look: components["schemas"]["LookModel"];
+            /** Name */
+            name: string;
+            /** Occupation */
+            occupation: string;
+            /** Origin */
+            origin: string;
+            personality: components["schemas"]["PersonalityModel"];
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "buddy" | "teacher" | "exam_coach";
+            /** Tagline */
+            tagline: string | null;
+            teaching: components["schemas"]["TeachingModel"];
+            /**
+             * Voice
+             * @enum {string}
+             */
+            voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
+        };
+        /**
+         * PersonaIn
+         * @description A new persona. Personality and teaching left out (or null): as their role does.
+         */
+        PersonaIn: {
+            /** Age */
+            age: number;
+            /** Backstory */
+            backstory: string;
+            /**
+             * Gender
+             * @enum {string}
+             */
+            gender: "female" | "male";
+            look: components["schemas"]["LookModel"];
+            /** Name */
+            name: string;
+            /**
+             * Occupation
+             * @default
+             */
+            occupation: string;
+            /** Origin */
+            origin: string;
+            personality?: components["schemas"]["PersonalityModel"] | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "buddy" | "teacher" | "exam_coach";
+            /** Tagline */
+            tagline?: string | null;
+            teaching?: components["schemas"]["TeachingModel"] | null;
+            /**
+             * Voice
+             * @enum {string}
+             */
+            voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
+        };
         /** PersonaOut */
         PersonaOut: {
             /** Age */
             age: number;
+            /** Backstory */
+            backstory: string;
+            /**
+             * Gender
+             * @enum {string}
+             */
+            gender: "female" | "male";
             /**
              * Id
              * Format: uuid
@@ -366,8 +751,11 @@ export interface components {
             look: components["schemas"]["LookModel"];
             /** Name */
             name: string;
+            /** Occupation */
+            occupation: string;
             /** Origin */
             origin: string;
+            personality: components["schemas"]["PersonalityModel"];
             /**
              * Role
              * @enum {string}
@@ -375,17 +763,106 @@ export interface components {
             role: "buddy" | "teacher" | "exam_coach";
             /** Tagline */
             tagline: string | null;
+            teaching: components["schemas"]["TeachingModel"];
+            /**
+             * Voice
+             * @enum {string}
+             */
+            voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
         };
-        /** PersonaPatch */
+        /**
+         * PersonaPatch
+         * @description The parts of a persona to change; the ones left out stay. Personality or teaching set
+         *     to null go back to what the persona's role does.
+         */
         PersonaPatch: {
+            /** Age */
+            age?: number | null;
+            /** Backstory */
+            backstory?: string | null;
+            /** Gender */
+            gender?: ("female" | "male") | null;
             look?: components["schemas"]["LookModel"] | null;
             /** Name */
             name?: string | null;
+            /** Occupation */
+            occupation?: string | null;
+            /** Origin */
+            origin?: string | null;
+            personality?: components["schemas"]["PersonalityModel"] | null;
+            /** Role */
+            role?: ("buddy" | "teacher" | "exam_coach") | null;
+            /** Tagline */
+            tagline?: string | null;
+            teaching?: components["schemas"]["TeachingModel"] | null;
+            /** Voice */
+            voice?: ("marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse") | null;
+        };
+        /** PersonaTemplatesOut */
+        PersonaTemplatesOut: {
+            /** Templates */
+            templates: components["schemas"]["PersonaDraftOut"][];
+        };
+        /**
+         * PersonalityModel
+         * @description How a persona comes across. Each trait is a point from 1 to 5 between two poles.
+         */
+        PersonalityModel: {
+            /** Curiosity */
+            curiosity: number;
+            /**
+             * Formofaddress
+             * @enum {string}
+             */
+            formOfAddress: "informal" | "formal" | "auto";
+            /** Humour */
+            humour: number;
+            /** Playfulness */
+            playfulness: number;
+            /**
+             * Style
+             * @enum {string}
+             */
+            style: "questions" | "stories" | "debate";
+            /** Talkativeness */
+            talkativeness: number;
+            /** Warmth */
+            warmth: number;
         };
         /** PersonasOut */
         PersonasOut: {
             /** Personas */
             personas: components["schemas"]["PersonaOut"][];
+        };
+        /** PictureConfirm */
+        PictureConfirm: {
+            /**
+             * Uploadid
+             * Format: uuid
+             */
+            uploadId: string;
+        };
+        /** PictureOut */
+        PictureOut: {
+            /** Url */
+            url: string;
+        };
+        /**
+         * PictureUploadOut
+         * @description How to send a photo: a form POST to `url` with `fields`, then the JPEG as `file`.
+         */
+        PictureUploadOut: {
+            /** Fields */
+            fields: {
+                [key: string]: string;
+            };
+            /**
+             * Uploadid
+             * Format: uuid
+             */
+            uploadId: string;
+            /** Url */
+            url: string;
         };
         /** PlacementDecision */
         PlacementDecision: {
@@ -459,6 +936,47 @@ export interface components {
          * @enum {string}
          */
         Stage: "essentials" | "review" | "placement" | "partners" | "ready" | "done";
+        /**
+         * TeachingModel
+         * @description How a persona treats mistakes and adapts to the learner. Every key is always present;
+         *     null means "as the learner's profile says" (or, for speed, the voice's own pace).
+         */
+        TeachingModel: {
+            /**
+             * Correctiontiming
+             * @enum {string}
+             */
+            correctionTiming: "recast" | "immediate" | "end" | "off";
+            /** Explanationusage */
+            explanationUsage: ("never" | "when_stuck" | "for_grammar" | "freely") | null;
+            /** Focus */
+            focus: string | null;
+            /** Level */
+            level: ("A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2") | null;
+            /** Speed */
+            speed: number | null;
+            /**
+             * Strictness
+             * @enum {string}
+             */
+            strictness: "meaning" | "important" | "everything";
+        };
+        /** TranscriptOut */
+        TranscriptOut: {
+            conversation: components["schemas"]["ConversationOut"];
+            /** Turns */
+            turns: components["schemas"]["TurnOut"][];
+        };
+        /** TurnOut */
+        TurnOut: {
+            /**
+             * Speaker
+             * @enum {string}
+             */
+            speaker: "learner" | "persona";
+            /** Text */
+            text: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -474,6 +992,10 @@ export interface components {
         };
         /** VoiceCallIn */
         VoiceCallIn: {
+            /** Localdate */
+            localDate?: string | null;
+            /** Personaid */
+            personaId?: string | null;
             purpose: components["schemas"]["CallPurpose"];
             /** Sdp */
             sdp: string;
@@ -487,6 +1009,11 @@ export interface components {
             /** Sdp */
             sdp: string;
         };
+        /** VoiceSampleOut */
+        VoiceSampleOut: {
+            /** Url */
+            url: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -496,6 +1023,182 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    confirmPicture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PictureConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removePicture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    startPictureUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PictureUploadOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     getCatalog: {
         parameters: {
             query?: never;
@@ -521,6 +1224,145 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getConversations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getHome: {
+        parameters: {
+            query?: {
+                tz?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -697,6 +1539,126 @@ export interface operations {
             };
         };
     };
+    createPersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonaIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    draftPersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonaDescription"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaDraftOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     proposeStarterPersonas: {
         parameters: {
             query?: never;
@@ -726,6 +1688,35 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getPersonaTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaTemplatesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -833,6 +1824,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    duplicatePersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                persona_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1066,6 +2115,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description Conflict */
             409: {
                 headers: {
@@ -1086,6 +2144,64 @@ export interface operations {
             };
             /** @description Too Many Requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getVoiceSample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceSampleOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

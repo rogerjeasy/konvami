@@ -25,7 +25,16 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
     applied = migrate(empty_db)
 
     assert applied[0] == "0001_profile"
-    assert applied == ["0001_profile", "0002_voice", "0003_placement", "0004_personas"]
+    assert applied == [
+        "0001_profile",
+        "0002_voice",
+        "0003_placement",
+        "0004_personas",
+        "0005_conversations",
+        "0006_profile",
+        "0007_account_safety",
+        "0008_deletion_lock",
+    ]
     assert {
         "app_user",
         "profile_field",
@@ -113,3 +122,39 @@ def test_a_deploy_gives_up_on_a_database_that_never_wakes(empty_db: SqlClient) -
         migrate_when_awake(SleepyClient(empty_db, asleep_for=3), attempts=3)
 
     assert "app_user" not in tables(empty_db)
+
+
+def test_a_function_body_stays_one_statement() -> None:
+    sql = """
+        CREATE TABLE a (id int);
+
+        CREATE FUNCTION bump() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+            NEW.id = NEW.id + 1;
+            RETURN NEW;
+        END
+        $$;
+
+        CREATE TRIGGER a_bump BEFORE INSERT ON a FOR EACH ROW EXECUTE FUNCTION bump();
+    """
+
+    statements = split_statements(sql)
+
+    assert len(statements) == 3
+    assert statements[1].startswith("CREATE FUNCTION bump()")
+    assert statements[1].endswith("$$")
+    assert "RETURN NEW;" in statements[1]
+
+
+def test_a_migration_with_a_function_can_be_applied(empty_db: SqlClient, tmp_path: Path) -> None:
+    (tmp_path / "0001_bump.sql").write_text(
+        "CREATE TABLE a (id int);\n\n"
+        "CREATE FUNCTION bump() RETURNS trigger LANGUAGE plpgsql AS $$\n"
+        "BEGIN\n    NEW.id = NEW.id + 1;\n    RETURN NEW;\nEND\n$$;\n\n"
+        "CREATE TRIGGER a_bump BEFORE INSERT ON a FOR EACH ROW EXECUTE FUNCTION bump();\n"
+    )
+
+    migrate(empty_db, tmp_path)
+    empty_db.execute("INSERT INTO a (id) VALUES (1)")
+
+    assert empty_db.execute("SELECT id FROM a") == [{"id": 2}]

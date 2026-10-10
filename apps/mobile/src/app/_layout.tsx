@@ -13,11 +13,17 @@ import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { Lexend_600SemiBold } from '@expo-google-fonts/lexend/600SemiBold';
 import { AuthServicesProvider, authServices } from '@/auth';
 import { OnboardingProvider, onboardingStore } from '@/onboarding';
+import { PracticeProvider, practiceServices } from '@/practice';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
+import { ProfileProvider, profileServices } from '@/profile';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
+import { ScreenBoundary } from '@/screens/error';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
 import { ThemeProvider, useTheme } from '@/theme';
 import { createAppVoiceEngine, VoiceProvider } from '@/voice';
+
+// What shows when this layout itself breaks; each screen has its own boundary (`RootStack`).
+export { AppError as ErrorBoundary } from '@/screens/error';
 
 // The native splash stays up until fonts, saved preferences and the saved session are ready, so
 // nothing flickers and a signed-in user never sees the signed-out screens.
@@ -51,14 +57,18 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthServicesProvider services={authServices}>
         <OnboardingProvider store={onboardingStore}>
-          <VoiceProvider createEngine={createAppVoiceEngine}>
-            <SignUpDraftProvider>
-              <AccessDraftProvider>
-                <StatusBar style="auto" />
-                <RootStack />
-              </AccessDraftProvider>
-            </SignUpDraftProvider>
-          </VoiceProvider>
+          <PracticeProvider services={practiceServices}>
+            <ProfileProvider services={profileServices}>
+              <VoiceProvider createEngine={createAppVoiceEngine}>
+                <SignUpDraftProvider>
+                  <AccessDraftProvider>
+                    <StatusBar style="auto" />
+                    <RootStack />
+                  </AccessDraftProvider>
+                </SignUpDraftProvider>
+              </VoiceProvider>
+            </ProfileProvider>
+          </PracticeProvider>
         </OnboardingProvider>
       </AuthServicesProvider>
     </ThemeProvider>
@@ -68,7 +78,11 @@ export default function RootLayout() {
 function RootStack() {
   const { color } = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}>
+    <Stack
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }}
+      // A screen that breaks shows a plain message in its place, and the rest of the app goes on.
+      screenLayout={({ children }) => <ScreenBoundary>{children}</ScreenBoundary>}
+    >
       <Stack.Screen name="index" options={{ animation: 'none' }} />
       <Stack.Screen name="intro" options={{ animation: 'fade' }} />
       <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
@@ -85,6 +99,10 @@ function RootStack() {
       <Stack.Screen name="onboarding/placement/result" options={{ animation: 'fade' }} />
       <Stack.Screen name="onboarding/partners/index" options={{ animation: 'fade' }} />
       <Stack.Screen name="onboarding/ready" options={{ animation: 'fade' }} />
+      {/* The app itself. Entering it, and a call beginning and ending, are not steps forward. */}
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="call/[personaId]" options={{ animation: 'fade' }} />
+      <Stack.Screen name="conversations/[id]/done" options={{ animation: 'fade' }} />
     </Stack>
   );
 }

@@ -81,6 +81,12 @@ variable "voice" {
     flagship did neither, and a test's result depends on the examiner's ear. It costs about
     three times as much per call (roughly $0.10–0.25 per setup, $1–3 per test); change a model
     to the mini one to trade that quality for cost.
+    A practice conversation runs on the efficient model (spec §17.3 lever 2: the default for a
+    buddy's free conversation), roughly $0.20–0.80 for its 10 minutes. It is where most voice
+    minutes go, so this choice decides most of the bill. On the same scripted A2 conversation
+    (2026-10-10) the efficient model followed its role and kept the learner talking, but spoke
+    about 60% more than the flagship and, as a teacher, got one grammar explanation wrong; the
+    flagship kept to two short sentences and made no such mistake.
   EOT
   type = object({
     models              = map(string)
@@ -90,8 +96,12 @@ variable "voice" {
     daily_call_limit    = number
   })
   default = {
-    models              = { onboarding = "gpt-realtime-2.1", placement = "gpt-realtime-2.1" }
-    max_seconds         = { onboarding = 480, placement = 720 }
+    models = {
+      onboarding = "gpt-realtime-2.1"
+      placement  = "gpt-realtime-2.1"
+      practice   = "gpt-realtime-2.1-mini"
+    }
+    max_seconds         = { onboarding = 480, placement = 720, practice = 600 }
     voice               = "marin"
     transcription_model = "gpt-transcribe"
     daily_call_limit    = 10
@@ -102,14 +112,18 @@ variable "text_models" {
   description = <<-EOT
     Text models for background work (see modules/api): the stronger one reads a placement
     test's transcript, where accuracy decides the learner's level; the small one writes the
-    starter partners (about 7 seconds on 2026-10-09).
+    starter partners (about 7 seconds on 2026-10-09) and drafts a partner from a description.
+    speech is the model that speaks a voice's sample in Persona Studio: one sentence per voice
+    and language, once, a fraction of a cent each.
   EOT
   type = object({
     assessment = string
     personas   = string
+    speech     = optional(string, "gpt-4o-mini-tts")
   })
   default = {
     assessment = "gpt-6.1-sol"
     personas   = "gpt-6-luna"
+    speech     = "gpt-4o-mini-tts"
   }
 }

@@ -1,16 +1,18 @@
 # Konvami API
 
 The backend of the app: FastAPI on AWS Lambda, PostgreSQL through the RDS Data API. Deployed by
-Terraform (`infra/modules/api`). Design: `docs/superpowers/specs/2026-10-09-onboarding-design.md`.
+Terraform (`infra/modules/api`). Design: `docs/superpowers/specs/2026-10-09-onboarding-design.md`
+(onboarding), `2026-10-10-home-design.md` (practice conversations, the library, Today) and
+`2026-10-10-profile-design.md` (the photo, account deletion, Persona Studio, voice samples).
 
 ## Layers
 
 | Folder (`src/konvami_api/`) | Holds                                                             | May import       |
 | --------------------------- | ----------------------------------------------------------------- | ---------------- |
 | `api/`                      | HTTP handlers, request and response models, the one error shape   | `domain`         |
-| `domain/`                   | Rules: profile fields, onboarding stages, placement, personas     | nothing above it |
+| `domain/`                   | Rules: profile, accounts, personas, practice, voices, home, …     | nothing above it |
 | `persistence/`              | Repositories on PostgreSQL, the Data API client, SQL migrations   | `domain`         |
-| `providers/`                | OpenAI Realtime and text models, Cognito accounts, AWS adapters   | `domain`         |
+| `providers/`                | OpenAI (calls, text, speech), Cognito accounts, S3 files, AWS     | `domain`         |
 | `worker.py`                 | The loop that follows a live voice call from the server           | `domain`         |
 | `main.py`                   | Lambda entry points: builds everything from environment variables | all of them      |
 

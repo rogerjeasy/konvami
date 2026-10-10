@@ -52,10 +52,34 @@ export const ROUTES = {
   /** 4.8 Ready: the summary before entering the app. */
   onboardingReady: '/onboarding/ready',
   /**
-   * Where a signed-in user lands: it continues onboarding where they left off. The app's home
-   * screen replaces its last stop when it is built.
+   * Where a signed-in user lands: it continues onboarding where they left off, and enters the
+   * app (`today`) once that is done.
    */
   home: '/home',
+  /** 5.1 Today, 5.2 Talk, 5.5 Library, 5.7 Learn, 5.8 Progress: the five tabs of the app. */
+  today: '/today',
+  talk: '/talk',
+  library: '/library',
+  learn: '/learn',
+  progress: '/progress',
+  /** 6.1 Profile: who the learner is, and the way to everything about their account. */
+  account: '/account',
+  /** 6.2 Personal: name, photo, app language. */
+  accountPersonal: '/account/personal',
+  /** 6.3 Learning: what the app knows about the learner's learning. */
+  accountLearning: '/account/learning',
+  /** 6.4 My partners, 6.5 New partner and 6.6 Persona Studio for a partner still to be added. */
+  accountPartners: '/account/partners',
+  accountNewPartner: '/account/partners/new',
+  accountStudio: '/account/partners/studio',
+  /** 6.7 Privacy and AI. */
+  accountPrivacy: '/account/privacy',
+  /** 6.8 Security, with its two forms. */
+  accountSecurity: '/account/security',
+  accountPassword: '/account/security/password',
+  accountEmail: '/account/security/email',
+  /** 6.9 Delete account. */
+  accountDelete: '/account/delete',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;
@@ -63,3 +87,19 @@ export const ROUTES = {
 /** 4.7 Edit one starter partner: their name and look. */
 export const partnerRoute = (id: string) =>
   ({ pathname: '/onboarding/partners/[id]', params: { id } }) as const satisfies Href;
+
+/** 5.3 A live conversation with one of the learner's partners. */
+export const callRoute = (personaId: string) =>
+  ({ pathname: '/call/[personaId]', params: { personaId } }) as const satisfies Href;
+
+/** 5.6 One past conversation, to read again. */
+export const conversationRoute = (id: string) =>
+  ({ pathname: '/conversations/[id]', params: { id } }) as const satisfies Href;
+
+/** 5.4 What a conversation that has just ended added up to. */
+export const conversationDoneRoute = (id: string) =>
+  ({ pathname: '/conversations/[id]/done', params: { id } }) as const satisfies Href;
+
+/** 6.6 Persona Studio for one of the learner's partners. */
+export const studioRoute = (id: string) =>
+  ({ pathname: '/account/partners/[id]', params: { id } }) as const satisfies Href;

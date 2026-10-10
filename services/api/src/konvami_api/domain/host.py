@@ -32,6 +32,7 @@ from konvami_api.domain.profile import (
     Source,
 )
 from konvami_api.domain.tools import ToolResult
+from konvami_api.domain.voice import Briefing
 
 GUIDE_NAME = "Mia"
 
@@ -392,8 +393,12 @@ class HostScript:
         self._catalog = catalog
         self._profiles = profiles
 
-    def prepare(self, user_id: UUID, account: Account, today: dt.date) -> str:
-        return host_instructions(account, self._catalog, self._profiles.get(user_id), today)
+    def prepare(
+        self, user_id: UUID, account: Account, today: dt.date, persona_id: UUID | None
+    ) -> Briefing:
+        return Briefing(
+            host_instructions(account, self._catalog, self._profiles.get(user_id), today)
+        )
 
     def tools(self, user_id: UUID) -> HostTools:
         return HostTools(user_id, self._catalog, self._profiles)

@@ -1,10 +1,13 @@
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from konvami_api.api.app import Services
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.placement import MIN_TASKS, PlacementTools
+from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from tests.api.conftest import OTHER_USER, USER, Call
-from tests.fakes import FakeVoiceProvider, ScriptedTextModel
+from tests.fakes import FakeVoiceProvider, InMemoryVoiceSessionRepository, ScriptedTextModel
 
 ESSENTIALS = [
     {"field": "target_language", "value": "de"},
@@ -349,22 +352,17 @@ def test_starter_partners_are_proposed_with_their_looks(
     assert response.status == 200
     personas = response.body["personas"]
     assert [(p["role"], p["name"]) for p in personas] == [("buddy", "Lena"), ("teacher", "Jonas")]
-    assert personas[0] == {
-        "id": personas[0]["id"],
-        "role": "buddy",
-        "name": "Lena",
-        "age": 27,
-        "origin": "Leipzig",
-        "tagline": None,
-        "look": {
-            "skin": "sand",
-            "hair": "long",
-            "hairColor": "chestnut",
-            "top": "teal",
-            "backdrop": "mist",
-            "glasses": False,
-            "beard": False,
-        },
+    # Everything else a partner carries is checked with Persona Studio (test_studio_api.py).
+    lena = personas[0]
+    assert (lena["age"], lena["origin"], lena["tagline"]) == (27, "Leipzig", None)
+    assert lena["look"] == {
+        "skin": "sand",
+        "hair": "long",
+        "hairColor": "chestnut",
+        "top": "teal",
+        "backdrop": "mist",
+        "glasses": False,
+        "beard": False,
     }
     assert call("GET", "/v1/personas").body == response.body
 
@@ -443,3 +441,305 @@ def test_onboarding_cannot_move_on_without_a_partner(
 
     assert (response.status, response.body["error"]["code"]) == (409, "no_partners")
     assert call("POST", "/v1/onboarding/complete").status == 409
+
+
+# --- Practice conversations, the library and home ----------------------------------------------
+
+NOON = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
+
+
+def onboarded(call: Call, text_model: ScriptedTextModel) -> list[dict[str, Any]]:
+    """Takes the learner through onboarding and returns their partners (Lena and Jonas)."""
+    at_partners(call, text_model)
+    # The writer delivers nothing usable, so the language pack's own partners are offered.
+    text_model.answers[-1] = {"personas": []}
+    partners: list[dict[str, Any]] = call("POST", "/v1/personas/starter").body["personas"]
+    call("POST", "/v1/onboarding/partners/confirm")
+    call("POST", "/v1/onboarding/complete")
+    return partners
+
+
+def talked(
+    calls: InMemoryVoiceSessionRepository,
+    call_id: str,
+    partner: dict[str, Any],
+    *,
+    at: datetime,
+    minutes: int = 5,
+    user: str = USER,
+) -> None:
+    """A finished practice conversation, as the broker and the worker record it."""
+    calls.started(
+        VoiceSession(
+            call_id,
+            UUID(user),
+            CallPurpose.PRACTICE,
+            "gpt-realtime-2.1-mini",
+            at,
+            persona_id=UUID(partner["id"]),
+        )
+    )
+    calls.finish(
+        call_id,
+        FinishedCall(
+            ended_at=at + timedelta(minutes=minutes),
+            outcome="closed",
+            usage={},
+            turns=(Turn("persona", "Hallo! Wie geht's?"), Turn("learner", "Gut, danke!")),
+        ),
+    )
+
+
+def test_a_practice_call_starts_with_the_chosen_partner(
+    call: Call, text_model: ScriptedTextModel, voice_provider: FakeVoiceProvider
+) -> None:
+    _, jonas = onboarded(call, text_model)
+
+    response = call(
+        "POST",
+        "/v1/voice/calls",
+        {"purpose": "practice", "sdp": "v=0 offer", "personaId": jonas["id"]},
+    )
+
+    assert response.status == 200
+    assert response.body == {"callId": "rtc_1", "sdp": "v=0 answer", "maxSeconds": 600}
+    session = voice_provider.created[0][1]
+    assert "You are Jonas" in session["instructions"]
+    assert session["audio"]["output"] == {"voice": "cedar"}
+
+
+def test_a_practice_call_needs_one_of_the_learners_partners(
+    call: Call, text_model: ScriptedTextModel
+) -> None:
+    onboarded(call, text_model)
+    stranger = "aaaaaaaa-aaaa-4aaa-8aaa-000000000009"
+
+    missing = call("POST", "/v1/voice/calls", {"purpose": "practice", "sdp": "v=0 offer"})
+    unknown = call(
+        "POST",
+        "/v1/voice/calls",
+        {"purpose": "practice", "sdp": "v=0 offer", "personaId": stranger},
+    )
+    malformed = call(
+        "POST", "/v1/voice/calls", {"purpose": "practice", "sdp": "v=0 offer", "personaId": "lena"}
+    )
+
+    assert (missing.status, missing.body["error"]["code"]) == (404, "not_found")
+    assert (unknown.status, unknown.body["error"]["code"]) == (404, "not_found")
+    assert (malformed.status, malformed.body["error"]["code"]) == (422, "invalid_request")
+
+
+def test_practice_is_refused_before_onboarding_is_finished(call: Call) -> None:
+    response = call("POST", "/v1/voice/calls", {"purpose": "practice", "sdp": "v=0 offer"})
+
+    assert response.status == 409
+    assert response.body == {"error": {"code": "wrong_stage", "field": None}}
+
+
+def test_home_of_a_new_learner_has_partners_a_level_and_an_empty_week(
+    call: Call, text_model: ScriptedTextModel
+) -> None:
+    lena, jonas = onboarded(call, text_model)
+
+    response = call("GET", "/v1/home")
+
+    assert response.status == 200
+    assert response.body == {
+        "language": "de",
+        "level": {"level": "A2", "source": "asked", "skills": None},
+        "focus": [],
+        "exam": None,
+        "partners": [
+            {"persona": lena, "conversations": 0, "lastTalkedAt": None},
+            {"persona": jonas, "conversations": 0, "lastTalkedAt": None},
+        ],
+        "suggestedPartnerId": lena["id"],
+        "activity": {
+            "today": "2026-10-09",
+            "streakDays": 0,
+            "practisedToday": False,
+            "todaySeconds": 0,
+            "weekSeconds": 0,
+            "week": [{"day": f"2026-10-{day:02d}", "seconds": 0} for day in range(5, 12)],
+            "conversations": 0,
+            "seconds": 0,
+        },
+        "recent": [],
+    }
+
+
+def test_home_adds_up_practice_and_lists_the_latest_conversations(
+    call: Call, text_model: ScriptedTextModel, calls: InMemoryVoiceSessionRepository
+) -> None:
+    lena, jonas = onboarded(call, text_model)
+    talked(calls, "rtc_a", lena, at=NOON - timedelta(days=1), minutes=4)
+    talked(calls, "rtc_b", jonas, at=NOON - timedelta(hours=1), minutes=10)
+
+    home = call("GET", "/v1/home").body
+
+    assert home["suggestedPartnerId"] == jonas["id"]
+    assert home["partners"][1] == {
+        "persona": jonas,
+        "conversations": 1,
+        "lastTalkedAt": "2026-10-09T11:00:00Z",
+    }
+    activity = home["activity"]
+    assert (activity["streakDays"], activity["practisedToday"]) == (2, True)
+    assert (activity["todaySeconds"], activity["weekSeconds"], activity["seconds"]) == (
+        600,
+        840,
+        840,
+    )
+    assert activity["week"][3:5] == [
+        {"day": "2026-10-08", "seconds": 240},
+        {"day": "2026-10-09", "seconds": 600},
+    ]
+    assert home["recent"] == [
+        {
+            "id": "rtc_b",
+            "partner": jonas,
+            "startedAt": "2026-10-09T11:00:00Z",
+            "endedAt": "2026-10-09T11:10:00Z",
+            "seconds": 600,
+            "learnerTurns": 1,
+        },
+        {
+            "id": "rtc_a",
+            "partner": lena,
+            "startedAt": "2026-10-08T12:00:00Z",
+            "endedAt": "2026-10-08T12:04:00Z",
+            "seconds": 240,
+            "learnerTurns": 1,
+        },
+    ]
+
+
+def test_home_counts_days_in_the_time_zone_the_app_names(
+    call: Call, text_model: ScriptedTextModel, calls: InMemoryVoiceSessionRepository
+) -> None:
+    lena, _ = onboarded(call, text_model)
+    # 23:30 in UTC on Thursday is already Friday in Zurich.
+    talked(calls, "rtc_late", lena, at=datetime(2026, 10, 8, 23, 30, tzinfo=UTC))
+
+    zurich = call("GET", "/v1/home?tz=Europe%2FZurich").body["activity"]
+    utc = call("GET", "/v1/home").body["activity"]
+    unknown = call("GET", "/v1/home?tz=Mars%2FOlympus").body["activity"]
+
+    assert zurich["practisedToday"] is True
+    assert utc["practisedToday"] is False
+    assert unknown == utc
+
+
+def test_home_shows_the_exam_ahead(call: Call, text_model: ScriptedTextModel) -> None:
+    onboarded(call, text_model)
+    exam = {"type": "goethe", "target_level": "B1", "date": "2026-12-01"}
+    call("PATCH", "/v1/profile", {"changes": [{"field": "exam", "value": exam}]})
+
+    assert call("GET", "/v1/home").body["exam"] == {
+        "type": "goethe",
+        "name": "Goethe-Zertifikat",
+        "targetLevel": "B1",
+        "date": "2026-12-01",
+        "daysLeft": 53,
+    }
+
+
+def test_home_shows_what_the_placement_test_measured(
+    call: Call, services: Services, text_model: ScriptedTextModel
+) -> None:
+    measure(call, services, text_model, overall="B1")
+    call("POST", "/v1/placement/decision", {"use": "measured"})
+    text_model.answers.append({"personas": []})
+    call("POST", "/v1/personas/starter")
+    call("POST", "/v1/onboarding/partners/confirm")
+    call("POST", "/v1/onboarding/complete")
+
+    home = call("GET", "/v1/home").body
+
+    assert home["level"] == {"level": "B1", "source": "measured", "skills": IMPRESSION}
+    assert home["focus"] == ["Perfekt mit sein"]
+
+
+def test_there_is_no_home_before_onboarding_is_finished(call: Call) -> None:
+    response = call("GET", "/v1/home")
+
+    assert response.status == 409
+    assert response.body == {"error": {"code": "wrong_stage", "field": None}}
+
+
+def test_the_library_lists_conversations_page_by_page(
+    call: Call, text_model: ScriptedTextModel, calls: InMemoryVoiceSessionRepository
+) -> None:
+    lena, _ = onboarded(call, text_model)
+    for hours in (1, 2, 3):
+        talked(calls, f"rtc_{hours}", lena, at=NOON - timedelta(hours=hours))
+
+    first = call("GET", "/v1/conversations?limit=2").body
+    second = call("GET", "/v1/conversations?limit=2&before=2026-10-09T10%3A00%3A00Z").body
+
+    assert [c["id"] for c in first["conversations"]] == ["rtc_1", "rtc_2"]
+    assert first["next"] == "2026-10-09T10:00:00Z"
+    assert [c["id"] for c in second["conversations"]] == ["rtc_3"]
+    assert second["next"] is None
+
+
+def test_the_library_refuses_a_page_it_cannot_read(call: Call) -> None:
+    assert call("GET", "/v1/conversations?limit=many").status == 422
+    assert call("GET", "/v1/conversations?before=yesterday").status == 422
+    assert call("GET", "/v1/conversations?before=2026-10-09T10%3A00%3A00").status == 422
+
+
+def test_a_new_learners_library_is_empty(call: Call) -> None:
+    assert call("GET", "/v1/conversations").body == {"conversations": [], "next": None}
+
+
+def test_a_transcript_is_read_with_its_conversation(
+    call: Call, text_model: ScriptedTextModel, calls: InMemoryVoiceSessionRepository
+) -> None:
+    lena, _ = onboarded(call, text_model)
+    talked(calls, "rtc_1", lena, at=NOON - timedelta(hours=1))
+
+    response = call("GET", "/v1/conversations/rtc_1")
+
+    assert response.status == 200
+    assert response.body == {
+        "conversation": {
+            "id": "rtc_1",
+            "partner": lena,
+            "startedAt": "2026-10-09T11:00:00Z",
+            "endedAt": "2026-10-09T11:05:00Z",
+            "seconds": 300,
+            "learnerTurns": 1,
+        },
+        "turns": [
+            {"speaker": "persona", "text": "Hallo! Wie geht's?"},
+            {"speaker": "learner", "text": "Gut, danke!"},
+        ],
+    }
+
+
+def test_a_conversation_is_only_read_by_the_learner_who_had_it(
+    call: Call, text_model: ScriptedTextModel, calls: InMemoryVoiceSessionRepository
+) -> None:
+    lena, _ = onboarded(call, text_model)
+    talked(calls, "rtc_1", lena, at=NOON - timedelta(hours=1))
+
+    theirs = call("GET", "/v1/conversations/rtc_1", subject=OTHER_USER)
+    unknown = call("GET", "/v1/conversations/rtc_nothing")
+
+    assert (theirs.status, theirs.body) == (404, {"error": {"code": "not_found", "field": None}})
+    assert unknown.status == 404
+
+
+def test_a_call_takes_the_learners_own_date(
+    call: Call, text_model: ScriptedTextModel, voice_provider: FakeVoiceProvider
+) -> None:
+    lena, _ = onboarded(call, text_model)
+    offer = {"purpose": "practice", "sdp": "v=0 offer", "personaId": lena["id"]}
+
+    ahead = call("POST", "/v1/voice/calls", {**offer, "localDate": "2026-10-10"})
+    malformed = call("POST", "/v1/voice/calls", {**offer, "localDate": "tomorrow"})
+
+    assert ahead.status == 200
+    assert "Saturday, 2026-10-10" in voice_provider.created[0][1]["instructions"]
+    assert (malformed.status, malformed.body["error"]["code"]) == (422, "invalid_request")

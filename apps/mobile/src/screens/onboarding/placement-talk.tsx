@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
+import { CallStage } from '@/components/call-stage';
 import { ProgressChips } from '@/components/progress-chips';
 import { HeaderButton } from '@/components/step-header';
 import { TextButton } from '@/components/text-button';
@@ -14,7 +15,6 @@ import { ROUTES } from '@/lib/routes';
 import { useOnboardingStore } from '@/onboarding/services';
 import { SETUP } from '@/screens/create-account/sample-content';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
-import { CallStage } from './call-stage';
 
 /**
  * The parts of the test, in the order the examiner runs them (services/api:
@@ -85,6 +85,7 @@ function Test({ onRetry }: { onRetry: () => void }) {
   return (
     <CallStage
       call={call}
+      persona={SETUP.guide}
       hint={t('onboarding.placement.talk.hint', { name })}
       finishedLabel={t('onboarding.placement.talk.finished')}
       problem={skipProblem ?? callProblem}

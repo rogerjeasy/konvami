@@ -1,16 +1,23 @@
 import {
   ApiError,
+  type Activity,
   type ApiClient,
   type Catalog,
+  type Conversation,
+  type Home,
+  type HomePartner,
   type Onboarding,
   type Persona,
+  type PersonaDraft,
   type Placement,
   type PlacementResult,
   type PlacementStatus,
   type Profile,
   type ProfileChange,
   type ProfileSource,
+  type TranscriptTurn,
 } from '@konvami/api-client';
+import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
 
 /**
  * An in-memory `ApiClient` for tests. It keeps a profile the way the server does (one value per
@@ -70,7 +77,13 @@ const ESSENTIAL_FIELDS = [
   'course',
 ];
 
+/** The fake server's clock: a Friday, at noon in UTC. Its week runs from Monday 5 October. */
 export const FAKE_NOW = '2026-10-09T12:00:00Z';
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+/** As on the server (services/api: domain/conversations.py and domain/home.py). */
+const PAGE_DEFAULT = 20;
+const RECENT_CONVERSATIONS = 3;
 
 /** A placement result one level above the typical learner's own estimate (A2). */
 export const FAKE_RESULT: PlacementResult = {
@@ -80,15 +93,28 @@ export const FAKE_RESULT: PlacementResult = {
   measuredAt: FAKE_NOW,
 };
 
+const BALANCED: Persona['personality'] = {
+  warmth: 3,
+  playfulness: 3,
+  talkativeness: 3,
+  curiosity: 3,
+  humour: 3,
+  formOfAddress: 'auto',
+  style: 'questions',
+};
+
 /** The partners the server proposes, as the German pack's built-in ones (no tagline). */
 export const FAKE_PERSONAS: Persona[] = [
   {
     id: '7b1c2f0e-6c1b-4a8e-9a55-0d2f6a1c9e11',
     role: 'buddy',
     name: 'Lena',
+    gender: 'female',
     age: 27,
     origin: 'Berlin',
+    occupation: '',
     tagline: null,
+    backstory: 'Lena arbeitet als Grafikerin in Berlin und hat eine Katze namens Krümel.',
     look: {
       skin: 'sand',
       hair: 'bob',
@@ -98,14 +124,20 @@ export const FAKE_PERSONAS: Persona[] = [
       glasses: false,
       beard: false,
     },
+    voice: 'marin',
+    personality: BALANCED,
+    teaching: ROLE_TEACHING.buddy,
   },
   {
     id: '1d0f8a52-3c7e-4f0b-8a41-5b9e2c7d4a22',
     role: 'teacher',
     name: 'Jonas',
+    gender: 'male',
     age: 34,
     origin: 'Zürich',
+    occupation: 'Deutschlehrer',
     tagline: 'Clear explanations and plenty of patience.',
+    backstory: 'Jonas unterrichtet Deutsch in Zürich und segelt am Wochenende.',
     look: {
       skin: 'honey',
       hair: 'short',
@@ -115,14 +147,20 @@ export const FAKE_PERSONAS: Persona[] = [
       glasses: true,
       beard: true,
     },
+    voice: 'cedar',
+    personality: BALANCED,
+    teaching: ROLE_TEACHING.teacher,
   },
   {
     id: 'c4e9b7a1-2f6d-4d3c-9b18-6a0f1e8d5c33',
     role: 'exam_coach',
     name: 'Frau Weber',
+    gender: 'female',
     age: 52,
     origin: 'Wien',
+    occupation: 'Prüferin',
     tagline: null,
+    backstory: 'Frau Weber ist Prüferin für Sprachzertifikate in Wien.',
     look: {
       skin: 'porcelain',
       hair: 'bun',
@@ -132,8 +170,69 @@ export const FAKE_PERSONAS: Persona[] = [
       glasses: true,
       beard: false,
     },
+    voice: 'sage',
+    personality: BALANCED,
+    teaching: ROLE_TEACHING.exam_coach,
   },
 ];
+
+/** What the server writes from any description: a teacher from Hamburg with her own settings. */
+export const FAKE_DRAFT: PersonaDraft = {
+  role: 'teacher',
+  name: 'Greta',
+  gender: 'female',
+  age: 30,
+  origin: 'Hamburg',
+  occupation: 'Marketing-Managerin',
+  tagline: 'Friendly and precise, loves sailing.',
+  backstory: 'Greta arbeitet im Marketing in Hamburg und segelt jedes Wochenende.',
+  look: {
+    skin: 'honey',
+    hair: 'bob',
+    hairColor: 'auburn',
+    top: 'amber',
+    backdrop: 'sand',
+    glasses: true,
+    beard: false,
+  },
+  voice: 'coral',
+  personality: {
+    warmth: 5,
+    playfulness: 2,
+    talkativeness: 4,
+    curiosity: 3,
+    humour: 1,
+    formOfAddress: 'formal',
+    style: 'stories',
+  },
+  teaching: {
+    correctionTiming: 'immediate',
+    strictness: 'everything',
+    explanationUsage: null,
+    level: null,
+    focus: 'Dativ und Perfekt',
+    speed: 0.9,
+  },
+};
+
+/** The language pack's ready-made partners: the three starter ones and a debate partner. */
+export const FAKE_TEMPLATES: PersonaDraft[] = [
+  ...FAKE_PERSONAS.map(draftOf),
+  {
+    ...draftOf(FAKE_PERSONAS[0]!),
+    name: 'Mara',
+    age: 34,
+    occupation: 'Journalistin',
+    backstory: 'Mara ist Journalistin in Berlin und diskutiert leidenschaftlich gern.',
+    voice: 'coral',
+    personality: { ...BALANCED, curiosity: 5, formOfAddress: 'informal', style: 'debate' },
+  },
+];
+
+/** As on the server (services/api: domain/personas.py). */
+const MAX_PARTNERS = 12;
+const DRAFTS_PER_DAY = 20;
+const FILES = 'https://files.test';
 
 export interface FakeApi extends ApiClient {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
@@ -153,6 +252,35 @@ export interface FakeApi extends ApiClient {
   assess(status: PlacementStatus, result?: PlacementResult): void;
   /** Brings a learner with all answers straight to a later stage. */
   advanceTo(stage: 'placement' | 'partners' | 'ready'): void;
+  /**
+   * A learner who has finished onboarding and is in the app, with Lena and Jonas as partners
+   * (and Frau Weber with `exam`). `measured` adds a placement test's result.
+   */
+  enterApp(options?: { measured?: boolean; exam?: unknown }): void;
+  /**
+   * Records a practice conversation with the partner at `partner` (0 is Lena), as the server
+   * would after a call: started `daysAgo` days and `hoursAgo` hours before `FAKE_NOW`, ended
+   * `minutes` later. With `ended: false` it is a call still running or being saved.
+   */
+  talked(
+    partner: number,
+    options?: {
+      id?: string;
+      daysAgo?: number;
+      hoursAgo?: number;
+      minutes?: number;
+      learnerSays?: string[];
+      ended?: boolean;
+    },
+  ): Conversation;
+  /** Ends a call recorded with `ended: false`. */
+  finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
+  /** Whether `deleteAccount` was called (and went through). */
+  readonly deleted: boolean;
+  /** The upload ids handed out so far, in order. */
+  readonly uploads: readonly string[];
+  /** Gives the learner a photo, as if one had been uploaded earlier. */
+  havePicture(): void;
 }
 
 export function createFakeApi(): FakeApi {
@@ -167,6 +295,13 @@ export function createFakeApi(): FakeApi {
   let personas: Persona[] | null = null;
   let partnersConfirmed = false;
   let completed = false;
+  /** Every practice call, with what was said in it. */
+  const practice: { conversation: Conversation; turns: TranscriptTurn[] }[] = [];
+  let picture: string | null = null;
+  const uploads: string[] = [];
+  let deleted = false;
+  let drafts = 0;
+  let created = 0;
   let gate: Promise<void> = Promise.resolve();
   const methodGates = new Map<keyof ApiClient, Promise<void>>();
 
@@ -254,8 +389,131 @@ export function createFakeApi(): FakeApi {
     return found;
   }
 
+  const now = Date.parse(FAKE_NOW);
+  const dayOf = (iso: string) => iso.slice(0, 10);
+  const isoDay = (ms: number) => dayOf(new Date(ms).toISOString());
+
+  function turnsOf(learnerSays: string[]): TranscriptTurn[] {
+    return [
+      { speaker: 'persona', text: 'Hallo! Wie geht’s dir heute?' },
+      ...learnerSays.map((text): TranscriptTurn => ({ speaker: 'learner', text })),
+    ];
+  }
+
+  /** Newest first, as the server lists them. */
+  const newestFirst = () =>
+    [...practice].sort((a, b) => b.conversation.startedAt.localeCompare(a.conversation.startedAt));
+  /** The conversations that count: ended, and the learner said something. */
+  const counted = () =>
+    newestFirst()
+      .map((entry) => entry.conversation)
+      .filter((conversation) => conversation.endedAt !== null && conversation.learnerTurns > 0);
+
+  function activity(): Activity {
+    const seconds = new Map<string, number>();
+    for (const conversation of counted()) {
+      const day = dayOf(conversation.startedAt);
+      seconds.set(day, (seconds.get(day) ?? 0) + conversation.seconds);
+    }
+    const today = dayOf(FAKE_NOW);
+    let streak = 0;
+    for (
+      let day = seconds.has(today) ? now : now - DAY_MS;
+      seconds.has(isoDay(day));
+      day -= DAY_MS
+    ) {
+      streak += 1;
+    }
+    // FAKE_NOW is a Friday: its Monday is four days earlier.
+    const monday = now - 4 * DAY_MS;
+    const week = Array.from({ length: 7 }, (_, i) => {
+      const day = isoDay(monday + i * DAY_MS);
+      return { day, seconds: seconds.get(day) ?? 0 };
+    });
+    return {
+      today,
+      streakDays: streak,
+      practisedToday: seconds.has(today),
+      todaySeconds: seconds.get(today) ?? 0,
+      weekSeconds: week.reduce((sum, day) => sum + day.seconds, 0),
+      week,
+      conversations: counted().length,
+      seconds: [...seconds.values()].reduce((sum, value) => sum + value, 0),
+    };
+  }
+
+  function home(): Home {
+    if (onboarding().stage !== 'done') throw new ApiError('wrong_stage', 409);
+    const language = target() ?? '';
+    const level = fields.get(`${language}/starting_level`) as string | undefined;
+    const exam = fields.get(`${language}/exam`) as
+      { type: string; target_level: string | null; date: string | null } | null | undefined;
+    const known = FAKE_CATALOG.languages
+      .find(({ code }) => code === language)
+      ?.exams.find(({ id }) => id === exam?.type);
+    const daysLeft = exam?.date
+      ? Math.round((Date.parse(exam.date) - Date.parse(dayOf(FAKE_NOW))) / DAY_MS)
+      : null;
+    const partners: HomePartner[] = (personas ?? []).map((persona) => {
+      const met = counted().filter((conversation) => conversation.partner?.id === persona.id);
+      return {
+        persona,
+        conversations: met.length,
+        lastTalkedAt: met[0]?.startedAt ?? null,
+      };
+    });
+    return {
+      language,
+      level: level
+        ? {
+            level: level as NonNullable<Home['level']>['level'],
+            source: sources.get(`${language}/starting_level`) ?? 'asked',
+            skills: result?.levels ?? null,
+          }
+        : null,
+      focus: result?.weakAreas ?? [],
+      exam:
+        exam && (daysLeft === null || daysLeft >= 0)
+          ? {
+              type: exam.type,
+              name: known?.name ?? null,
+              targetLevel: exam.target_level as NonNullable<Home['exam']>['targetLevel'],
+              date: exam.date,
+              daysLeft,
+            }
+          : null,
+      partners,
+      suggestedPartnerId: counted()[0]?.partner?.id ?? personas?.[0]?.id ?? null,
+      activity: activity(),
+      recent: counted().slice(0, RECENT_CONVERSATIONS),
+    };
+  }
+
+  const account = () => ({ picture: picture ? { url: picture } : null });
+
+  /** A new partner at the end of the list, unless the list is full. */
+  function add(fields: PersonaDraft): Persona {
+    if (!target()) throw new ApiError('no_language', 409);
+    if ((personas ?? []).length >= MAX_PARTNERS) throw new ApiError('too_many', 409);
+    if (!fields.name.trim()) throw new ApiError('invalid_value', 422);
+    created += 1;
+    const added: Persona = {
+      ...fields,
+      id: `aaaaaaaa-aaaa-4aaa-8aaa-${String(created).padStart(12, '0')}`,
+    };
+    personas = [...(personas ?? []), added];
+    return added;
+  }
+
   return {
     calls,
+    get deleted() {
+      return deleted;
+    },
+    uploads,
+    havePicture() {
+      picture = `${FILES}/users/amara/picture/earlier.jpg`;
+    },
     failNext: (method, code, field) =>
       void failures.set(method, new ApiError(code, code === 'network' ? 0 : 422, field ?? null)),
     answer: apply,
@@ -282,6 +540,55 @@ export function createFakeApi(): FakeApi {
       personas = FAKE_PERSONAS.slice(0, 2);
       partnersConfirmed = true;
     },
+    enterApp({ measured = false, exam } = {}) {
+      if (!target()) apply(ESSENTIAL_ANSWERS);
+      if (exam !== undefined) apply([{ field: 'exam', value: exam }]);
+      essentialsConfirmed = true;
+      if (measured) {
+        result = FAKE_RESULT;
+        startAt(FAKE_RESULT.overall, 'decided', 'measured');
+      } else {
+        startAt(ownLevel(), 'skipped', 'asked');
+      }
+      personas = FAKE_PERSONAS.slice(0, exam ? 3 : 2);
+      partnersConfirmed = true;
+      completed = true;
+    },
+    talked(
+      partner,
+      {
+        id = `rtc_${practice.length + 1}`,
+        daysAgo = 0,
+        hoursAgo = 1,
+        minutes = 5,
+        learnerSays = ['Gut, danke! Und dir?'],
+        ended = true,
+      } = {},
+    ) {
+      const started = now - daysAgo * DAY_MS - hoursAgo * 60 * MINUTE_MS;
+      const conversation: Conversation = {
+        id,
+        partner: personas?.[partner] ?? null,
+        startedAt: new Date(started).toISOString(),
+        endedAt: ended ? new Date(started + minutes * MINUTE_MS).toISOString() : null,
+        seconds: ended ? minutes * 60 : 0,
+        learnerTurns: ended ? learnerSays.length : 0,
+      };
+      practice.push({ conversation, turns: ended ? turnsOf(learnerSays) : [] });
+      return conversation;
+    },
+    finish(id, { minutes = 5, learnerSays = ['Gut, danke! Und dir?'] } = {}) {
+      const entry = practice.find(({ conversation }) => conversation.id === id);
+      if (!entry) throw new Error(`fake api: no call ${id}`);
+      const ended = Date.parse(entry.conversation.startedAt) + minutes * MINUTE_MS;
+      entry.conversation = {
+        ...entry.conversation,
+        endedAt: new Date(ended).toISOString(),
+        seconds: minutes * 60,
+        learnerTurns: learnerSays.length,
+      };
+      entry.turns = turnsOf(learnerSays);
+    },
 
     async getCatalog() {
       await record('getCatalog');
@@ -294,6 +601,12 @@ export function createFakeApi(): FakeApi {
     async updateProfile(changes) {
       await record('updateProfile', changes);
       apply(changes);
+      // Whatever the form sends is, from now on, what the learner told us.
+      for (const change of changes) {
+        if (change.field !== 'target_language') {
+          sources.delete(`${change.scope ?? target()}/${change.field}`);
+        }
+      }
       return profile();
     },
     async getOnboarding() {
@@ -306,10 +619,36 @@ export function createFakeApi(): FakeApi {
       essentialsConfirmed = true;
       return onboarding();
     },
-    async startVoiceCall(purpose, sdp) {
-      await record('startVoiceCall', purpose, sdp);
+    async startVoiceCall(purpose, sdp, { personaId } = {}) {
+      await record('startVoiceCall', purpose, sdp, personaId);
       if (purpose === 'placement') placement = 'in_progress';
-      return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds: 480 };
+      if (purpose === 'practice' && !personas?.some(({ id }) => id === personaId)) {
+        throw new ApiError('not_found', 404);
+      }
+      return {
+        callId: 'rtc_fake',
+        sdp: 'v=0 answer',
+        maxSeconds: purpose === 'practice' ? 600 : 480,
+      };
+    },
+    async getHome(timeZone) {
+      await record('getHome', timeZone);
+      return home();
+    },
+    async getConversations({ before, limit = PAGE_DEFAULT } = {}) {
+      await record('getConversations', { before, limit });
+      const older = counted().filter((conversation) => !before || conversation.startedAt < before);
+      const page = older.slice(0, limit);
+      return {
+        conversations: page,
+        next: older.length > limit ? (page.at(-1)?.startedAt ?? null) : null,
+      };
+    },
+    async getConversation(id) {
+      await record('getConversation', id);
+      const entry = practice.find(({ conversation }) => conversation.id === id);
+      if (!entry) throw new ApiError('not_found', 404);
+      return { conversation: entry.conversation, turns: entry.turns };
     },
     async getPlacement() {
       await record('getPlacement');
@@ -342,10 +681,81 @@ export function createFakeApi(): FakeApi {
     },
     async changePersona(id, change) {
       await record('changePersona', id, change);
-      const changed = { ...persona(id), ...change };
+      const current = persona(id);
+      const role = change.role ?? current.role;
+      const changed: Persona = {
+        ...current,
+        ...change,
+        // Null hands the settings back to the role, as on the server.
+        personality:
+          change.personality === null ? BALANCED : (change.personality ?? current.personality),
+        teaching:
+          change.teaching === null ? ROLE_TEACHING[role] : (change.teaching ?? current.teaching),
+      };
       if (!changed.name.trim()) throw new ApiError('invalid_value', 422, 'name');
       personas = (personas ?? []).map((candidate) => (candidate.id === id ? changed : candidate));
       return changed;
+    },
+    async createPersona(fields) {
+      await record('createPersona', fields);
+      return add({
+        ...fields,
+        occupation: fields.occupation ?? '',
+        tagline: fields.tagline ?? null,
+        personality: fields.personality ?? BALANCED,
+        teaching: fields.teaching ?? ROLE_TEACHING[fields.role],
+      });
+    },
+    async draftPersona(description) {
+      await record('draftPersona', description);
+      if (drafts >= DRAFTS_PER_DAY) throw new ApiError('draft_limit', 429);
+      drafts += 1;
+      return FAKE_DRAFT;
+    },
+    async getPersonaTemplates() {
+      await record('getPersonaTemplates');
+      return target() ? FAKE_TEMPLATES : [];
+    },
+    async duplicatePersona(id) {
+      await record('duplicatePersona', id);
+      const original = persona(id);
+      const names = new Set((personas ?? []).map(({ name }) => name));
+      let number = 2;
+      while (names.has(`${original.name} ${number}`)) number += 1;
+      return add({ ...draftOf(original), name: `${original.name} ${number}` });
+    },
+    async getVoiceSample(voice) {
+      await record('getVoiceSample', voice);
+      return `${FILES}/voices/de/${voice}.mp3`;
+    },
+    async getAccount() {
+      await record('getAccount');
+      return account();
+    },
+    async startPictureUpload() {
+      await record('startPictureUpload');
+      const uploadId = `bbbbbbbb-bbbb-4bbb-8bbb-${String(uploads.length + 1).padStart(12, '0')}`;
+      uploads.push(uploadId);
+      return {
+        uploadId,
+        url: `${FILES}/`,
+        fields: { key: `uploads/amara/${uploadId}.jpg`, 'Content-Type': 'image/jpeg' },
+      };
+    },
+    async confirmPicture(uploadId) {
+      await record('confirmPicture', uploadId);
+      if (!uploads.includes(uploadId)) throw new ApiError('upload_not_found', 404);
+      picture = `${FILES}/users/amara/picture/${uploadId}.jpg`;
+      return account();
+    },
+    async removePicture() {
+      await record('removePicture');
+      picture = null;
+      return account();
+    },
+    async deleteAccount() {
+      await record('deleteAccount');
+      deleted = true;
     },
     async removePersona(id) {
       await record('removePersona', id);

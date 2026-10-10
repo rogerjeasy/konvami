@@ -38,6 +38,14 @@ variable "openai_secret_arn" {
   type        = string
 }
 
+variable "media_bucket" {
+  description = "The private bucket for learners' photos and voice samples (modules/media)."
+  type = object({
+    name = string
+    arn  = string
+  })
+}
+
 variable "voice" {
   description = <<-EOT
     Live voice calls (spec §9, §17.3). models: the voice model per call purpose; a purpose
@@ -62,12 +70,15 @@ variable "text_models" {
   description = <<-EOT
     Text models for work that is not live conversation (spec §17.3: the smallest model that does
     the job well). assessment reads a placement test's transcript; personas writes the starter
-    partners. An empty name turns the job off: it then uses its fallback (the examiner's own
-    impression, the language pack's built-in partners).
+    partners and drafts a partner from a description in Persona Studio; speech speaks a voice's
+    sample there (once per voice and language, then it is read from the media bucket). An empty
+    name turns the job off: it then uses its fallback (the examiner's own impression, the
+    language pack's built-in partners) or, for drafts and samples, says it is unavailable.
   EOT
   type = object({
     assessment = string
     personas   = string
+    speech     = optional(string, "")
   })
 }
 

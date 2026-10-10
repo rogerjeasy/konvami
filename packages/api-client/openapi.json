@@ -1,10 +1,98 @@
 {
   "components": {
     "schemas": {
+      "AccountDeletedOut": {
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "const": true,
+            "default": true,
+            "title": "Deleted",
+            "type": "boolean"
+          }
+        },
+        "title": "AccountDeletedOut",
+        "type": "object"
+      },
+      "AccountOut": {
+        "additionalProperties": false,
+        "description": "What the backend keeps for an account. Name and email live with the identity provider.",
+        "properties": {
+          "picture": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PictureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "picture"
+        ],
+        "title": "AccountOut",
+        "type": "object"
+      },
+      "ActivityOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "practisedToday": {
+            "title": "Practisedtoday",
+            "type": "boolean"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "streakDays": {
+            "title": "Streakdays",
+            "type": "integer"
+          },
+          "today": {
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          },
+          "todaySeconds": {
+            "title": "Todayseconds",
+            "type": "integer"
+          },
+          "week": {
+            "items": {
+              "$ref": "#/components/schemas/DayOut"
+            },
+            "title": "Week",
+            "type": "array"
+          },
+          "weekSeconds": {
+            "title": "Weekseconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "today",
+          "streakDays",
+          "practisedToday",
+          "todaySeconds",
+          "weekSeconds",
+          "week",
+          "conversations",
+          "seconds"
+        ],
+        "title": "ActivityOut",
+        "type": "object"
+      },
       "CallPurpose": {
         "enum": [
           "onboarding",
-          "placement"
+          "placement",
+          "practice"
         ],
         "title": "CallPurpose",
         "type": "string"
@@ -130,6 +218,110 @@
         "title": "ChangeIn",
         "type": "object"
       },
+      "ConversationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "learnerTurns": {
+            "title": "Learnerturns",
+            "type": "integer"
+          },
+          "partner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonaOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "title": "Startedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "partner",
+          "startedAt",
+          "endedAt",
+          "seconds",
+          "learnerTurns"
+        ],
+        "title": "ConversationOut",
+        "type": "object"
+      },
+      "ConversationsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationOut"
+            },
+            "title": "Conversations",
+            "type": "array"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          }
+        },
+        "required": [
+          "conversations",
+          "next"
+        ],
+        "title": "ConversationsOut",
+        "type": "object"
+      },
+      "DayOut": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "seconds"
+        ],
+        "title": "DayOut",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "error": {
@@ -235,6 +427,237 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HomeExamOut": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "daysLeft": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daysleft"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "targetLevel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2",
+                  "C1",
+                  "C2"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetlevel"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "name",
+          "targetLevel",
+          "date",
+          "daysLeft"
+        ],
+        "title": "HomeExamOut",
+        "type": "object"
+      },
+      "HomeLevelOut": {
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "skills": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "enum": [
+                    "A0",
+                    "A1",
+                    "A2",
+                    "B1",
+                    "B2",
+                    "C1",
+                    "C2"
+                  ],
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skills"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "level",
+          "source",
+          "skills"
+        ],
+        "title": "HomeLevelOut",
+        "type": "object"
+      },
+      "HomeOut": {
+        "additionalProperties": false,
+        "description": "The Today screen in one answer.",
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/ActivityOut"
+          },
+          "exam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeExamOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "focus": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Focus",
+            "type": "array"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeLevelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "partners": {
+            "items": {
+              "$ref": "#/components/schemas/HomePartnerOut"
+            },
+            "title": "Partners",
+            "type": "array"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationOut"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "suggestedPartnerId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestedpartnerid"
+          }
+        },
+        "required": [
+          "language",
+          "level",
+          "focus",
+          "exam",
+          "partners",
+          "suggestedPartnerId",
+          "activity",
+          "recent"
+        ],
+        "title": "HomeOut",
+        "type": "object"
+      },
+      "HomePartnerOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "lastTalkedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lasttalkedat"
+          },
+          "persona": {
+            "$ref": "#/components/schemas/PersonaOut"
+          }
+        },
+        "required": [
+          "persona",
+          "conversations",
+          "lastTalkedAt"
+        ],
+        "title": "HomePartnerOut",
         "type": "object"
       },
       "LanguageOut": {
@@ -389,16 +812,39 @@
         "title": "OnboardingOut",
         "type": "object"
       },
-      "PersonaOut": {
+      "PersonaDescription": {
         "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 1000,
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "PersonaDescription",
+        "type": "object"
+      },
+      "PersonaDraftOut": {
+        "additionalProperties": false,
+        "description": "A persona that is not saved: a template, or one written from a description.",
         "properties": {
           "age": {
             "title": "Age",
             "type": "integer"
           },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
+          "backstory": {
+            "title": "Backstory",
+            "type": "string"
+          },
+          "gender": {
+            "enum": [
+              "female",
+              "male"
+            ],
+            "title": "Gender",
             "type": "string"
           },
           "look": {
@@ -408,9 +854,16 @@
             "title": "Name",
             "type": "string"
           },
+          "occupation": {
+            "title": "Occupation",
+            "type": "string"
+          },
           "origin": {
             "title": "Origin",
             "type": "string"
+          },
+          "personality": {
+            "$ref": "#/components/schemas/PersonalityModel"
           },
           "role": {
             "enum": [
@@ -431,23 +884,291 @@
               }
             ],
             "title": "Tagline"
+          },
+          "teaching": {
+            "$ref": "#/components/schemas/TeachingModel"
+          },
+          "voice": {
+            "enum": [
+              "marin",
+              "cedar",
+              "coral",
+              "sage",
+              "shimmer",
+              "ash",
+              "echo",
+              "verse"
+            ],
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "name",
+          "gender",
+          "age",
+          "origin",
+          "occupation",
+          "tagline",
+          "backstory",
+          "look",
+          "voice",
+          "personality",
+          "teaching"
+        ],
+        "title": "PersonaDraftOut",
+        "type": "object"
+      },
+      "PersonaIn": {
+        "additionalProperties": false,
+        "description": "A new persona. Personality and teaching left out (or null): as their role does.",
+        "properties": {
+          "age": {
+            "title": "Age",
+            "type": "integer"
+          },
+          "backstory": {
+            "maxLength": 1200,
+            "title": "Backstory",
+            "type": "string"
+          },
+          "gender": {
+            "enum": [
+              "female",
+              "male"
+            ],
+            "title": "Gender",
+            "type": "string"
+          },
+          "look": {
+            "$ref": "#/components/schemas/LookModel"
+          },
+          "name": {
+            "maxLength": 80,
+            "title": "Name",
+            "type": "string"
+          },
+          "occupation": {
+            "default": "",
+            "maxLength": 1200,
+            "title": "Occupation",
+            "type": "string"
+          },
+          "origin": {
+            "maxLength": 1200,
+            "title": "Origin",
+            "type": "string"
+          },
+          "personality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonalityModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "enum": [
+              "buddy",
+              "teacher",
+              "exam_coach"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "tagline": {
+            "anyOf": [
+              {
+                "maxLength": 1200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagline"
+          },
+          "teaching": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeachingModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "voice": {
+            "enum": [
+              "marin",
+              "cedar",
+              "coral",
+              "sage",
+              "shimmer",
+              "ash",
+              "echo",
+              "verse"
+            ],
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "name",
+          "gender",
+          "age",
+          "origin",
+          "backstory",
+          "look",
+          "voice"
+        ],
+        "title": "PersonaIn",
+        "type": "object"
+      },
+      "PersonaOut": {
+        "additionalProperties": false,
+        "properties": {
+          "age": {
+            "title": "Age",
+            "type": "integer"
+          },
+          "backstory": {
+            "title": "Backstory",
+            "type": "string"
+          },
+          "gender": {
+            "enum": [
+              "female",
+              "male"
+            ],
+            "title": "Gender",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "look": {
+            "$ref": "#/components/schemas/LookModel"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "occupation": {
+            "title": "Occupation",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "personality": {
+            "$ref": "#/components/schemas/PersonalityModel"
+          },
+          "role": {
+            "enum": [
+              "buddy",
+              "teacher",
+              "exam_coach"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "tagline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagline"
+          },
+          "teaching": {
+            "$ref": "#/components/schemas/TeachingModel"
+          },
+          "voice": {
+            "enum": [
+              "marin",
+              "cedar",
+              "coral",
+              "sage",
+              "shimmer",
+              "ash",
+              "echo",
+              "verse"
+            ],
+            "title": "Voice",
+            "type": "string"
           }
         },
         "required": [
           "id",
           "role",
           "name",
+          "gender",
           "age",
           "origin",
+          "occupation",
           "tagline",
-          "look"
+          "backstory",
+          "look",
+          "voice",
+          "personality",
+          "teaching"
         ],
         "title": "PersonaOut",
         "type": "object"
       },
       "PersonaPatch": {
         "additionalProperties": false,
+        "description": "The parts of a persona to change; the ones left out stay. Personality or teaching set\nto null go back to what the persona's role does.",
         "properties": {
+          "age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "backstory": {
+            "anyOf": [
+              {
+                "maxLength": 1200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backstory"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "enum": [
+                  "female",
+                  "male"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
           "look": {
             "anyOf": [
               {
@@ -469,9 +1190,174 @@
               }
             ],
             "title": "Name"
+          },
+          "occupation": {
+            "anyOf": [
+              {
+                "maxLength": 1200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupation"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "maxLength": 1200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "personality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonalityModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buddy",
+                  "teacher",
+                  "exam_coach"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "tagline": {
+            "anyOf": [
+              {
+                "maxLength": 1200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagline"
+          },
+          "teaching": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeachingModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "voice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "marin",
+                  "cedar",
+                  "coral",
+                  "sage",
+                  "shimmer",
+                  "ash",
+                  "echo",
+                  "verse"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice"
           }
         },
         "title": "PersonaPatch",
+        "type": "object"
+      },
+      "PersonaTemplatesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/PersonaDraftOut"
+            },
+            "title": "Templates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "templates"
+        ],
+        "title": "PersonaTemplatesOut",
+        "type": "object"
+      },
+      "PersonalityModel": {
+        "additionalProperties": false,
+        "description": "How a persona comes across. Each trait is a point from 1 to 5 between two poles.",
+        "properties": {
+          "curiosity": {
+            "title": "Curiosity",
+            "type": "integer"
+          },
+          "formOfAddress": {
+            "enum": [
+              "informal",
+              "formal",
+              "auto"
+            ],
+            "title": "Formofaddress",
+            "type": "string"
+          },
+          "humour": {
+            "title": "Humour",
+            "type": "integer"
+          },
+          "playfulness": {
+            "title": "Playfulness",
+            "type": "integer"
+          },
+          "style": {
+            "enum": [
+              "questions",
+              "stories",
+              "debate"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "talkativeness": {
+            "title": "Talkativeness",
+            "type": "integer"
+          },
+          "warmth": {
+            "title": "Warmth",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "warmth",
+          "playfulness",
+          "talkativeness",
+          "curiosity",
+          "humour",
+          "formOfAddress",
+          "style"
+        ],
+        "title": "PersonalityModel",
         "type": "object"
       },
       "PersonasOut": {
@@ -489,6 +1375,64 @@
           "personas"
         ],
         "title": "PersonasOut",
+        "type": "object"
+      },
+      "PictureConfirm": {
+        "additionalProperties": false,
+        "properties": {
+          "uploadId": {
+            "format": "uuid",
+            "title": "Uploadid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uploadId"
+        ],
+        "title": "PictureConfirm",
+        "type": "object"
+      },
+      "PictureOut": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "PictureOut",
+        "type": "object"
+      },
+      "PictureUploadOut": {
+        "additionalProperties": false,
+        "description": "How to send a photo: a form POST to `url` with `fields`, then the JPEG as `file`.",
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "uploadId": {
+            "format": "uuid",
+            "title": "Uploadid",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uploadId",
+          "url",
+          "fields"
+        ],
+        "title": "PictureUploadOut",
         "type": "object"
       },
       "PlacementDecision": {
@@ -707,6 +1651,144 @@
         "title": "Stage",
         "type": "string"
       },
+      "TeachingModel": {
+        "additionalProperties": false,
+        "description": "How a persona treats mistakes and adapts to the learner. Every key is always present;\nnull means \"as the learner's profile says\" (or, for speed, the voice's own pace).",
+        "properties": {
+          "correctionTiming": {
+            "enum": [
+              "recast",
+              "immediate",
+              "end",
+              "off"
+            ],
+            "title": "Correctiontiming",
+            "type": "string"
+          },
+          "explanationUsage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "never",
+                  "when_stuck",
+                  "for_grammar",
+                  "freely"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanationusage"
+          },
+          "focus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A0",
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2",
+                  "C1",
+                  "C2"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed"
+          },
+          "strictness": {
+            "enum": [
+              "meaning",
+              "important",
+              "everything"
+            ],
+            "title": "Strictness",
+            "type": "string"
+          }
+        },
+        "required": [
+          "correctionTiming",
+          "strictness",
+          "explanationUsage",
+          "level",
+          "focus",
+          "speed"
+        ],
+        "title": "TeachingModel",
+        "type": "object"
+      },
+      "TranscriptOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation": {
+            "$ref": "#/components/schemas/ConversationOut"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/TurnOut"
+            },
+            "title": "Turns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conversation",
+          "turns"
+        ],
+        "title": "TranscriptOut",
+        "type": "object"
+      },
+      "TurnOut": {
+        "additionalProperties": false,
+        "properties": {
+          "speaker": {
+            "enum": [
+              "learner",
+              "persona"
+            ],
+            "title": "Speaker",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "speaker",
+          "text"
+        ],
+        "title": "TurnOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -750,6 +1832,30 @@
       "VoiceCallIn": {
         "additionalProperties": false,
         "properties": {
+          "localDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Localdate"
+          },
+          "personaId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Personaid"
+          },
           "purpose": {
             "$ref": "#/components/schemas/CallPurpose"
           },
@@ -790,6 +1896,20 @@
         ],
         "title": "VoiceCallOut",
         "type": "object"
+      },
+      "VoiceSampleOut": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "VoiceSampleOut",
+        "type": "object"
       }
     }
   },
@@ -799,6 +1919,182 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/account": {
+      "delete": {
+        "operationId": "deleteAccount",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "summary": "Delete Account"
+      },
+      "get": {
+        "operationId": "getAccount",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Account"
+      }
+    },
+    "/v1/account/picture": {
+      "delete": {
+        "operationId": "removePicture",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Remove Picture"
+      },
+      "post": {
+        "operationId": "confirmPicture",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PictureConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Confirm Picture"
+      }
+    },
+    "/v1/account/picture/upload": {
+      "post": {
+        "operationId": "startPictureUpload",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PictureUploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Start Picture Upload"
+      }
+    },
     "/v1/catalog": {
       "get": {
         "operationId": "getCatalog",
@@ -825,6 +2121,199 @@
           }
         },
         "summary": "Get Catalog"
+      }
+    },
+    "/v1/conversations": {
+      "get": {
+        "operationId": "getConversations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Conversations"
+      }
+    },
+    "/v1/conversations/{conversation_id}": {
+      "get": {
+        "operationId": "getConversation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Conversation"
+      }
+    },
+    "/v1/home": {
+      "get": {
+        "operationId": "getHome",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tz",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tz"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Home"
       }
     },
     "/v1/onboarding": {
@@ -995,6 +2484,140 @@
           }
         },
         "summary": "Get Personas"
+      },
+      "post": {
+        "operationId": "createPersona",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonaIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonaOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Create Persona"
+      }
+    },
+    "/v1/personas/draft": {
+      "post": {
+        "operationId": "draftPersona",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonaDescription"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonaDraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Draft Persona"
       }
     },
     "/v1/personas/starter": {
@@ -1033,6 +2656,34 @@
           }
         },
         "summary": "Propose Starter Personas"
+      }
+    },
+    "/v1/personas/templates": {
+      "get": {
+        "operationId": "getPersonaTemplates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonaTemplatesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Persona Templates"
       }
     },
     "/v1/personas/{persona_id}": {
@@ -1161,6 +2812,76 @@
           }
         },
         "summary": "Change Persona"
+      }
+    },
+    "/v1/personas/{persona_id}/duplicate": {
+      "post": {
+        "operationId": "duplicatePersona",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "persona_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Persona Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonaOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Duplicate Persona"
       }
     },
     "/v1/placement": {
@@ -1405,6 +3126,16 @@
             },
             "description": "Forbidden"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
           "409": {
             "content": {
               "application/json": {
@@ -1447,6 +3178,85 @@
           }
         },
         "summary": "Start Voice Call"
+      }
+    },
+    "/v1/voices/{voice}/sample": {
+      "get": {
+        "operationId": "getVoiceSample",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "voice",
+            "required": true,
+            "schema": {
+              "enum": [
+                "marin",
+                "cedar",
+                "coral",
+                "sage",
+                "shimmer",
+                "ash",
+                "echo",
+                "verse"
+              ],
+              "title": "Voice",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSampleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Voice Sample"
       }
     }
   }

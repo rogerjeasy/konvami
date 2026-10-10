@@ -27,6 +27,11 @@ const UNCONFIGURED: AuthProvider = {
   requestPasswordReset: notConfigured,
   confirmPasswordReset: notConfigured,
   signOutEverywhere: notConfigured,
+  updateName: notConfigured,
+  updateLocale: notConfigured,
+  changePassword: notConfigured,
+  requestEmailChange: notConfigured,
+  confirmEmailChange: notConfigured,
 };
 
 export function createAuthServices(config: AuthConfig | null): AuthServices {

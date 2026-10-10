@@ -8,7 +8,8 @@ import Animated, {
 import { useTranslation } from 'react-i18next';
 import { opacity, size } from '@konvami/design-tokens';
 import { Avatar } from '@/components/avatar/avatar';
-import type { AvatarMood } from '@/components/avatar/look';
+import type { AvatarLook, AvatarMood } from '@/components/avatar/look';
+import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { ChatBubble } from '@/components/chat';
 import { HeroLayout } from '@/components/hero-layout';
@@ -21,7 +22,6 @@ import { TextButton } from '@/components/text-button';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { stepFeedback } from '@/lib/haptics';
 import { heroDrawingSize } from '@/lib/layout';
-import { SETUP } from '@/screens/create-account/sample-content';
 import { useTheme } from '@/theme';
 import type { ConversationPhase } from '@/voice/conversation';
 import type { VoiceCall } from '@/voice/use-voice-call';
@@ -74,13 +74,14 @@ function ListeningRing({ level, diameter }: { level: SharedValue<number>; diamet
 }
 
 /**
- * A live conversation with the guide, as the spoken setup (4.1) and the placement test (4.5)
- * show it: her portrait, who is speaking, the latest line of each side, what is done so far and
- * the microphone. The screen around it decides what the call is for, where it leads and what to
- * offer when it fails.
+ * A live conversation as every call shows it (the spoken setup 4.1, the placement test 4.5, a
+ * practice conversation 5.3): the persona's portrait, who is speaking, the latest line of each
+ * side, what is done so far and the microphone. The screen around it decides who the call is
+ * with, what it is for, where it leads and what to offer when it fails.
  */
 export function CallStage({
   call,
+  persona,
   header,
   hint,
   finishedLabel,
@@ -90,14 +91,16 @@ export function CallStage({
   failedActions,
 }: {
   call: VoiceCall;
+  /** Who the learner is talking to. */
+  persona: { name: string; look: AvatarLook };
   /** The row across the top (ending the call, the way out to another mode). */
   header: ReactNode;
   /** Shown under the portrait until someone has said something. */
   hint: string;
   /** The status line once the call has done its job and the goodbye is being said. */
   finishedLabel: string;
-  /** What is done so far (`ProgressChips`). */
-  progress: ReactNode;
+  /** What is done so far (`ProgressChips`), for a call that works through a list. */
+  progress?: ReactNode;
   /**
    * The action this call is mostly used with, when it has one ("I don't know" in the test). It
    * takes the button's place, and the microphone control becomes a quiet text action under it.
@@ -113,7 +116,7 @@ export function CallStage({
   const { illustrationWidth } = useScreenLayout(HERO_SHARE);
   const { height: windowHeight } = useWindowDimensions();
   const { conversation } = call;
-  const name = SETUP.guide.name;
+  const { name } = persona;
 
   const live = call.status === 'live';
   const failed = call.status === 'failed';
@@ -122,7 +125,7 @@ export function CallStage({
   const lines = conversation.captions.filter(
     (caption, index, all) => all.findLastIndex((c) => c.speaker === caption.speaker) === index,
   );
-  const muteLabel = t(call.muted ? 'onboarding.talk.unmute' : 'onboarding.talk.mute');
+  const muteLabel = t(call.muted ? 'call.unmute' : 'call.mute');
   const toggleMute = () => {
     stepFeedback();
     call.toggleMute();
@@ -143,7 +146,7 @@ export function CallStage({
           <View style={{ width: avatarSize, height: avatarSize }}>
             <ListeningRing level={call.voice} diameter={avatarSize} />
             <Avatar
-              look={SETUP.guide.look}
+              look={persona.look}
               size={avatarSize}
               mood={failed ? 'waiting' : MOOD[phase]}
               mouth={call.mouth}
@@ -154,11 +157,7 @@ export function CallStage({
               <Text variant="heading" accessibilityRole="header">
                 {name}
               </Text>
-              <View className="rounded-sm bg-chip px-1.5 py-1">
-                <Text variant="badge" tone="muted">
-                  {t('common.aiBadge')}
-                </Text>
-              </View>
+              <Badge label={t('common.aiBadge')} tone="chip" />
             </View>
             {failed ? null : (
               <Text
@@ -167,15 +166,13 @@ export function CallStage({
                 accessibilityLiveRegion="polite"
                 className="text-center"
               >
-                {conversation.finished
-                  ? finishedLabel
-                  : t(`onboarding.talk.status.${phase}`, { name })}
+                {conversation.finished ? finishedLabel : t(`call.status.${phase}`, { name })}
               </Text>
             )}
             {live && call.muted ? (
               <Pill
                 tone="warn"
-                label={t('onboarding.talk.muted')}
+                label={t('call.muted')}
                 leading={<Icon name="micOff" color={color.warnText} size={size.iconSm} />}
               />
             ) : null}

@@ -7,7 +7,7 @@ import { apiErrorCode, apiErrorKey } from '@/api/messages';
 import { Button } from '@/components/button';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
-import { StepHeader } from '@/components/step-header';
+import { HeaderButton, StepHeader } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
 import { commitFeedback } from '@/lib/haptics';
@@ -17,23 +17,42 @@ import { ESSENTIAL_STEPS, type EssentialStep } from '@/onboarding/essentials';
 import { OnboardingGate } from '@/onboarding/gate';
 import { STEP_ROUTES } from '@/onboarding/routing';
 import { useOnboardingStore } from '@/onboarding/services';
+import { usePracticeServices } from '@/practice/services';
 import type { OnboardingData } from '@/onboarding/store';
 
-/** A step opened from the review screen saves and returns there instead of moving forward. */
-function useEditingFromReview(): boolean {
-  return useLocalSearchParams<{ from?: string }>().from === 'review';
+/**
+ * Where a step was opened from to change one answer: the review at the end of the setup, or
+ * the profile (6.3), long after it. Such a step saves and returns there instead of moving
+ * forward. Null while the learner is going through the setup.
+ */
+export function useEditOrigin(): 'review' | 'profile' | null {
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  return from === 'review' || from === 'profile' ? from : null;
 }
 
 function useStepHeader(step: EssentialStep) {
-  const editing = useEditingFromReview();
+  const { t } = useTranslation();
+  const origin = useEditOrigin();
   const index = ESSENTIAL_STEPS.indexOf(step);
   const previous = ESSENTIAL_STEPS[index - 1];
+  // From the profile it is one question to change, not step 4 of 5.
+  if (origin === 'profile') {
+    return (
+      <View className="min-h-tap flex-row items-center">
+        <HeaderButton
+          icon="chevronLeft"
+          label={t('common.back')}
+          onPress={() => backOr(ROUTES.accountLearning)}
+        />
+      </View>
+    );
+  }
   return (
     <StepHeader
       step={index + 1}
       total={ESSENTIAL_STEPS.length}
       onBack={() =>
-        editing ? router.back() : backOr(previous ? STEP_ROUTES[previous] : ROUTES.allSet)
+        origin ? router.back() : backOr(previous ? STEP_ROUTES[previous] : ROUTES.allSet)
       }
     />
   );
@@ -84,7 +103,9 @@ export function StepFrame({
 }) {
   const { t } = useTranslation();
   const store = useOnboardingStore();
-  const editing = useEditingFromReview();
+  const { home } = usePracticeServices();
+  const origin = useEditOrigin();
+  const editing = origin !== null;
   const header = useStepHeader(step);
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -95,7 +116,11 @@ export function StepFrame({
     setSaving(true);
     try {
       await store.save(changes());
-      if (editing) {
+      if (origin === 'profile') {
+        // Today shows the level, the exam and the partners' lines: it reads them again.
+        void home.refresh();
+        backOr(ROUTES.accountLearning);
+      } else if (editing) {
         router.back();
       } else {
         const next = ESSENTIAL_STEPS[ESSENTIAL_STEPS.indexOf(step) + 1];

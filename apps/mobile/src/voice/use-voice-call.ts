@@ -13,6 +13,9 @@ export type CallProblem = VoiceErrorCode | 'lost';
 export interface VoiceCall {
   status: 'starting' | 'live' | 'failed';
   problem: CallProblem | null;
+  /** The call's id on the server and its time limit (seconds); null until it is live. */
+  callId: string | null;
+  maxSeconds: number | null;
   conversation: ConversationState;
   muted: boolean;
   toggleMute: () => void;
@@ -31,12 +34,14 @@ const LEVEL_INTERVAL_MS = 100;
 
 /**
  * One live voice call for the life of the component that uses it: it starts on mount and ends
- * on unmount. To try again after a failure, mount the component anew (a new `key`).
+ * on unmount. To try again after a failure, mount the component anew (a new `key`). A practice
+ * call names the partner to talk to (`personaId`).
  */
-export function useVoiceCall(purpose: CallPurpose): VoiceCall {
+export function useVoiceCall(purpose: CallPurpose, personaId?: string): VoiceCall {
   const createEngine = useVoiceEngineFactory();
   const [status, setStatus] = useState<VoiceCall['status']>('starting');
   const [problem, setProblem] = useState<CallProblem | null>(null);
+  const [started, setStarted] = useState<{ callId: string; maxSeconds: number } | null>(null);
   const [conversation, dispatch] = useReducer(conversationReducer, INITIAL_CONVERSATION);
   const [muted, setMuted] = useState(false);
   const engine = useRef<VoiceEngine | null>(null);
@@ -44,7 +49,7 @@ export function useVoiceCall(purpose: CallPurpose): VoiceCall {
   const voice = useSharedValue(0);
 
   useEffect(() => {
-    const call = createEngine(purpose);
+    const call = createEngine(purpose, personaId);
     engine.current = call;
     let current = true;
     const fail = (reason: CallProblem) => {
@@ -62,7 +67,11 @@ export function useVoiceCall(purpose: CallPurpose): VoiceCall {
       }
     });
     call.start().then(
-      () => current && setStatus('live'),
+      (answer) => {
+        if (!current) return;
+        setStarted(answer);
+        setStatus('live');
+      },
       (error: unknown) => fail(error instanceof VoiceError ? error.code : 'unknown'),
     );
     return () => {
@@ -70,7 +79,7 @@ export function useVoiceCall(purpose: CallPurpose): VoiceCall {
       unsubscribe();
       call.stop();
     };
-  }, [createEngine, purpose]);
+  }, [createEngine, purpose, personaId]);
 
   // The lips and the listening ring follow the voice levels while the call is live.
   const speaking = conversation.phase === 'speaking';
@@ -101,5 +110,17 @@ export function useVoiceCall(purpose: CallPurpose): VoiceCall {
   const say = useCallback((text: string) => engine.current?.say(text), []);
   const stop = useCallback(() => engine.current?.stop(), []);
 
-  return { status, problem, conversation, muted, toggleMute, say, stop, mouth, voice };
+  return {
+    status,
+    problem,
+    callId: started?.callId ?? null,
+    maxSeconds: started?.maxSeconds ?? null,
+    conversation,
+    muted,
+    toggleMute,
+    say,
+    stop,
+    mouth,
+    voice,
+  };
 }

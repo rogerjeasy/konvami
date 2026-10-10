@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { Persona } from '@konvami/api-client';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
+import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { LoadState } from '@/components/load-state';
@@ -49,11 +50,7 @@ function PartnerCard({
             <Text variant="heading" className="shrink">
               {name}
             </Text>
-            <View className="rounded-sm bg-primary-soft px-1.5 py-1">
-              <Text variant="badge" tone="primary">
-                {t(`onboarding.partners.roles.${partner.role}`)}
-              </Text>
-            </View>
+            <Badge label={t(`onboarding.partners.roles.${partner.role}`)} />
           </View>
           <Text variant="small" tone="subtle">
             {t('onboarding.partners.ageOrigin', { age: partner.age, origin: partner.origin })}

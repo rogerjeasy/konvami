@@ -1,15 +1,25 @@
 """In-memory stand-ins for the persistence layer, checked against the same contract tests as SQL."""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from konvami_api.domain.accounts import Account, AccountNotFound
+from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
+from konvami_api.domain.conversations import (
+    ActivityDays,
+    Conversation,
+    DayActivity,
+    PartnerHistory,
+)
+from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
+from konvami_api.domain.speech import SpeechTask
+from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -90,11 +100,110 @@ class InMemoryVoiceSessionRepository:
 class FakeAccountDirectory:
     def __init__(self, accounts: dict[UUID, Account] | None = None) -> None:
         self.accounts = accounts or {}
+        # True: deleting fails and changes nothing. "after": the account is deleted, but the
+        # answer is lost on the way, so the caller sees a failure all the same.
+        self.fail_delete: bool | str = False
+        self.fail_get = False
 
     def get(self, user_id: UUID) -> Account:
+        if self.fail_get:
+            raise RuntimeError("the identity provider did not answer")
         if user_id not in self.accounts:
             raise AccountNotFound
         return self.accounts[user_id]
+
+    def delete(self, user_id: UUID) -> None:
+        if self.fail_delete == "after":
+            self.accounts.pop(user_id, None)
+        if self.fail_delete:
+            raise RuntimeError("the identity provider did not answer")
+        self.accounts.pop(user_id, None)
+
+
+class InMemoryAccountRepository:
+    def __init__(self) -> None:
+        self.pictures: dict[UUID, str] = {}
+        self.deleted: list[UUID] = []
+        self.deleted_at: dict[UUID, datetime] = {}
+        self.fail_delete = False
+
+    def picture_key(self, user_id: UUID) -> str | None:
+        return self.pictures.get(user_id)
+
+    def set_picture_key(self, user_id: UUID, key: str | None) -> None:
+        if key is None:
+            self.pictures.pop(user_id, None)
+        else:
+            self.pictures[user_id] = key
+
+    def delete(self, user_id: UUID, at: datetime) -> None:
+        if self.fail_delete:
+            raise RuntimeError("the database did not answer")
+        self.pictures.pop(user_id, None)
+        self.deleted.append(user_id)
+        self.deleted_at = {
+            user: moment
+            for user, moment in self.deleted_at.items()
+            if moment >= at - DELETION_MEMORY
+        }
+        self.deleted_at[user_id] = at
+
+    def is_deleted(self, user_id: UUID) -> bool:
+        return user_id in self.deleted_at
+
+    def restore(self, user_id: UUID) -> None:
+        self.deleted_at.pop(user_id, None)
+
+
+class InMemoryFileStore:
+    """Files in a dict. `save` also stands in for the app sending a file with an upload form."""
+
+    def __init__(self) -> None:
+        self.files: dict[str, tuple[bytes, str]] = {}
+        # Every upload form handed out, as the arguments it was asked with.
+        self.forms: list[dict[str, Any]] = []
+
+    def keys(self) -> list[str]:
+        return sorted(self.files)
+
+    def upload_form(
+        self, key: str, *, content_type: str, max_bytes: int, expires_seconds: int
+    ) -> UploadForm:
+        self.forms.append(
+            {
+                "key": key,
+                "content_type": content_type,
+                "max_bytes": max_bytes,
+                "expires_seconds": expires_seconds,
+            }
+        )
+        return UploadForm("https://files.test/", {"key": key, "Content-Type": content_type})
+
+    def stat(self, key: str) -> StoredFile | None:
+        stored = self.files.get(key)
+        return StoredFile(size=len(stored[0]), content_type=stored[1]) if stored else None
+
+    def read_start(self, key: str, count: int) -> bytes:
+        return self.files[key][0][:count]
+
+    def read(self, key: str) -> bytes:
+        return self.files[key][0]
+
+    def save(self, key: str, body: bytes, content_type: str) -> None:
+        self.files[key] = (body, content_type)
+
+    def move(self, source: str, destination: str) -> None:
+        self.files[destination] = self.files.pop(source)
+
+    def address(self, key: str, expires_seconds: int) -> str:
+        return f"https://files.test/{key}?expires={expires_seconds}"
+
+    def remove(self, key: str) -> None:
+        self.files.pop(key, None)
+
+    def remove_all(self, prefix: str) -> None:
+        for key in [key for key in self.files if key.startswith(prefix)]:
+            del self.files[key]
 
 
 class FakeVoiceProvider:
@@ -184,3 +293,100 @@ class InMemoryPersonaRepository:
             return False
         del self.personas[persona_id]
         return True
+
+
+class InMemoryConversationRepository:
+    """Reads the calls of an `InMemoryVoiceSessionRepository`, as the SQL one reads the tables."""
+
+    def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
+        self._calls = calls
+
+    def _practice(self, user_id: UUID) -> list[Conversation]:
+        conversations = []
+        for session in self._calls.sessions.values():
+            if session.user_id != user_id or session.purpose is not CallPurpose.PRACTICE:
+                continue
+            finished = self._calls.finished.get(session.call_id)
+            conversations.append(
+                Conversation(
+                    id=session.call_id,
+                    persona_id=session.persona_id,
+                    started_at=session.started_at,
+                    ended_at=finished.ended_at if finished else None,
+                    seconds=int((finished.ended_at - session.started_at).total_seconds())
+                    if finished
+                    else 0,
+                    learner_turns=sum(1 for turn in finished.turns if turn.speaker == "learner")
+                    if finished
+                    else 0,
+                )
+            )
+        return sorted(conversations, key=lambda c: c.started_at, reverse=True)
+
+    def _counted(self, user_id: UUID) -> list[Conversation]:
+        return [c for c in self._practice(user_id) if c.ended_at and c.learner_turns > 0]
+
+    def listed(self, user_id: UUID, limit: int, before: datetime | None) -> list[Conversation]:
+        counted = self._counted(user_id)
+        return [c for c in counted if before is None or c.started_at < before][:limit]
+
+    def get(self, user_id: UUID, call_id: str) -> Conversation | None:
+        return next((c for c in self._practice(user_id) if c.id == call_id), None)
+
+    def turns(self, call_id: str) -> list[Turn]:
+        finished = self._calls.finished.get(call_id)
+        return list(finished.turns) if finished else []
+
+    def partner_history(self, user_id: UUID) -> dict[UUID, PartnerHistory]:
+        history: dict[UUID, PartnerHistory] = {}
+        # Newest first, so the first one seen per partner is the last time they talked.
+        for conversation in self._counted(user_id):
+            if conversation.persona_id is None:
+                continue
+            known = history.get(conversation.persona_id)
+            history[conversation.persona_id] = PartnerHistory(
+                conversations=(known.conversations if known else 0) + 1,
+                last_at=known.last_at if known else conversation.started_at,
+            )
+        return history
+
+    def days(self, user_id: UUID, timezone: str | None, now: datetime) -> ActivityDays:
+        try:
+            zone = ZoneInfo(timezone) if timezone else UTC
+        except (ZoneInfoNotFoundError, ValueError):
+            zone = UTC
+        days: dict[Any, DayActivity] = {}
+        for conversation in self._counted(user_id):
+            day = conversation.started_at.astimezone(zone).date()
+            known = days.get(day, DayActivity(day, 0, 0))
+            days[day] = DayActivity(
+                day, known.seconds + conversation.seconds, known.conversations + 1
+            )
+        newest_first = sorted(days.values(), key=lambda d: d.day, reverse=True)
+        return ActivityDays(now.astimezone(zone).date(), tuple(newest_first))
+
+
+class InMemoryDraftLog:
+    def __init__(self) -> None:
+        self.drafts: dict[tuple[UUID, date], int] = {}
+
+    def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
+        used = self.drafts.get((user_id, day), 0)
+        if used >= limit:
+            return False
+        self.drafts[(user_id, day)] = used + 1
+        return True
+
+
+class FakeSpeechModel:
+    """Answers with bytes that name the voice, and records what it was asked to say."""
+
+    def __init__(self) -> None:
+        self.tasks: list[SpeechTask] = []
+        self.fail: Exception | None = None
+
+    def speak(self, task: SpeechTask) -> bytes:
+        if self.fail:
+            raise self.fail
+        self.tasks.append(task)
+        return f"mp3:{task.voice}".encode()

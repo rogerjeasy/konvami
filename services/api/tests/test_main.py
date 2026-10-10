@@ -9,12 +9,14 @@ import pytest
 from botocore.stub import ANY, Stubber
 
 from konvami_api import main
+from konvami_api.providers.s3_store import s3_client
 from tests.api.conftest import USER, http_api_event
 
 ENVIRONMENT = {
     "KONVAMI_DB_CLUSTER_ARN": "arn:aws:rds:eu-central-1:503002144480:cluster:kv-dev-db",
     "KONVAMI_DB_SECRET_ARN": "arn:aws:secretsmanager:eu-central-1:503002144480:secret:rds!x",
     "KONVAMI_DB_NAME": "konvami",
+    "KONVAMI_MEDIA_BUCKET": "kv-dev-media-503002144480",
 }
 
 
@@ -37,9 +39,13 @@ class Unused:
         raise AssertionError(f"unexpected AWS call: {name}")
 
 
-def clients(stub: Stubber) -> main.Clients:
+def clients(stub: Stubber, s3: Any = None) -> main.Clients:
     return main.Clients(
-        rds_data=stub.client, cognito=Unused(), functions=Unused(), secrets=Unused()
+        rds_data=stub.client,
+        cognito=Unused(),
+        functions=Unused(),
+        secrets=Unused(),
+        s3=s3 or Unused(),
     )
 
 
@@ -108,8 +114,104 @@ def test_without_voice_settings_a_call_is_refused_before_any_provider_is_asked(
 ) -> None:
     handler = main.build_handler(ENVIRONMENT, clients(stub), sleep=lambda _: None)
     event = http_api_event("POST", "/v1/voice/calls", {"purpose": "onboarding", "sdp": "v=0"}, USER)
+    # Before anything is changed for a caller: was their account deleted? (It was not.)
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": "[]"},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [{"name": "user_id", "value": {"stringValue": USER}}],
+            "formatRecordsAs": "JSON",
+        },
+    )
 
     result = handler(event, None)  # type: ignore[arg-type]
 
     assert result["statusCode"] == 503
     assert json.loads(result["body"]) == {"error": {"code": "voice_unavailable", "field": None}}
+
+
+def test_the_library_is_read_from_the_database(stub: Stubber) -> None:
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": "[]"},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [
+                {"name": "user_id", "value": {"stringValue": USER}},
+                # One more than the page, to know whether another page follows.
+                {"name": "limit", "value": {"longValue": 21}},
+                {"name": "before", "value": {"isNull": True}},
+            ],
+            "formatRecordsAs": "JSON",
+        },
+    )
+
+    result = invoke(stub, "GET", "/v1/conversations")
+
+    assert result["statusCode"] == 200
+    assert json.loads(result["body"]) == {"conversations": [], "next": None}
+    stub.assert_no_pending_responses()
+
+
+def test_a_photo_is_read_from_the_configured_bucket(stub: Stubber) -> None:
+    key = f"users/{USER}/picture/aaaaaaaa-aaaa-4aaa-8aaa-000000000001.jpg"
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": json.dumps([{"picture_key": key}])},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [{"name": "user_id", "value": {"stringValue": USER}}],
+            "formatRecordsAs": "JSON",
+        },
+    )
+    # Signing an address needs credentials but no request to S3.
+    s3 = s3_client(
+        region_name="eu-central-1",
+        aws_access_key_id="test",
+        aws_secret_access_key="test",  # noqa: S106
+    )
+    handler = main.build_handler(ENVIRONMENT, clients(stub, s3), sleep=lambda _: None)
+
+    result = handler(http_api_event("GET", "/v1/account", None, USER), None)  # type: ignore[arg-type]
+
+    assert result["statusCode"] == 200
+    address: str = json.loads(result["body"])["picture"]["url"]
+    assert address.startswith(
+        f"https://kv-dev-media-503002144480.s3.eu-central-1.amazonaws.com/{key}?"
+    )
+
+
+def test_a_partner_can_be_drafted_and_a_voice_sampled_with_the_configured_models(
+    stub: Stubber,
+) -> None:
+    """The entry point builds the studio's services; here only that their routes answer."""
+    handler = main.build_handler(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": "[]"},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [{"name": "user_id", "value": {"stringValue": USER}}],
+            "formatRecordsAs": "JSON",
+        },
+    )
+
+    # A learner without a language yet: the profile is read, and no model or bucket is asked.
+    result = handler(http_api_event("GET", "/v1/voices/coral/sample", None, USER), None)  # type: ignore[arg-type]
+
+    assert result["statusCode"] == 409
+    assert json.loads(result["body"]) == {"error": {"code": "no_language", "field": None}}
+    stub.assert_no_pending_responses()

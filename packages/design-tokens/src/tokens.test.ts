@@ -22,6 +22,8 @@ const TEXT_PAIRS: [ColorToken, ColorToken][] = [
   ['onPrimary', 'primary'],
   ['primaryText', 'primarySoft'],
   ['primaryText', 'chip'],
+  ['primaryText', 'bg'],
+  ['primaryText', 'surface'],
   ['warnText', 'warnSoft'],
   ['success', 'successSoft'],
   ['danger', 'dangerSoft'],

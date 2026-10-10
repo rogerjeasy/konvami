@@ -56,6 +56,8 @@ describe('createCognitoClient', () => {
     ['NotAuthorizedException', 'notAuthorized'],
     ['UserNotFoundException', 'notAuthorized'],
     ['UserNotConfirmedException', 'notConfirmed'],
+    // A new email address that another account already signs in with.
+    ['AliasExistsException', 'emailTaken'],
     ['InternalErrorException', 'unknown'],
   ] as const)('maps %s to "%s"', async (type, code) => {
     const { call } = clientWith(reply(400, { __type: type, message: 'details from AWS' }));
