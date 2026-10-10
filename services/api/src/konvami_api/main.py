@@ -15,15 +15,19 @@ from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.conversations import ConversationService
+from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
+from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.repositories import (
+    SqlConversationRepository,
     SqlOnboardingRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
@@ -109,11 +113,19 @@ def build_backend(
         text_model=text,
         model=models.personas,
     )
+    conversations = ConversationService(SqlConversationRepository(sql), personas)
     voice = VoiceCallService(
         settings=voice_settings(environment.get(VOICE_VARIABLE)),
         scripts={
             CallPurpose.ONBOARDING: HostScript(CATALOG, profiles),
             CallPurpose.PLACEMENT: PlacementScript(placement),
+            CallPurpose.PRACTICE: PracticeScript(
+                profiles=profiles,
+                onboarding=onboarding,
+                personas=personas,
+                placement=placement,
+                conversations=conversations,
+            ),
         },
         accounts=CognitoAccounts(clients.cognito, environment.get(_USER_POOL, "")),
         provider=realtime,
@@ -121,7 +133,17 @@ def build_backend(
         starter=LambdaCallStarter(clients.functions, environment.get(_CALL_WORKER, "")),
         clock=_now,
     )
-    services = Services(CATALOG, profiles, onboarding, voice, placement, personas)
+    home = HomeService(
+        profiles=profiles,
+        onboarding=onboarding,
+        personas=personas,
+        placement=placement,
+        conversations=conversations,
+        clock=_now,
+    )
+    services = Services(
+        CATALOG, profiles, onboarding, voice, placement, personas, conversations, home
+    )
     return Backend(services, realtime)
 
 

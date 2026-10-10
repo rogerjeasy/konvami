@@ -5,8 +5,16 @@ transaction (see `sql.py`); the owning `app_user` row is created on a user's fir
 import datetime as dt
 import json
 from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 
+from konvami_api.domain.conversations import (
+    ActivityDays,
+    Conversation,
+    DayActivity,
+    PartnerHistory,
+)
+from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
@@ -116,13 +124,14 @@ _REMOVE_PERSONA = """
 
 _START_SESSION = f"""
     WITH {_ENSURE_USER}
-    INSERT INTO voice_session (call_id, user_id, purpose, model, started_at)
-    VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz))
+    INSERT INTO voice_session (call_id, user_id, purpose, model, started_at, persona_id)
+    VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
+            CAST(:persona_id AS uuid))
 """
 
 _LOAD_SESSION = f"""
     SELECT call_id, CAST(user_id AS text) AS user_id, purpose, model,
-           {epoch_micros("started_at")} AS started_at
+           {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id
     FROM voice_session
     WHERE call_id = :call_id
 """
@@ -166,6 +175,83 @@ _LOAD_PLACEMENT = f"""
            {epoch_micros("measured_at")} AS measured_at
     FROM placement_result
     WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+"""
+
+# A learner's practice calls, as `s`.
+_PRACTICE = "s.user_id = CAST(:user_id AS uuid) AND s.purpose = 'practice'"
+# The ones that count (see `domain/conversations.py`): ended, and the learner said something.
+_COUNTED = f"""
+    {_PRACTICE} AND s.ended_at IS NOT NULL
+    AND EXISTS (
+        SELECT 1 FROM voice_turn t WHERE t.call_id = s.call_id AND t.speaker = 'learner'
+    )
+"""
+# Whole seconds, rounded down; null while the call has not ended.
+_SECONDS = "floor(extract(epoch FROM s.ended_at - s.started_at))"
+
+_CONVERSATION = f"""
+    SELECT s.call_id, CAST(s.persona_id AS text) AS persona_id,
+           {epoch_micros("s.started_at")} AS started_at,
+           {epoch_micros("s.ended_at")} AS ended_at,
+           CAST({_SECONDS} AS integer) AS seconds,
+           (
+               SELECT CAST(count(*) AS integer) FROM voice_turn t
+               WHERE t.call_id = s.call_id AND t.speaker = 'learner'
+           ) AS learner_turns
+    FROM voice_session s
+"""
+
+_LIST_CONVERSATIONS = f"""
+    {_CONVERSATION}
+    WHERE {_COUNTED}
+      AND (CAST(:before AS timestamptz) IS NULL OR s.started_at < CAST(:before AS timestamptz))
+    ORDER BY s.started_at DESC, s.call_id DESC
+    LIMIT :limit
+"""
+
+_LOAD_CONVERSATION = f"""
+    {_CONVERSATION}
+    WHERE {_PRACTICE} AND s.call_id = :call_id
+"""
+
+_LIST_TURNS = """
+    SELECT speaker, text FROM voice_turn WHERE call_id = :call_id ORDER BY position
+"""
+
+_PARTNER_HISTORY = f"""
+    SELECT CAST(s.persona_id AS text) AS persona_id,
+           CAST(count(*) AS integer) AS conversations,
+           {epoch_micros("max(s.started_at)")} AS last_at
+    FROM voice_session s
+    WHERE {_COUNTED} AND s.persona_id IS NOT NULL
+    GROUP BY s.persona_id
+"""
+
+# Days are cut in the learner's time zone, by the database, which knows every zone's rules. A
+# name it does not know counts as UTC. Always one row at least, so `today` is always there; its
+# other columns are null when the learner has not practised yet.
+_PRACTICE_DAYS = f"""
+    WITH zone AS (
+        SELECT COALESCE(
+            (SELECT name FROM pg_timezone_names WHERE name = :timezone), 'UTC'
+        ) AS name
+    ),
+    per_day AS (
+        SELECT CAST(s.started_at AT TIME ZONE zone.name AS date) AS day,
+               sum({_SECONDS}) AS seconds,
+               count(*) AS conversations
+        FROM voice_session s, zone
+        WHERE {_COUNTED}
+        GROUP BY 1
+    )
+    SELECT to_char(
+               CAST(CAST(:now AS timestamptz) AT TIME ZONE zone.name AS date), 'YYYY-MM-DD'
+           ) AS today,
+           to_char(per_day.day, 'YYYY-MM-DD') AS day,
+           CAST(per_day.seconds AS integer) AS seconds,
+           CAST(per_day.conversations AS integer) AS conversations
+    FROM zone LEFT JOIN per_day ON true
+    ORDER BY per_day.day DESC
 """
 
 
@@ -256,6 +342,7 @@ class SqlVoiceSessionRepository:
                 "purpose": session.purpose.value,
                 "model": session.model,
                 "started_at": session.started_at.isoformat(),
+                "persona_id": str(session.persona_id) if session.persona_id else None,
             },
         )
 
@@ -270,6 +357,7 @@ class SqlVoiceSessionRepository:
             purpose=CallPurpose(row["purpose"]),
             model=row["model"],
             started_at=from_epoch_micros(row["started_at"]),
+            persona_id=UUID(row["persona_id"]) if row["persona_id"] else None,
         )
 
     def count_since(self, user_id: UUID, since: dt.datetime) -> int:
@@ -386,3 +474,59 @@ class SqlPersonaRepository:
             _REMOVE_PERSONA, {"id": str(persona_id), "user_id": str(user_id)}
         )
         return bool(rows)
+
+
+def _conversation(row: dict[str, Any]) -> Conversation:
+    return Conversation(
+        id=row["call_id"],
+        persona_id=UUID(row["persona_id"]) if row["persona_id"] else None,
+        started_at=from_epoch_micros(row["started_at"]),
+        ended_at=_moment(row["ended_at"]),
+        seconds=row["seconds"] or 0,
+        learner_turns=row["learner_turns"],
+    )
+
+
+class SqlConversationRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def listed(self, user_id: UUID, limit: int, before: dt.datetime | None) -> list[Conversation]:
+        rows = self._client.execute(
+            _LIST_CONVERSATIONS,
+            {"user_id": str(user_id), "limit": limit, "before": _iso(before)},
+        )
+        return [_conversation(row) for row in rows]
+
+    def get(self, user_id: UUID, call_id: str) -> Conversation | None:
+        rows = self._client.execute(
+            _LOAD_CONVERSATION, {"user_id": str(user_id), "call_id": call_id}
+        )
+        return _conversation(rows[0]) if rows else None
+
+    def turns(self, call_id: str) -> list[Turn]:
+        rows = self._client.execute(_LIST_TURNS, {"call_id": call_id})
+        return [Turn(row["speaker"], row["text"]) for row in rows]
+
+    def partner_history(self, user_id: UUID) -> dict[UUID, PartnerHistory]:
+        rows = self._client.execute(_PARTNER_HISTORY, {"user_id": str(user_id)})
+        return {
+            UUID(row["persona_id"]): PartnerHistory(
+                conversations=row["conversations"], last_at=from_epoch_micros(row["last_at"])
+            )
+            for row in rows
+        }
+
+    def days(self, user_id: UUID, timezone: str | None, now: dt.datetime) -> ActivityDays:
+        rows = self._client.execute(
+            _PRACTICE_DAYS,
+            {"user_id": str(user_id), "timezone": timezone, "now": now.isoformat()},
+        )
+        return ActivityDays(
+            today=dt.date.fromisoformat(rows[0]["today"]),
+            days=tuple(
+                DayActivity(dt.date.fromisoformat(row["day"]), row["seconds"], row["conversations"])
+                for row in rows
+                if row["day"] is not None
+            ),
+        )

@@ -22,12 +22,12 @@ function fakeSession(overrides: Partial<RtcSession> = {}) {
 const answer = { callId: 'rtc_1', sdp: 'v=0 answer', maxSeconds: 480 };
 
 describe('starting', () => {
-  it('trades the offer for the server’s answer and reports the time limit', async () => {
+  it('trades the offer for the server’s answer and reports the call and its time limit', async () => {
     const { session } = fakeSession();
     const startCall = jest.fn(async () => answer);
     const engine = createVoiceEngine({ createSession: () => session, startCall });
 
-    expect(await engine.start()).toEqual({ maxSeconds: 480 });
+    expect(await engine.start()).toEqual({ callId: 'rtc_1', maxSeconds: 480 });
     expect(startCall).toHaveBeenCalledWith('v=0 offer');
     expect(session.accept).toHaveBeenCalledWith('v=0 answer');
   });

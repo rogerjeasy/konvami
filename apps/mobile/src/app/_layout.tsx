@@ -13,6 +13,7 @@ import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { Lexend_600SemiBold } from '@expo-google-fonts/lexend/600SemiBold';
 import { AuthServicesProvider, authServices } from '@/auth';
 import { OnboardingProvider, onboardingStore } from '@/onboarding';
+import { PracticeProvider, practiceServices } from '@/practice';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
@@ -51,14 +52,16 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthServicesProvider services={authServices}>
         <OnboardingProvider store={onboardingStore}>
-          <VoiceProvider createEngine={createAppVoiceEngine}>
-            <SignUpDraftProvider>
-              <AccessDraftProvider>
-                <StatusBar style="auto" />
-                <RootStack />
-              </AccessDraftProvider>
-            </SignUpDraftProvider>
-          </VoiceProvider>
+          <PracticeProvider services={practiceServices}>
+            <VoiceProvider createEngine={createAppVoiceEngine}>
+              <SignUpDraftProvider>
+                <AccessDraftProvider>
+                  <StatusBar style="auto" />
+                  <RootStack />
+                </AccessDraftProvider>
+              </SignUpDraftProvider>
+            </VoiceProvider>
+          </PracticeProvider>
         </OnboardingProvider>
       </AuthServicesProvider>
     </ThemeProvider>
@@ -85,6 +88,10 @@ function RootStack() {
       <Stack.Screen name="onboarding/placement/result" options={{ animation: 'fade' }} />
       <Stack.Screen name="onboarding/partners/index" options={{ animation: 'fade' }} />
       <Stack.Screen name="onboarding/ready" options={{ animation: 'fade' }} />
+      {/* The app itself. Entering it, and a call beginning and ending, are not steps forward. */}
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="call/[personaId]" options={{ animation: 'fade' }} />
+      <Stack.Screen name="conversations/[id]/done" options={{ animation: 'fade' }} />
     </Stack>
   );
 }

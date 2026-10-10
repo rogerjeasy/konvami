@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -8,6 +8,7 @@ from konvami_api.domain.accounts import Account
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, PlacementStatus
+from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.placement import MIN_TASKS, PlacementScript, PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.voice import (
@@ -27,6 +28,7 @@ from tests.fakes import (
     RecordingCallStarter,
     ScriptedTextModel,
 )
+from tests.world import World
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_USER = UUID("22222222-2222-4222-8222-222222222222")
@@ -361,3 +363,112 @@ def test_when_a_placement_call_ends_its_result_is_worked_out(setup: Setup) -> No
 
     assert setup.onboarding.placement(USER) is PlacementStatus.MEASURED
     assert setup.placement.view(USER).result is not None
+
+
+# --- A practice conversation as a call ----------------------------------------------------------
+
+
+def test_a_practice_call_has_the_partners_voice_instructions_and_time_limit() -> None:
+    world = World()
+    _, jonas = world.onboard()
+
+    started = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, jonas.id)
+
+    session = world.provider.created[0][1]
+    assert started.max_seconds == 600
+    assert session["model"] == "gpt-realtime-2.1-mini"
+    assert "You are Jonas" in session["instructions"]
+    assert session["audio"]["output"] == {"voice": "cedar"}
+    assert [tool["name"] for tool in session["tools"]] == ["end_conversation"]
+    # Learners pause to think in a language they are learning.
+    assert session["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
+
+
+def test_a_practice_call_is_recorded_with_its_partner() -> None:
+    world = World()
+    lena, _ = world.onboard()
+
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id).call_id
+
+    recorded = world.sessions.get(call_id)
+    assert recorded is not None
+    assert (recorded.purpose, recorded.persona_id) == (CallPurpose.PRACTICE, lena.id)
+    assert world.starter.started == [(call_id, USER, "practice")]
+
+
+def test_a_practice_call_with_an_unknown_partner_is_not_created() -> None:
+    world = World()
+    world.onboard()
+
+    with pytest.raises(PersonaError):
+        world.voice.start(USER, CallPurpose.PRACTICE, OFFER, OTHER_USER)
+
+    assert world.provider.created == []
+    assert world.sessions.sessions == {}
+
+
+def test_a_finished_practice_call_shows_up_as_a_conversation() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id).call_id
+    live = world.voice.live_call(call_id)
+    assert live is not None
+    live.handle(
+        {"type": "conversation.item.input_audio_transcription.completed", "transcript": "Hallo!"},
+        5,
+    )
+    live.closed()
+    world.clock.now = NOON + timedelta(minutes=7)
+
+    world.voice.finished(call_id, live)
+
+    conversation = world.conversations.listed(USER).conversations[0]
+    assert (conversation.id, conversation.seconds, conversation.partner) == (call_id, 420, lena)
+
+
+def test_the_guides_calls_have_no_partner() -> None:
+    world = World()
+
+    call_id = world.voice.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+
+    recorded = world.sessions.get(call_id)
+    assert recorded is not None
+    assert recorded.persona_id is None
+    assert world.provider.created[0][1]["audio"]["output"] == {"voice": "marin"}
+
+
+# --- The learner's own date ----------------------------------------------------------------------
+
+
+def said_today(world: World) -> str:
+    instructions: str = world.provider.created[-1][1]["instructions"]
+    return next(line for line in instructions.splitlines() if "2026-10-" in line)
+
+
+def test_a_persona_is_told_the_learners_date_when_the_app_names_it() -> None:
+    world = World()
+    lena, _ = world.onboard()
+
+    # Noon on Friday in UTC is already Saturday in Auckland.
+    world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id, local_date=date(2026, 10, 10))
+
+    assert "Saturday, 2026-10-10" in said_today(world)
+
+
+def test_without_a_date_from_the_app_the_persona_is_told_the_date_in_utc() -> None:
+    world = World()
+    lena, _ = world.onboard()
+
+    world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id)
+
+    assert "Friday, 2026-10-09" in said_today(world)
+
+
+@pytest.mark.parametrize("claimed", [date(2026, 10, 11), date(2026, 10, 7), date(2031, 1, 1)])
+def test_a_date_that_no_time_zone_can_have_right_now_is_not_believed(claimed: date) -> None:
+    world = World()
+    lena, _ = world.onboard()
+
+    world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id, local_date=claimed)
+
+    assert "Friday, 2026-10-09" in said_today(world)

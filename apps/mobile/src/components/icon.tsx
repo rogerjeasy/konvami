@@ -206,6 +206,19 @@ const ICONS = {
     </>
   ),
   check: <Path d="M20 6L9 17l-5-5" />,
+  user: (
+    <>
+      <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <Circle cx="12" cy="7" r="4" />
+    </>
+  ),
+  archive: (
+    <>
+      <Path d="M21 8v13H3V8" />
+      <Rect x="1" y="3" width="22" height="5" />
+      <Path d="M10 12h4" />
+    </>
+  ),
   book: (
     <>
       <Path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

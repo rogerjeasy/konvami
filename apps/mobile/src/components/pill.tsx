@@ -4,6 +4,8 @@ import { Text } from '@/components/text';
 import { ILLUSTRATION_MAX_FONT_SCALE } from '@/lib/layout';
 
 const LOOK = {
+  /** Something worth noticing that is neither good nor bad news (a streak). */
+  primary: { box: 'bg-primary-soft', tone: 'primary' },
   success: { box: 'bg-success-soft', tone: 'success' },
   warn: { box: 'bg-warn-soft', tone: 'warn' },
   danger: { box: 'bg-danger-soft', tone: 'danger' },

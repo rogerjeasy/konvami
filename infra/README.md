@@ -73,6 +73,8 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
   the value and raise `openai_api_key_version` by one. Voice models and limits are the `voice`
   variable. After a placement test's call the same worker has the transcript assessed, so a call
   may last 780 seconds at most.
+  A practice conversation (`practice` in the same variable) runs on the efficient voice model for
+  at most 10 minutes; it is where most voice minutes, and most of the OpenAI bill, will go.
 - **Text models:** the `text_models` variable names the model that assesses a placement test and
   the one that writes the starter partners. They use the same OpenAI key. With an empty name a
   job uses its fallback (the examiner's impression, the language pack's built-in partners).

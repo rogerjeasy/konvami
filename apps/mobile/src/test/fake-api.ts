@@ -1,7 +1,11 @@
 import {
   ApiError,
+  type Activity,
   type ApiClient,
   type Catalog,
+  type Conversation,
+  type Home,
+  type HomePartner,
   type Onboarding,
   type Persona,
   type Placement,
@@ -10,6 +14,7 @@ import {
   type Profile,
   type ProfileChange,
   type ProfileSource,
+  type TranscriptTurn,
 } from '@konvami/api-client';
 
 /**
@@ -70,7 +75,13 @@ const ESSENTIAL_FIELDS = [
   'course',
 ];
 
+/** The fake server's clock: a Friday, at noon in UTC. Its week runs from Monday 5 October. */
 export const FAKE_NOW = '2026-10-09T12:00:00Z';
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+/** As on the server (services/api: domain/conversations.py and domain/home.py). */
+const PAGE_DEFAULT = 20;
+const RECENT_CONVERSATIONS = 3;
 
 /** A placement result one level above the typical learner's own estimate (A2). */
 export const FAKE_RESULT: PlacementResult = {
@@ -153,6 +164,29 @@ export interface FakeApi extends ApiClient {
   assess(status: PlacementStatus, result?: PlacementResult): void;
   /** Brings a learner with all answers straight to a later stage. */
   advanceTo(stage: 'placement' | 'partners' | 'ready'): void;
+  /**
+   * A learner who has finished onboarding and is in the app, with Lena and Jonas as partners
+   * (and Frau Weber with `exam`). `measured` adds a placement test's result.
+   */
+  enterApp(options?: { measured?: boolean; exam?: unknown }): void;
+  /**
+   * Records a practice conversation with the partner at `partner` (0 is Lena), as the server
+   * would after a call: started `daysAgo` days and `hoursAgo` hours before `FAKE_NOW`, ended
+   * `minutes` later. With `ended: false` it is a call still running or being saved.
+   */
+  talked(
+    partner: number,
+    options?: {
+      id?: string;
+      daysAgo?: number;
+      hoursAgo?: number;
+      minutes?: number;
+      learnerSays?: string[];
+      ended?: boolean;
+    },
+  ): Conversation;
+  /** Ends a call recorded with `ended: false`. */
+  finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
 }
 
 export function createFakeApi(): FakeApi {
@@ -167,6 +201,8 @@ export function createFakeApi(): FakeApi {
   let personas: Persona[] | null = null;
   let partnersConfirmed = false;
   let completed = false;
+  /** Every practice call, with what was said in it. */
+  const practice: { conversation: Conversation; turns: TranscriptTurn[] }[] = [];
   let gate: Promise<void> = Promise.resolve();
   const methodGates = new Map<keyof ApiClient, Promise<void>>();
 
@@ -254,6 +290,106 @@ export function createFakeApi(): FakeApi {
     return found;
   }
 
+  const now = Date.parse(FAKE_NOW);
+  const dayOf = (iso: string) => iso.slice(0, 10);
+  const isoDay = (ms: number) => dayOf(new Date(ms).toISOString());
+
+  function turnsOf(learnerSays: string[]): TranscriptTurn[] {
+    return [
+      { speaker: 'persona', text: 'Hallo! Wie geht’s dir heute?' },
+      ...learnerSays.map((text): TranscriptTurn => ({ speaker: 'learner', text })),
+    ];
+  }
+
+  /** Newest first, as the server lists them. */
+  const newestFirst = () =>
+    [...practice].sort((a, b) => b.conversation.startedAt.localeCompare(a.conversation.startedAt));
+  /** The conversations that count: ended, and the learner said something. */
+  const counted = () =>
+    newestFirst()
+      .map((entry) => entry.conversation)
+      .filter((conversation) => conversation.endedAt !== null && conversation.learnerTurns > 0);
+
+  function activity(): Activity {
+    const seconds = new Map<string, number>();
+    for (const conversation of counted()) {
+      const day = dayOf(conversation.startedAt);
+      seconds.set(day, (seconds.get(day) ?? 0) + conversation.seconds);
+    }
+    const today = dayOf(FAKE_NOW);
+    let streak = 0;
+    for (
+      let day = seconds.has(today) ? now : now - DAY_MS;
+      seconds.has(isoDay(day));
+      day -= DAY_MS
+    ) {
+      streak += 1;
+    }
+    // FAKE_NOW is a Friday: its Monday is four days earlier.
+    const monday = now - 4 * DAY_MS;
+    const week = Array.from({ length: 7 }, (_, i) => {
+      const day = isoDay(monday + i * DAY_MS);
+      return { day, seconds: seconds.get(day) ?? 0 };
+    });
+    return {
+      today,
+      streakDays: streak,
+      practisedToday: seconds.has(today),
+      todaySeconds: seconds.get(today) ?? 0,
+      weekSeconds: week.reduce((sum, day) => sum + day.seconds, 0),
+      week,
+      conversations: counted().length,
+      seconds: [...seconds.values()].reduce((sum, value) => sum + value, 0),
+    };
+  }
+
+  function home(): Home {
+    if (onboarding().stage !== 'done') throw new ApiError('wrong_stage', 409);
+    const language = target() ?? '';
+    const level = fields.get(`${language}/starting_level`) as string | undefined;
+    const exam = fields.get(`${language}/exam`) as
+      { type: string; target_level: string | null; date: string | null } | null | undefined;
+    const known = FAKE_CATALOG.languages
+      .find(({ code }) => code === language)
+      ?.exams.find(({ id }) => id === exam?.type);
+    const daysLeft = exam?.date
+      ? Math.round((Date.parse(exam.date) - Date.parse(dayOf(FAKE_NOW))) / DAY_MS)
+      : null;
+    const partners: HomePartner[] = (personas ?? []).map((persona) => {
+      const met = counted().filter((conversation) => conversation.partner?.id === persona.id);
+      return {
+        persona,
+        conversations: met.length,
+        lastTalkedAt: met[0]?.startedAt ?? null,
+      };
+    });
+    return {
+      language,
+      level: level
+        ? {
+            level: level as NonNullable<Home['level']>['level'],
+            source: sources.get(`${language}/starting_level`) ?? 'asked',
+            skills: result?.levels ?? null,
+          }
+        : null,
+      focus: result?.weakAreas ?? [],
+      exam:
+        exam && (daysLeft === null || daysLeft >= 0)
+          ? {
+              type: exam.type,
+              name: known?.name ?? null,
+              targetLevel: exam.target_level as NonNullable<Home['exam']>['targetLevel'],
+              date: exam.date,
+              daysLeft,
+            }
+          : null,
+      partners,
+      suggestedPartnerId: counted()[0]?.partner?.id ?? personas?.[0]?.id ?? null,
+      activity: activity(),
+      recent: counted().slice(0, RECENT_CONVERSATIONS),
+    };
+  }
+
   return {
     calls,
     failNext: (method, code, field) =>
@@ -282,6 +418,55 @@ export function createFakeApi(): FakeApi {
       personas = FAKE_PERSONAS.slice(0, 2);
       partnersConfirmed = true;
     },
+    enterApp({ measured = false, exam } = {}) {
+      if (!target()) apply(ESSENTIAL_ANSWERS);
+      if (exam !== undefined) apply([{ field: 'exam', value: exam }]);
+      essentialsConfirmed = true;
+      if (measured) {
+        result = FAKE_RESULT;
+        startAt(FAKE_RESULT.overall, 'decided', 'measured');
+      } else {
+        startAt(ownLevel(), 'skipped', 'asked');
+      }
+      personas = FAKE_PERSONAS.slice(0, exam ? 3 : 2);
+      partnersConfirmed = true;
+      completed = true;
+    },
+    talked(
+      partner,
+      {
+        id = `rtc_${practice.length + 1}`,
+        daysAgo = 0,
+        hoursAgo = 1,
+        minutes = 5,
+        learnerSays = ['Gut, danke! Und dir?'],
+        ended = true,
+      } = {},
+    ) {
+      const started = now - daysAgo * DAY_MS - hoursAgo * 60 * MINUTE_MS;
+      const conversation: Conversation = {
+        id,
+        partner: personas?.[partner] ?? null,
+        startedAt: new Date(started).toISOString(),
+        endedAt: ended ? new Date(started + minutes * MINUTE_MS).toISOString() : null,
+        seconds: ended ? minutes * 60 : 0,
+        learnerTurns: ended ? learnerSays.length : 0,
+      };
+      practice.push({ conversation, turns: ended ? turnsOf(learnerSays) : [] });
+      return conversation;
+    },
+    finish(id, { minutes = 5, learnerSays = ['Gut, danke! Und dir?'] } = {}) {
+      const entry = practice.find(({ conversation }) => conversation.id === id);
+      if (!entry) throw new Error(`fake api: no call ${id}`);
+      const ended = Date.parse(entry.conversation.startedAt) + minutes * MINUTE_MS;
+      entry.conversation = {
+        ...entry.conversation,
+        endedAt: new Date(ended).toISOString(),
+        seconds: minutes * 60,
+        learnerTurns: learnerSays.length,
+      };
+      entry.turns = turnsOf(learnerSays);
+    },
 
     async getCatalog() {
       await record('getCatalog');
@@ -306,10 +491,36 @@ export function createFakeApi(): FakeApi {
       essentialsConfirmed = true;
       return onboarding();
     },
-    async startVoiceCall(purpose, sdp) {
-      await record('startVoiceCall', purpose, sdp);
+    async startVoiceCall(purpose, sdp, { personaId } = {}) {
+      await record('startVoiceCall', purpose, sdp, personaId);
       if (purpose === 'placement') placement = 'in_progress';
-      return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds: 480 };
+      if (purpose === 'practice' && !personas?.some(({ id }) => id === personaId)) {
+        throw new ApiError('not_found', 404);
+      }
+      return {
+        callId: 'rtc_fake',
+        sdp: 'v=0 answer',
+        maxSeconds: purpose === 'practice' ? 600 : 480,
+      };
+    },
+    async getHome(timeZone) {
+      await record('getHome', timeZone);
+      return home();
+    },
+    async getConversations({ before, limit = PAGE_DEFAULT } = {}) {
+      await record('getConversations', { before, limit });
+      const older = counted().filter((conversation) => !before || conversation.startedAt < before);
+      const page = older.slice(0, limit);
+      return {
+        conversations: page,
+        next: older.length > limit ? (page.at(-1)?.startedAt ?? null) : null,
+      };
+    },
+    async getConversation(id) {
+      await record('getConversation', id);
+      const entry = practice.find(({ conversation }) => conversation.id === id);
+      if (!entry) throw new ApiError('not_found', 404);
+      return { conversation: entry.conversation, turns: entry.turns };
     },
     async getPlacement() {
       await record('getPlacement');

@@ -15,6 +15,7 @@ canvas after that date is not in it.
 | 2 · Create account | 2.1 Age check · 2.2 Create account · 2.3 Email sign-up · 2.4 Verify email · 2.5 AI data consent · 2.6 Microphone · 2.7 All set | Built (`apps/mobile/src/screens/create-account`). Email sign-up is real (Cognito); Apple and Google are placeholders until their credentials exist. Design note: `docs/superpowers/specs/2026-10-09-create-account-design.md` |
 | 3 · Sign in & recovery | 3.1 Sign in · 3.2 Error · 3.3 Face ID · 3.4 Link sent · 3.5 Forgot password · 3.6 Reset sent · 3.7 New password · 3.8 Updated | Built (`apps/mobile/src/screens/sign-in`), except 3.4: the emailed sign-in link needs Amazon SES and is a "coming soon" notice for now |
 | 4 · Onboarding | 4.1 Talk with Mia · 4.2 Form (five steps) · 4.3 Review · 4.4 Placement intro · 4.5 Placement test · 4.6 Placement result · 4.7 Starter partners (and editing one) · 4.8 Ready | Built (`apps/mobile/src/screens/onboarding`, backend in `services/api`). **Not drawn on the canvas**: built directly in the visual language below and reviewed in the running app (decided 2026-10-09). Design note: `docs/superpowers/specs/2026-10-09-onboarding-design.md` |
+| 5 · Home | 5.1 Today · 5.2 Talk · 5.3 Conversation · 5.4 Conversation done · 5.5 Library · 5.6 Transcript · 5.7 Learn · 5.8 Progress · 5.9 Account | Built (`apps/mobile/src/screens/{tabs,today,talk,conversation,library,learn,progress,account}`, backend in `services/api`). **Not drawn on the canvas**, like section 4. Learn and Progress say what will be there; their features are not built. Design note: `docs/superpowers/specs/2026-10-10-home-design.md` |
 
 ## Where the app differs from the canvas, and why
 
@@ -35,6 +36,11 @@ canvas after that date is not in it.
 | 4.1, 4.5 | Voice works in development and store builds and in the web preview, not in Expo Go | WebRTC is a native module; in Expo Go the screen explains this and offers the form (4.1) or skipping the test (4.5) |
 | 4.7 | A partner's name and look can be changed; voice, personality and the rest cannot yet | Those belong to Persona Studio (spec §6.2), which is not built |
 | 4.8 | No trial offer on the ready screen | The 7-day trial needs RevenueCat and the store accounts |
+| 5 (all) | The tab bar is drawn by the app, not by the system | It uses the design tokens, is the same in the web preview, and becomes a side rail on wide windows |
+| 5.1 | No daily plan, due cards or pen-pal notes on Today (spec §14.1) | Those features are not built; Today shows what exists: the partner, the week, the level, what to polish, the exam, recent conversations |
+| 5.3 | A conversation lasts at most 10 minutes and has no help buttons or correction chips | The call worker runs on Lambda (15-minute limit); help buttons and live corrections belong to the full live session (spec §6.4, §6.5) |
+| 5.5, 5.6 | The library holds text only | Recordings need the audio pipeline (S3, spec §6.6) |
+| 5.9 | Account shows name and email and signs out | The profile, memories, subscription and privacy screens (spec §14.1) come with their features |
 
 ## Visual language (v2)
 

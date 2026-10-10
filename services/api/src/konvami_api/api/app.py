@@ -1,15 +1,18 @@
 """The HTTP API. Handlers translate between HTTP and the domain services and decide nothing."""
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Query
+from pydantic import AwareDatetime
 
 from konvami_api.api.auth import CurrentUser
 from konvami_api.api.errors import ErrorBody, install_error_handlers
 from konvami_api.api.schemas import (
     CatalogOut,
+    ConversationsOut,
+    HomeOut,
     OnboardingOut,
     PersonaOut,
     PersonaPatch,
@@ -18,10 +21,13 @@ from konvami_api.api.schemas import (
     PlacementOut,
     ProfileOut,
     ProfilePatch,
+    TranscriptOut,
     VoiceCallIn,
     VoiceCallOut,
 )
 from konvami_api.domain.catalog import Catalog
+from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
+from konvami_api.domain.home import HomeService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementService
@@ -39,6 +45,8 @@ class Services:
     voice: VoiceCallService
     placement: PlacementService
     personas: PersonaService
+    conversations: ConversationService
+    home: HomeService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -47,7 +55,9 @@ NOT_AUTHENTICATED: Responses = {401: {"model": ErrorBody}}
 REFUSED: Responses = {422: {"model": ErrorBody}}
 CONFLICT: Responses = {409: {"model": ErrorBody}}
 NOT_FOUND: Responses = {404: {"model": ErrorBody}}
-CALL_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 409, 429, 503)}
+CALL_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 429, 503)}
+# An IANA time zone name is at most a few dozen characters ("America/Argentina/ComodRivadavia").
+MAX_TIME_ZONE_LENGTH = 64
 
 
 def _router(services: Services) -> APIRouter:
@@ -130,7 +140,34 @@ def _router(services: Services) -> APIRouter:
 
     @router.post("/voice/calls", operation_id="startVoiceCall", responses=CALL_REFUSED)
     def start_voice_call(user: CurrentUser, offer: VoiceCallIn) -> VoiceCallOut:
-        return VoiceCallOut.of(services.voice.start(user, offer.purpose, offer.sdp))
+        started = services.voice.start(
+            user, offer.purpose, offer.sdp, offer.persona_id, offer.local_date
+        )
+        return VoiceCallOut.of(started)
+
+    @router.get("/home", operation_id="getHome", responses=CONFLICT)
+    def get_home(
+        user: CurrentUser,
+        # The device's time zone ("Europe/Zurich"): days and the streak follow the learner's
+        # calendar. Left out or unknown, they follow UTC.
+        tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
+    ) -> HomeOut:
+        return HomeOut.of(services.home.view(user, tz))
+
+    @router.get("/conversations", operation_id="getConversations", responses=REFUSED)
+    def get_conversations(
+        user: CurrentUser,
+        limit: int = PAGE_DEFAULT,
+        # The `next` of the page before.
+        before: AwareDatetime | None = None,
+    ) -> ConversationsOut:
+        return ConversationsOut.of(services.conversations.listed(user, limit=limit, before=before))
+
+    @router.get(
+        "/conversations/{conversation_id}", operation_id="getConversation", responses=NOT_FOUND
+    )
+    def get_conversation(user: CurrentUser, conversation_id: str) -> TranscriptOut:
+        return TranscriptOut.of(services.conversations.transcript(user, conversation_id))
 
     return router
 

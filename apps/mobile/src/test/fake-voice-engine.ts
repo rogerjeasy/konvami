@@ -17,7 +17,13 @@ export interface FakeVoiceEngine extends VoiceEngine {
   readonly said: readonly string[];
   /** What each call that used this engine was for (filled by the test renderer). */
   readonly openedFor: CallPurpose[];
+  /** The partner each of those calls was with; undefined for the guide's calls. */
+  readonly openedWith: (string | undefined)[];
 }
+
+/** The id and the time limit every call of the fake engine reports. */
+export const FAKE_CALL_ID = 'rtc_fake';
+export const FAKE_MAX_SECONDS = 600;
 
 export function createFakeVoiceEngine(): FakeVoiceEngine {
   const listeners = new Set<(event: unknown) => void>();
@@ -38,6 +44,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
     },
     said,
     openedFor: [],
+    openedWith: [],
     emit,
     failNextStart: (code) => void (failure = code),
     holdStart() {
@@ -53,7 +60,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
         failure = null;
         throw new VoiceError(code);
       }
-      return { maxSeconds: 480 };
+      return { callId: FAKE_CALL_ID, maxSeconds: FAKE_MAX_SECONDS };
     },
     stop() {
       state.stops += 1;

@@ -86,3 +86,18 @@ export function heroDrawingSize({
 }): number {
   return Math.min(frame, available, Math.round(windowHeight * HERO_DRAWING_MAX_HEIGHT_RATIO));
 }
+
+/** Up to this OS text scale the five tab names fit side by side on a standard phone. */
+const TAB_LABELS_MAX_FONT_SCALE = 1.3;
+
+/**
+ * Whether the bottom tab bar names every tab. On compact phones and at large text sizes only
+ * the open tab keeps its name (the others keep their icon and their accessible label), so no
+ * name is ever cut off, whatever the language.
+ */
+export function showAllTabLabels({
+  width,
+  fontScale,
+}: Pick<WindowMetrics, 'width' | 'fontScale'>): boolean {
+  return width >= breakpoint.compact && fontScale <= TAB_LABELS_MAX_FONT_SCALE;
+}

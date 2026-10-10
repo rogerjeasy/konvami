@@ -52,10 +52,18 @@ export const ROUTES = {
   /** 4.8 Ready: the summary before entering the app. */
   onboardingReady: '/onboarding/ready',
   /**
-   * Where a signed-in user lands: it continues onboarding where they left off. The app's home
-   * screen replaces its last stop when it is built.
+   * Where a signed-in user lands: it continues onboarding where they left off, and enters the
+   * app (`today`) once that is done.
    */
   home: '/home',
+  /** 5.1 Today, 5.2 Talk, 5.5 Library, 5.7 Learn, 5.8 Progress: the five tabs of the app. */
+  today: '/today',
+  talk: '/talk',
+  library: '/library',
+  learn: '/learn',
+  progress: '/progress',
+  /** 5.9 Account: who is signed in, and the way out. */
+  account: '/account',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;
@@ -63,3 +71,15 @@ export const ROUTES = {
 /** 4.7 Edit one starter partner: their name and look. */
 export const partnerRoute = (id: string) =>
   ({ pathname: '/onboarding/partners/[id]', params: { id } }) as const satisfies Href;
+
+/** 5.3 A live conversation with one of the learner's partners. */
+export const callRoute = (personaId: string) =>
+  ({ pathname: '/call/[personaId]', params: { personaId } }) as const satisfies Href;
+
+/** 5.6 One past conversation, to read again. */
+export const conversationRoute = (id: string) =>
+  ({ pathname: '/conversations/[id]', params: { id } }) as const satisfies Href;
+
+/** 5.4 What a conversation that has just ended added up to. */
+export const conversationDoneRoute = (id: string) =>
+  ({ pathname: '/conversations/[id]/done', params: { id } }) as const satisfies Href;

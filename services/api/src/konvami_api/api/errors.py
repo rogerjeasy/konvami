@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
+from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
@@ -63,6 +64,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PersonaError)
     async def _persona_error(_: Request, error: PersonaError) -> JSONResponse:
         return _response(_PERSONA_STATUS.get(error.code, 422), error.code)
+
+    @app.exception_handler(ConversationError)
+    async def _conversation_error(_: Request, error: ConversationError) -> JSONResponse:
+        return _response(404, error.code)
 
     @app.exception_handler(VoiceError)
     async def _voice_error(_: Request, error: VoiceError) -> JSONResponse:
