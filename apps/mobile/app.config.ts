@@ -7,10 +7,18 @@ import { SUPPORTED_LANGUAGES } from './src/i18n/languages.ts';
  * Per-environment values (API URLs, auth client ids) come from EXPO_PUBLIC_* variables in a local,
  * gitignored .env (see .env.example), never from this file.
  */
-const BUNDLE_ID = 'app.konvami';
+const STORE_BUNDLE_ID = 'app.konvami';
+
+/**
+ * A development build (`pnpm device:ios`, which sets APP_VARIANT) is its own app: another id and
+ * name, so it installs next to the store app, and so signing it with a personal Apple ID never
+ * registers the store's bundle id to that person's team.
+ */
+const IS_DEV_BUILD = process.env.APP_VARIANT === 'development';
+const BUNDLE_ID = IS_DEV_BUILD ? `${STORE_BUNDLE_ID}.dev` : STORE_BUNDLE_ID;
 
 const config: ExpoConfig = {
-  name: 'Konvami',
+  name: IS_DEV_BUILD ? 'Konvami Dev' : 'Konvami',
   slug: 'konvami',
   scheme: 'konvami',
   version: '0.1.0',
@@ -20,6 +28,9 @@ const config: ExpoConfig = {
   backgroundColor: color.light.bg,
   ios: {
     bundleIdentifier: BUNDLE_ID,
+    // Who signs a build made on this machine (`pnpm device:ios`): the developer's own Apple team,
+    // from the local .env. Store builds are signed by EAS and do not read it.
+    appleTeamId: process.env.APPLE_TEAM_ID || undefined,
     supportsTablet: true,
     config: { usesNonExemptEncryption: false },
   },
@@ -43,6 +54,8 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // The developer menu and launcher of a development build; left out of store builds by Expo.
+    'expo-dev-client',
     [
       'expo-splash-screen',
       {
