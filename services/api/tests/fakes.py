@@ -4,8 +4,16 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from konvami_api.domain.accounts import Account, AccountNotFound
+from konvami_api.domain.conversations import (
+    ActivityDays,
+    Conversation,
+    DayActivity,
+    PartnerHistory,
+)
+from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
@@ -184,3 +192,74 @@ class InMemoryPersonaRepository:
             return False
         del self.personas[persona_id]
         return True
+
+
+class InMemoryConversationRepository:
+    """Reads the calls of an `InMemoryVoiceSessionRepository`, as the SQL one reads the tables."""
+
+    def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
+        self._calls = calls
+
+    def _practice(self, user_id: UUID) -> list[Conversation]:
+        conversations = []
+        for session in self._calls.sessions.values():
+            if session.user_id != user_id or session.purpose is not CallPurpose.PRACTICE:
+                continue
+            finished = self._calls.finished.get(session.call_id)
+            conversations.append(
+                Conversation(
+                    id=session.call_id,
+                    persona_id=session.persona_id,
+                    started_at=session.started_at,
+                    ended_at=finished.ended_at if finished else None,
+                    seconds=int((finished.ended_at - session.started_at).total_seconds())
+                    if finished
+                    else 0,
+                    learner_turns=sum(1 for turn in finished.turns if turn.speaker == "learner")
+                    if finished
+                    else 0,
+                )
+            )
+        return sorted(conversations, key=lambda c: c.started_at, reverse=True)
+
+    def _counted(self, user_id: UUID) -> list[Conversation]:
+        return [c for c in self._practice(user_id) if c.ended_at and c.learner_turns > 0]
+
+    def listed(self, user_id: UUID, limit: int, before: datetime | None) -> list[Conversation]:
+        counted = self._counted(user_id)
+        return [c for c in counted if before is None or c.started_at < before][:limit]
+
+    def get(self, user_id: UUID, call_id: str) -> Conversation | None:
+        return next((c for c in self._practice(user_id) if c.id == call_id), None)
+
+    def turns(self, call_id: str) -> list[Turn]:
+        finished = self._calls.finished.get(call_id)
+        return list(finished.turns) if finished else []
+
+    def partner_history(self, user_id: UUID) -> dict[UUID, PartnerHistory]:
+        history: dict[UUID, PartnerHistory] = {}
+        # Newest first, so the first one seen per partner is the last time they talked.
+        for conversation in self._counted(user_id):
+            if conversation.persona_id is None:
+                continue
+            known = history.get(conversation.persona_id)
+            history[conversation.persona_id] = PartnerHistory(
+                conversations=(known.conversations if known else 0) + 1,
+                last_at=known.last_at if known else conversation.started_at,
+            )
+        return history
+
+    def days(self, user_id: UUID, timezone: str | None, now: datetime) -> ActivityDays:
+        try:
+            zone = ZoneInfo(timezone) if timezone else UTC
+        except (ZoneInfoNotFoundError, ValueError):
+            zone = UTC
+        days: dict[Any, DayActivity] = {}
+        for conversation in self._counted(user_id):
+            day = conversation.started_at.astimezone(zone).date()
+            known = days.get(day, DayActivity(day, 0, 0))
+            days[day] = DayActivity(
+                day, known.seconds + conversation.seconds, known.conversations + 1
+            )
+        newest_first = sorted(days.values(), key=lambda d: d.day, reverse=True)
+        return ActivityDays(now.astimezone(zone).date(), tuple(newest_first))

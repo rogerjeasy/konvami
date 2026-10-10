@@ -199,6 +199,55 @@ describe('api client', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('starts a practice call with the chosen partner and the learner’s own date', async () => {
+    const answer = { callId: 'rtc_2', sdp: 'v=0 answer', maxSeconds: 600 };
+    const { fetch, calls } = fakeFetch(json(200, answer));
+
+    const started = await client(fetch).api.startVoiceCall('practice', 'v=0 offer', {
+      personaId: 'persona-1',
+      localDate: '2026-10-10',
+    });
+
+    expect(started).toEqual(answer);
+    expect(calls[0]?.body).toEqual({
+      purpose: 'practice',
+      sdp: 'v=0 offer',
+      personaId: 'persona-1',
+      localDate: '2026-10-10',
+    });
+  });
+
+  it('reads home for the device’s time zone', async () => {
+    const home = { language: 'de', partners: [], recent: [] };
+    const { fetch, calls } = fakeFetch(json(200, home), json(200, home));
+    const { api } = client(fetch);
+
+    expect(await api.getHome('Europe/Zurich')).toEqual(home);
+    await api.getHome();
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/home?tz=Europe%2FZurich',
+      'GET https://api.example.test/v1/home',
+    ]);
+  });
+
+  it('reads the library page by page and one transcript', async () => {
+    const page = { conversations: [], next: '2026-10-09T10:00:00Z' };
+    const transcript = { conversation: { id: 'rtc/1' }, turns: [] };
+    const { fetch, calls } = fakeFetch(json(200, page), json(200, page), json(200, transcript));
+    const { api } = client(fetch);
+
+    expect(await api.getConversations()).toEqual(page);
+    await api.getConversations({ before: '2026-10-09T10:00:00Z', limit: 10 });
+    expect(await api.getConversation('rtc/1')).toEqual(transcript);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/conversations',
+      'GET https://api.example.test/v1/conversations?before=2026-10-09T10%3A00%3A00Z&limit=10',
+      'GET https://api.example.test/v1/conversations/rtc%2F1',
+    ]);
+  });
+
   it('accepts a base URL with a trailing slash', async () => {
     const { fetch, calls } = fakeFetch(json(200, {}));
 

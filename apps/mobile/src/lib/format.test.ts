@@ -1,4 +1,16 @@
-import { formatDate, formatDuration, formatPercent, monthNames, weekdayInitials } from './format';
+import {
+  daysAgo,
+  formatClock,
+  formatDate,
+  formatDayLine,
+  formatDuration,
+  formatPercent,
+  formatShortDate,
+  monthNames,
+  weekdayInitials,
+  weekdayNames,
+  wholeMinutes,
+} from './format';
 
 describe('weekdayInitials', () => {
   it('starts on Monday in English', () => {
@@ -62,5 +74,85 @@ describe('formatDate', () => {
   it('keeps the calendar day whatever the device time zone', () => {
     expect(formatDate('en', '2027-01-01')).toBe('January 1, 2027');
     expect(formatDate('en', '2027-12-31')).toBe('December 31, 2027');
+  });
+});
+
+describe('wholeMinutes', () => {
+  it.each([
+    [0, 0],
+    // Any practice at all counts as a minute: "0 min" would read as nothing.
+    [1, 1],
+    [59, 1],
+    [89, 1],
+    [90, 2],
+    [600, 10],
+    [1500, 25],
+  ])('%i seconds are %i minutes', (seconds, minutes) => {
+    expect(wholeMinutes(seconds)).toBe(minutes);
+  });
+});
+
+describe('formatDayLine', () => {
+  const friday = new Date(2026, 9, 9, 18, 30);
+
+  it('writes the weekday, day and month in the language', () => {
+    expect(formatDayLine('en-GB', friday)).toBe('Friday 9 October');
+    expect(formatDayLine('de', friday)).toBe('Freitag, 9. Oktober');
+    expect(formatDayLine('fr', friday)).toBe('vendredi 9 octobre');
+  });
+});
+
+describe('daysAgo', () => {
+  const now = new Date(2026, 9, 9, 8, 0);
+
+  it.each([
+    ['earlier today', new Date(2026, 9, 9, 0, 5), 0],
+    // Calendar days, not 24-hour spans: late last night was yesterday.
+    ['late last night', new Date(2026, 9, 8, 23, 55), 1],
+    ['yesterday morning', new Date(2026, 9, 8, 6, 0), 1],
+    ['a week ago', new Date(2026, 9, 2, 12, 0), 7],
+    ['across a month end', new Date(2026, 8, 30, 12, 0), 9],
+  ])('%s', (_, then, days) => {
+    expect(daysAgo(then.toISOString(), now)).toBe(days);
+  });
+
+  it('never counts a moment in the future as days ago', () => {
+    expect(daysAgo(new Date(2026, 9, 10, 9, 0).toISOString(), now)).toBe(0);
+  });
+});
+
+describe('formatShortDate', () => {
+  it('writes a day without the weekday, and the year only when it is another one', () => {
+    const now = new Date(2026, 9, 9, 8, 0);
+
+    expect(formatShortDate('en-GB', new Date(2026, 8, 30, 12).toISOString(), now)).toBe('30 Sept');
+    expect(formatShortDate('en-GB', new Date(2025, 11, 24, 12).toISOString(), now)).toBe(
+      '24 Dec 2025',
+    );
+    expect(formatShortDate('de', new Date(2026, 8, 30, 12).toISOString(), now)).toBe('30. Sept.');
+  });
+});
+
+describe('formatClock', () => {
+  it('writes the time of day the way the language does', () => {
+    const afternoon = new Date(2026, 9, 9, 14, 5).toISOString();
+
+    expect(formatClock('de', afternoon)).toBe('14:05');
+    expect(formatClock('en-US', afternoon)).toMatch(/^2:05\sPM$/);
+  });
+});
+
+describe('weekdayNames', () => {
+  it('names the days in full, Monday first, in the language', () => {
+    expect(weekdayNames('en')).toEqual([
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ]);
+    expect(weekdayNames('de')[2]).toBe('Mittwoch');
   });
 });

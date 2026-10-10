@@ -5,12 +5,13 @@ fakes, so tests that use the fakes are testing something the real database also 
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
 import pytest
 
+from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona, PersonaRepository
@@ -23,6 +24,7 @@ from konvami_api.domain.voice import (
     VoiceSessionRepository,
 )
 from konvami_api.persistence.repositories import (
+    SqlConversationRepository,
     SqlOnboardingRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
@@ -31,6 +33,7 @@ from konvami_api.persistence.repositories import (
 )
 from konvami_api.persistence.sql import SqlClient
 from tests.fakes import (
+    InMemoryConversationRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -468,3 +471,196 @@ def test_the_last_onboarding_steps_are_read_back(onboarding: OnboardingRepositor
     onboarding.save(USER, state)
 
     assert onboarding.load(USER) == state
+
+
+# --- Practice conversations ------------------------------------------------------------------
+
+
+@dataclass
+class Practice:
+    calls: VoiceSessionRepository
+    personas: PersonaRepository
+    conversations: ConversationRepository
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def practice(request: pytest.FixtureRequest) -> Practice:
+    if request.param == "memory":
+        calls = InMemoryVoiceSessionRepository()
+        return Practice(calls, InMemoryPersonaRepository(), InMemoryConversationRepository(calls))
+    db: SqlClient = request.getfixturevalue("db")
+    return Practice(
+        SqlVoiceSessionRepository(db), SqlPersonaRepository(db), SqlConversationRepository(db)
+    )
+
+
+LENA = persona(1, "Lena")
+JONAS = persona(2, "Jonas")
+HOUR = timedelta(hours=1)
+
+
+def talked(
+    practice: Practice,
+    call_id: str,
+    *,
+    at: datetime,
+    partner: Persona | None = LENA,
+    user: UUID = USER,
+    minutes: float = 5,
+    learner_says: tuple[str, ...] = ("Hallo!",),
+    purpose: CallPurpose = CallPurpose.PRACTICE,
+    ended: bool = True,
+) -> None:
+    """A call as the broker and the worker record it."""
+    practice.calls.started(
+        VoiceSession(
+            call_id,
+            user,
+            purpose,
+            "gpt-realtime-2.1-mini",
+            at,
+            persona_id=partner.id if partner else None,
+        )
+    )
+    if ended:
+        turns = [Turn("persona", "Hallo! Wie geht's?"), *(Turn("learner", t) for t in learner_says)]
+        practice.calls.finish(
+            call_id, FinishedCall(at + timedelta(minutes=minutes), "closed", USAGE, tuple(turns))
+        )
+
+
+@pytest.fixture
+def partners(practice: Practice) -> Practice:
+    """The learner has two partners (a call's partner must exist)."""
+    practice.personas.add(USER, "de", [LENA, JONAS])
+    return practice
+
+
+def test_a_practice_call_keeps_its_partner(partners: Practice) -> None:
+    talked(partners, "rtc_1", at=NOON, ended=False)
+
+    stored = partners.calls.get("rtc_1")
+
+    assert stored is not None
+    assert (stored.purpose, stored.persona_id) == (CallPurpose.PRACTICE, LENA.id)
+
+
+def test_conversations_that_count_are_listed_newest_first(partners: Practice) -> None:
+    talked(partners, "rtc_old", at=NOON - 3 * HOUR, minutes=5)
+    talked(partners, "rtc_new", at=NOON - HOUR, partner=JONAS, minutes=8.5)
+    talked(partners, "rtc_silent", at=NOON - 2 * HOUR, learner_says=())
+    talked(partners, "rtc_running", at=NOON, ended=False)
+    talked(partners, "rtc_setup", at=NOON, partner=None, purpose=CallPurpose.ONBOARDING)
+    talked(partners, "rtc_theirs", at=NOON, partner=None, user=OTHER_USER)
+
+    listed = partners.conversations.listed(USER, 10, None)
+
+    assert [(c.id, c.persona_id, c.seconds, c.learner_turns) for c in listed] == [
+        ("rtc_new", JONAS.id, 510, 1),
+        ("rtc_old", LENA.id, 300, 1),
+    ]
+    assert listed[0].started_at == NOON - HOUR
+    assert listed[0].ended_at == NOON - HOUR + timedelta(minutes=8.5)
+    assert listed[0].partner is None
+
+
+def test_the_list_can_be_cut_by_size_and_continued_before_a_time(partners: Practice) -> None:
+    for hours in (1, 2, 3):
+        talked(partners, f"rtc_{hours}", at=NOON - hours * HOUR)
+
+    assert [c.id for c in partners.conversations.listed(USER, 2, None)] == ["rtc_1", "rtc_2"]
+    assert [c.id for c in partners.conversations.listed(USER, 2, NOON - 2 * HOUR)] == ["rtc_3"]
+
+
+def test_one_practice_call_is_read_whether_or_not_it_counts_yet(partners: Practice) -> None:
+    talked(partners, "rtc_running", at=NOON, ended=False)
+    talked(partners, "rtc_done", at=NOON - HOUR, learner_says=("Hallo!", "Gut, danke."))
+    talked(partners, "rtc_setup", at=NOON, partner=None, purpose=CallPurpose.ONBOARDING)
+
+    running = partners.conversations.get(USER, "rtc_running")
+    done = partners.conversations.get(USER, "rtc_done")
+
+    assert running is not None
+    assert (running.ended_at, running.seconds, running.learner_turns) == (None, 0, 0)
+    assert done is not None
+    assert (done.seconds, done.learner_turns, done.persona_id) == (300, 2, LENA.id)
+    assert partners.conversations.get(OTHER_USER, "rtc_done") is None
+    assert partners.conversations.get(USER, "rtc_setup") is None
+    assert partners.conversations.get(USER, "rtc_unknown") is None
+
+
+def test_the_turns_of_a_conversation_are_read_in_order(partners: Practice) -> None:
+    talked(partners, "rtc_1", at=NOON, learner_says=("Hallo!", "Gut, « danke »."))
+
+    turns = partners.conversations.turns("rtc_1")
+
+    assert [(turn.speaker, turn.text) for turn in turns] == [
+        ("persona", "Hallo! Wie geht's?"),
+        ("learner", "Hallo!"),
+        ("learner", "Gut, « danke »."),
+    ]
+    assert partners.conversations.turns("rtc_unknown") == []
+
+
+def test_each_partners_history_counts_only_conversations_that_count(partners: Practice) -> None:
+    talked(partners, "rtc_1", at=NOON - 30 * HOUR)
+    talked(partners, "rtc_2", at=NOON - 3 * HOUR)
+    talked(partners, "rtc_silent", at=NOON - HOUR, learner_says=())
+    talked(partners, "rtc_running", at=NOON, partner=JONAS, ended=False)
+
+    history = partners.conversations.partner_history(USER)
+
+    assert set(history) == {LENA.id}
+    assert (history[LENA.id].conversations, history[LENA.id].last_at) == (2, NOON - 3 * HOUR)
+    assert partners.conversations.partner_history(OTHER_USER) == {}
+
+
+def test_practice_is_added_up_per_day_of_the_learners_calendar(partners: Practice) -> None:
+    late = datetime(2026, 10, 8, 23, 30, tzinfo=UTC)
+    talked(partners, "rtc_late", at=late, minutes=10)
+    talked(partners, "rtc_noon", at=NOON, minutes=5)
+    talked(partners, "rtc_before", at=NOON - 30 * HOUR, minutes=4)
+    talked(partners, "rtc_silent", at=NOON, learner_says=())
+
+    zurich = partners.conversations.days(USER, "Europe/Zurich", NOON)
+    utc = partners.conversations.days(USER, None, NOON)
+
+    # 23:30 in UTC is already the next day in Zurich (UTC+2 in October).
+    assert zurich.today == date(2026, 10, 9)
+    assert [(d.day, d.seconds, d.conversations) for d in zurich.days] == [
+        (date(2026, 10, 9), 900, 2),
+        (date(2026, 10, 8), 240, 1),
+    ]
+    assert [(d.day, d.seconds, d.conversations) for d in utc.days] == [
+        (date(2026, 10, 9), 300, 1),
+        (date(2026, 10, 8), 840, 2),
+    ]
+
+
+def test_today_is_the_learners_date_not_the_servers(practice: Practice) -> None:
+    late = datetime(2026, 10, 9, 23, 30, tzinfo=UTC)
+
+    assert practice.conversations.days(USER, "Europe/Zurich", late).today == date(2026, 10, 10)
+    assert practice.conversations.days(USER, "America/Los_Angeles", NOON).today == date(2026, 10, 9)
+    assert practice.conversations.days(USER, None, late).days == ()
+
+
+@pytest.mark.parametrize("unknown", ["Mars/Olympus", "", "'; DROP TABLE voice_session; --"])
+def test_an_unknown_time_zone_means_utc(practice: Practice, unknown: str) -> None:
+    late = datetime(2026, 10, 9, 23, 30, tzinfo=UTC)
+
+    assert practice.conversations.days(USER, unknown, late).today == date(2026, 10, 9)
+
+
+def test_removing_a_partner_keeps_their_conversations(db: SqlClient) -> None:
+    practice = Practice(
+        SqlVoiceSessionRepository(db), SqlPersonaRepository(db), SqlConversationRepository(db)
+    )
+    practice.personas.add(USER, "de", [LENA])
+    talked(practice, "rtc_1", at=NOON)
+
+    practice.personas.remove(USER, LENA.id)
+
+    kept = practice.conversations.listed(USER, 10, None)
+    assert [(c.id, c.persona_id, c.seconds) for c in kept] == [("rtc_1", None, 300)]
+    assert practice.conversations.partner_history(USER) == {}

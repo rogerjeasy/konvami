@@ -113,3 +113,29 @@ def test_without_voice_settings_a_call_is_refused_before_any_provider_is_asked(
 
     assert result["statusCode"] == 503
     assert json.loads(result["body"]) == {"error": {"code": "voice_unavailable", "field": None}}
+
+
+def test_the_library_is_read_from_the_database(stub: Stubber) -> None:
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": "[]"},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [
+                {"name": "user_id", "value": {"stringValue": USER}},
+                # One more than the page, to know whether another page follows.
+                {"name": "limit", "value": {"longValue": 21}},
+                {"name": "before", "value": {"isNull": True}},
+            ],
+            "formatRecordsAs": "JSON",
+        },
+    )
+
+    result = invoke(stub, "GET", "/v1/conversations")
+
+    assert result["statusCode"] == 200
+    assert json.loads(result["body"]) == {"conversations": [], "next": None}
+    stub.assert_no_pending_responses()

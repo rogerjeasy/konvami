@@ -20,6 +20,14 @@ from konvami_api.domain.catalog import (
     GoalReason,
     StartingLevel,
 )
+from konvami_api.domain.conversations import (
+    Activity,
+    Conversation,
+    ConversationPage,
+    Transcript,
+)
+from konvami_api.domain.home import HomeView
+from konvami_api.domain.live_call import Speaker
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
 from konvami_api.domain.persona_parts import Backdrop, Hair, HairColor, Role, Skin, Top
 from konvami_api.domain.personas import NAME_MAX, Persona
@@ -184,6 +192,11 @@ class VoiceCallIn(ApiModel):
     purpose: CallPurpose
     # The app's WebRTC offer (SDP).
     sdp: str = Field(min_length=1, max_length=MAX_SDP_LENGTH)
+    # The partner to talk to: needed for practice, ignored for the guide's calls.
+    persona_id: UUID | None = None
+    # Today on the learner's calendar, so a persona names the right weekday. Left out, or not
+    # a date any time zone has right now, the date in UTC is used.
+    local_date: dt.date | None = None
 
 
 class VoiceCallOut(ApiModel):
@@ -245,3 +258,169 @@ class PersonasOut(ApiModel):
 class PersonaPatch(ApiModel):
     name: str | None = Field(default=None, max_length=NAME_MAX * 2)
     look: LookModel | None = None
+
+
+class ConversationOut(ApiModel):
+    # The id of the voice call.
+    id: str
+    # Null once the partner has been removed.
+    partner: PersonaOut | None
+    started_at: dt.datetime
+    # Null while the conversation runs and for the moment in which it is being saved.
+    ended_at: dt.datetime | None
+    seconds: int
+    # How often the learner spoke. A conversation counts as practice from the first time.
+    learner_turns: int
+
+    @classmethod
+    def of(cls, conversation: Conversation) -> "ConversationOut":
+        partner = conversation.partner
+        return cls(
+            id=conversation.id,
+            partner=PersonaOut.of(partner) if partner else None,
+            started_at=conversation.started_at,
+            ended_at=conversation.ended_at,
+            seconds=conversation.seconds,
+            learner_turns=conversation.learner_turns,
+        )
+
+
+class ConversationsOut(ApiModel):
+    conversations: list[ConversationOut]
+    # Pass as `before` to read the next page; null on the last one.
+    next: dt.datetime | None
+
+    @classmethod
+    def of(cls, page: ConversationPage) -> "ConversationsOut":
+        return cls(
+            conversations=[ConversationOut.of(c) for c in page.conversations], next=page.next
+        )
+
+
+class TurnOut(ApiModel):
+    speaker: Speaker
+    text: str
+
+
+class TranscriptOut(ApiModel):
+    conversation: ConversationOut
+    turns: list[TurnOut]
+
+    @classmethod
+    def of(cls, transcript: Transcript) -> "TranscriptOut":
+        return cls(
+            conversation=ConversationOut.of(transcript.conversation),
+            turns=[TurnOut(speaker=turn.speaker, text=turn.text) for turn in transcript.turns],
+        )
+
+
+class HomeLevelOut(ApiModel):
+    # The level practice starts at.
+    level: StartingLevel
+    source: Source
+    # Level per skill from the placement test; null when it was not taken.
+    skills: dict[str, StartingLevel] | None
+
+
+class HomeExamOut(ApiModel):
+    type: str
+    # The exam's proper name; null for one the language pack does not list.
+    name: str | None
+    target_level: CefrLevel | None
+    date: dt.date | None
+    # Days until the exam on the learner's calendar; null without a date.
+    days_left: int | None
+
+
+class HomePartnerOut(ApiModel):
+    persona: PersonaOut
+    conversations: int
+    last_talked_at: dt.datetime | None
+
+
+class DayOut(ApiModel):
+    day: dt.date
+    seconds: int
+
+
+class ActivityOut(ApiModel):
+    # The learner's date, in the time zone the app named.
+    today: dt.date
+    # Days in a row with practice, ending today or, while today is still open, yesterday.
+    streak_days: int
+    practised_today: bool
+    today_seconds: int
+    week_seconds: int
+    # Monday to Sunday of the current week.
+    week: list[DayOut]
+    # Everything so far.
+    conversations: int
+    seconds: int
+
+    @classmethod
+    def of(cls, activity: Activity) -> "ActivityOut":
+        return cls(
+            today=activity.today,
+            streak_days=activity.streak_days,
+            practised_today=activity.practised_today,
+            today_seconds=activity.today_seconds,
+            week_seconds=activity.week_seconds,
+            week=[DayOut(day=day.day, seconds=day.seconds) for day in activity.week],
+            conversations=activity.conversations,
+            seconds=activity.seconds,
+        )
+
+
+class HomeOut(ApiModel):
+    """The Today screen in one answer."""
+
+    language: str
+    level: HomeLevelOut | None
+    # Things to work on from the placement test, most useful first.
+    focus: list[str]
+    # Null without an exam, and once its day has passed.
+    exam: HomeExamOut | None
+    partners: list[HomePartnerOut]
+    # Who the main button talks to: the partner talked to last, or the first one.
+    suggested_partner_id: UUID | None
+    activity: ActivityOut
+    recent: list[ConversationOut]
+
+    @classmethod
+    def of(cls, home: HomeView) -> "HomeOut":
+        level, exam = home.level, home.exam
+        return cls(
+            language=home.language,
+            level=None
+            if level is None
+            else HomeLevelOut.model_validate(
+                {
+                    "level": level.level,
+                    "source": level.source,
+                    "skills": None if level.skills is None else dict(level.skills),
+                }
+            ),
+            focus=list(home.focus),
+            exam=None
+            if exam is None
+            else HomeExamOut.model_validate(
+                {
+                    "type": exam.type,
+                    "name": exam.name,
+                    "targetLevel": exam.target_level,
+                    "date": exam.date,
+                    "daysLeft": exam.days_left,
+                }
+            ),
+            partners=[
+                HomePartnerOut(
+                    persona=PersonaOut.of(partner.persona),
+                    conversations=partner.conversations,
+                    last_talked_at=partner.last_talked_at,
+                )
+                for partner in home.partners
+            ],
+            suggested_partner_id=home.suggested_partner_id,
+            activity=ActivityOut.of(home.activity),
+            recent=[ConversationOut.of(conversation) for conversation in home.recent],
+        )

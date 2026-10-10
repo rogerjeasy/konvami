@@ -28,6 +28,8 @@ DAY = dt.timedelta(hours=24)
 class CallPurpose(StrEnum):
     ONBOARDING = "onboarding"
     PLACEMENT = "placement"
+    # A conversation with one of the learner's partners.
+    PRACTICE = "practice"
 
 
 # When the learner's turn counts as finished, per purpose. Measured on spoken test sentences
@@ -39,6 +41,7 @@ _TURN_DETECTION: dict[CallPurpose, dict[str, Any]] = {
     CallPurpose.ONBOARDING: {"type": "server_vad", "silence_duration_ms": 800},
     # In the language being learned people pause to think: wait for the thought, within a limit.
     CallPurpose.PLACEMENT: {"type": "semantic_vad", "eagerness": "auto"},
+    CallPurpose.PRACTICE: {"type": "semantic_vad", "eagerness": "auto"},
 }
 
 
@@ -50,6 +53,7 @@ class VoiceSettings:
     models: Mapping[CallPurpose, str]
     # The longest a call of each purpose may last.
     max_seconds: Mapping[CallPurpose, int]
+    # The guide's voice. A partner speaks with their own (`Briefing.voice`).
     voice: str
     transcription_model: str
     daily_call_limit: int
@@ -75,6 +79,17 @@ class VoiceSession:
     purpose: CallPurpose
     model: str
     started_at: dt.datetime
+    # The partner of a practice call; None for the guide's calls.
+    persona_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class Briefing:
+    """What a call's persona is told, and the voice they speak with."""
+
+    instructions: str
+    # None: the guide's voice from the settings.
+    voice: str | None = None
 
 
 @dataclass(frozen=True)
@@ -109,9 +124,11 @@ class VoiceProvider(Protocol):
 class CallScript(Protocol):
     """What one kind of call says, can do and leaves behind (the setup, the placement test)."""
 
-    def prepare(self, user_id: UUID, account: Account, today: dt.date) -> str:
-        """The persona's instructions for this learner. Raises if the call may not start now;
-        changes nothing."""
+    def prepare(
+        self, user_id: UUID, account: Account, today: dt.date, persona_id: UUID | None
+    ) -> Briefing:
+        """The persona's instructions for this learner. `persona_id` is the partner the app
+        asked for, if any. Raises if the call may not start now; changes nothing."""
 
     def tools(self, user_id: UUID) -> ToolSet:
         """Fresh tools for one call."""
@@ -138,6 +155,15 @@ class VoiceSessionRepository(Protocol):
     def finish(self, call_id: str, result: FinishedCall) -> None: ...
 
 
+def _today(now: dt.datetime, local_date: dt.date | None) -> dt.date:
+    """The date a persona is told. The learner's own, when the app names one that some time
+    zone can have right now (at most a day from the date in UTC); otherwise the date in UTC."""
+    utc = now.date()
+    if local_date is not None and abs((local_date - utc).days) <= 1:
+        return local_date
+    return utc
+
+
 class VoiceCallService:
     def __init__(
         self,
@@ -158,7 +184,15 @@ class VoiceCallService:
         self._starter = starter
         self._clock = clock
 
-    def start(self, user_id: UUID, purpose: CallPurpose, sdp_offer: str) -> CallStarted:
+    def start(
+        self,
+        user_id: UUID,
+        purpose: CallPurpose,
+        sdp_offer: str,
+        persona_id: UUID | None = None,
+        local_date: dt.date | None = None,
+    ) -> CallStarted:
+        """`local_date` is today on the learner's calendar, as their device has it."""
         model = self._settings.models.get(purpose)
         max_seconds = self._settings.max_seconds.get(purpose)
         script = self._scripts.get(purpose)
@@ -175,11 +209,11 @@ class VoiceCallService:
         if self._sessions.count_since(user_id, now - DAY) >= self._settings.daily_call_limit:
             raise VoiceError("call_limit")
 
-        instructions = script.prepare(user_id, account, now.date())
+        briefing = script.prepare(user_id, account, _today(now, local_date), persona_id)
         session = {
             "type": "realtime",
             "model": model,
-            "instructions": instructions,
+            "instructions": briefing.instructions,
             "tools": script.tools(user_id).definitions(),
             "tool_choice": "auto",
             "audio": {
@@ -187,7 +221,7 @@ class VoiceCallService:
                     "transcription": {"model": self._settings.transcription_model},
                     "turn_detection": _TURN_DETECTION[purpose],
                 },
-                "output": {"voice": self._settings.voice},
+                "output": {"voice": briefing.voice or self._settings.voice},
             },
         }
         # The provider asks for a stable id per end user for abuse handling; it gets a hash.
@@ -197,7 +231,9 @@ class VoiceCallService:
         except VoiceProviderError as error:
             raise VoiceError("voice_unavailable") from error
 
-        self._sessions.started(VoiceSession(created.call_id, user_id, purpose, model, now))
+        self._sessions.started(
+            VoiceSession(created.call_id, user_id, purpose, model, now, persona_id)
+        )
         try:
             self._starter.start(created.call_id, user_id, purpose)
         except Exception as error:

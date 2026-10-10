@@ -13,6 +13,13 @@ export type Onboarding = Schemas['OnboardingOut'];
 export type OnboardingStage = Schemas['Stage'];
 export type CallPurpose = Schemas['CallPurpose'];
 export type VoiceCall = Schemas['VoiceCallOut'];
+/** What a call may say about itself beyond its purpose and offer. */
+export interface VoiceCallDetails {
+  /** The partner of a practice call. */
+  personaId?: string;
+  /** Today on the device's calendar ("2026-10-10"), so a persona names the right weekday. */
+  localDate?: string;
+}
 export type Placement = Schemas['PlacementOut'];
 export type PlacementStatus = Schemas['PlacementStatus'];
 export type PlacementResult = Schemas['PlacementResultOut'];
@@ -21,6 +28,16 @@ export type Persona = Schemas['PersonaOut'];
 export type PersonaRole = Persona['role'];
 export type PersonaLook = Schemas['LookModel'];
 export type PersonaChange = { name?: string; look?: PersonaLook };
+export type Home = Schemas['HomeOut'];
+export type HomeLevel = Schemas['HomeLevelOut'];
+export type HomeExam = Schemas['HomeExamOut'];
+export type HomePartner = Schemas['HomePartnerOut'];
+export type Activity = Schemas['ActivityOut'];
+export type ActivityDay = Schemas['DayOut'];
+export type Conversation = Schemas['ConversationOut'];
+export type ConversationPage = Schemas['ConversationsOut'];
+export type Transcript = Schemas['TranscriptOut'];
+export type TranscriptTurn = Schemas['TurnOut'];
 
 /**
  * Why a call failed. Codes the server sends (`invalid_value`, `essentials_incomplete`, …) pass
@@ -85,10 +102,20 @@ export interface ApiClient {
   confirmPartners(): Promise<Onboarding>;
   completeOnboarding(): Promise<Onboarding>;
   /**
-   * Creates a live voice call from the app's WebRTC offer (SDP) and returns the answer. Fails
-   * with `consent_required`, `call_limit` or `voice_unavailable`.
+   * Creates a live voice call from the app's WebRTC offer (SDP) and returns the answer. A
+   * practice call names the partner to talk to. Fails with `consent_required`, `call_limit`,
+   * `voice_unavailable` or, for a partner the learner does not have, `not_found`.
    */
-  startVoiceCall(purpose: CallPurpose, sdp: string): Promise<VoiceCall>;
+  startVoiceCall(purpose: CallPurpose, sdp: string, details?: VoiceCallDetails): Promise<VoiceCall>;
+  /**
+   * The Today screen in one answer. `timeZone` is the device's IANA zone ("Europe/Zurich"), so
+   * days and the streak follow the learner's calendar.
+   */
+  getHome(timeZone?: string): Promise<Home>;
+  /** Past conversations, newest first. `before` is the `next` of the page read before. */
+  getConversations(page?: { before?: string; limit?: number }): Promise<ConversationPage>;
+  /** One conversation and what was said in it. Fails with `not_found`. */
+  getConversation(id: string): Promise<Transcript>;
 }
 
 // The dev database pauses when idle and needs about 15 seconds to wake. The server answers 503
@@ -154,6 +181,16 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     }
   }
 
+  /** A path with the query values that are set. */
+  function withQuery(path: string, values: Record<string, string | number | undefined>): string {
+    const query = new URLSearchParams();
+    for (const [name, value] of Object.entries(values)) {
+      if (value !== undefined) query.set(name, String(value));
+    }
+    const text = query.toString();
+    return text ? `${path}?${text}` : path;
+  }
+
   const personaPath = (id: string) => `/v1/personas/${encodeURIComponent(id)}`;
   const personas = async (answer: Promise<Schemas['PersonasOut']>) => (await answer).personas;
 
@@ -172,6 +209,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     removePersona: (id) => personas(request('DELETE', personaPath(id))),
     confirmPartners: () => request('POST', '/v1/onboarding/partners/confirm'),
     completeOnboarding: () => request('POST', '/v1/onboarding/complete'),
-    startVoiceCall: (purpose, sdp) => request('POST', '/v1/voice/calls', { purpose, sdp }),
+    startVoiceCall: (purpose, sdp, details = {}) =>
+      request('POST', '/v1/voice/calls', { purpose, sdp, ...details }),
+    getHome: (timeZone) => request('GET', withQuery('/v1/home', { tz: timeZone })),
+    getConversations: (page = {}) =>
+      request('GET', withQuery('/v1/conversations', { before: page.before, limit: page.limit })),
+    getConversation: (id) => request('GET', `/v1/conversations/${encodeURIComponent(id)}`),
   };
 }

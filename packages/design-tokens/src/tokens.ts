@@ -254,10 +254,19 @@ export const size = {
   avatarMd: 46,
   /** A partner's portrait on their card. */
   avatarLg: 64,
+  /** The partner on the Today screen's talk card: big enough to be seen breathing. */
+  avatarHero: 88,
   /** A partner's portrait while their look is edited. */
   avatarXl: 132,
   /** The round badge that shows a measured level. */
   levelBadge: 92,
+  /** The same badge beside a card's text (Today's level card). */
+  levelBadgeSm: 56,
+  /** One day of the week strip: a round mark, filled when practised. */
+  dayMark: 32,
+  /** The tab bar: its row of tabs when it lies along the bottom, its width as a side rail. */
+  tabBarHeight: 60,
+  tabRailWidth: 104,
   /** A round color choice (inside a 44 pt touch target). */
   swatch: 34,
   /** Rounded tile behind a screen's lead icon (2.4 Verify email). */

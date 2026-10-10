@@ -7,8 +7,12 @@ from konvami_api.settings import text_models, voice_settings
 
 CONFIGURED = json.dumps(
     {
-        "models": {"onboarding": "gpt-realtime-2.1-mini", "placement": "gpt-realtime-2.1"},
-        "max_seconds": {"onboarding": 480, "placement": 720},
+        "models": {
+            "onboarding": "gpt-realtime-2.1-mini",
+            "placement": "gpt-realtime-2.1",
+            "practice": "gpt-realtime-2.1-mini",
+        },
+        "max_seconds": {"onboarding": 480, "placement": 720, "practice": 600},
         "voice": "marin",
         "transcription_model": "gpt-transcribe",
         "daily_call_limit": 10,
@@ -22,8 +26,10 @@ def test_voice_settings_are_read_from_the_json_terraform_sets() -> None:
     assert settings.models == {
         CallPurpose.ONBOARDING: "gpt-realtime-2.1-mini",
         CallPurpose.PLACEMENT: "gpt-realtime-2.1",
+        CallPurpose.PRACTICE: "gpt-realtime-2.1-mini",
     }
     assert settings.max_seconds[CallPurpose.PLACEMENT] == 720
+    assert settings.max_seconds[CallPurpose.PRACTICE] == 600
     assert (settings.voice, settings.transcription_model, settings.daily_call_limit) == (
         "marin",
         "gpt-transcribe",

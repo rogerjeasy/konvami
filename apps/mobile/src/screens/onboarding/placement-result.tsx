@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,8 @@ import { LoadState } from '@/components/load-state';
 import { Pop, Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { OptionCard } from '@/components/option-card';
+import { Section } from '@/components/section';
+import { SkillLevels } from '@/components/skill-levels';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
@@ -32,9 +34,6 @@ import { useTheme } from '@/theme';
 // before the wait is given up: about a minute and a half, well beyond a normal assessment.
 const POLL_MS = 2000;
 const MAX_POLLS = 45;
-
-/** The skills of a result, in the order they are shown. */
-const SKILLS = ['speaking', 'listening', 'grammar', 'vocabulary', 'pronunciation'] as const;
 
 /** Statuses of a test whose result is still on its way. */
 const PENDING: readonly Placement['status'][] = ['in_progress', 'assessing'];
@@ -184,57 +183,6 @@ function Inconclusive() {
   );
 }
 
-/** One skill: its name, its level, and how far up the scale that is. */
-function SkillRow({
-  name,
-  level,
-  scale,
-}: {
-  name: string;
-  level: StartingLevel;
-  /** Every level, lowest first. The first one ("no usable language yet") fills nothing. */
-  scale: readonly StartingLevel[];
-}) {
-  const { t } = useTranslation();
-  const reached = scale.indexOf(level);
-  return (
-    <View
-      accessible
-      accessibilityLabel={t('onboarding.placement.result.skillLevel', { skill: name, level })}
-      className="gap-1.5"
-    >
-      <View className="flex-row items-baseline justify-between gap-3">
-        <Text variant="labelSmall" className="flex-1">
-          {name}
-        </Text>
-        <Text variant="labelSmall" tone="primary">
-          {level}
-        </Text>
-      </View>
-      <View aria-hidden className="flex-row gap-1">
-        {scale.slice(1).map((step, i) => (
-          <View
-            key={step}
-            style={{ height: size.progressHeight }}
-            className={`flex-1 rounded-sm ${i < reached ? 'bg-primary' : 'bg-track'}`}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View className="gap-2.5">
-      <Text variant="overline" tone="subtle">
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
-
 function Result({
   data,
   placement,
@@ -252,7 +200,6 @@ function Result({
   const [choice, setChoice] = useState<PlacementChoice>('measured');
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const scale = data.catalog.startingLevels;
   const levelLabel = (level: StartingLevel) => t(`onboarding.level.levels.${level}.label`);
 
   // One success haptic, with the result it belongs to.
@@ -336,15 +283,8 @@ function Result({
       </View>
 
       <Reveal delay={staggerDelay(3)}>
-        <Card className="gap-3.5 p-4">
-          {SKILLS.map((skill) => (
-            <SkillRow
-              key={skill}
-              name={t(`onboarding.placement.result.skills.${skill}`)}
-              level={result.levels[skill] ?? result.overall}
-              scale={scale}
-            />
-          ))}
+        <Card className="p-4">
+          <SkillLevels levels={result.levels} fallback={result.overall} />
         </Card>
       </Reveal>
 

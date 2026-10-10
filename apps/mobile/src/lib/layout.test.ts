@@ -1,5 +1,5 @@
 import { size, space } from '@konvami/design-tokens';
-import { heroDrawingSize, screenLayout } from './layout';
+import { heroDrawingSize, screenLayout, showAllTabLabels } from './layout';
 
 describe('screenLayout', () => {
   it('stacks on a standard phone with a tall hero', () => {
@@ -65,5 +65,21 @@ describe('heroDrawingSize', () => {
     const size = heroDrawingSize({ frame: 288, available: 288, windowHeight: 568 });
     expect(size).toBeLessThan(288);
     expect(size).toBe(Math.round(568 * 0.36));
+  });
+});
+
+describe('showAllTabLabels', () => {
+  it.each([
+    [390, 1, true],
+    [390, 1.3, true],
+    // Five names no longer fit side by side: only the open tab keeps its name.
+    [390, 1.31, false],
+    [390, 2, false],
+    // Nor do they on the narrowest phones, in languages with long names ("Bibliothèque").
+    [320, 1, false],
+    [359, 1, false],
+    [360, 1, true],
+  ])('in a window %i wide at text size ×%s: %s', (width, fontScale, all) => {
+    expect(showAllTabLabels({ width, fontScale })).toBe(all);
   });
 });

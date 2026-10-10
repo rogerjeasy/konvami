@@ -23,7 +23,7 @@ function apiWith(answers: number) {
   return api;
 }
 
-describe('Home: continues onboarding where the learner left off', () => {
+describe('Home: continues onboarding where the learner left off, then enters the app', () => {
   it('starts someone who has answered nothing on All set', async () => {
     await renderScreen(<HomeScreen />, { api: apiWith(0), signedIn: true });
 
@@ -63,14 +63,13 @@ describe('Home: continues onboarding where the learner left off', () => {
     expect(await screen.findByText('redirect:/onboarding/placement/result')).toBeTruthy();
   });
 
-  it('shows the placeholder once onboarding is done', async () => {
+  it('enters the app once onboarding is done', async () => {
     const api = createFakeApi();
     api.advanceTo('ready');
     await api.completeOnboarding();
     await renderScreen(<HomeScreen />, { api, signedIn: true });
 
-    expect(await screen.findByRole('header', { name: 'Coming next' })).toBeTruthy();
-    expect(screen.queryByText(/^redirect:/)).toBeNull();
+    expect(await screen.findByText('redirect:/today')).toBeTruthy();
   });
 
   it('offers to try again when the stage cannot be loaded', async () => {

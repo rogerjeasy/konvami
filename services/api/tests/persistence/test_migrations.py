@@ -25,7 +25,13 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
     applied = migrate(empty_db)
 
     assert applied[0] == "0001_profile"
-    assert applied == ["0001_profile", "0002_voice", "0003_placement", "0004_personas"]
+    assert applied == [
+        "0001_profile",
+        "0002_voice",
+        "0003_placement",
+        "0004_personas",
+        "0005_conversations",
+    ]
     assert {
         "app_user",
         "profile_field",
