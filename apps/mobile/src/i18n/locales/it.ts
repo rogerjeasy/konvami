@@ -743,6 +743,11 @@ export const it: Translation = {
   account: {
     title: 'Account',
   },
+  screenError: {
+    title: 'Qualcosa è andato storto',
+    body: 'Non è stato possibile mostrare questa schermata. Riprova.',
+    home: 'Torna all’inizio',
+  },
   upcoming: {
     title: 'In arrivo',
     body: 'Questa schermata fa parte del prossimo passo.',

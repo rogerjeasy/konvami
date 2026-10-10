@@ -731,6 +731,11 @@ export const en = {
   account: {
     title: 'Account',
   },
+  screenError: {
+    title: 'Something went wrong',
+    body: 'This screen couldn’t be shown. Please try again.',
+    home: 'Back to the start',
+  },
   upcoming: {
     title: 'Coming next',
     body: 'This screen is part of the next build step.',

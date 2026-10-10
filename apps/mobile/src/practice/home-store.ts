@@ -60,14 +60,15 @@ export function createHomeStore(
     const from = generation;
     if (quiet && state.phase === 'ready') setState({ ...state, refreshing: true });
     else setState({ phase: 'loading', data: null, error: null, refreshing: false });
-    const current = api
-      .getHome(device.timeZone())
-      .then((data) => {
+    // An async function, so a client that throws instead of rejecting is a failed load as well,
+    // and never an error in the screen that asked.
+    const current = (async () => {
+      try {
+        const data = await api.getHome(device.timeZone());
         if (from !== generation) return;
         loadedAt = device.now();
         setState({ phase: 'ready', data, error: null, refreshing: false });
-      })
-      .catch((error: unknown) => {
+      } catch (error) {
         if (from !== generation) return;
         if (state.phase === 'ready') {
           setState({ ...state, refreshing: false });
@@ -75,10 +76,10 @@ export function createHomeStore(
         }
         const code = error instanceof ApiError ? error.code : 'unknown';
         setState({ phase: 'failed', data: null, error: code, refreshing: false });
-      })
-      .finally(() => {
-        if (request === current) request = null;
-      });
+      }
+    })().finally(() => {
+      if (request === current) request = null;
+    });
     request = current;
     return current;
   }
