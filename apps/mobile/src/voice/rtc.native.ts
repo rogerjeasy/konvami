@@ -1,19 +1,23 @@
+import { NativeModules } from 'react-native';
+
 import { createRtcSession, type RtcPeer, type RtcSession, type RtcStream } from './rtc-session';
 
 type WebRtc = typeof import('react-native-webrtc');
 
+/** The name react-native-webrtc registers its native half under. */
+const NATIVE_MODULE = 'WebRTCModule';
+
 /**
- * The native WebRTC module, or null in a build without it. Expo Go has no such module and the
- * library throws when it is loaded there, so it is loaded here, guarded, and not at the top of
- * the file: the rest of the app must keep working in Expo Go.
+ * The WebRTC library, or null in a build without its native half (Expo Go). The native module is
+ * looked for first, because the library throws while loading without it and a `try` here cannot
+ * catch that: Metro catches a failing module load itself, reports it as a fatal error (the red
+ * screen) and hands back `undefined`. It is loaded here and not at the top of the file so the
+ * rest of the app keeps working in Expo Go.
  */
 function loadWebRtc(): WebRtc | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('react-native-webrtc') as WebRtc;
-  } catch {
-    return null;
-  }
+  if (NativeModules[NATIVE_MODULE] == null) return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('react-native-webrtc') as WebRtc;
 }
 
 /** A WebRTC session on iOS and Android, or null when this build cannot make voice calls. */
