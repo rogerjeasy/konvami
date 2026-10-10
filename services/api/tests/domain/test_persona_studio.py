@@ -453,8 +453,8 @@ def test_a_learner_gets_twenty_drafts_a_day() -> None:
         world.personas.draft(USER, DESCRIPTION)
 
     assert error.value.code == "draft_limit"
-    # The limit is each learner's own, and a day later it is used up no more.
+    # The limit is each learner's own, and the next day (in UTC) starts a new count.
     world.text.answers.extend([GRETA, GRETA])
     assert world.personas.draft(OTHER_USER, DESCRIPTION).name == "Greta"
-    world.clock.now += timedelta(hours=24, seconds=1)
+    world.clock.now += timedelta(hours=12)
     assert world.personas.draft(USER, DESCRIPTION).name == "Greta"

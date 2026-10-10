@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+from konvami_api.domain.accounts import DELETION_MEMORY
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -22,22 +23,42 @@ from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile, Source
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from konvami_api.persistence.sql import SqlClient, epoch_micros, from_epoch_micros
 
-_ENSURE_USER = """
+# A deleted account is not created again (its last access token may still be in use). The
+# statement that follows then has no owner to refer to and fails as a whole.
+_NOT_DELETED = "NOT EXISTS (SELECT 1 FROM deleted_user WHERE id = CAST(:user_id AS uuid))"
+
+_ENSURE_USER = f"""
     owner AS (
-        INSERT INTO app_user (id) VALUES (CAST(:user_id AS uuid)) ON CONFLICT (id) DO NOTHING
+        INSERT INTO app_user (id)
+        SELECT CAST(:user_id AS uuid) WHERE {_NOT_DELETED}
+        ON CONFLICT (id) DO NOTHING
     )
 """
 
 _LOAD_PICTURE = "SELECT picture_key FROM app_user WHERE id = CAST(:user_id AS uuid)"
 
-_SAVE_PICTURE = """
+_SAVE_PICTURE = f"""
     INSERT INTO app_user (id, picture_key)
-    VALUES (CAST(:user_id AS uuid), CAST(:picture_key AS text))
+    SELECT CAST(:user_id AS uuid), CAST(:picture_key AS text) WHERE {_NOT_DELETED}
     ON CONFLICT (id) DO UPDATE SET picture_key = EXCLUDED.picture_key
 """
 
-# Every table of a learner's data refers to this row with ON DELETE CASCADE.
-_DELETE_USER = "DELETE FROM app_user WHERE id = CAST(:user_id AS uuid)"
+# Every table of a learner's data refers to the `app_user` row with ON DELETE CASCADE. The
+# deletion is remembered, and deletions remembered long enough are forgotten, all at once.
+_DELETE_USER = """
+    WITH gone AS (
+        DELETE FROM app_user WHERE id = CAST(:user_id AS uuid)
+    ),
+    forgotten AS (
+        DELETE FROM deleted_user
+        WHERE deleted_at < CAST(:forget_before AS timestamptz) AND id <> CAST(:user_id AS uuid)
+    )
+    INSERT INTO deleted_user (id, deleted_at)
+    VALUES (CAST(:user_id AS uuid), CAST(:deleted_at AS timestamptz))
+    ON CONFLICT (id) DO UPDATE SET deleted_at = EXCLUDED.deleted_at
+"""
+
+_IS_DELETED = "SELECT 1 AS gone FROM deleted_user WHERE id = CAST(:user_id AS uuid)"
 
 _LOAD_PROFILE = f"""
     SELECT scope, field, CAST(value AS text) AS value, source,
@@ -148,16 +169,16 @@ _REMOVE_PERSONA = """
     RETURNING 1 AS removed
 """
 
-_ADD_DRAFT = f"""
+# Counts one more draft for the day, unless the limit is reached: the row is locked while it is
+# raised, so requests arriving together are counted one after the other. No row comes back
+# when the limit stands.
+_RESERVE_DRAFT = f"""
     WITH {_ENSURE_USER}
-    INSERT INTO persona_draft (user_id, created_at)
-    VALUES (CAST(:user_id AS uuid), CAST(:created_at AS timestamptz))
-"""
-
-_COUNT_DRAFTS = """
-    SELECT count(*) AS drafts
-    FROM persona_draft
-    WHERE user_id = CAST(:user_id AS uuid) AND created_at >= CAST(:since AS timestamptz)
+    INSERT INTO persona_draft_day (user_id, day, drafts)
+    VALUES (CAST(:user_id AS uuid), CAST(:day AS date), 1)
+    ON CONFLICT (user_id, day) DO UPDATE SET drafts = persona_draft_day.drafts + 1
+        WHERE persona_draft_day.drafts < :limit
+    RETURNING drafts
 """
 
 _START_SESSION = f"""
@@ -313,8 +334,18 @@ class SqlAccountRepository:
     def set_picture_key(self, user_id: UUID, key: str | None) -> None:
         self._client.execute(_SAVE_PICTURE, {"user_id": str(user_id), "picture_key": key})
 
-    def delete(self, user_id: UUID) -> None:
-        self._client.execute(_DELETE_USER, {"user_id": str(user_id)})
+    def delete(self, user_id: UUID, at: dt.datetime) -> None:
+        self._client.execute(
+            _DELETE_USER,
+            {
+                "user_id": str(user_id),
+                "deleted_at": at.isoformat(),
+                "forget_before": (at - DELETION_MEMORY).isoformat(),
+            },
+        )
+
+    def is_deleted(self, user_id: UUID) -> bool:
+        return bool(self._client.execute(_IS_DELETED, {"user_id": str(user_id)}))
 
 
 class SqlProfileRepository:
@@ -539,14 +570,13 @@ class SqlDraftLog:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
 
-    def add(self, user_id: UUID, at: dt.datetime) -> None:
-        self._client.execute(_ADD_DRAFT, {"user_id": str(user_id), "created_at": at.isoformat()})
-
-    def count_since(self, user_id: UUID, since: dt.datetime) -> int:
+    def reserve(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        if limit < 1:
+            return False
         rows = self._client.execute(
-            _COUNT_DRAFTS, {"user_id": str(user_id), "since": since.isoformat()}
+            _RESERVE_DRAFT, {"user_id": str(user_id), "day": day.isoformat(), "limit": limit}
         )
-        return int(rows[0]["drafts"])
+        return bool(rows)
 
 
 def _conversation(row: dict[str, Any]) -> Conversation:

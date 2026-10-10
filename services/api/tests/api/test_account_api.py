@@ -106,3 +106,44 @@ def test_the_account_routes_need_a_signed_in_user(call: Call) -> None:
         ("DELETE", "/v1/account"),
     ]:
         assert call(method, path, subject=None).status == 401, (method, path)
+
+
+def test_deleting_the_account_needs_a_password_typed_moments_ago(
+    call: Call, directory: FakeAccountDirectory, account_records: InMemoryAccountRepository
+) -> None:
+    """A token alone is not enough: one that was stolen, or kept alive by refreshing for weeks,
+    must not be able to delete everything."""
+    response = call("DELETE", "/v1/account", signed_in_seconds_ago=301)
+
+    assert response.status == 403
+    assert response.body == {"error": {"code": "recent_sign_in_required", "field": None}}
+    assert account_records.deleted == []
+    assert UUID(USER) in directory.accounts
+
+    assert call("DELETE", "/v1/account", signed_in_seconds_ago=300).status == 200
+
+
+def test_the_last_token_of_a_deleted_account_can_store_nothing(
+    call: Call, files: InMemoryFileStore
+) -> None:
+    call("DELETE", "/v1/account")
+
+    changes = {"changes": [{"field": "target_language", "value": "de"}]}
+    for method, path, body in [
+        ("PATCH", "/v1/profile", changes),
+        ("POST", "/v1/account/picture/upload", None),
+        ("POST", "/v1/personas/draft", {"description": "A friendly woman from Hamburg"}),
+        ("DELETE", "/v1/account/picture", None),
+    ]:
+        response = call(method, path, body)
+        assert response.status == 401, (method, path)
+        assert response.body == {"error": {"code": "not_authenticated", "field": None}}
+    assert files.forms == []
+    # Reading shows what is left, which is nothing.
+    assert call("GET", "/v1/profile").body == {
+        "targetLanguage": None,
+        "global": {},
+        "languages": {},
+    }
+    # Other accounts are not affected.
+    assert call("PATCH", "/v1/profile", changes, subject=OTHER_USER).status == 200

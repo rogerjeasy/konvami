@@ -42,7 +42,8 @@ export function DeleteAccountScreen() {
     setFailure(null);
     setDeleting(true);
     try {
-      await session.verifyPassword(password);
+      // The server deletes an account only for a token from a sign-in made moments ago.
+      await session.reauthenticate(password);
     } catch (error) {
       const reason = authErrorCode(error);
       setFailure(

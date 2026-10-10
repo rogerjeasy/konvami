@@ -55,7 +55,6 @@ MAX_PARTNERS = 12
 # "Create from a description" asks a text model each time (profile design P8).
 DRAFTS_PER_DAY = 20
 DESCRIPTION_MIN, DESCRIPTION_MAX = 10, 500
-DAY = dt.timedelta(days=1)
 # The writer answers inside an API request, which may take 29 seconds in all (it usually needs
 # about 7). Past this limit the built-in partners are offered instead.
 WRITER_MAX_SECONDS = 20.0
@@ -273,11 +272,11 @@ class PersonaRepository(Protocol):
 
 
 class DraftLog(Protocol):
-    """When each learner asked for a persona to be written, for the daily limit."""
+    """How many personas each learner had written on a day, for the daily limit."""
 
-    def add(self, user_id: UUID, at: dt.datetime) -> None: ...
-
-    def count_since(self, user_id: UUID, since: dt.datetime) -> int: ...
+    def reserve(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        """Counts one more draft for that day and returns True, unless the learner has reached
+        `limit`. One step: requests arriving together cannot both take the last place."""
 
 
 def _enum(options: Any) -> dict[str, Any]:
@@ -663,11 +662,10 @@ class PersonaService:
         language = profile.target_language
         if not language:
             raise PersonaError("no_language")
-        now = self._clock()
-        if self._drafts.count_since(user_id, now - DAY) >= DRAFTS_PER_DAY:
-            raise PersonaError("draft_limit")
         # Counted before the writer is asked: a draft that fails cost a request all the same.
-        self._drafts.add(user_id, now)
+        # The day is the clock's (UTC).
+        if not self._drafts.reserve(user_id, self._clock().date(), DRAFTS_PER_DAY):
+            raise PersonaError("draft_limit")
 
         catalog = self._profiles.catalog
         explanation = profile.value(language, "explanation_language") or "en"

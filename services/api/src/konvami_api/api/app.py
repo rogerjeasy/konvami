@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, FastAPI, Query
+from fastapi import APIRouter, Depends, FastAPI, Query, Request
 from pydantic import AwareDatetime
 
-from konvami_api.api.auth import CurrentUser
-from konvami_api.api.errors import ErrorBody, install_error_handlers
+from konvami_api.api.auth import CurrentUser, recently_signed_in
+from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
 from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
@@ -76,8 +76,19 @@ UNAVAILABLE: Responses = {503: {"model": ErrorBody}}
 MAX_TIME_ZONE_LENGTH = 64
 
 
+FORBIDDEN: Responses = {403: {"model": ErrorBody}}
+
+
 def _router(services: Services) -> APIRouter:
-    router = APIRouter(prefix="/v1", responses=NOT_AUTHENTICATED)
+    def not_deleted(request: Request, user: CurrentUser) -> None:
+        """Refuses to change anything for an account that was deleted: its last access token
+        outlives it by up to an hour. Reading is not checked; there is nothing left to read."""
+        if request.method != "GET" and services.accounts.is_deleted(user):
+            raise ApiError(401, "not_authenticated")
+
+    router = APIRouter(
+        prefix="/v1", responses=NOT_AUTHENTICATED, dependencies=[Depends(not_deleted)]
+    )
 
     @router.get("/catalog", operation_id="getCatalog")
     def get_catalog(_: CurrentUser) -> CatalogOut:
@@ -234,7 +245,13 @@ def _router(services: Services) -> APIRouter:
     def remove_picture(user: CurrentUser) -> AccountOut:
         return AccountOut.of(services.accounts.remove_picture(user))
 
-    @router.delete("/account", operation_id="deleteAccount")
+    @router.delete(
+        "/account",
+        operation_id="deleteAccount",
+        # The password, typed moments ago: the app signs in again right before this call.
+        dependencies=[Depends(recently_signed_in)],
+        responses=FORBIDDEN,
+    )
     def delete_account(user: CurrentUser) -> AccountDeletedOut:
         services.accounts.delete(user)
         return AccountDeletedOut()

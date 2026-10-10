@@ -3,12 +3,15 @@ fakes, so tests that use the fakes are testing something the real database also 
 """
 
 import json
+import threading
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
+import psycopg
 import pytest
 
 from konvami_api.domain.accounts import AccountRepository
@@ -45,6 +48,7 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryVoiceSessionRepository,
 )
+from tests.persistence.pg import LocalSqlClient
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_USER = UUID("22222222-2222-4222-8222-222222222222")
@@ -542,22 +546,40 @@ def drafts(request: pytest.FixtureRequest) -> DraftLog:
     return SqlDraftLog(request.getfixturevalue("db"))
 
 
-def test_drafts_are_counted_per_learner_from_a_point_in_time(drafts: DraftLog) -> None:
-    drafts.add(USER, NOON - timedelta(hours=25))
-    drafts.add(USER, NOON - timedelta(hours=24))
-    drafts.add(USER, NOON)
-    drafts.add(OTHER_USER, NOON)
-
-    assert drafts.count_since(USER, NOON - timedelta(hours=24)) == 2
-    assert drafts.count_since(OTHER_USER, NOON - timedelta(hours=24)) == 1
-    assert drafts.count_since(USER, NOON + timedelta(seconds=1)) == 0
+TODAY = NOON.date()
+TOMORROW = TODAY + timedelta(days=1)
 
 
-def test_two_drafts_at_the_same_moment_both_count(drafts: DraftLog) -> None:
-    drafts.add(USER, NOON)
-    drafts.add(USER, NOON)
+def test_a_draft_is_counted_until_the_days_limit_is_reached(drafts: DraftLog) -> None:
+    assert [drafts.reserve(USER, TODAY, 3) for _ in range(5)] == [True, True, True, False, False]
 
-    assert drafts.count_since(USER, NOON) == 2
+
+def test_the_limit_is_each_learners_own_and_starts_again_the_next_day(drafts: DraftLog) -> None:
+    assert drafts.reserve(USER, TODAY, 1) is True
+    assert drafts.reserve(USER, TODAY, 1) is False
+
+    assert drafts.reserve(OTHER_USER, TODAY, 1) is True
+    assert drafts.reserve(USER, TOMORROW, 1) is True
+
+
+def test_requests_arriving_together_cannot_get_past_the_limit(
+    db: SqlClient, postgres_uri: str
+) -> None:
+    """Counting and checking are one statement: twelve requests at the same moment get five
+    drafts, never more."""
+    schema = db.execute("SELECT current_schema() AS name")[0]["name"]
+    barrier = threading.Barrier(12)
+
+    def ask() -> bool:
+        with psycopg.connect(postgres_uri, autocommit=True) as connection:
+            connection.execute(f'SET search_path TO "{schema}"')
+            barrier.wait()
+            return SqlDraftLog(LocalSqlClient(connection)).reserve(USER, TODAY, 5)
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        answers = [future.result() for future in [pool.submit(ask) for _ in range(12)]]
+
+    assert sorted(answers) == [False] * 7 + [True] * 5
 
 
 def test_the_last_onboarding_steps_are_read_back(onboarding: OnboardingRepository) -> None:
@@ -803,14 +825,60 @@ def test_a_deleted_learner_has_no_picture_left(accounts: AccountRepository) -> N
     accounts.set_picture_key(USER, PICTURE)
     accounts.set_picture_key(OTHER_USER, PICTURE.replace(str(USER), str(OTHER_USER)))
 
-    accounts.delete(USER)
+    accounts.delete(USER, NOON)
 
     assert accounts.picture_key(USER) is None
     assert accounts.picture_key(OTHER_USER) is not None
 
 
 def test_deleting_a_learner_who_stored_nothing_is_not_an_error(accounts: AccountRepository) -> None:
-    accounts.delete(USER)
+    accounts.delete(USER, NOON)
+
+
+def test_a_deletion_is_remembered(accounts: AccountRepository) -> None:
+    assert accounts.is_deleted(USER) is False
+
+    accounts.delete(USER, NOON)
+    accounts.delete(USER, NOON + timedelta(minutes=1))
+
+    assert accounts.is_deleted(USER) is True
+    assert accounts.is_deleted(OTHER_USER) is False
+
+
+def test_a_deletion_is_forgotten_once_no_token_of_the_account_can_still_work(
+    accounts: AccountRepository,
+) -> None:
+    """An access token lasts an hour. A day later the id of a deleted account is deleted too:
+    it identified a person."""
+    accounts.delete(USER, NOON)
+
+    accounts.delete(OTHER_USER, NOON + timedelta(days=1, seconds=1))
+
+    assert accounts.is_deleted(USER) is False
+    assert accounts.is_deleted(OTHER_USER) is True
+
+
+def test_nothing_can_be_stored_again_for_a_deleted_learner(db: SqlClient) -> None:
+    """The database itself refuses: whatever the layers above let through, a deleted account
+    gets no rows back."""
+    SqlAccountRepository(db).delete(USER, NOON)
+
+    writes: list[Callable[[], object]] = [
+        lambda: SqlProfileRepository(db).save(USER, [change("goals", {"reasons": ["work"]})]),
+        lambda: SqlOnboardingRepository(db).save(USER, OnboardingState()),
+        lambda: SqlPersonaRepository(db).add(USER, "de", [persona(1, "Lena")]),
+        lambda: SqlDraftLog(db).reserve(USER, TODAY, 5),
+    ]
+    for write in writes:
+        with pytest.raises(psycopg.Error):
+            write()
+    # A photo's place is the learner's own row, which is simply not made again.
+    SqlAccountRepository(db).set_picture_key(USER, PICTURE)
+
+    assert db.execute("SELECT count(*) AS users FROM app_user") == [{"users": 0}]
+    # Another learner is stored as before.
+    SqlProfileRepository(db).save(OTHER_USER, [change("goals", {"reasons": ["work"]})])
+    assert db.execute("SELECT count(*) AS users FROM app_user") == [{"users": 1}]
 
 
 def test_deleting_a_learner_deletes_everything_stored_for_them(db: SqlClient) -> None:
@@ -836,7 +904,7 @@ def test_deleting_a_learner_deletes_everything_stored_for_them(db: SqlClient) ->
     ]
     assert len(owned) >= 6
 
-    SqlAccountRepository(db).delete(USER)
+    SqlAccountRepository(db).delete(USER, NOON)
 
     for table in owned:
         rows = db.execute(f"SELECT CAST(user_id AS text) AS user_id FROM {table}")

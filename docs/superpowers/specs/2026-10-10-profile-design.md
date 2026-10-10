@@ -37,10 +37,10 @@ Done means:
 | P2 | **The photo goes straight from the app to a private S3 bucket** through a short-lived signed upload form, and is read through a short-lived signed address | Lambda and API Gateway never carry image bytes; the form limits the size; nothing in the bucket is public |
 | P3 | **The app shrinks the photo to 512 px JPEG before upload**; the server accepts JPEG only and checks the file's first bytes | Small uploads, no camera metadata (location), and nothing but a picture ends up stored as one |
 | P4 | **An upload lands under `uploads/` and is moved under `users/<id>/` when confirmed**; `uploads/` empties itself after a day | An abandoned upload never becomes someone's photo and never stays |
-| P5 | **Account deletion runs on the server in one request**: files, then database, then the Cognito user | If a step fails the account still exists and the request can be repeated; the reverse order could leave data nobody can reach |
+| P5 | **Account deletion runs on the server in one request**: files, then database, then the Cognito user. It needs a sign-in made moments ago, and it is remembered for a day (§4c) | If a step fails the account still exists and the request can be repeated; the reverse order could leave data nobody can reach |
 | P6 | **A partner's personality and teaching settings are two JSON columns**, validated by the domain; a partner without them behaves as their role always did | Starter partners need no data migration, and the settings can grow without schema changes |
 | P7 | **Roles stay buddy, teacher and exam coach.** Role-play, course companion and custom roles are not built | Each needs its own instructions and, for role-play, scenarios (spec §6.3) |
-| P8 | **"Create from a description" returns a draft; nothing is saved until the learner reviews it** (spec §12.4) | The learner sees and corrects what the model wrote. 20 drafts a day per learner |
+| P8 | **"Create from a description" returns a draft; nothing is saved until the learner reviews it** (spec §12.4) | The learner sees and corrects what the model wrote. 20 drafts per learner and day (UTC) |
 | P9 | **A voice sample is spoken once per voice and language by OpenAI's speech model and kept in the bucket** | A preview costs a fraction of a cent once, then nothing |
 | P10 | **At most 12 partners per language** | A bound on storage and on the Talk screen; far above what the spec's examples need |
 
@@ -70,7 +70,7 @@ Talk (5.2) gains a "New partner" button and a way to edit each partner.
 | `domain/voices.py` | A voice's sample: from the bucket, or spoken and stored on first request |
 | `domain/personas.py` | Create, draft from a description, templates, change every field, duplicate; personality and teaching settings |
 | `domain/practice.py` | A partner's instructions use occupation, personality, form of address, conversation style, correction settings, level, focus and explanation settings |
-| Migration `0006` | `app_user.picture_key`; `persona.occupation`, `personality`, `teaching`; `persona_draft` (the daily limit) |
+| Migrations `0006`, `0007` | `app_user.picture_key`; `persona.occupation`, `personality`, `teaching`; `persona_draft_day` (the daily limit); `deleted_user` |
 | `GET /v1/account` · `POST /v1/account/picture/upload` · `POST /v1/account/picture` · `DELETE /v1/account/picture` · `DELETE /v1/account` | The photo and account deletion |
 | `POST /v1/personas` · `POST /v1/personas/draft` · `GET /v1/personas/templates` · `PATCH /v1/personas/{id}` · `POST /v1/personas/{id}/duplicate` | Persona Studio |
 | `GET /v1/voices/{voice}/sample` | A signed address of the sample |
@@ -107,6 +107,16 @@ deleted the account and returned to Welcome.
 **Not checked:** the photo picker on a phone (it needs a rebuilt development build), a real
 upload to S3 and a real voice sample (nothing is deployed yet), and a real call with a
 partner's new personality and correction settings.
+
+## 4c. What a security review of the commit found (2026-10-10)
+
+| Finding | Fix |
+| --- | --- |
+| A deleted account's last access token works for up to an hour, and a write made with it stored data again for an account that no longer exists | The deletion is remembered for a day (`deleted_user`). The API refuses every change for such an account, and the database itself no longer creates its row again, so nothing can be stored whatever the layers above let through. The id is deleted after that day, because it identified a person |
+| The password was checked only in the app before deleting: a stolen token alone could delete an account | `DELETE /v1/account` needs a token from a sign-in made at most five minutes ago (`auth_time`); a refreshed token keeps the old time. The app signs in again with the password and continues on that session |
+| The limit of 20 drafts a day was counted, then checked: requests arriving together could pass it | One row per learner and UTC day (`persona_draft_day`), raised and checked in one statement; a test sends twelve requests at once and five get through. The day is now the calendar day in UTC, not the last 24 hours |
+
+Migration `0007_account_safety`.
 
 ## 5. Not in this feature
 

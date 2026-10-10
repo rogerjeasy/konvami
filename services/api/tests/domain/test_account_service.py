@@ -1,10 +1,16 @@
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
 
 from konvami_api.domain.accounts import Account, AccountError, AccountService
-from tests.fakes import FakeAccountDirectory, InMemoryAccountRepository, InMemoryFileStore
+from tests.fakes import (
+    FakeAccountDirectory,
+    FixedClock,
+    InMemoryAccountRepository,
+    InMemoryFileStore,
+)
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_USER = UUID("22222222-2222-4222-8222-222222222222")
@@ -12,6 +18,7 @@ FIRST = UUID("aaaaaaaa-aaaa-4aaa-8aaa-000000000001")
 SECOND = UUID("aaaaaaaa-aaaa-4aaa-8aaa-000000000002")
 # The first bytes of every JPEG file, and some image data after them.
 JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 64
+NOON = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
 
@@ -30,6 +37,7 @@ class Setup:
             records=self.records,
             files=self.files,
             directory=self.directory,
+            clock=FixedClock(NOON),
             new_id=lambda: next(ids),
         )
 
@@ -183,3 +191,15 @@ def test_the_sign_in_is_removed_last_so_a_failed_deletion_can_be_repeated() -> N
     setup.records.fail_delete = False
     setup.accounts.delete(USER)
     assert USER not in setup.directory.accounts
+
+
+def test_a_deleted_account_is_remembered_as_deleted() -> None:
+    """Its last access token works for up to an hour: nothing may be stored with it again."""
+    setup = Setup()
+    assert setup.accounts.is_deleted(USER) is False
+
+    setup.accounts.delete(USER)
+
+    assert setup.accounts.is_deleted(USER) is True
+    assert setup.accounts.is_deleted(OTHER_USER) is False
+    assert setup.records.deleted_at[USER] == NOON

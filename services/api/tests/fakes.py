@@ -1,12 +1,12 @@
 """In-memory stand-ins for the persistence layer, checked against the same contract tests as SQL."""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from konvami_api.domain.accounts import Account, AccountNotFound
+from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -114,6 +114,7 @@ class InMemoryAccountRepository:
     def __init__(self) -> None:
         self.pictures: dict[UUID, str] = {}
         self.deleted: list[UUID] = []
+        self.deleted_at: dict[UUID, datetime] = {}
         self.fail_delete = False
 
     def picture_key(self, user_id: UUID) -> str | None:
@@ -125,11 +126,20 @@ class InMemoryAccountRepository:
         else:
             self.pictures[user_id] = key
 
-    def delete(self, user_id: UUID) -> None:
+    def delete(self, user_id: UUID, at: datetime) -> None:
         if self.fail_delete:
             raise RuntimeError("the database did not answer")
         self.pictures.pop(user_id, None)
         self.deleted.append(user_id)
+        self.deleted_at = {
+            user: moment
+            for user, moment in self.deleted_at.items()
+            if moment >= at - DELETION_MEMORY
+        }
+        self.deleted_at[user_id] = at
+
+    def is_deleted(self, user_id: UUID) -> bool:
+        return user_id in self.deleted_at
 
 
 class InMemoryFileStore:
@@ -345,13 +355,14 @@ class InMemoryConversationRepository:
 
 class InMemoryDraftLog:
     def __init__(self) -> None:
-        self.drafts: list[tuple[UUID, datetime]] = []
+        self.drafts: dict[tuple[UUID, date], int] = {}
 
-    def add(self, user_id: UUID, at: datetime) -> None:
-        self.drafts.append((user_id, at))
-
-    def count_since(self, user_id: UUID, since: datetime) -> int:
-        return sum(1 for owner, at in self.drafts if owner == user_id and at >= since)
+    def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
+        used = self.drafts.get((user_id, day), 0)
+        if used >= limit:
+            return False
+        self.drafts[(user_id, day)] = used + 1
+        return True
 
 
 class FakeSpeechModel:

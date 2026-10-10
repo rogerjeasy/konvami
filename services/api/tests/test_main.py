@@ -114,6 +114,19 @@ def test_without_voice_settings_a_call_is_refused_before_any_provider_is_asked(
 ) -> None:
     handler = main.build_handler(ENVIRONMENT, clients(stub), sleep=lambda _: None)
     event = http_api_event("POST", "/v1/voice/calls", {"purpose": "onboarding", "sdp": "v=0"}, USER)
+    # Before anything is changed for a caller: was their account deleted? (It was not.)
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": "[]"},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [{"name": "user_id", "value": {"stringValue": USER}}],
+            "formatRecordsAs": "JSON",
+        },
+    )
 
     result = handler(event, None)  # type: ignore[arg-type]
 

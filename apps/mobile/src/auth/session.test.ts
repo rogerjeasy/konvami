@@ -391,23 +391,43 @@ describe('signOutEverywhere', () => {
   });
 });
 
-describe('confirming it is really the user', () => {
-  it('accepts the right password without opening another session', async () => {
+describe('signing in again before something that cannot be undone', () => {
+  it('continues on a session opened with the password just typed, and closes the old one', async () => {
     const { provider, session } = setup();
     await session.signIn(EMAIL, PASSWORD);
-    const before = provider.liveRefreshTokens.size;
+    const before = await session.getAccessToken();
+    const sessions = provider.liveRefreshTokens.size;
 
-    await expect(session.verifyPassword(PASSWORD)).resolves.toBeUndefined();
+    await expect(session.reauthenticate(PASSWORD)).resolves.toBeUndefined();
 
-    expect(provider.liveRefreshTokens.size).toBe(before);
+    // The server only accepts a token from a sign-in made moments ago.
+    const after = await session.getAccessToken();
+    expect(after).not.toBe(before);
+    expect(provider.calls.filter(([method]) => method === 'signIn')).toHaveLength(2);
+    expect(provider.liveRefreshTokens.size).toBe(sessions);
     expect(session.getState().status).toBe('signedIn');
   });
 
-  it('refuses a wrong password', async () => {
-    const { session } = setup();
+  it('saves the new session, so the next launch does not start from the closed one', async () => {
+    const { provider, session } = setup();
     await session.signIn(EMAIL, PASSWORD);
 
-    await expect(session.verifyPassword('wrong')).rejects.toMatchObject({ code: 'notAuthorized' });
+    await session.reauthenticate(PASSWORD);
+
+    const afterRestart = createSessionStore(provider);
+    await afterRestart.restore();
+    expect(afterRestart.getState().status).toBe('signedIn');
+  });
+
+  it('refuses a wrong password and keeps the session as it was', async () => {
+    const { session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    const before = await session.getAccessToken();
+
+    await expect(session.reauthenticate('wrong')).rejects.toMatchObject({ code: 'notAuthorized' });
+
+    expect(await session.getAccessToken()).toBe(before);
+    expect(session.getState().status).toBe('signedIn');
   });
 });
 

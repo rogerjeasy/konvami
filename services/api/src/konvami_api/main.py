@@ -154,7 +154,9 @@ def build_backend(
         clock=_now,
     )
     files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
-    accounts = AccountService(records=SqlAccountRepository(sql), files=files, directory=directory)
+    accounts = AccountService(
+        records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
+    )
     services = Services(
         catalog=CATALOG,
         profiles=profiles,

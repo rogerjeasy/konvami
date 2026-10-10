@@ -50,10 +50,12 @@ export interface SessionStore {
   requestEmailChange(email: string): Promise<void>;
   confirmEmailChange(code: string): Promise<void>;
   /**
-   * Checks the password of the signed-in user before something that cannot be undone. Fails
-   * with `notAuthorized` when it is wrong.
+   * Signs the user in again with their password, before something that cannot be undone: the
+   * server only does it for a token from a sign-in made moments ago. The app continues on the
+   * new session and the old one is closed. Fails with `notAuthorized` for a wrong password and
+   * then keeps the session as it was.
    */
-  verifyPassword(password: string): Promise<void>;
+  reauthenticate(password: string): Promise<void>;
   /** Signs out on this device only, without telling the server (the account no longer exists). */
   forget(): Promise<void>;
   /**
@@ -195,12 +197,18 @@ export function createSessionStore(provider: AuthProvider): SessionStore {
       await signedIn(await provider.getUser(token));
     },
 
-    async verifyPassword(password) {
-      const email = state.user?.email;
-      if (!email) throw new AuthError('notAuthorized');
-      const proof = await provider.signIn(email, password);
-      // The sign-in was only a check: its session is closed again at once.
-      await provider.signOut(proof.refreshToken).catch(() => {});
+    async reauthenticate(password) {
+      const user = state.user;
+      if (!user) throw new AuthError('notAuthorized');
+      const fresh = await provider.signIn(user.email, password);
+      const replaced = refreshToken;
+      tokens = fresh;
+      refreshToken = fresh.refreshToken;
+      await signedIn(user);
+      // One session per device: the one this sign-in replaces is closed on the server.
+      if (replaced && replaced !== fresh.refreshToken) {
+        await provider.signOut(replaced).catch(() => {});
+      }
     },
 
     forget,

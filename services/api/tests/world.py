@@ -144,7 +144,10 @@ class World:
             profiles=self.profiles, files=self.files, speech=self.speech, model="gpt-4o-mini-tts"
         )
         self.account = AccountService(
-            records=InMemoryAccountRepository(), files=self.files, directory=self.accounts
+            records=InMemoryAccountRepository(),
+            files=self.files,
+            directory=self.accounts,
+            clock=self.clock,
         )
         self._calls = 0
 

@@ -294,6 +294,22 @@ describe('6.9 Delete account', () => {
     expect(auth.session.getState()).toEqual({ status: 'signedOut', user: null });
   });
 
+  it('signs in again with the password right before deleting, as the server requires', async () => {
+    const { auth, api } = await open(<DeleteAccountScreen />, 'Delete your account');
+    const [sessionBefore] = [...auth.provider.liveRefreshTokens];
+
+    await ask(PASSWORD);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Delete forever' }));
+
+    await waitFor(() => expect(api.deleted).toBe(true));
+    // Two sign-ins: the one that opened the app, and the one made for the deletion.
+    expect(auth.provider.calls.filter(([method]) => method === 'signIn')).toHaveLength(2);
+    // The deletion went out on the new session: the one closed meanwhile is the old one.
+    expect(auth.provider.calls.filter(([method]) => method === 'signOut')).toEqual([
+      ['signOut', sessionBefore],
+    ]);
+  });
+
   it('keeps the account when the learner changes their mind', async () => {
     const { auth, api } = await open(<DeleteAccountScreen />, 'Delete your account');
 

@@ -81,6 +81,10 @@ PICTURE_MAX_BYTES = 1024 * 1024
 UPLOAD_SECONDS = 300
 # How long a photo's address works. The app asks for a new one whenever it opens.
 PICTURE_ADDRESS_SECONDS = 3600
+# How long a deleted account's id is remembered. Its last access token works for up to an hour
+# (infra/modules/auth); a day covers that with room, and then the id, which identified a person,
+# is deleted as well.
+DELETION_MEMORY = dt.timedelta(days=1)
 # How every JPEG file starts, whatever wrote it.
 _JPEG_START = b"\xff\xd8\xff"
 
@@ -97,8 +101,11 @@ class AccountRepository(Protocol):
 
     def set_picture_key(self, user_id: UUID, key: str | None) -> None: ...
 
-    def delete(self, user_id: UUID) -> None:
-        """Deletes the learner and everything stored for them."""
+    def delete(self, user_id: UUID, at: dt.datetime) -> None:
+        """Deletes the learner and everything stored for them, and remembers the deletion
+        for `DELETION_MEMORY`, so that nothing is stored for them again."""
+
+    def is_deleted(self, user_id: UUID) -> bool: ...
 
 
 @dataclass(frozen=True)
@@ -128,11 +135,13 @@ class AccountService:
         records: AccountRepository,
         files: FileStore,
         directory: AccountDirectory,
+        clock: Callable[[], dt.datetime],
         new_id: Callable[[], UUID] = uuid4,
     ) -> None:
         self._records = records
         self._files = files
         self._directory = directory
+        self._clock = clock
         self._new_id = new_id
 
     def view(self, user_id: UUID) -> AccountView:
@@ -192,5 +201,10 @@ class AccountService:
         """
         self._files.remove_all(_user_folder(user_id))
         self._files.remove_all(_upload_folder(user_id))
-        self._records.delete(user_id)
+        self._records.delete(user_id, self._clock())
         self._directory.delete(user_id)
+
+    def is_deleted(self, user_id: UUID) -> bool:
+        """Whether this account was deleted. Its last access token outlives it by up to an
+        hour; a request made with it must not store anything."""
+        return self._records.is_deleted(user_id)
