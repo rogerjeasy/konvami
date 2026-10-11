@@ -112,6 +112,9 @@ class ConversationRepository(Protocol):
         """The conversations that count, added up per day of the learner's calendar. An unknown
         or missing time zone means UTC."""
 
+    def longest(self, user_id: UUID) -> int:
+        """The seconds of the longest conversation that counts; 0 without one."""
+
 
 def summarise(activity: ActivityDays) -> Activity:
     today = activity.today
@@ -187,3 +190,11 @@ class ConversationService:
 
     def activity(self, user_id: UUID, timezone: str | None, now: dt.datetime) -> Activity:
         return summarise(self._repository.days(user_id, timezone, now))
+
+    def days(self, user_id: UUID, timezone: str | None, now: dt.datetime) -> ActivityDays:
+        """Every day the learner practised on, for what `summarise` leaves out: earlier weeks,
+        the longest streak."""
+        return self._repository.days(user_id, timezone, now)
+
+    def longest_seconds(self, user_id: UUID) -> int:
+        return self._repository.longest(user_id)

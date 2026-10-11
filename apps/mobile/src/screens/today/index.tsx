@@ -23,7 +23,7 @@ import { useHome, usePracticeServices } from '@/practice/services';
 import { useAccount } from '@/profile/services';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
-import { LevelCard } from './level-card';
+import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
 import { WeekCard } from './week-card';
 

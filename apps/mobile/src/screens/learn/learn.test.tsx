@@ -4,7 +4,6 @@ import * as SecureStore from 'expo-secure-store';
 import { createFakeApi, type FakeApi } from '@/test/fake-api';
 import { renderScreen } from '@/test/render';
 import { LearnScreen } from '.';
-import { ProgressScreen } from '../progress';
 
 jest.mock('expo-router', () => ({
   router: {
@@ -159,15 +158,5 @@ describe('5.7 Learn', () => {
     await renderScreen(<LearnScreen />, { api: inApp() });
 
     expect(screen.getByText('redirect:/welcome')).toBeTruthy();
-  });
-});
-
-describe('5.8 Progress', () => {
-  it('says what will be here, and shows nothing that is not the learner’s', async () => {
-    await renderScreen(<ProgressScreen />, { signedIn: true });
-
-    expect(screen.getByRole('header', { name: 'Progress' })).toBeTruthy();
-    expect(screen.getByText('Your progress will be charted here')).toBeTruthy();
-    expect(screen.queryByText(/\d/)).toBeNull();
   });
 });

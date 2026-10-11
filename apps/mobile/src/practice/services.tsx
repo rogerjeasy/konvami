@@ -7,13 +7,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { ApiClient, Card, CardSource, Transcript } from '@konvami/api-client';
+import type { ApiClient, Card, CardSource, Progress, Transcript } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
 import { createDeckStore, type DeckState, type DeckStore } from './deck-store';
 import { createHomeStore, type HomeState, type HomeStore } from './home-store';
 import { createLibraryStore, type LibraryState, type LibraryStore } from './library-store';
 import { createReportFollower, type ReportFollower, type ReportView } from './report-follower';
+import { createResourceStore, type ResourceState, type ResourceStore } from './resource-store';
 import { createReviewSession, type ReviewSession, type ReviewState } from './review-session';
 
 /** What the device tells the app about time. Replaced in tests. */
@@ -36,6 +37,8 @@ export interface PracticeServices {
   readConversation: (id: string) => Promise<Transcript>;
   /** Follows one conversation's report for as long as a screen shows it. */
   followReport: (id: string) => ReportFollower;
+  /** What the Progress screen charts. */
+  progress: ResourceStore<Progress>;
   /** The learner's flashcards. */
   deck: DeckStore;
   /**
@@ -52,6 +55,7 @@ export function createPracticeServices(
   api: Pick<
     ApiClient,
     | 'getHome'
+    | 'getProgress'
     | 'getConversations'
     | 'getConversation'
     | 'getConversationReport'
@@ -68,6 +72,7 @@ export function createPracticeServices(
   const deck = createDeckStore(api);
   return {
     home,
+    progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
     library: createLibraryStore(api),
     readConversation: (id) => api.getConversation(id),
     followReport: (id) => createReportFollower(api, id),
@@ -102,6 +107,7 @@ export function PracticeProvider({
     services.home.reset();
     services.library.reset();
     services.deck.reset();
+    services.progress.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
 }
@@ -122,6 +128,12 @@ export function useHome(): HomeState {
 export function useLibrary(): LibraryState {
   const { library } = usePracticeServices();
   return useSyncExternalStore(library.subscribe, library.getState, library.getState);
+}
+
+/** What the Progress screen charts; re-renders when it changes. */
+export function useProgress(): ResourceState<Progress> {
+  const { progress } = usePracticeServices();
+  return useSyncExternalStore(progress.subscribe, progress.getState, progress.getState);
 }
 
 /** The learner's flashcards; re-renders when they change. */

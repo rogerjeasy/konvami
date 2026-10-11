@@ -343,6 +343,20 @@ describe('api client', () => {
     ]);
   });
 
+  it('reads progress for the device’s time zone', async () => {
+    const progress = { language: 'de', weeks: [], milestones: [] };
+    const { fetch, calls } = fakeFetch(json(200, progress), json(200, progress));
+    const { api } = client(fetch);
+
+    expect(await api.getProgress('Europe/Zurich')).toEqual(progress);
+    await api.getProgress();
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/progress?tz=Europe%2FZurich',
+      'GET https://api.example.test/v1/progress',
+    ]);
+  });
+
   it('reads the library page by page and one transcript', async () => {
     const page = { conversations: [], next: '2026-10-09T10:00:00Z' };
     const transcript = { conversation: { id: 'rtc/1' }, turns: [] };

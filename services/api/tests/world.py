@@ -18,6 +18,7 @@ from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.reports import (
     MAX_REQUESTS,
     Mistake,
@@ -176,6 +177,15 @@ class World:
             cards=self.cards,
             clock=self.clock,
         )
+        self.progress = ProgressService(
+            profiles=self.profiles,
+            onboarding=self.onboarding,
+            placement=self.placement,
+            conversations=self.conversations,
+            reports=self.reports,
+            cards=self.cards,
+            clock=self.clock,
+        )
         self.files = InMemoryFileStore()
         self.speech = FakeSpeechModel()
         self.voices = VoiceSampleService(
@@ -282,6 +292,7 @@ class World:
         target: str = "de",
         words: tuple[Word, ...] = (),
         mistakes: tuple[Mistake, ...] = (),
+        stats: Stats | None = None,
     ) -> None:
         """Stores a ready report for a conversation, as the worker would after writing it."""
         now = self.clock()
@@ -298,6 +309,6 @@ class World:
                 words=words,
                 wins=(),
                 next_steps=next_steps,
-                stats=Stats(20, 15, 3, 9),
+                stats=stats or Stats(20, 15, 3, 9),
             ),
         )

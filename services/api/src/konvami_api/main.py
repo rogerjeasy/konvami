@@ -25,6 +25,7 @@ from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
@@ -182,6 +183,15 @@ def build_backend(
         cards=cards,
         clock=_now,
     )
+    progress = ProgressService(
+        profiles=profiles,
+        onboarding=onboarding,
+        placement=placement,
+        conversations=conversations,
+        reports=reports,
+        cards=cards,
+        clock=_now,
+    )
     files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
     accounts = AccountService(
         records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
@@ -197,6 +207,7 @@ def build_backend(
         reports=reports,
         cards=cards,
         home=home,
+        progress=progress,
         accounts=accounts,
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=OpenAiSpeech(openai_key), model=models.speech

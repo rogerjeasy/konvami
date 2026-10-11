@@ -88,6 +88,30 @@ class Saved:
     mistakes: tuple[bool, ...]
 
 
+@dataclass(frozen=True)
+class CardTotals:
+    """What a learner's reviews add up to."""
+
+    # Cards reviewed at least once.
+    learned: int
+    # Reviews since a given moment, and how many of them were not "again".
+    reviews: int
+    remembered: int
+    reviews_ever: int
+
+
+@dataclass(frozen=True)
+class CardProgress:
+    total: int
+    due: int
+    # Cards reviewed at least once.
+    learned: int
+    # Reviews since a given moment, and how many of them the learner remembered.
+    reviews: int
+    remembered: int
+    reviews_ever: int
+
+
 class CardError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
@@ -125,6 +149,9 @@ class CardRepository(Protocol):
         self, user_id: UUID, language: str, keys: Sequence[tuple[Kind, str]]
     ) -> set[tuple[str, str]]:
         """Those of the given (kind, key) pairs the learner has a card for."""
+
+    def totals(self, user_id: UUID, language: str, since: dt.datetime) -> CardTotals:
+        """What the learner's reviews in a language add up to; `since` bounds the recent ones."""
 
 
 def card_key(front: str) -> str:
@@ -238,6 +265,20 @@ class CardService:
 
     def due_count(self, user_id: UUID) -> int:
         return self._repository.counts(user_id, self._language(user_id), self._clock())[1]
+
+    def progress(self, user_id: UUID, since: dt.datetime) -> CardProgress:
+        """The deck in numbers; reviews are counted since `since`."""
+        language = self._language(user_id)
+        total, due = self._repository.counts(user_id, language, self._clock())
+        totals = self._repository.totals(user_id, language, since)
+        return CardProgress(
+            total=total,
+            due=due,
+            learned=totals.learned,
+            reviews=totals.reviews,
+            remembered=totals.remembered,
+            reviews_ever=totals.reviews_ever,
+        )
 
     def queue(self, user_id: UUID, *, limit: int = QUEUE_DEFAULT) -> Queue:
         """The cards to review now, each with when it would come back for every rating."""

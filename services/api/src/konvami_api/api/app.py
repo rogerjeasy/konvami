@@ -33,6 +33,7 @@ from konvami_api.api.schemas import (
     PlacementOut,
     ProfileOut,
     ProfilePatch,
+    ProgressOut,
     QueueOut,
     ReportOut,
     ReviewIn,
@@ -52,6 +53,7 @@ from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
@@ -71,6 +73,7 @@ class Services:
     reports: ReportService
     cards: CardService
     home: HomeService
+    progress: ProgressService
     accounts: AccountService
     voices: VoiceSampleService
 
@@ -225,6 +228,14 @@ def _router(services: Services) -> APIRouter:
         tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
     ) -> HomeOut:
         return HomeOut.of(services.home.view(user, tz))
+
+    @router.get("/progress", operation_id="getProgress", responses=CONFLICT)
+    def get_progress(
+        user: CurrentUser,
+        # The device's time zone, as for `/home`: days and weeks follow the learner's calendar.
+        tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
+    ) -> ProgressOut:
+        return ProgressOut.of(services.progress.view(user, tz))
 
     @router.get("/conversations", operation_id="getConversations", responses=REFUSED)
     def get_conversations(
