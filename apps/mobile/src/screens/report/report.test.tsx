@@ -257,6 +257,22 @@ describe('5.10 Session report', () => {
     ).toBeTruthy();
   });
 
+  it('stops offering another try once a report has failed too often', async () => {
+    const api = talked();
+    api.reported(ID, 'failed');
+    await open(api);
+    api.failNext('requestConversationReport', 'report_limit');
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Try again' }));
+
+    expect(
+      await screen.findByText(
+        'This report couldn’t be written, even after several tries. Your conversation is still in your library.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  });
+
   it('says when the report cannot be loaded and loads it again', async () => {
     const api = talked();
     api.reported(ID);

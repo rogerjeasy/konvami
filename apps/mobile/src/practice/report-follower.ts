@@ -17,7 +17,8 @@ export type ReportView =
   | { phase: 'tooShort' }
   /**
    * `failed`: the server could not write it. `timeout`: it never arrived. Otherwise the code of
-   * the request that failed (`network`, `not_found`, `consent_required`, `unavailable`, …).
+   * the request that failed (`network`, `not_found`, `consent_required`, `unavailable`,
+   * `report_limit`, …).
    */
   | { phase: 'failed'; code: string };
 

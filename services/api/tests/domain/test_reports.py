@@ -9,6 +9,7 @@ from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.reports import (
     MAX_MISTAKES,
+    MAX_REQUESTS,
     MAX_WORDS,
     PENDING_FOR,
     SUMMARY_MAX,
@@ -633,6 +634,60 @@ def test_a_report_that_never_arrived_can_be_asked_for_again() -> None:
 
     assert state == ReportState("pending")
     assert world.report_starter.started == [call_id, call_id]
+
+
+def test_a_request_that_loses_to_another_one_starts_nothing() -> None:
+    """Two requests can both see that there is no report yet. Storage lets one of them start
+    the writing (the contract tests show that with real connections); the other must not."""
+    world = World()
+    call_id = unreported(world)
+    seen_before_the_other_request = world.report_store.load
+
+    def none_yet(asked_for: str) -> None:
+        # What this request saw; meanwhile the other one has asked.
+        world.report_store.load = seen_before_the_other_request  # type: ignore[method-assign]
+        world.report_store.request(
+            asked_for, world.clock(), stale_before=world.clock(), max_requests=MAX_REQUESTS
+        )
+        return None
+
+    world.report_store.load = none_yet  # type: ignore[method-assign, assignment]
+
+    state = world.reports.request(USER, call_id)
+
+    assert state == ReportState("pending")
+    assert world.report_starter.started == []
+
+
+def test_a_report_is_written_by_one_worker_only() -> None:
+    world = World()
+    call_id = talked(world)
+    asked = len(world.text.tasks)
+    # Another invocation of the worker has taken it.
+    world.report_store.claim(call_id, world.clock())
+
+    world.reports.write(call_id)
+
+    assert len(world.text.tasks) == asked
+    assert world.reports.view(USER, call_id) == ReportState("pending")
+
+
+def test_a_report_that_keeps_failing_is_asked_for_only_so_many_times() -> None:
+    world = World()
+    call_id = talked(world)
+    for _ in range(MAX_REQUESTS - 1):
+        world.text.answers.append(TextModelError("no answer"))
+        world.reports.write(call_id)
+        world.reports.request(USER, call_id)
+    world.text.answers.append(TextModelError("no answer"))
+    world.reports.write(call_id)
+
+    with pytest.raises(ReportError) as refused:
+        world.reports.request(USER, call_id)
+
+    assert refused.value.code == "report_limit"
+    assert len(world.report_starter.started) == MAX_REQUESTS
+    assert world.reports.view(USER, call_id) == ReportState("failed")
 
 
 def test_asking_again_does_not_help_a_conversation_that_was_too_short() -> None:

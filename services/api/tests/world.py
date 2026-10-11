@@ -17,7 +17,7 @@ from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
-from konvami_api.domain.reports import Report, ReportService, Stats
+from konvami_api.domain.reports import MAX_REQUESTS, Report, ReportService, Stats
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -257,7 +257,8 @@ class World:
 
     def reported(self, call_id: str, *next_steps: str, target: str = "de") -> None:
         """Stores a ready report for a conversation, as the worker would after writing it."""
-        self.report_store.requested(call_id, self.clock())
+        now = self.clock()
+        self.report_store.request(call_id, now, stale_before=now, max_requests=MAX_REQUESTS)
         self.report_store.written(
             call_id,
             "ready",

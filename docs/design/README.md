@@ -45,6 +45,7 @@ canvas after that date is not in it.
 | 5.10 | Mistakes can be missing from a report | The live transcript comes from speech recognition, which tidies some mistakes away; the second, verbatim pass of spec §9.4 needs the recording |
 | 5.10 | A correction the second check could not confirm is shown, marked "Not sure" | Spec §16.1: never as a fact. One the second check calls wrong is not shown at all |
 | 5.10 | Words are listed, not saved as cards; no "Explain my mistake", no "That's wrong" flag | Cards (spec §6.7), the Tutor (spec §6.8) and the review queue (spec §16.1) are not built |
+| 5.10 | A report that keeps failing can be asked for three times in all | Every attempt is two requests to a paid model; storage lets one request, and one worker, through at a time |
 | 5.10 | The report is written by the call worker, not a Step Functions pipeline | Two steps (analysis, second check) need no orchestration yet; memory, cards and the level update will (spec §12.2) |
 | 5.1 | "Let's polish this" shows the last report's next steps once there is a report | A report is newer than the placement test; the partners are told the same before a call |
 | 6.1 | No memories, subscription or usage on the Profile (spec §14.1) | Those features are not built; the Profile shows what exists |

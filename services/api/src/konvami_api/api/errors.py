@@ -52,7 +52,7 @@ _PERSONA_STATUS = {
     "writer_unavailable": 503,
 }
 _SAMPLE_STATUS = {"no_language": 409}
-_REPORT_STATUS = {"nothing_to_report": 409, "consent_required": 403}
+_REPORT_STATUS = {"nothing_to_report": 409, "consent_required": 403, "report_limit": 429}
 _UNAVAILABLE = 503
 
 

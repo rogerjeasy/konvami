@@ -101,6 +101,10 @@ export function ReportStatus({
   if (view.phase === 'failed' && view.code === 'unavailable') {
     return <NoticeBox icon="info">{t('report.unavailable')}</NoticeBox>;
   }
+  // The server writes a report only so many times: asking again would change nothing.
+  if (view.phase === 'failed' && view.code === 'report_limit') {
+    return <NoticeBox icon="info">{t('report.gaveUp')}</NoticeBox>;
+  }
   return (
     <LoadState
       failed={view.phase === 'failed'}

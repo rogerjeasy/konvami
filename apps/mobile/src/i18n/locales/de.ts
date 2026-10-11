@@ -775,6 +775,8 @@ export const de: Translation = {
       action: '„Datenschutz und KI“ öffnen',
     },
     unavailable: 'Berichte sind gerade nicht verfügbar. Versuch es später noch einmal.',
+    gaveUp:
+      'Dieser Bericht konnte auch nach mehreren Versuchen nicht geschrieben werden. Dein Gespräch steht weiterhin in deiner Bibliothek.',
     share: {
       title: 'Dein Anteil am Gespräch',
       label: 'Du hast {{percent}} der Wörter gesagt',

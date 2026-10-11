@@ -243,7 +243,7 @@ def _router(services: Services) -> APIRouter:
     @router.post(
         "/conversations/{conversation_id}/report",
         operation_id="requestConversationReport",
-        responses=NOT_FOUND | CONFLICT | FORBIDDEN | UNAVAILABLE,
+        responses=NOT_FOUND | CONFLICT | FORBIDDEN | LIMITED | UNAVAILABLE,
     )
     def request_conversation_report(user: CurrentUser, conversation_id: str) -> ReportOut:
         """Asks for a report that is not there: for an earlier conversation, or again after one

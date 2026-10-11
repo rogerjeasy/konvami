@@ -319,6 +319,8 @@ _PRACTICE_DAYS = f"""
 
 # Asking for a report is a write for the call's learner, so it begins like every other one
 # (see `_ENSURE_USER`). A call that does not exist, or whose account was deleted, gets nothing.
+# One statement decides whether the report may be started (again) and marks it, so of several
+# requests at once only one gets its row back: each start is paid for.
 _REQUEST_REPORT = """
     WITH call AS (
         SELECT call_id, user_id FROM voice_session WHERE call_id = :call_id
@@ -326,10 +328,28 @@ _REQUEST_REPORT = """
     owner AS (
         INSERT INTO app_user (id) SELECT user_id FROM call ON CONFLICT (id) DO NOTHING
     )
-    INSERT INTO session_report (call_id, status, requested_at, content)
-    SELECT call_id, 'pending', CAST(:requested_at AS timestamptz), NULL FROM call
+    INSERT INTO session_report (call_id, status, requested_at, requests, writing_since, content)
+    SELECT call_id, 'pending', CAST(:requested_at AS timestamptz), 1, NULL, NULL FROM call
     ON CONFLICT (call_id) DO UPDATE
-        SET status = EXCLUDED.status, requested_at = EXCLUDED.requested_at, content = NULL
+        SET status = EXCLUDED.status, requested_at = EXCLUDED.requested_at,
+            requests = session_report.requests + 1, writing_since = NULL, content = NULL
+        WHERE session_report.requests < :max_requests
+          AND (
+              session_report.status = 'failed'
+              OR (
+                  session_report.status = 'pending'
+                  AND session_report.requested_at < CAST(:stale_before AS timestamptz)
+              )
+          )
+    RETURNING call_id
+"""
+
+# The worker that sets writing_since is the one that writes; a second one gets no row.
+_CLAIM_REPORT = """
+    UPDATE session_report
+    SET writing_since = CAST(:at AS timestamptz)
+    WHERE call_id = :call_id AND status = 'pending' AND writing_since IS NULL
+    RETURNING call_id
 """
 
 _WRITE_REPORT = """
@@ -697,8 +717,22 @@ class SqlReportRepository:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
 
-    def requested(self, call_id: str, at: dt.datetime) -> None:
-        self._client.execute(_REQUEST_REPORT, {"call_id": call_id, "requested_at": at.isoformat()})
+    def request(
+        self, call_id: str, at: dt.datetime, *, stale_before: dt.datetime, max_requests: int
+    ) -> bool:
+        rows = self._client.execute(
+            _REQUEST_REPORT,
+            {
+                "call_id": call_id,
+                "requested_at": at.isoformat(),
+                "stale_before": stale_before.isoformat(),
+                "max_requests": max_requests,
+            },
+        )
+        return bool(rows)
+
+    def claim(self, call_id: str, at: dt.datetime) -> bool:
+        return bool(self._client.execute(_CLAIM_REPORT, {"call_id": call_id, "at": at.isoformat()}))
 
     def written(self, call_id: str, status: Status, report: Report | None) -> None:
         content = None if report is None else json.dumps(dataclasses.asdict(report))

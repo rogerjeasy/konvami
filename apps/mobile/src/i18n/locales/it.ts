@@ -774,6 +774,8 @@ export const it: Translation = {
       action: 'Apri «Privacy e IA»',
     },
     unavailable: 'I resoconti non sono disponibili in questo momento. Riprova più tardi.',
+    gaveUp:
+      'Non è stato possibile scrivere questo resoconto, nemmeno dopo diversi tentativi. La tua conversazione è ancora nella tua libreria.',
     share: {
       title: 'La tua parte della conversazione',
       label: 'Hai detto il {{percent}} delle parole',

@@ -762,6 +762,8 @@ export const en = {
       action: 'Open “Privacy and AI”',
     },
     unavailable: 'Reports aren’t available right now. Try again later.',
+    gaveUp:
+      'This report couldn’t be written, even after several tries. Your conversation is still in your library.',
     share: {
       title: 'Your share of the talking',
       label: 'You said {{percent}} of the words',

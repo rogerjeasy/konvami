@@ -47,6 +47,9 @@ MAX_NEXT_STEPS = 3
 # How long a report may be on its way. Writing takes a minute or two at most (two answers from
 # the text model); one still pending after this was lost with its worker and counts as failed.
 PENDING_FOR = dt.timedelta(minutes=5)
+# How often one conversation's report is asked for at most: after a failure the learner can ask
+# again, but every attempt is two requests to a paid model.
+MAX_REQUESTS = 3
 # The most characters kept of the summary, of a quoted sentence, and of any other text.
 SUMMARY_MAX = 600
 QUOTE_MAX = 300
@@ -155,9 +158,18 @@ class ReportError(Exception):
 
 
 class ReportRepository(Protocol):
-    def requested(self, call_id: str, at: dt.datetime) -> None:
-        """A report is being written for this call: pending since `at`. Whatever was stored for
-        the call before is replaced. Nothing is stored for a call that does not exist."""
+    def request(
+        self, call_id: str, at: dt.datetime, *, stale_before: dt.datetime, max_requests: int
+    ) -> bool:
+        """Marks the call's report as being written (pending since `at`) and says whether this
+        caller is the one to start the writing. That is so when the call has no report yet, when
+        its report failed, or when it has been pending since before `stale_before`; never for a
+        call that does not exist, and never more than `max_requests` times for one call.
+        Checking and marking are one step: of several callers at once, one is told True."""
+
+    def claim(self, call_id: str, at: dt.datetime) -> bool:
+        """A worker takes the pending report to write it. Only one worker is told True for
+        each time the report was asked for."""
 
     def written(self, call_id: str, status: Status, report: Report | None) -> None:
         """How writing ended; `report` when it is ready."""
@@ -520,7 +532,7 @@ class ReportService:
             return
         if counts:
             try:
-                self._start(call_id)
+                self._begin(call_id)
             except ReportError:
                 # Stored as failed: the learner can ask for it again.
                 return
@@ -543,16 +555,31 @@ class ReportService:
             consented = False
         if not consented:
             raise ReportError("consent_required")
-        self._start(call_id)
-        return ReportState("pending")
+        if self._begin(call_id):
+            return ReportState("pending")
+        # Not this request's to start: another one got there first, or it was asked for too
+        # often. What is stored now says which.
+        state = self._state(call_id)
+        if state.status == "failed":
+            raise ReportError("report_limit")
+        return state
 
-    def _start(self, call_id: str) -> None:
-        self._repository.requested(call_id, self._clock())
+    def _begin(self, call_id: str) -> bool:
+        """Starts the writing, if it is this caller's to start (see `ReportRepository.request`).
+        Each start costs two requests to a paid model, so storage decides, in one step, which
+        of several callers at once may make it."""
+        now = self._clock()
+        mine = self._repository.request(
+            call_id, now, stale_before=now - PENDING_FOR, max_requests=MAX_REQUESTS
+        )
+        if not mine:
+            return False
         try:
             self._starter.start(call_id)
         except Exception as error:
             self._repository.written(call_id, "failed", None)
             raise ReportError("unavailable") from error
+        return True
 
     def view(self, user_id: UUID, call_id: str) -> ReportState:
         """The report of one of the learner's conversations, or how far it is."""
@@ -579,10 +606,8 @@ class ReportService:
         """Writes the report that was asked for. Runs apart from any request (`ReportStarter`),
         and does nothing for a call whose report is not waiting to be written."""
         session = self._sessions.get(call_id)
-        if session is None:
-            return
-        stored = self._repository.load(call_id)
-        if stored is None or stored.status != "pending":
+        # A second invocation for the same report (a delivery made twice) finds it taken.
+        if session is None or not self._repository.claim(call_id, self._clock()):
             return
         transcript = self._conversations.transcript(session.user_id, call_id)
         turns = transcript.turns

@@ -775,6 +775,8 @@ export const fr: Translation = {
       action: 'Ouvrir « Confidentialité et IA »',
     },
     unavailable: 'Les bilans ne sont pas disponibles pour le moment. Réessaie plus tard.',
+    gaveUp:
+      'Ce bilan n’a pas pu être rédigé, même après plusieurs essais. Ta conversation est toujours dans ta bibliothèque.',
     share: {
       title: 'Ta part de la conversation',
       label: 'Tu as dit {{percent}} des mots',

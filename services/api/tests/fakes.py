@@ -399,10 +399,31 @@ class InMemoryReportRepository:
     def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
         self._calls = calls
         self.reports: dict[str, StoredReport] = {}
+        self._requests: dict[str, int] = {}
+        self._claimed: set[str] = set()
 
-    def requested(self, call_id: str, at: datetime) -> None:
-        if call_id in self._calls.sessions:
-            self.reports[call_id] = StoredReport("pending", at.astimezone(UTC), None)
+    def request(
+        self, call_id: str, at: datetime, *, stale_before: datetime, max_requests: int
+    ) -> bool:
+        if call_id not in self._calls.sessions:
+            return False
+        stored = self.reports.get(call_id)
+        if stored is not None:
+            lost = stored.status == "pending" and stored.requested_at < stale_before
+            again = stored.status == "failed" or lost
+            if not again or self._requests[call_id] >= max_requests:
+                return False
+        self._requests[call_id] = self._requests.get(call_id, 0) + 1
+        self._claimed.discard(call_id)
+        self.reports[call_id] = StoredReport("pending", at.astimezone(UTC), None)
+        return True
+
+    def claim(self, call_id: str, at: datetime) -> bool:
+        stored = self.reports.get(call_id)
+        if stored is None or stored.status != "pending" or call_id in self._claimed:
+            return False
+        self._claimed.add(call_id)
+        return True
 
     def written(self, call_id: str, status: Status, report: Report | None) -> None:
         stored = self.reports.get(call_id)

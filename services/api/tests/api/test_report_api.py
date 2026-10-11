@@ -7,6 +7,8 @@ from uuid import UUID
 from konvami_api.api.app import Services
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.live_call import Turn
+from konvami_api.domain.reports import MAX_REQUESTS
+from konvami_api.domain.text import TextModelError
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from tests.api.conftest import OTHER_USER, USER, Call
 from tests.api.test_api import NOON, onboarded
@@ -236,3 +238,23 @@ def test_a_report_that_cannot_be_started_is_unavailable(
     assert response.status == 503
     assert response.body == {"error": {"code": "unavailable", "field": None}}
     assert call("GET", "/v1/conversations/rtc_1/report").body["status"] == "failed"
+
+
+def test_a_report_that_keeps_failing_cannot_be_asked_for_without_end(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+    report_starter: RecordingReportStarter,
+) -> None:
+    talked(call, text_model, calls)
+    statuses = []
+    for _ in range(MAX_REQUESTS + 1):
+        statuses.append(call("POST", "/v1/conversations/rtc_1/report").status)
+        text_model.answers.append(TextModelError("no answer"))
+        services.reports.write("rtc_1")
+
+    assert statuses == [200] * MAX_REQUESTS + [429]
+    assert len(report_starter.started) == MAX_REQUESTS
+    refused = call("POST", "/v1/conversations/rtc_1/report")
+    assert refused.body == {"error": {"code": "report_limit", "field": None}}

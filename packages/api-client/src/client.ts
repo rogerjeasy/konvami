@@ -170,7 +170,8 @@ export interface ApiClient {
   /**
    * Asks for a report that is not there (an earlier conversation, or one whose report failed).
    * Answers at once with its status; the report is written in the background. Fails with
-   * `nothing_to_report`, `consent_required` or `unavailable`.
+   * `nothing_to_report`, `consent_required`, `unavailable` or, for a report that failed too
+   * often, `report_limit`.
    */
   requestConversationReport(id: string): Promise<ConversationReport>;
 }
