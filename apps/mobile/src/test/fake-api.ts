@@ -2,6 +2,7 @@ import {
   ApiError,
   type Activity,
   type ApiClient,
+  type Card,
   type Catalog,
   type Conversation,
   type ConversationReport,
@@ -16,6 +17,7 @@ import {
   type Profile,
   type ProfileChange,
   type ProfileSource,
+  type Rating,
   type SessionReport,
   type TranscriptTurn,
 } from '@konvami/api-client';
@@ -87,6 +89,20 @@ const MINUTE_MS = 60 * 1000;
 const PAGE_DEFAULT = 20;
 const RECENT_CONVERSATIONS = 3;
 
+/**
+ * When a card comes back after each rating, as the fake server has it (ms). The real server
+ * works it out per card (services/api: domain/fsrs.py); these are its answers for a new card.
+ */
+export const FAKE_DUE_IN_MS: Record<Rating, number> = {
+  again: 10 * MINUTE_MS,
+  hard: DAY_MS,
+  good: 2 * DAY_MS,
+  easy: 8 * DAY_MS,
+};
+/** As on the server (services/api: domain/cards.py). */
+const CARDS_PAGE_DEFAULT = 50;
+const QUEUE_DEFAULT = 20;
+
 /** A placement result one level above the typical learner's own estimate (A2). */
 export const FAKE_RESULT: PlacementResult = {
   levels: { speaking: 'B1', listening: 'B1', grammar: 'A2', vocabulary: 'B1', pronunciation: 'B2' },
@@ -116,6 +132,7 @@ export const FAKE_REPORT: SessionReport = {
       category: 'perfekt_auxiliary',
       severity: 'noticeable',
       certain: true,
+      saved: false,
     },
     {
       turn: 2,
@@ -125,6 +142,7 @@ export const FAKE_REPORT: SessionReport = {
       category: 'word_order_subordinate',
       severity: 'minor',
       certain: false,
+      saved: false,
     },
   ],
   rewrites: [
@@ -136,8 +154,13 @@ export const FAKE_REPORT: SessionReport = {
     },
   ],
   words: [
-    { text: 'das Wochenende', meaning: 'weekend', example: 'Wie war dein Wochenende?' },
-    { text: 'die Ausstellung', meaning: 'exhibition', example: null },
+    {
+      text: 'das Wochenende',
+      meaning: 'weekend',
+      example: 'Wie war dein Wochenende?',
+      saved: false,
+    },
+    { text: 'die Ausstellung', meaning: 'exhibition', example: null, saved: false },
   ],
   wins: ['You told a whole story in the past tense.'],
   nextSteps: ['The Perfekt with “sein” for verbs of movement', 'Verb at the end after “weil”'],
@@ -335,6 +358,11 @@ export interface FakeApi extends ApiClient {
     id: string,
     state?: Exclude<ConversationReport['status'], 'ready'> | SessionReport,
   ): void;
+  /**
+   * A learner with flashcards: a conversation whose report is ready (`FAKE_REPORT`), and its two
+   * words and its confirmed correction saved as cards, all due. Returns the cards, oldest first.
+   */
+  learning(): Promise<Card[]>;
   /** Whether `deleteAccount` was called (and went through). */
   readonly deleted: boolean;
   /** The upload ids handed out so far, in order. */
@@ -357,6 +385,8 @@ export function createFakeApi(): FakeApi {
   let completed = false;
   /** Every practice call, with what was said in it. */
   const practice: { conversation: Conversation; turns: TranscriptTurn[] }[] = [];
+  /** The learner's flashcards, in the order they were made. */
+  let cards: Card[] = [];
   /** Where each conversation's report stands; a conversation not in here has none. */
   const reports = new Map<string, ConversationReport>();
   let picture: string | null = null;
@@ -504,6 +534,16 @@ export function createFakeApi(): FakeApi {
     };
   }
 
+  /** What makes two cards the same, as on the server: their words. */
+  const cardKey = (text: string) => (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).join(' ');
+  const hasCard = (kind: Card['kind'], front: string) =>
+    cards.some((card) => card.kind === kind && cardKey(card.front) === cardKey(front));
+  const dueCards = () =>
+    cards
+      .filter((card) => Date.parse(card.dueAt) <= now)
+      .sort((a, b) => a.dueAt.localeCompare(b.dueAt) || a.createdAt.localeCompare(b.createdAt));
+  const deckSummary = () => ({ total: cards.length, due: dueCards().length });
+
   /** As on the server: the last report's next steps, and until then the placement test's. */
   function focus(): Pick<Home, 'focus' | 'focusSource'> {
     const latest = counted()
@@ -544,6 +584,7 @@ export function createFakeApi(): FakeApi {
           }
         : null,
       ...focus(),
+      cardsDue: dueCards().length,
       exam:
         exam && (daysLeft === null || daysLeft >= 0)
           ? {
@@ -662,6 +703,20 @@ export function createFakeApi(): FakeApi {
       entry.turns = turnsOf(learnerSays);
     },
 
+    async learning() {
+      const { id } = this.talked(0, { learnerSays: FAKE_REPORT_SAYS });
+      this.reported(id);
+      for (const source of [
+        { kind: 'word', index: 0 },
+        { kind: 'word', index: 1 },
+        { kind: 'correction', index: 0 },
+      ] as const) {
+        await this.saveCard({ conversationId: id, ...source });
+      }
+      // The saving above is not what a test wants to count.
+      calls.length = 0;
+      return [...cards];
+    },
     reported(id, state = FAKE_REPORT) {
       reports.set(
         id,
@@ -736,7 +791,98 @@ export function createFakeApi(): FakeApi {
       if (!practice.some(({ conversation }) => conversation.id === id)) {
         throw new ApiError('not_found', 404);
       }
-      return reports.get(id) ?? { status: 'none', report: null };
+      const stands = reports.get(id) ?? { status: 'none', report: null };
+      const report = stands.report;
+      if (!report) return stands;
+      // As on the server: each word and mistake says whether the learner has it as a card.
+      return {
+        ...stands,
+        report: {
+          ...report,
+          words: report.words.map((word) => ({ ...word, saved: hasCard('word', word.text) })),
+          mistakes: report.mistakes.map((mistake) => ({
+            ...mistake,
+            saved: hasCard('correction', mistake.original),
+          })),
+        },
+      };
+    },
+    async saveCard({ conversationId, kind, index }) {
+      await record('saveCard', { conversationId, kind, index });
+      if (!practice.some(({ conversation }) => conversation.id === conversationId)) {
+        throw new ApiError('not_found', 404);
+      }
+      const report = reports.get(conversationId)?.report;
+      if (!report) throw new ApiError('no_report', 409);
+      const word = kind === 'word' ? report.words[index] : undefined;
+      const mistake = kind === 'correction' ? report.mistakes[index] : undefined;
+      if (!word && !mistake) throw new ApiError('no_such_item', 422);
+      if (mistake && !mistake.certain) throw new ApiError('not_certain', 422);
+      const front = word?.text ?? mistake?.original ?? '';
+      const known = cards.find(
+        (card) => card.kind === kind && cardKey(card.front) === cardKey(front),
+      );
+      if (known) return known;
+      // A second apart, so that the newest card is always the last one made.
+      const made = new Date(now + cards.length * 1000).toISOString();
+      const card: Card = {
+        id: `card_${cards.length + 1}`,
+        kind,
+        front,
+        back: word?.meaning ?? mistake?.corrected ?? '',
+        note: word ? word.example : (mistake?.explanation ?? null),
+        explainedIn: report.language,
+        conversationId,
+        createdAt: made,
+        dueAt: new Date(now).toISOString(),
+        reviewedAt: null,
+        reviews: 0,
+        lapses: 0,
+      };
+      cards.push(card);
+      return card;
+    },
+    async getCards({ before, limit = CARDS_PAGE_DEFAULT } = {}) {
+      await record('getCards', { before, limit });
+      const newestFirstCards = [...cards].reverse();
+      const older = newestFirstCards.filter((card) => !before || card.createdAt < before);
+      const page = older.slice(0, limit);
+      return {
+        cards: page,
+        next: older.length > limit ? (page.at(-1)?.createdAt ?? null) : null,
+        ...deckSummary(),
+      };
+    },
+    async getDueCards(limit = QUEUE_DEFAULT) {
+      await record('getDueCards', limit);
+      const dueIn = Object.fromEntries(
+        Object.entries(FAKE_DUE_IN_MS).map(([rating, ms]) => [rating, ms / 1000]),
+      ) as Record<Rating, number>;
+      return {
+        cards: dueCards()
+          .slice(0, limit)
+          .map((card) => ({ card, dueIn })),
+        due: dueCards().length,
+      };
+    },
+    async reviewCard(id, rating) {
+      await record('reviewCard', id, rating);
+      const card = cards.find((candidate) => candidate.id === id);
+      if (!card) throw new ApiError('not_found', 404);
+      const reviewed: Card = {
+        ...card,
+        dueAt: new Date(now + FAKE_DUE_IN_MS[rating]).toISOString(),
+        reviewedAt: new Date(now).toISOString(),
+        reviews: card.reviews + 1,
+      };
+      cards = cards.map((candidate) => (candidate.id === id ? reviewed : candidate));
+      return reviewed;
+    },
+    async removeCard(id) {
+      await record('removeCard', id);
+      if (!cards.some((card) => card.id === id)) throw new ApiError('not_found', 404);
+      cards = cards.filter((card) => card.id !== id);
+      return deckSummary();
     },
     async requestConversationReport(id) {
       await record('requestConversationReport', id);

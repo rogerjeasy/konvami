@@ -164,6 +164,73 @@ describe('5.10 Session report', () => {
     expect(screen.getByText('Ich bin nach Berlin gefahren')).toBeTruthy();
   });
 
+  const saves = (api: FakeApi) =>
+    api.calls.filter(([method]) => method === 'saveCard').map(([, source]) => source);
+
+  it('saves a word as a card', async () => {
+    const api = await openReady();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Save “das Wochenende” as a card' }));
+
+    expect(await screen.findByLabelText('“das Wochenende” is in your cards')).toBeTruthy();
+    expect(saves(api)).toEqual([{ conversationId: ID, kind: 'word', index: 0 }]);
+    expect(screen.queryByRole('button', { name: 'Save “das Wochenende” as a card' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save “die Ausstellung” as a card' })).toBeTruthy();
+  });
+
+  it('shows what is a card already as saved', async () => {
+    const api = talked();
+    api.reported(ID);
+    await api.saveCard({ conversationId: ID, kind: 'word', index: 1 });
+    await api.saveCard({ conversationId: ID, kind: 'correction', index: 0 });
+    await open(api);
+    await screen.findByText(FAKE_REPORT.summary);
+
+    expect(screen.getByLabelText('“die Ausstellung” is in your cards')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save “das Wochenende” as a card' })).toBeTruthy();
+    expect(screen.getByText('In your cards')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Practise this' })).toBeNull();
+  });
+
+  it('saves every word that is not a card yet in one go', async () => {
+    const api = await openReady();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Save all' }));
+
+    expect(await screen.findByLabelText('“die Ausstellung” is in your cards')).toBeTruthy();
+    expect(screen.getByLabelText('“das Wochenende” is in your cards')).toBeTruthy();
+    expect(saves(api)).toEqual([
+      { conversationId: ID, kind: 'word', index: 0 },
+      { conversationId: ID, kind: 'word', index: 1 },
+    ]);
+    expect(screen.queryByRole('button', { name: 'Save all' })).toBeNull();
+  });
+
+  it('makes a card of a correction that was confirmed, and offers none for one that was not', async () => {
+    const api = await openReady();
+
+    // Only the first mistake was confirmed by the second check.
+    expect(screen.getAllByRole('button', { name: 'Practise this' })).toHaveLength(1);
+    await fireEvent.press(screen.getByRole('button', { name: 'Practise this' }));
+
+    expect(await screen.findByText('In your cards')).toBeTruthy();
+    expect(saves(api)).toEqual([{ conversationId: ID, kind: 'correction', index: 0 }]);
+    expect(screen.queryByRole('button', { name: 'Practise this' })).toBeNull();
+  });
+
+  it.each([
+    ['network', 'That couldn’t be saved. Try again.'],
+    ['too_many', 'Your deck is full. Remove a card to add this one.'],
+  ])('says so when a card could not be saved (%s)', async (code, message) => {
+    const api = await openReady();
+    api.failNext('saveCard', code);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Save “das Wochenende” as a card' }));
+
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save “das Wochenende” as a card' })).toBeTruthy();
+  });
+
   it('starts another conversation with the same partner', async () => {
     await openReady();
 

@@ -377,6 +377,41 @@ describe('api client', () => {
     ]);
   });
 
+  it('saves, lists, reviews and removes flashcards', async () => {
+    const card = { id: 'card/1', front: 'das Wochenende' };
+    const deck = { cards: [card], next: null, total: 1, due: 1 };
+    const { fetch, calls } = fakeFetch(
+      json(200, card),
+      json(200, deck),
+      json(200, deck),
+      json(200, { cards: [], due: 0 }),
+      json(200, { cards: [], due: 0 }),
+      json(200, card),
+      json(200, { total: 0, due: 0 }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.saveCard({ conversationId: 'rtc_1', kind: 'word', index: 2 })).toEqual(card);
+    expect(await api.getCards()).toEqual(deck);
+    await api.getCards({ before: '2026-10-09T10:00:00Z', limit: 10 });
+    expect(await api.getDueCards()).toEqual({ cards: [], due: 0 });
+    await api.getDueCards(5);
+    expect(await api.reviewCard('card/1', 'good')).toEqual(card);
+    expect(await api.removeCard('card/1')).toEqual({ total: 0, due: 0 });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/cards',
+      'GET https://api.example.test/v1/cards',
+      'GET https://api.example.test/v1/cards?before=2026-10-09T10%3A00%3A00Z&limit=10',
+      'GET https://api.example.test/v1/cards/due',
+      'GET https://api.example.test/v1/cards/due?limit=5',
+      'POST https://api.example.test/v1/cards/card%2F1/review',
+      'DELETE https://api.example.test/v1/cards/card%2F1',
+    ]);
+    expect(calls[0]?.body).toEqual({ conversationId: 'rtc_1', kind: 'word', index: 2 });
+    expect(calls[5]?.body).toEqual({ rating: 'good' });
+  });
+
   it('accepts a base URL with a trailing slash', async () => {
     const { fetch, calls } = fakeFetch(json(200, {}));
 

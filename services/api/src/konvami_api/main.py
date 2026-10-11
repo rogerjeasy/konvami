@@ -15,6 +15,7 @@ from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import AccountService
+from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
@@ -31,6 +32,7 @@ from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
+    SqlCardRepository,
     SqlConversationRepository,
     SqlDraftLog,
     SqlOnboardingRepository,
@@ -147,6 +149,9 @@ def build_backend(
         model=models.report,
         clock=_now,
     )
+    cards = CardService(
+        profiles=profiles, reports=reports, repository=SqlCardRepository(sql), clock=_now
+    )
     voice = VoiceCallService(
         settings=voice_settings(environment.get(VOICE_VARIABLE)),
         scripts={
@@ -174,6 +179,7 @@ def build_backend(
         placement=placement,
         conversations=conversations,
         reports=reports,
+        cards=cards,
         clock=_now,
     )
     files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
@@ -189,6 +195,7 @@ def build_backend(
         personas=personas,
         conversations=conversations,
         reports=reports,
+        cards=cards,
         home=home,
         accounts=accounts,
         voices=VoiceSampleService(

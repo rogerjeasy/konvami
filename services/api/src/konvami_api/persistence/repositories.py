@@ -10,12 +10,14 @@ from typing import Any
 from uuid import UUID
 
 from konvami_api.domain.accounts import DELETION_MEMORY
+from konvami_api.domain.cards import Card, Kind
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
     DayActivity,
     PartnerHistory,
 )
+from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona
@@ -371,6 +373,88 @@ _LATEST_REPORT = """
     WHERE s.user_id = CAST(:user_id AS uuid) AND r.status = 'ready'
     ORDER BY s.started_at DESC, s.call_id DESC
     LIMIT 1
+"""
+
+_CARD = f"""
+    SELECT CAST(id AS text) AS id, kind, front, back, note, explained_in, source_call_id,
+           {epoch_micros("created_at")} AS created_at, {epoch_micros("due_at")} AS due_at,
+           {epoch_micros("reviewed_at")} AS reviewed_at, stability, difficulty, reviews, lapses
+    FROM card
+"""
+# A learner's cards in one language.
+_DECK = "user_id = CAST(:user_id AS uuid) AND language = :language"
+
+# The limit bounds storage, not money: two requests at the same moment could both count one
+# card too few and leave the deck one over, which harms nobody.
+_ADD_CARD = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO card
+        (id, user_id, language, kind, front_key, front, back, note, explained_in,
+         source_call_id, created_at, due_at)
+    SELECT CAST(:id AS uuid), CAST(:user_id AS uuid), :language, :kind, :front_key, :front,
+           :back, CAST(:note AS text), :explained_in, CAST(:source_call_id AS text),
+           CAST(:created_at AS timestamptz), CAST(:due_at AS timestamptz)
+    WHERE (SELECT count(*) FROM card WHERE {_DECK}) < :limit
+    ON CONFLICT (user_id, language, kind, front_key) DO NOTHING
+    RETURNING id
+"""
+
+_CARD_BY_KEY = f"{_CARD} WHERE {_DECK} AND kind = :kind AND front_key = :front_key"
+
+_CARD_BY_ID = f"{_CARD} WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)"
+
+_LIST_CARDS = f"""
+    {_CARD}
+    WHERE {_DECK}
+      AND (CAST(:before AS timestamptz) IS NULL OR created_at < CAST(:before AS timestamptz))
+    ORDER BY created_at DESC, id DESC
+    LIMIT :limit
+"""
+
+_DUE_CARDS = f"""
+    {_CARD}
+    WHERE {_DECK} AND due_at <= CAST(:now AS timestamptz)
+    ORDER BY due_at, created_at, id
+    LIMIT :limit
+"""
+
+_COUNT_CARDS = f"""
+    SELECT CAST(count(*) AS integer) AS total,
+           CAST(count(*) FILTER (WHERE due_at <= CAST(:now AS timestamptz)) AS integer) AS due
+    FROM card
+    WHERE {_DECK}
+"""
+
+# The review is stored only while the card still has the number of reviews it was read with,
+# and logged in the same statement: a rating sent twice at once counts once.
+_REVIEW_CARD = """
+    WITH done AS (
+        UPDATE card
+        SET due_at = CAST(:due_at AS timestamptz),
+            reviewed_at = CAST(:reviewed_at AS timestamptz),
+            stability = CAST(:stability AS double precision),
+            difficulty = CAST(:difficulty AS double precision),
+            reviews = :reviews, lapses = :lapses
+        WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+          AND reviews = :reviews_before
+        RETURNING id, reviews, reviewed_at
+    )
+    INSERT INTO card_review (card_id, position, reviewed_at, rating)
+    SELECT id, reviews, reviewed_at, :rating FROM done
+    RETURNING card_id
+"""
+
+_REMOVE_CARD = """
+    DELETE FROM card WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+    RETURNING id
+"""
+
+_KNOWN_CARDS = """
+    SELECT c.kind, c.front_key
+    FROM card c
+    JOIN jsonb_array_elements(CAST(:keys AS jsonb)) AS wanted (item)
+      ON c.kind = wanted.item ->> 'kind' AND c.front_key = wanted.item ->> 'key'
+    WHERE c.user_id = CAST(:user_id AS uuid) AND c.language = :language
 """
 
 
@@ -754,3 +838,120 @@ class SqlReportRepository:
     def latest(self, user_id: UUID) -> Report | None:
         rows = self._client.execute(_LATEST_REPORT, {"user_id": str(user_id)})
         return _report(json.loads(rows[0]["content"])) if rows else None
+
+
+def _card(row: dict[str, Any]) -> Card:
+    learned = row["stability"] is not None
+    return Card(
+        id=UUID(row["id"]),
+        kind=row["kind"],
+        front=row["front"],
+        back=row["back"],
+        note=row["note"],
+        explained_in=row["explained_in"],
+        source_call_id=row["source_call_id"],
+        created_at=from_epoch_micros(row["created_at"]),
+        due_at=from_epoch_micros(row["due_at"]),
+        reviewed_at=_moment(row["reviewed_at"]),
+        memory=Memory(float(row["stability"]), float(row["difficulty"])) if learned else None,
+        reviews=row["reviews"],
+        lapses=row["lapses"],
+    )
+
+
+class SqlCardRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def add(self, user_id: UUID, language: str, key: str, card: Card, limit: int) -> bool:
+        rows = self._client.execute(
+            _ADD_CARD,
+            {
+                "id": str(card.id),
+                "user_id": str(user_id),
+                "language": language,
+                "kind": card.kind,
+                "front_key": key,
+                "front": card.front,
+                "back": card.back,
+                "note": card.note,
+                "explained_in": card.explained_in,
+                "source_call_id": card.source_call_id,
+                "created_at": card.created_at.isoformat(),
+                "due_at": card.due_at.isoformat(),
+                "limit": limit,
+            },
+        )
+        return bool(rows)
+
+    def by_key(self, user_id: UUID, language: str, kind: Kind, key: str) -> Card | None:
+        rows = self._client.execute(
+            _CARD_BY_KEY,
+            {"user_id": str(user_id), "language": language, "kind": kind, "front_key": key},
+        )
+        return _card(rows[0]) if rows else None
+
+    def get(self, user_id: UUID, card_id: UUID) -> Card | None:
+        rows = self._client.execute(_CARD_BY_ID, {"id": str(card_id), "user_id": str(user_id)})
+        return _card(rows[0]) if rows else None
+
+    def listed(
+        self, user_id: UUID, language: str, limit: int, before: dt.datetime | None
+    ) -> list[Card]:
+        rows = self._client.execute(
+            _LIST_CARDS,
+            {
+                "user_id": str(user_id),
+                "language": language,
+                "limit": limit,
+                "before": _iso(before),
+            },
+        )
+        return [_card(row) for row in rows]
+
+    def due(self, user_id: UUID, language: str, now: dt.datetime, limit: int) -> list[Card]:
+        rows = self._client.execute(
+            _DUE_CARDS,
+            {"user_id": str(user_id), "language": language, "now": now.isoformat(), "limit": limit},
+        )
+        return [_card(row) for row in rows]
+
+    def counts(self, user_id: UUID, language: str, now: dt.datetime) -> tuple[int, int]:
+        rows = self._client.execute(
+            _COUNT_CARDS, {"user_id": str(user_id), "language": language, "now": now.isoformat()}
+        )
+        return rows[0]["total"], rows[0]["due"]
+
+    def reviewed(self, user_id: UUID, card: Card, rating: Rating, reviews_before: int) -> bool:
+        memory = card.memory
+        rows = self._client.execute(
+            _REVIEW_CARD,
+            {
+                "id": str(card.id),
+                "user_id": str(user_id),
+                "due_at": card.due_at.isoformat(),
+                "reviewed_at": _iso(card.reviewed_at),
+                "stability": memory.stability if memory else None,
+                "difficulty": memory.difficulty if memory else None,
+                "reviews": card.reviews,
+                "lapses": card.lapses,
+                "reviews_before": reviews_before,
+                "rating": rating,
+            },
+        )
+        return bool(rows)
+
+    def remove(self, user_id: UUID, card_id: UUID) -> bool:
+        rows = self._client.execute(_REMOVE_CARD, {"id": str(card_id), "user_id": str(user_id)})
+        return bool(rows)
+
+    def known(
+        self, user_id: UUID, language: str, keys: Sequence[tuple[Kind, str]]
+    ) -> set[tuple[str, str]]:
+        if not keys:
+            return set()
+        wanted = json.dumps([{"kind": kind, "key": key} for kind, key in keys])
+        rows = self._client.execute(
+            _KNOWN_CARDS, {"user_id": str(user_id), "language": language, "keys": wanted}
+        )
+        return {(row["kind"], row["front_key"]) for row in rows}

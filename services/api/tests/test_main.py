@@ -261,3 +261,27 @@ def test_a_report_is_read_from_the_database(stub: Stubber) -> None:
 
     assert result["statusCode"] == 404
     stub.assert_no_pending_responses()
+
+
+def test_the_deck_is_read_from_the_database(stub: Stubber) -> None:
+    """The entry point builds the card service; here only that its route answers."""
+    statement = {
+        "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+        "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+        "database": "konvami",
+        "sql": ANY,
+        "parameters": ANY,
+        "formatRecordsAs": "JSON",
+    }
+    # The learner's language, their cards, and how many there are.
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, statement)
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, statement)
+    stub.add_response(
+        "execute_statement", {"formattedRecords": '[{"total": 0, "due": 0}]'}, statement
+    )
+
+    result = invoke(stub, "GET", "/v1/cards")
+
+    assert result["statusCode"] == 200
+    assert json.loads(result["body"]) == {"cards": [], "next": None, "total": 0, "due": 0}
+    stub.assert_no_pending_responses()
