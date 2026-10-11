@@ -2,6 +2,7 @@ import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { ReportMistake, ReportRewrite, ReportWord } from '@konvami/api-client';
+import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { CorrectionCard } from '@/components/correction-card';
 import { Icon, type IconName } from '@/components/icon';
@@ -132,6 +133,74 @@ function SaveCorrection({
   );
 }
 
+// Stands between the two counts of what can be kept ("1 correction · 2 words").
+const SEPARATOR = ' · ';
+
+/**
+ * Near the top of a report: one button that makes flashcards of everything in it worth keeping
+ * (its confirmed corrections and its words), so a learner need not find each one further down.
+ * Once all are cards it says so and leads to Learn, where they come back. Nothing when the
+ * report has nothing that can be a card.
+ */
+export function Keep({
+  mistakes,
+  words,
+  saver,
+  onOpenLearn,
+}: {
+  mistakes: readonly ReportMistake[];
+  words: readonly ReportWord[];
+  saver: CardSaver;
+  onOpenLearn: () => void;
+}) {
+  const { t } = useTranslation();
+  if (words.length + mistakes.filter(({ certain }) => certain).length === 0) return null;
+  const { corrections, words: wordsLeft } = saver.unsaved;
+  const left = corrections + wordsLeft;
+  if (left === 0) {
+    return (
+      <Card className="gap-1 p-4">
+        <View accessibilityLiveRegion="polite" className="flex-row items-center gap-2">
+          <SavedTick />
+          <Text variant="label" tone="success" className="flex-1">
+            {t('report.keep.saved')}
+          </Text>
+        </View>
+        <Text variant="small" tone="muted">
+          {t('report.keep.savedBody')}
+        </Text>
+        <View className="items-start">
+          <TextButton tone="primary" label={t('report.keep.learn')} onPress={onOpenLearn} />
+        </View>
+      </Card>
+    );
+  }
+  const counts = [
+    corrections ? t('report.keep.corrections', { count: corrections }) : null,
+    wordsLeft ? t('report.keep.words', { count: wordsLeft }) : null,
+  ].filter((count) => count !== null);
+  return (
+    <Card className="gap-3 p-4">
+      <View className="gap-1">
+        <Text variant="label">{t('report.keep.title')}</Text>
+        <Text variant="small" tone="muted">
+          {counts.join(SEPARATOR)}
+        </Text>
+        <Text variant="small" tone="subtle">
+          {t('report.keep.body')}
+        </Text>
+      </View>
+      <SaveFailure code={saver.failureOfAll} />
+      <Button
+        variant="secondary"
+        label={t('report.keep.save', { count: left })}
+        loading={saver.savingAll}
+        onPress={() => void saver.saveAll()}
+      />
+    </Card>
+  );
+}
+
 /** Sentences that were right, and how they are more usually said. */
 export function Natural({ rewrites }: { rewrites: readonly ReportRewrite[] }) {
   const { t } = useTranslation();
@@ -171,7 +240,6 @@ export function Words({ words, saver }: { words: readonly ReportWord[]; saver: C
   const { t } = useTranslation();
   const { color } = useTheme();
   if (words.length === 0) return null;
-  const unsaved = words.filter((_, i) => !saver.isSaved('word', i)).length;
   return (
     <Section title={t('report.words.title')} count={words.length} collapsible>
       <View className="gap-2.5">
@@ -216,15 +284,6 @@ export function Words({ words, saver }: { words: readonly ReportWord[]; saver: C
           ))}
         </ListGroup>
         <SaveFailure code={saver.failure('word')} />
-        {unsaved > 1 ? (
-          <View className="items-end">
-            <TextButton
-              tone="primary"
-              label={t('report.save.all')}
-              onPress={() => void saver.saveWords()}
-            />
-          </View>
-        ) : null}
       </View>
     </Section>
   );

@@ -192,18 +192,71 @@ describe('5.10 Session report', () => {
     expect(screen.queryByRole('button', { name: 'Practise this' })).toBeNull();
   });
 
-  it('saves every word that is not a card yet in one go', async () => {
+  it('offers to keep everything worth keeping in one go: the confirmed correction and the words', async () => {
     const api = await openReady();
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Save all' }));
+    expect(screen.getByText('Keep what you learned')).toBeTruthy();
+    expect(screen.getByText('1 correction · 2 words')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Save all 3 as cards' }));
 
-    expect(await screen.findByLabelText('“die Ausstellung” is in your cards')).toBeTruthy();
-    expect(screen.getByLabelText('“das Wochenende” is in your cards')).toBeTruthy();
+    expect(await screen.findByText('All in your cards')).toBeTruthy();
     expect(saves(api)).toEqual([
+      { conversationId: ID, kind: 'correction', index: 0 },
       { conversationId: ID, kind: 'word', index: 0 },
       { conversationId: ID, kind: 'word', index: 1 },
     ]);
-    expect(screen.queryByRole('button', { name: 'Save all' })).toBeNull();
+    expect(screen.getByLabelText('“das Wochenende” is in your cards')).toBeTruthy();
+    expect(screen.getByLabelText('“die Ausstellung” is in your cards')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Practise this' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Save all/ })).toBeNull();
+  });
+
+  it('counts and saves only what is not a card yet', async () => {
+    const api = talked();
+    api.reported(ID);
+    await api.saveCard({ conversationId: ID, kind: 'word', index: 1 });
+    await api.saveCard({ conversationId: ID, kind: 'correction', index: 0 });
+    const before = saves(api).length;
+    await open(api);
+    await screen.findByText(FAKE_REPORT.summary);
+
+    expect(screen.getByText('1 word')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Save it as a card' }));
+
+    expect(await screen.findByText('All in your cards')).toBeTruthy();
+    expect(saves(api).slice(before)).toEqual([{ conversationId: ID, kind: 'word', index: 0 }]);
+  });
+
+  it('leads to Learn once everything is a card', async () => {
+    await openReady();
+    await fireEvent.press(screen.getByRole('button', { name: 'Save all 3 as cards' }));
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Open Learn' }));
+
+    expect(router.navigate).toHaveBeenCalledWith('/learn');
+  });
+
+  it('offers nothing to keep when a report has no words and no confirmed correction', async () => {
+    await openReady(talked(), {
+      ...FAKE_REPORT,
+      mistakes: FAKE_REPORT.mistakes.filter(({ certain }) => !certain),
+      words: [],
+    });
+
+    expect(screen.queryByText('Keep what you learned')).toBeNull();
+  });
+
+  it('stops saving and says why when the deck is full', async () => {
+    const api = await openReady();
+    api.failNext('saveCard', 'too_many');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Save all 3 as cards' }));
+
+    expect(
+      await screen.findByText('Your deck is full. Remove a card to add this one.'),
+    ).toBeTruthy();
+    expect(saves(api)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Save all 3 as cards' })).toBeTruthy();
   });
 
   it('makes a card of a correction that was confirmed, and offers none for one that was not', async () => {
