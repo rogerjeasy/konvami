@@ -2,18 +2,21 @@ import { createContext, useContext, useEffect, useSyncExternalStore, type ReactN
 import type { ApiClient, PersonaDraft, PersonaVoice } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { createAccountStore, type AccountState, type AccountStore } from './account-store';
+import { createMemoryStore, type MemoryState, type MemoryStore } from './memory-store';
 import { createPartnersStore, type PartnersState, type PartnersStore } from './partners-store';
 import type { PictureDevice } from './pictures';
 import type { SamplePlayer } from './sample-player';
 
 /**
  * Everything the Profile screens (section 6) need beyond the session and the learner's
- * answers: the photo, the partners as Persona Studio edits them, and the device's photo picker
- * and audio player.
+ * answers: the photo, the partners as Persona Studio edits them, what those partners know
+ * about the learner, and the device's photo picker and audio player.
  */
 export interface ProfileServices {
   account: AccountStore;
   partners: PartnersStore;
+  /** What the learner's partners know about them from earlier conversations. */
+  memory: MemoryStore;
   pictures: PictureDevice;
   samples: SamplePlayer;
   /**
@@ -47,6 +50,7 @@ export function createProfileServices(
   return {
     account: createAccountStore(api, device.pictures.send),
     partners: createPartnersStore(api, device.onPartnersChanged),
+    memory: createMemoryStore(api, Date.now),
     pictures: device.pictures,
     samples: device.samples,
     studioStart: {
@@ -65,7 +69,7 @@ const ProfileContext = createContext<ProfileServices | null>(null);
 /**
  * Provides the profile services to every screen. It reads the learner's photo once they are
  * signed in (the header shows it everywhere) and empties the stores when they sign out, so one
- * account never sees another's photo or partners on a shared device.
+ * account never sees another's photo, partners or memories on a shared device.
  */
 export function ProfileProvider({
   services,
@@ -82,6 +86,7 @@ export function ProfileProvider({
     services.studioStart.set(null);
     services.account.reset();
     services.partners.reset();
+    services.memory.reset();
   }, [status, services]);
   return <ProfileContext.Provider value={services}>{children}</ProfileContext.Provider>;
 }
@@ -102,4 +107,10 @@ export function useAccount(): AccountState {
 export function usePartnerList(): PartnersState {
   const { partners } = useProfileServices();
   return useSyncExternalStore(partners.subscribe, partners.getState, partners.getState);
+}
+
+/** What the learner's partners know about them; re-renders when it changes. */
+export function useMemories(): MemoryState {
+  const { memory } = useProfileServices();
+  return useSyncExternalStore(memory.subscribe, memory.getState, memory.getState);
 }

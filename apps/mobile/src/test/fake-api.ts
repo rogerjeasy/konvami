@@ -8,6 +8,8 @@ import {
   type ConversationReport,
   type Home,
   type HomePartner,
+  type Memories,
+  type Memory,
   type Onboarding,
   type Persona,
   type PersonaDraft,
@@ -304,6 +306,61 @@ export const FAKE_TEMPLATES: PersonaDraft[] = [
   },
 ];
 
+/** As on the server (services/api: domain/memories.py and domain/profile.py). */
+const MEMORY_TEXT_MAX = 200;
+const MAX_AVOID_TOPICS = 10;
+
+/**
+ * What Amara's partners know about her after a few conversations, newest first: something
+ * coming up, something about her life, something she would rather not talk about, and
+ * something that is between her and Lena.
+ */
+export const FAKE_MEMORIES: Memory[] = [
+  {
+    id: 'eeeeeeee-eeee-4eee-8eee-000000000004',
+    kind: 'relationship',
+    text: 'Promised Lena a photo of her sister’s visit.',
+    day: null,
+    partnerId: 'aaaaaaaa-aaaa-4aaa-8aaa-000000000001',
+    partnerName: 'Lena',
+    createdAt: '2026-10-08T18:00:00Z',
+    updatedAt: '2026-10-08T18:00:00Z',
+  },
+  {
+    id: 'eeeeeeee-eeee-4eee-8eee-000000000003',
+    kind: 'preference',
+    text: 'Would rather not talk about politics.',
+    day: null,
+    partnerId: null,
+    partnerName: null,
+    createdAt: '2026-10-08T18:00:00Z',
+    updatedAt: '2026-10-08T18:00:00Z',
+  },
+  {
+    id: 'eeeeeeee-eeee-4eee-8eee-000000000002',
+    kind: 'fact',
+    text: 'Works as a nurse and wants to change jobs.',
+    day: null,
+    partnerId: null,
+    partnerName: null,
+    createdAt: '2026-10-06T18:00:00Z',
+    updatedAt: '2026-10-06T18:00:00Z',
+  },
+  {
+    id: 'eeeeeeee-eeee-4eee-8eee-000000000001',
+    kind: 'event',
+    text: 'Has a job interview at a logistics company in Zurich.',
+    day: '2026-10-16',
+    partnerId: null,
+    partnerName: null,
+    createdAt: '2026-10-06T18:00:00Z',
+    updatedAt: '2026-10-06T18:00:00Z',
+  },
+];
+
+/** What makes two memories the same, roughly as on the server: their words. */
+const wording = (text: string) => (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).join(' ');
+
 /** As on the server (services/api: domain/personas.py). */
 const MAX_PARTNERS = 12;
 const DRAFTS_PER_DAY = 20;
@@ -364,6 +421,11 @@ export interface FakeApi extends ApiClient {
    * words and its confirmed correction saved as cards, all due. Returns the cards, oldest first.
    */
   learning(): Promise<Card[]>;
+  /**
+   * What the learner's partners know about them, as the server's worker would have written it
+   * down after their conversations (`FAKE_MEMORIES` unless others are given).
+   */
+  remembering(memories?: Memory[]): void;
   /** Whether `deleteAccount` was called (and went through). */
   readonly deleted: boolean;
   /** The upload ids handed out so far, in order. */
@@ -392,6 +454,10 @@ export function createFakeApi(): FakeApi {
   let reviewLog: { id: string; rating: Rating }[] = [];
   /** Where each conversation's report stands; a conversation not in here has none. */
   const reports = new Map<string, ConversationReport>();
+  /** What partners know about the learner, newest first, and what the learner set. */
+  let memories: Memory[] = [];
+  let memoryEnabled = true;
+  let avoidTopics: string[] = [];
   let picture: string | null = null;
   const uploads: string[] = [];
   let deleted = false;
@@ -700,6 +766,12 @@ export function createFakeApi(): FakeApi {
 
   const account = () => ({ picture: picture ? { url: picture } : null });
 
+  const memoryBook = (): Memories => ({
+    enabled: memoryEnabled,
+    avoidTopics: [...avoidTopics],
+    memories: [...memories],
+  });
+
   /** A new partner at the end of the list, unless the list is full. */
   function add(fields: PersonaDraft): Persona {
     if (!target()) throw new ApiError('no_language', 409);
@@ -812,6 +884,9 @@ export function createFakeApi(): FakeApi {
       // The saving above is not what a test wants to count.
       calls.length = 0;
       return [...cards];
+    },
+    remembering(known = FAKE_MEMORIES) {
+      memories = [...known];
     },
     reported(id, state = FAKE_REPORT) {
       reports.set(
@@ -998,6 +1073,54 @@ export function createFakeApi(): FakeApi {
       const pending: ConversationReport = { status: 'pending', report: null };
       reports.set(id, pending);
       return pending;
+    },
+    async getMemories() {
+      await record('getMemories');
+      return memoryBook();
+    },
+    async configureMemories(settings) {
+      await record('configureMemories', settings);
+      if (settings.avoidTopics) {
+        const topics = settings.avoidTopics.map((topic) => topic.trim().replace(/\s+/g, ' '));
+        const distinct = new Set(topics.map((topic) => topic.toLowerCase()));
+        if (
+          topics.some((topic) => !topic) ||
+          distinct.size !== topics.length ||
+          topics.length > MAX_AVOID_TOPICS
+        ) {
+          throw new ApiError('invalid_value', 422, 'avoid_topics');
+        }
+        avoidTopics = topics;
+      }
+      if (settings.enabled !== undefined) memoryEnabled = settings.enabled;
+      return memoryBook();
+    },
+    async changeMemory(id, change) {
+      await record('changeMemory', id, change);
+      const current = memories.find((memory) => memory.id === id);
+      if (!current) throw new ApiError('not_found', 404);
+      const text = change.text === undefined ? current.text : change.text.trim();
+      if (!wording(text) || text.length > MEMORY_TEXT_MAX) throw new ApiError('invalid_value', 422);
+      if (change.day && current.kind !== 'event') throw new ApiError('invalid_value', 422);
+      const same = (other: Memory) =>
+        other.id !== id &&
+        other.partnerId === current.partnerId &&
+        wording(other.text) === wording(text);
+      if (memories.some(same)) throw new ApiError('duplicate', 409);
+      const changed: Memory = {
+        ...current,
+        text,
+        day: change.day === undefined ? current.day : change.day,
+        updatedAt: new Date(now).toISOString(),
+      };
+      memories = memories.map((memory) => (memory.id === id ? changed : memory));
+      return changed;
+    },
+    async removeMemory(id) {
+      await record('removeMemory', id);
+      if (!memories.some((memory) => memory.id === id)) throw new ApiError('not_found', 404);
+      memories = memories.filter((memory) => memory.id !== id);
+      return memoryBook();
     },
     async getPlacement() {
       await record('getPlacement');

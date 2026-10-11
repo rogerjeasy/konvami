@@ -88,6 +88,7 @@ describe('6.1 Profile', () => {
     ['Learning', '/account/learning'],
     ['My partners', '/account/partners'],
     ['New partner', '/account/partners/new'],
+    ['What my partners know', '/account/memory'],
     ['Privacy and AI', '/account/privacy'],
     ['Security', '/account/security'],
   ])('leads to %s', async (row, route) => {

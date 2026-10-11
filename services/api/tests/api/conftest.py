@@ -15,6 +15,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
+from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
@@ -34,6 +35,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
+    InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -197,11 +199,18 @@ def report_starter() -> RecordingReportStarter:
 
 
 @pytest.fixture
+def memory_store(calls: InMemoryVoiceSessionRepository) -> InMemoryMemoryRepository:
+    """What is remembered, for tests that need something to have been written down."""
+    return InMemoryMemoryRepository(calls)
+
+
+@pytest.fixture
 def services(
     clock: FixedClock,
     voice_provider: FakeVoiceProvider,
     text_model: ScriptedTextModel,
     calls: InMemoryVoiceSessionRepository,
+    memory_store: InMemoryMemoryRepository,
     files: InMemoryFileStore,
     directory: FakeAccountDirectory,
     account_records: InMemoryAccountRepository,
@@ -249,6 +258,15 @@ def services(
         clock=clock,
         new_id=lambda: next(card_ids),
     )
+    memories = MemoryService(
+        profiles=profiles,
+        conversations=conversations,
+        sessions=calls,
+        repository=memory_store,
+        text_model=text_model,
+        model="gpt-6-luna",
+        clock=clock,
+    )
     voice = VoiceCallService(
         settings=VOICE,
         scripts={
@@ -261,6 +279,7 @@ def services(
                 placement=placement,
                 conversations=conversations,
                 reports=reports,
+                memories=memories,
             ),
         },
         accounts=directory,
@@ -307,6 +326,7 @@ def services(
         conversations=conversations,
         reports=reports,
         cards=cards,
+        memories=memories,
         home=home,
         progress=progress,
         accounts=accounts,

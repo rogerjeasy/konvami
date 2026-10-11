@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 from konvami_api.domain import fsrs
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.profile import ProfileService
-from konvami_api.domain.reports import Report, ReportService, words_in
+from konvami_api.domain.reports import Report, ReportService, wording
 
 # A word or phrase to remember, or a sentence the learner said and how it is right.
 Kind = Literal["word", "correction"]
@@ -156,7 +156,7 @@ class CardRepository(Protocol):
 
 def card_key(front: str) -> str:
     """What makes two cards the same: their words, whatever the capitals and punctuation."""
-    return " ".join(words_in(front))
+    return wording(front)
 
 
 def _reviewed(card: Card, rating: Rating, now: dt.datetime) -> Card:

@@ -220,6 +220,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Memories
+         * @description What the learner's partners know about them from earlier conversations.
+         */
+        get: operations["getMemories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Configure Memories
+         * @description Turns memory on or off, or names the topics partners leave alone.
+         */
+        patch: operations["configureMemories"];
+        trace?: never;
+    };
+    "/v1/memories/{memory_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Memory
+         * @description Forgets one memory for good.
+         */
+        delete: operations["removeMemory"];
+        options?: never;
+        head?: never;
+        /** Change Memory */
+        patch: operations["changeMemory"];
+        trace?: never;
+    };
     "/v1/onboarding": {
         parameters: {
             query?: never;
@@ -839,6 +884,73 @@ export interface components {
              * @enum {string}
              */
             top: "teal" | "graphite" | "stone" | "amber";
+        };
+        /**
+         * MemoriesOut
+         * @description What the learner's partners know about them, and what the learner set (spec §6.11).
+         */
+        MemoriesOut: {
+            /** Avoidtopics */
+            avoidTopics: string[];
+            /** Enabled */
+            enabled: boolean;
+            /** Memories */
+            memories: components["schemas"]["MemoryOut"][];
+        };
+        /** MemoryOut */
+        MemoryOut: {
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Day */
+            day: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "fact" | "event" | "preference" | "relationship";
+            /** Partnerid */
+            partnerId: string | null;
+            /** Partnername */
+            partnerName: string | null;
+            /** Text */
+            text: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /**
+         * MemoryPatch
+         * @description What to change about one memory. A key left out is not a change; `day: null` takes an
+         *     event's day away.
+         */
+        MemoryPatch: {
+            /** Day */
+            day?: string | null;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+        };
+        /**
+         * MemorySettingsPatch
+         * @description A setting left out stays as it is.
+         */
+        MemorySettingsPatch: {
+            /** Avoidtopics */
+            avoidTopics?: string[] | null;
+            /** Enabled */
+            enabled?: boolean | null;
         };
         /** MilestoneOut */
         MilestoneOut: {
@@ -2119,6 +2231,188 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getMemories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    configureMemories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemorySettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removeMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    changeMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemoryPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoryOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

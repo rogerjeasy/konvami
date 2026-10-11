@@ -19,6 +19,8 @@ from konvami_api.domain.cards import Card, CardRepository, CardTotals, card_key
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.live_call import Turn
+from konvami_api.domain.memories import Memory as Remembered
+from konvami_api.domain.memories import MemoryRepository, memory_key
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
@@ -46,6 +48,7 @@ from konvami_api.persistence.repositories import (
     SqlCardRepository,
     SqlConversationRepository,
     SqlDraftLog,
+    SqlMemoryRepository,
     SqlOnboardingRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
@@ -59,6 +62,7 @@ from tests.fakes import (
     InMemoryCardRepository,
     InMemoryConversationRepository,
     InMemoryDraftLog,
+    InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -1629,3 +1633,244 @@ def test_a_removed_card_takes_its_reviews_with_it(cards: CardRepository) -> None
     cards.remove(USER, card(1).id)
 
     assert cards.totals(USER, "de", NOON - DAY) == CardTotals(0, 0, 0, 0)
+
+
+# --- Memories --------------------------------------------------------------------------------
+
+
+@dataclass
+class Memories:
+    personas: PersonaRepository
+    memories: MemoryRepository
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def memories(request: pytest.FixtureRequest) -> Memories:
+    """Memory storage for a learner with two partners and the call `rtc_1`."""
+    if request.param == "memory":
+        calls: VoiceSessionRepository = InMemoryVoiceSessionRepository()
+        stored = Memories(InMemoryPersonaRepository(), InMemoryMemoryRepository(calls))  # type: ignore[arg-type]
+    else:
+        db: SqlClient = request.getfixturevalue("db")
+        calls = SqlVoiceSessionRepository(db)
+        stored = Memories(SqlPersonaRepository(db), SqlMemoryRepository(db))
+    stored.personas.add(USER, "de", [LENA, JONAS])
+    calls.started(VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON))
+    return stored
+
+
+def remembered(number: int, text: str = "Habite à Zurich.", **changes: Any) -> Remembered:
+    """A fact every partner knows, written down `number` minutes after noon."""
+    made = NOON + timedelta(minutes=number)
+    fields: dict[str, Any] = {
+        "id": UUID(f"eeeeeeee-eeee-4eee-8eee-{number:012d}"),
+        "kind": "fact",
+        "text": text,
+        "day": None,
+        "importance": 2,
+        "persona_id": None,
+        "source_call_id": None,
+        "created_at": made,
+        "updated_at": made,
+    }
+    return Remembered(**{**fields, **changes})
+
+
+def keep(memories: MemoryRepository, new: Remembered, *, user: UUID = USER) -> bool:
+    return memories.add(user, memory_key(new.text), new, 100)
+
+
+def test_a_memory_is_read_back_as_it_was_stored(memories: Memories) -> None:
+    berlin = timezone(timedelta(hours=2))
+    new = remembered(
+        1,
+        "A un entretien : « logistique » !",
+        kind="event",
+        day=date(2026, 10, 16),
+        importance=3,
+        source_call_id="rtc_1",
+        created_at=NOON.astimezone(berlin),
+        updated_at=(NOON + HOUR).astimezone(berlin),
+    )
+
+    stored = keep(memories.memories, new)
+
+    assert stored is True
+    assert memories.memories.get(USER, new.id) == replace(
+        new, created_at=NOON, updated_at=NOON + HOUR
+    )
+    assert memories.memories.listed(USER) == [memories.memories.get(USER, new.id)]
+
+
+def test_a_memory_can_belong_to_one_partner(memories: Memories) -> None:
+    new = remembered(1, "Lena a parlé de sa chatte.", kind="relationship", persona_id=LENA.id)
+
+    keep(memories.memories, new)
+
+    assert memories.memories.get(USER, new.id) == new
+
+
+def test_the_same_memory_is_not_stored_twice(memories: Memories) -> None:
+    keep(memories.memories, remembered(1))
+
+    assert keep(memories.memories, remembered(2, "habite à ZURICH !")) is False
+    assert memories.memories.get(USER, remembered(2).id) is None
+    # The same words are another memory when they are one partner's, or another learner's.
+    assert keep(memories.memories, remembered(3, persona_id=LENA.id)) is True
+    assert keep(memories.memories, remembered(4, persona_id=LENA.id)) is False
+    assert keep(memories.memories, remembered(5, persona_id=JONAS.id)) is True
+    assert keep(memories.memories, remembered(6), user=OTHER_USER) is True
+
+
+def test_a_learner_has_room_for_only_so_many_memories(memories: Memories) -> None:
+    for number in (1, 2):
+        memories.memories.add(
+            USER, f"souvenir {number}", remembered(number, f"Souvenir {number}"), 2
+        )
+
+    assert memories.memories.add(USER, "souvenir 3", remembered(3, "Souvenir 3"), 2) is False
+    # The limit is each learner's own.
+    assert memories.memories.add(OTHER_USER, "souvenir 4", remembered(4, "Souvenir 4"), 2) is True
+    assert len(memories.memories.listed(USER)) == 2
+
+
+def test_memories_are_listed_newest_first_for_their_owner_only(memories: Memories) -> None:
+    for number in (1, 2, 3):
+        keep(memories.memories, remembered(number, f"Souvenir {number}"))
+    # Written down at the same moment as the third: the later id comes first.
+    keep(memories.memories, remembered(4, "Souvenir 4", created_at=remembered(3).created_at))
+    keep(memories.memories, remembered(5, "Souvenir 5"), user=OTHER_USER)
+
+    assert [memory.text for memory in memories.memories.listed(USER)] == [
+        "Souvenir 4",
+        "Souvenir 3",
+        "Souvenir 2",
+        "Souvenir 1",
+    ]
+    assert memories.memories.get(OTHER_USER, remembered(1).id) is None
+    assert memories.memories.get(USER, remembered(9).id) is None
+
+
+def test_a_memory_is_stored_anew_by_its_owner_only(memories: Memories) -> None:
+    keep(memories.memories, remembered(1, kind="event", day=date(2026, 10, 16)))
+    now = replace(
+        remembered(1),
+        kind="fact",
+        text="Habite à Winterthour.",
+        importance=3,
+        persona_id=LENA.id,
+        source_call_id="rtc_1",
+        updated_at=NOON + HOUR,
+    )
+
+    assert memories.memories.replace(OTHER_USER, "habite à winterthour", now) is False
+    assert memories.memories.get(USER, now.id) == remembered(
+        1, kind="event", day=date(2026, 10, 16)
+    )
+
+    assert memories.memories.replace(USER, "habite à winterthour", now) is True
+    assert memories.memories.get(USER, now.id) == now
+    # Its old words are free again, and its new ones taken.
+    assert keep(memories.memories, remembered(2, persona_id=LENA.id)) is True
+    assert (
+        keep(memories.memories, remembered(3, "Habite à Winterthour", persona_id=LENA.id)) is False
+    )
+
+
+def test_a_memory_that_is_not_there_cannot_be_stored_anew(memories: Memories) -> None:
+    assert memories.memories.replace(USER, "habite à zurich", remembered(1)) is False
+    assert memories.memories.listed(USER) == []
+
+
+def test_a_memory_cannot_take_the_words_of_another_one(memories: Memories) -> None:
+    keep(memories.memories, remembered(1))
+    keep(memories.memories, remembered(2, "Aime le football."))
+
+    same = replace(remembered(2), text="Habite à Zurich !")
+
+    assert memories.memories.replace(USER, "habite à zurich", same) is False
+    assert memories.memories.get(USER, same.id) == remembered(2, "Aime le football.")
+    # Storing a memory again under its own words is not taking another one's.
+    assert (
+        memories.memories.replace(USER, "aime le football", remembered(2, "Aime le football !"))
+        is True
+    )
+
+
+def test_a_memory_is_forgotten_by_its_owner_only(memories: Memories) -> None:
+    keep(memories.memories, remembered(1))
+
+    assert memories.memories.remove(OTHER_USER, remembered(1).id) is False
+    assert memories.memories.remove(USER, remembered(2).id) is False
+    assert memories.memories.get(USER, remembered(1).id) is not None
+
+    assert memories.memories.remove(USER, remembered(1).id) is True
+    assert memories.memories.listed(USER) == []
+    # What was forgotten can be learned again.
+    assert keep(memories.memories, remembered(2)) is True
+
+
+def test_a_call_is_taken_once_to_write_its_memories_down(memories: Memories) -> None:
+    assert memories.memories.claim("rtc_1", NOON) is True
+    assert memories.memories.claim("rtc_1", NOON + HOUR) is False
+
+
+def test_a_call_that_was_let_go_can_be_taken_again(memories: Memories) -> None:
+    memories.memories.claim("rtc_1", NOON)
+
+    memories.memories.release("rtc_1")
+
+    assert memories.memories.claim("rtc_1", NOON + HOUR) is True
+
+
+def test_a_call_that_does_not_exist_cannot_be_taken(memories: Memories) -> None:
+    assert memories.memories.claim("rtc_ghost", NOON) is False
+    memories.memories.release("rtc_ghost")
+
+
+def test_workers_arriving_together_take_a_call_once(db: SqlClient, postgres_uri: str) -> None:
+    """Of twelve workers started for one conversation at the same moment, one reads it."""
+    SqlVoiceSessionRepository(db).started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    schema = db.execute("SELECT current_schema() AS name")[0]["name"]
+    barrier = threading.Barrier(12)
+
+    def claim() -> bool:
+        with psycopg.connect(postgres_uri, autocommit=True) as connection:
+            connection.execute(f'SET search_path TO "{schema}"')
+            barrier.wait()
+            return SqlMemoryRepository(LocalSqlClient(connection)).claim("rtc_1", NOON)
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        taken = [future.result() for future in [pool.submit(claim) for _ in range(12)]]
+
+    assert sorted(taken) == [False] * 11 + [True]
+
+
+def test_removing_a_partner_forgets_what_was_theirs(db: SqlClient) -> None:
+    personas, stored = SqlPersonaRepository(db), SqlMemoryRepository(db)
+    personas.add(USER, "de", [LENA])
+    keep(stored, remembered(1))
+    keep(stored, remembered(2, "Lena a parlé de sa chatte.", persona_id=LENA.id))
+
+    personas.remove(USER, LENA.id)
+
+    assert stored.listed(USER) == [remembered(1)]
+
+
+def test_a_deleted_learner_has_no_memories_left(db: SqlClient) -> None:
+    stored = SqlMemoryRepository(db)
+    SqlVoiceSessionRepository(db).started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    stored.claim("rtc_1", NOON)
+    keep(stored, remembered(1, source_call_id="rtc_1"))
+
+    SqlAccountRepository(db).delete(USER, NOON)
+
+    assert stored.listed(USER) == []
+    assert db.execute("SELECT 1 AS left FROM memory_extraction") == []
+    # Nothing can be written down for them again.
+    with pytest.raises(psycopg.Error):
+        keep(stored, remembered(2))

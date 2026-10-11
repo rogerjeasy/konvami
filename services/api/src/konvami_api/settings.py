@@ -52,6 +52,9 @@ class TextModels:
     # Writes a conversation's Session Report and checks its corrections a second time: accuracy
     # matters (spec §17.3 lever 5).
     report: str = ""
+    # Reads a conversation for what is worth remembering about the learner (spec §6.11). A
+    # small model (spec §17.3 lever 5): what it writes down the learner can see and put right.
+    memory: str = ""
 
 
 class _TextModels(BaseModel):
@@ -59,9 +62,10 @@ class _TextModels(BaseModel):
 
     assessment: str
     personas: str
-    # Left out by settings written before voice samples, or reports, existed.
+    # Left out by settings written before voice samples, reports, or memory existed.
     speech: str = ""
     report: str = ""
+    memory: str = ""
 
 
 def text_models(raw: str | None) -> TextModels:
@@ -77,4 +81,5 @@ def text_models(raw: str | None) -> TextModels:
         personas=models.personas,
         speech=models.speech,
         report=models.report,
+        memory=models.memory,
     )

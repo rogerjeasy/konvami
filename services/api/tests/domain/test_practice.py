@@ -1,5 +1,9 @@
+from datetime import date, timedelta
+from uuid import UUID
+
 import pytest
 
+from konvami_api.domain.memories import MAX_MEMORIES, Memory
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.practice import PracticeTools
@@ -430,3 +434,168 @@ def test_a_partner_steers_towards_what_the_learner_asked_to_practise() -> None:
 def test_a_partner_speaks_at_the_pace_they_were_given() -> None:
     assert designed(World(), teaching={**USUAL, "speed": 0.8}).speed == 0.8
     assert designed(World()).speed is None
+
+
+# --- Memory (spec §6.11) -------------------------------------------------------------------------
+
+
+def remember(
+    world: World,
+    number: int,
+    text: str,
+    *,
+    kind: str = "fact",
+    day: date | None = None,
+    persona: UUID | None = None,
+) -> None:
+    """Something the learner's partners know about them from before."""
+    memory = Memory(
+        id=UUID(int=number),
+        kind=kind,  # type: ignore[arg-type]
+        text=text,
+        day=day,
+        importance=2,
+        persona_id=persona,
+        source_call_id=None,
+        created_at=NOON,
+        updated_at=NOON,
+    )
+    assert world.memory_store.add(USER, text.casefold(), memory, MAX_MEMORIES)
+
+
+def told(world: World, partner_index: int = 0) -> str:
+    """What an onboarded learner's partner is told today."""
+    partner = world.personas.partners(USER)[partner_index]
+    return world.practice.prepare(USER, world.accounts.get(USER), TODAY, partner.id).instructions
+
+
+def section(text: str, heading: str) -> str:
+    """One section of the instructions, without the ones after it."""
+    return text.split(f"# {heading}\n", 1)[1].split("\n# ", 1)[0]
+
+
+def test_a_partner_knows_what_the_learner_told_before() -> None:
+    world = World()
+    world.onboard()
+    remember(world, 1, "Habite à Zurich.")
+
+    known = section(told(world), "What you know from before")
+
+    assert "- Habite à Zurich." in known
+    # A note has no subject: the partner must not read it as being about themselves.
+    assert "the learner is the subject" in " ".join(known.split())
+
+
+def test_a_partner_asks_how_something_went() -> None:
+    world = World()
+    world.onboard()
+    remember(world, 1, "A un entretien d'embauche.", kind="event", day=date(2026, 10, 8))
+
+    known = section(told(world), "What you know from before")
+
+    asking, _, rest = known.partition("- Thursday, 2026-10-08: A un entretien d'embauche.")
+    assert "Ask how" in asking
+    assert "A un entretien" not in rest
+
+
+def test_a_partner_knows_what_is_coming_up_for_the_learner() -> None:
+    world = World()
+    world.onboard()
+    remember(world, 1, "Passe un examen.", kind="event", day=TODAY)
+    remember(world, 2, "Part à Hambourg.", kind="event", day=date(2026, 10, 17))
+
+    known = section(told(world), "What you know from before")
+
+    coming, _, _ = known.partition("- Saturday, 2026-10-17: Part à Hambourg.")
+    assert "Coming up" in coming
+    assert "- today: Passe un examen." in coming
+
+
+def test_an_event_long_past_is_told_with_its_date() -> None:
+    world = World()
+    world.onboard()
+    remember(world, 1, "A déménagé à Zurich.", kind="event", day=date(2026, 3, 1))
+
+    assert "- A déménagé à Zurich. (2026-03-01)" in told(world)
+
+
+def test_a_partner_no_longer_claims_to_remember_nothing() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.talk(lena, at=NOON - timedelta(days=2))
+    remember(world, 1, "Habite à Zurich.")
+
+    text = told(world)
+
+    assert "You do not remember what was said then" not in text
+    assert "This is all you remember" in text
+
+
+def test_a_partner_with_nothing_to_remember_says_so_honestly() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.talk(lena, at=NOON - timedelta(days=2))
+
+    text = told(world)
+
+    assert "# What you know from before" not in text
+    assert "You do not remember what was said then" in text
+
+
+def test_a_partner_is_told_nothing_from_before_while_memory_is_off() -> None:
+    world = World()
+    world.onboard()
+    remember(world, 1, "Habite à Zurich.")
+    world.profiles.apply(
+        USER, [Change("memory_enabled", False)], source=Source.ASKED, origin=Origin.FORM
+    )
+
+    text = told(world)
+
+    assert "Zurich." not in text
+    assert "# What you know from before" not in text
+
+
+def test_a_partner_knows_what_another_partner_was_told_but_not_what_is_theirs() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    remember(world, 1, "Habite à Zurich.")
+    remember(world, 2, "Lena a parlé de sa chatte.", kind="relationship", persona=lena.id)
+
+    jonas = told(world, partner_index=1)
+
+    assert "- Habite à Zurich." in jonas
+    assert "chatte" not in jonas
+    # Jonas has not met them, and still knows: he must be able to say honestly why.
+    assert "share" in section(jonas, "What you know from before")
+
+
+def test_only_the_partner_who_has_not_talked_since_asks_how_it_went() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    remember(world, 1, "A un entretien d'embauche.", kind="event", day=date(2026, 10, 7))
+    # Lena talked with them the day after; Jonas has not.
+    world.talk(lena, at=NOON - timedelta(days=1))
+
+    assert "Ask how" not in told(world, partner_index=0)
+    assert "Ask how" in told(world, partner_index=1)
+
+
+def test_a_partner_leaves_alone_what_the_learner_asked_to_leave_alone() -> None:
+    world = World()
+    world.onboard()
+    world.profiles.apply(
+        USER,
+        [Change("avoid_topics", ["La politique", "mon ex"]), Change("memory_enabled", False)],
+        source=Source.ASKED,
+        origin=Origin.FORM,
+    )
+
+    learner = section(told(world), "The learner")
+
+    assert "Never bring up" in learner
+    assert "- La politique\n- mon ex" in learner
+
+
+def test_nothing_is_off_limits_until_the_learner_says_so() -> None:
+    assert "Never bring up" not in instructions(World())

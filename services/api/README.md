@@ -4,13 +4,16 @@ The backend of the app: FastAPI on AWS Lambda, PostgreSQL through the RDS Data A
 Terraform (`infra/modules/api`). Design: `docs/superpowers/specs/2026-10-09-onboarding-design.md`
 (onboarding), `2026-10-10-home-design.md` (practice conversations, the library, Today) and
 `2026-10-10-profile-design.md` (the photo, account deletion, Persona Studio, voice samples).
+Memory (product spec §6.11) is `domain/memories.py`: written down by the call worker after a
+conversation's report, told to the partner before the next call, and read, changed and deleted
+by the learner through `/v1/memories`.
 
 ## Layers
 
 | Folder (`src/konvami_api/`) | Holds                                                             | May import       |
 | --------------------------- | ----------------------------------------------------------------- | ---------------- |
 | `api/`                      | HTTP handlers, request and response models, the one error shape   | `domain`         |
-| `domain/`                   | Rules: profile, accounts, personas, practice, voices, home, …     | nothing above it |
+| `domain/`                   | Rules: profile, accounts, personas, practice, memories, home, …   | nothing above it |
 | `persistence/`              | Repositories on PostgreSQL, the Data API client, SQL migrations   | `domain`         |
 | `providers/`                | OpenAI (calls, text, speech), Cognito accounts, S3 files, AWS     | `domain`         |
 | `worker.py`                 | The loop that follows a live voice call from the server           | `domain`         |

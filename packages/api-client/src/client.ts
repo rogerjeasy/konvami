@@ -79,6 +79,15 @@ export type DeckSummary = Schemas['DeckSummaryOut'];
 export type ReviewQueue = Schemas['QueueOut'];
 export type ReviewCard = Schemas['QueueCardOut'];
 export type Rating = Schemas['ReviewIn']['rating'];
+/** Something the learner's partners know about them from an earlier conversation. */
+export type Memory = Schemas['MemoryOut'];
+export type MemoryKind = Memory['kind'];
+/** Everything the partners know, whether memory is on, and the topics they leave alone. */
+export type Memories = Schemas['MemoriesOut'];
+/** The settings to change; the ones left out stay. */
+export type MemorySettings = { enabled?: boolean; avoidTopics?: string[] };
+/** What to change about one memory; `day: null` takes an event's day away. */
+export type MemoryChange = { text?: string; day?: string | null };
 
 /**
  * Why a call failed. Codes the server sends (`invalid_value`, `essentials_incomplete`, …) pass
@@ -209,6 +218,17 @@ export interface ApiClient {
   reviewCard(id: string, rating: Rating): Promise<Card>;
   /** Removes a card; answers with what is left of the deck. */
   removeCard(id: string): Promise<DeckSummary>;
+  /** What the learner's partners know about them, newest first, and the memory settings. */
+  getMemories(): Promise<Memories>;
+  /** Turns memory on or off, or names the topics to leave alone. Fails with `invalid_value`. */
+  configureMemories(settings: MemorySettings): Promise<Memories>;
+  /**
+   * Rewords a memory or moves an event's day. Fails with `invalid_value`, `duplicate` (another
+   * memory says the same) or `not_found`.
+   */
+  changeMemory(id: string, change: MemoryChange): Promise<Memory>;
+  /** Forgets a memory for good; answers with what is left. */
+  removeMemory(id: string): Promise<Memories>;
 }
 
 // The dev database pauses when idle and needs about 15 seconds to wake. The server answers 503
@@ -337,5 +357,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     reviewCard: (id, rating) =>
       request('POST', `/v1/cards/${encodeURIComponent(id)}/review`, { rating }),
     removeCard: (id) => request('DELETE', `/v1/cards/${encodeURIComponent(id)}`),
+    getMemories: () => request('GET', '/v1/memories'),
+    configureMemories: (settings) => request('PATCH', '/v1/memories', settings),
+    changeMemory: (id, change) =>
+      request('PATCH', `/v1/memories/${encodeURIComponent(id)}`, change),
+    removeMemory: (id) => request('DELETE', `/v1/memories/${encodeURIComponent(id)}`),
   };
 }

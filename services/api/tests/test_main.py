@@ -6,6 +6,7 @@ from typing import Any
 
 import boto3
 import pytest
+from botocore.exceptions import ClientError
 from botocore.stub import ANY, Stubber
 
 from konvami_api import main
@@ -284,4 +285,65 @@ def test_the_deck_is_read_from_the_database(stub: Stubber) -> None:
 
     assert result["statusCode"] == 200
     assert json.loads(result["body"]) == {"cards": [], "next": None, "total": 0, "due": 0}
+    stub.assert_no_pending_responses()
+
+
+WITH_MEMORY = {
+    **ENVIRONMENT,
+    "KONVAMI_TEXT_MODELS": json.dumps(
+        {"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna", "memory": "gpt-6-luna"}
+    ),
+}
+CALL_LOOKUP = {
+    "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+    "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+    "database": "konvami",
+    "sql": ANY,
+    "parameters": [{"name": "call_id", "value": {"stringValue": "rtc_ghost"}}],
+    "formatRecordsAs": "JSON",
+}
+
+
+def test_after_the_report_the_worker_writes_down_what_the_conversation_told(stub: Stubber) -> None:
+    """Both jobs look the call up in the database (here: no such call), one after the other."""
+    backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
+
+    main.run_worker(backend, {"report": "rtc_ghost"})
+
+    stub.assert_no_pending_responses()
+
+
+def test_a_report_that_cannot_be_written_does_not_cost_the_memories(stub: Stubber) -> None:
+    """Spec §12.2: a failure in one step does not block the others."""
+    backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
+    stub.add_client_error("execute_statement", service_error_code="InternalServerErrorException")
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
+
+    with pytest.raises(ClientError):
+        main.run_worker(backend, {"report": "rtc_ghost"})
+
+    stub.assert_no_pending_responses()
+
+
+def test_what_partners_know_is_read_from_the_database(stub: Stubber) -> None:
+    """The entry point builds the memory service; here only that its route answers."""
+    statement = {
+        "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+        "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+        "database": "konvami",
+        "sql": ANY,
+        "parameters": ANY,
+        "formatRecordsAs": "JSON",
+    }
+    # The learner's settings and their memories. Their partners are not read: no memory names
+    # one.
+    for _ in range(2):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"}, statement)
+
+    result = invoke(stub, "GET", "/v1/memories")
+
+    assert result["statusCode"] == 200
+    assert json.loads(result["body"]) == {"enabled": True, "avoidTopics": [], "memories": []}
     stub.assert_no_pending_responses()

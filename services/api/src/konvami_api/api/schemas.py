@@ -4,10 +4,11 @@ they are stored (`target_language`).
 
 import dataclasses
 import datetime as dt
-from typing import Any, Literal
+from collections.abc import Mapping
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from pydantic.alias_generators import to_camel
 
 from konvami_api.domain.accounts import AccountView, PictureUpload
@@ -33,6 +34,9 @@ from konvami_api.domain.conversations import (
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.home import HomeView, LevelView
 from konvami_api.domain.live_call import Speaker
+from konvami_api.domain.memories import TEXT_MAX as MEMORY_TEXT_MAX
+from konvami_api.domain.memories import Kind as MemoryKind
+from konvami_api.domain.memories import Memory, MemoryBook
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
 from konvami_api.domain.persona_parts import (
     Backdrop,
@@ -61,7 +65,13 @@ from konvami_api.domain.personas import (
     teaching_of,
 )
 from konvami_api.domain.placement import PlacementView
-from konvami_api.domain.profile import GLOBAL_SCOPE, Profile, Source
+from konvami_api.domain.profile import (
+    AVOID_TOPIC_MAX,
+    GLOBAL_SCOPE,
+    MAX_AVOID_TOPICS,
+    Profile,
+    Source,
+)
 from konvami_api.domain.progress import ProgressView
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
@@ -591,6 +601,76 @@ class QueueOut(ApiModel):
 
 class ReviewIn(ApiModel):
     rating: Rating
+
+
+class MemoryOut(ApiModel):
+    id: UUID
+    kind: MemoryKind
+    # A short note with the learner as its subject, in the language explanations were in then.
+    text: str
+    # The date of an event; null for what has no day.
+    day: dt.date | None
+    # Set for what belongs to one partner; null for what every partner knows.
+    partner_id: UUID | None
+    # Null also when that partner is not among the learner's partners now.
+    partner_name: str | None
+    created_at: dt.datetime
+    updated_at: dt.datetime
+
+    @classmethod
+    def of(cls, memory: Memory, partners: Mapping[UUID, Persona]) -> "MemoryOut":
+        partner = partners.get(memory.persona_id) if memory.persona_id else None
+        return cls(
+            id=memory.id,
+            kind=memory.kind,
+            text=memory.text,
+            day=memory.day,
+            partner_id=memory.persona_id,
+            partner_name=partner.name if partner else None,
+            created_at=memory.created_at,
+            updated_at=memory.updated_at,
+        )
+
+
+class MemoriesOut(ApiModel):
+    """What the learner's partners know about them, and what the learner set (spec §6.11)."""
+
+    # Off: nothing new is written down and partners are told nothing from before.
+    enabled: bool
+    # What no partner brings up and nothing is remembered about, in the learner's words.
+    avoid_topics: list[str]
+    # Newest first.
+    memories: list[MemoryOut]
+
+    @classmethod
+    def of(cls, book: MemoryBook, partners: Mapping[UUID, Persona]) -> "MemoriesOut":
+        return cls(
+            enabled=book.enabled,
+            avoid_topics=list(book.avoid_topics),
+            memories=[MemoryOut.of(memory, partners) for memory in book.memories],
+        )
+
+
+class MemorySettingsPatch(ApiModel):
+    """A setting left out stays as it is."""
+
+    # Strict: "no" and 0 are not answers to a privacy setting.
+    enabled: StrictBool | None = None
+    avoid_topics: (
+        Annotated[
+            list[Annotated[str, Field(max_length=AVOID_TOPIC_MAX)]],
+            Field(max_length=MAX_AVOID_TOPICS),
+        ]
+        | None
+    ) = None
+
+
+class MemoryPatch(ApiModel):
+    """What to change about one memory. A key left out is not a change; `day: null` takes an
+    event's day away."""
+
+    text: str = Field(default="", max_length=MEMORY_TEXT_MAX)
+    day: dt.date | None = None
 
 
 class ReportMistakeOut(ApiModel):

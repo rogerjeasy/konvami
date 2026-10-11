@@ -1013,6 +1013,179 @@
         "title": "LookModel",
         "type": "object"
       },
+      "MemoriesOut": {
+        "additionalProperties": false,
+        "description": "What the learner's partners know about them, and what the learner set (spec \u00a76.11).",
+        "properties": {
+          "avoidTopics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avoidtopics",
+            "type": "array"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryOut"
+            },
+            "title": "Memories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "avoidTopics",
+          "memories"
+        ],
+        "title": "MemoriesOut",
+        "type": "object"
+      },
+      "MemoryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "fact",
+              "event",
+              "preference",
+              "relationship"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "partnerId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerid"
+          },
+          "partnerName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnername"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "text",
+          "day",
+          "partnerId",
+          "partnerName",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "MemoryOut",
+        "type": "object"
+      },
+      "MemoryPatch": {
+        "additionalProperties": false,
+        "description": "What to change about one memory. A key left out is not a change; `day: null` takes an\nevent's day away.",
+        "properties": {
+          "day": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "title": "MemoryPatch",
+        "type": "object"
+      },
+      "MemorySettingsPatch": {
+        "additionalProperties": false,
+        "description": "A setting left out stays as it is.",
+        "properties": {
+          "avoidTopics": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avoidtopics"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "title": "MemorySettingsPatch",
+        "type": "object"
+      },
       "MilestoneOut": {
         "additionalProperties": false,
         "properties": {
@@ -3545,6 +3718,221 @@
           }
         },
         "summary": "Get Home"
+      }
+    },
+    "/v1/memories": {
+      "get": {
+        "description": "What the learner's partners know about them from earlier conversations.",
+        "operationId": "getMemories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Memories"
+      },
+      "patch": {
+        "description": "Turns memory on or off, or names the topics partners leave alone.",
+        "operationId": "configureMemories",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemorySettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Configure Memories"
+      }
+    },
+    "/v1/memories/{memory_id}": {
+      "delete": {
+        "description": "Forgets one memory for good.",
+        "operationId": "removeMemory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memory_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Memory Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Remove Memory"
+      },
+      "patch": {
+        "operationId": "changeMemory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memory_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Memory Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Change Memory"
       }
     },
     "/v1/onboarding": {

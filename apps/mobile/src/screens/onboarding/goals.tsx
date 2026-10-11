@@ -2,26 +2,15 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
-import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ChoiceChip } from '@/components/choice-chip';
-import { DateWheels } from '@/components/date-wheels';
+import { DateChoice } from '@/components/date-choice';
 import { Icon, type IconName } from '@/components/icon';
 import { Reveal } from '@/components/motion';
 import { OptionCard } from '@/components/option-card';
-import { Sheet } from '@/components/sheet';
 import { Text } from '@/components/text';
-import { TextButton } from '@/components/text-button';
 import { TextField } from '@/components/text-field';
-import {
-  addMonths,
-  calendarDateOf,
-  fromIsoDate,
-  toIsoDate,
-  withDatePart,
-  type CalendarDate,
-} from '@/lib/dates';
-import { formatDate } from '@/lib/format';
+import { addMonths, calendarDateOf } from '@/lib/dates';
 import { stepFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import type { CefrLevel, GoalReason } from '@/onboarding/essentials';
@@ -58,7 +47,7 @@ function rowsOf<T>(items: readonly T[], width: number): T[][] {
 }
 
 function GoalsForm({ data, today }: { data: OnboardingData; today: Date }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { color } = useTheme();
   const { catalog, essentials } = data;
   const exams =
@@ -72,8 +61,6 @@ function GoalsForm({ data, today }: { data: OnboardingData; today: Date }) {
     essentials.exam?.targetLevel ?? null,
   );
   const [examDate, setExamDate] = useState(essentials.exam?.date ?? null);
-  /** The date on the wheels while the sheet is open; null when it is closed. */
-  const [picking, setPicking] = useState<CalendarDate | null>(null);
 
   const wantsExam = reasons.includes('exam');
   const levels =
@@ -192,34 +179,20 @@ function GoalsForm({ data, today }: { data: OnboardingData; today: Date }) {
 
                   <View className="gap-2.5">
                     <Text variant="fieldLabel">{t('onboarding.goals.examDate')}</Text>
-                    {examDate ? (
-                      <View className="gap-1">
-                        <View className="min-h-field flex-row items-center gap-3 rounded-field border border-field-border bg-bg px-4 py-3">
-                          <Icon name="calendar" color={color.primaryText} size={size.iconMd} />
-                          <Text variant="label" className="flex-1">
-                            {formatDate(i18n.language, examDate)}
-                          </Text>
-                        </View>
-                        <View className="flex-row flex-wrap">
-                          <TextButton
-                            tone="primary"
-                            label={t('onboarding.goals.changeDate')}
-                            onPress={() => setPicking(fromIsoDate(examDate) ?? earliest)}
-                          />
-                          <TextButton
-                            label={t('onboarding.goals.removeDate')}
-                            onPress={() => setExamDate(null)}
-                          />
-                        </View>
-                      </View>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        label={t('onboarding.goals.addDate')}
-                        leading={<Icon name="calendar" color={color.fg} size={size.iconMd} />}
-                        onPress={() => setPicking(addMonths(earliest, DATE_START_MONTHS_AHEAD))}
-                      />
-                    )}
+                    <DateChoice
+                      value={examDate}
+                      onChange={setExamDate}
+                      opensOn={addMonths(earliest, DATE_START_MONTHS_AHEAD)}
+                      min={earliest}
+                      years={{ from: earliest.year, to: earliest.year + DATE_YEARS_AHEAD }}
+                      labels={{
+                        add: t('onboarding.goals.addDate'),
+                        change: t('onboarding.goals.changeDate'),
+                        remove: t('onboarding.goals.removeDate'),
+                        title: t('onboarding.goals.dateTitle'),
+                        confirm: t('onboarding.goals.setDate'),
+                      }}
+                    />
                   </View>
                 </View>
               </Reveal>
@@ -238,33 +211,6 @@ function GoalsForm({ data, today }: { data: OnboardingData; today: Date }) {
           multiline
         />
       </Reveal>
-
-      <Sheet
-        visible={picking !== null}
-        title={t('onboarding.goals.dateTitle')}
-        onClose={() => setPicking(null)}
-      >
-        {picking ? (
-          <View className="gap-4 pt-1">
-            <DateWheels
-              value={picking}
-              min={earliest}
-              years={{ from: earliest.year, to: earliest.year + DATE_YEARS_AHEAD }}
-              onChange={(part, value) =>
-                setPicking((current) => current && withDatePart(current, part, value, earliest))
-              }
-            />
-            <Button
-              label={t('onboarding.goals.setDate')}
-              onPress={() => {
-                stepFeedback();
-                setExamDate(toIsoDate(picking));
-                setPicking(null);
-              }}
-            />
-          </View>
-        ) : null}
-      </Sheet>
     </StepFrame>
   );
 }
