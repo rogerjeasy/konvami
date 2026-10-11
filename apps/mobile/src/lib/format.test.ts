@@ -3,6 +3,7 @@ import {
   formatClock,
   formatDate,
   formatDayLine,
+  formatDayOfYear,
   formatDuration,
   formatPercent,
   formatShortDate,
@@ -74,6 +75,22 @@ describe('formatDate', () => {
   it('keeps the calendar day whatever the device time zone', () => {
     expect(formatDate('en', '2027-01-01')).toBe('January 1, 2027');
     expect(formatDate('en', '2027-12-31')).toBe('December 31, 2027');
+  });
+});
+
+describe('formatDayOfYear', () => {
+  it.each([
+    ['en', 'Oct 5'],
+    ['de', '5. Okt.'],
+    ['fr', '5 oct.'],
+    ['it', '5 ott'],
+  ])('writes a calendar date in a few characters in %s', (locale, expected) => {
+    expect(formatDayOfYear(locale, '2026-10-05')).toBe(expected);
+  });
+
+  it('keeps the calendar day whatever the device time zone', () => {
+    expect(formatDayOfYear('en', '2027-01-01')).toBe('Jan 1');
+    expect(formatDayOfYear('en', '2027-12-31')).toBe('Dec 31');
   });
 });
 

@@ -277,6 +277,10 @@ export const size = {
   progressHeight: 4,
   /** A bar that shows a share of a whole (the learner's part of the talking). */
   meterHeight: 8,
+  /** The tallest bar of a small bar chart (minutes per week). */
+  chartHeight: 96,
+  /** One cell of a week-by-week grid (how often a kind of mistake came up). */
+  heatCell: 20,
   /** One box of the verification code. */
   codeBoxWidth: 48,
   codeBoxHeight: 58,

@@ -49,6 +49,16 @@ export function formatDate(locale: string, isoDate: string): string {
   );
 }
 
+/** A calendar date ("2026-10-05") in a few characters, without its year: "Oct 5", "5. Okt.". */
+export function formatDayOfYear(locale: string, isoDate: string): string {
+  // As `formatDate`: read and written as UTC, so the day never shifts with the device.
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 const SECONDS_PER_MINUTE = 60;
 
 /**

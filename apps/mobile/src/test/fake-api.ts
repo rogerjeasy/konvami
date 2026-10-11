@@ -17,6 +17,7 @@ import {
   type Profile,
   type ProfileChange,
   type ProfileSource,
+  type Progress,
   type Rating,
   type SessionReport,
   type TranscriptTurn,
@@ -387,6 +388,8 @@ export function createFakeApi(): FakeApi {
   const practice: { conversation: Conversation; turns: TranscriptTurn[] }[] = [];
   /** The learner's flashcards, in the order they were made. */
   let cards: Card[] = [];
+  /** Every review of a card that still exists: how it was rated. */
+  let reviewLog: { id: string; rating: Rating }[] = [];
   /** Where each conversation's report stands; a conversation not in here has none. */
   const reports = new Map<string, ConversationReport>();
   let picture: string | null = null;
@@ -552,6 +555,99 @@ export function createFakeApi(): FakeApi {
     if (latest?.nextSteps.length) return { focus: latest.nextSteps, focusSource: 'report' };
     if (result?.weakAreas.length) return { focus: result.weakAreas, focusSource: 'placement' };
     return { focus: [], focusSource: null };
+  }
+
+  /** As on the server (services/api: domain/progress.py), for the fake's own clock and UTC. */
+  function progress(): Progress {
+    const { level } = home();
+    const done = activity();
+    const monday = now - 4 * DAY_MS;
+    const weekOf = (iso: string) => {
+      const day = Date.parse(dayOf(iso));
+      return isoDay(
+        monday + Math.floor((day - Date.parse(isoDay(monday))) / (7 * DAY_MS)) * 7 * DAY_MS,
+      );
+    };
+    const weekStarts = (count: number) =>
+      Array.from({ length: count }, (_, i) => isoDay(monday - (count - 1 - i) * 7 * DAY_MS));
+
+    const days = [...new Set(counted().map((c) => Date.parse(dayOf(c.startedAt))))].sort();
+    let longest = 0;
+    for (let i = 0, run = 0; i < days.length; i += 1) {
+      run = i > 0 && days[i]! - days[i - 1]! === DAY_MS ? run + 1 : 1;
+      longest = Math.max(longest, run);
+    }
+
+    const ready = counted().flatMap((conversation) => {
+      const report = reports.get(conversation.id)?.report;
+      return report ? [{ conversation, report }] : [];
+    });
+    const recent = ready.filter(
+      ({ conversation }) => Date.parse(conversation.startedAt) >= now - 30 * DAY_MS,
+    );
+    const learnerWords = recent.reduce((sum, { report }) => sum + report.stats.learnerWords, 0);
+    const partnerWords = recent.reduce((sum, { report }) => sum + report.stats.partnerWords, 0);
+
+    const mistakeWeeks = weekStarts(6);
+    const kinds = new Map<string, number[]>();
+    for (const { conversation, report } of ready) {
+      const place = mistakeWeeks.indexOf(weekOf(conversation.startedAt));
+      if (place < 0) continue;
+      for (const mistake of report.mistakes.filter(({ certain }) => certain)) {
+        const counts = kinds.get(mistake.category) ?? mistakeWeeks.map(() => 0);
+        counts[place] = (counts[place] ?? 0) + 1;
+        kinds.set(mistake.category, counts);
+      }
+    }
+    const total = (counts: number[]) => counts.reduce((sum, count) => sum + count, 0);
+
+    const longestSeconds = Math.max(0, ...counted().map((c) => c.seconds));
+    const mostWords = Math.max(0, ...ready.map(({ report }) => report.stats.learnerWords));
+    const mark = (id: string, value: number, target: number) => ({
+      id,
+      current: Math.min(value, target),
+      target,
+      reached: value >= target,
+    });
+    return {
+      language: target() ?? '',
+      level,
+      activity: done,
+      weeks: weekStarts(8).map((start) => {
+        const inWeek = counted().filter((c) => weekOf(c.startedAt) === start);
+        return {
+          start,
+          seconds: inWeek.reduce((sum, c) => sum + c.seconds, 0),
+          conversations: inWeek.length,
+        };
+      }),
+      longestStreakDays: longest,
+      talk: learnerWords + partnerWords > 0 ? { learnerWords, partnerWords } : null,
+      mistakes: {
+        weeks: mistakeWeeks,
+        kinds: [...kinds]
+          .sort(([a, x], [b, y]) => total(y) - total(x) || a.localeCompare(b))
+          .slice(0, 6)
+          .map(([category, counts]) => ({ category, counts })),
+      },
+      cards: {
+        total: cards.length,
+        due: dueCards().length,
+        learned: cards.filter((card) => card.reviews > 0).length,
+        reviews: reviewLog.length,
+        remembered: reviewLog.filter(({ rating }) => rating !== 'again').length,
+      },
+      milestones: [
+        mark('first_conversation', done.conversations, 1),
+        mark('five_conversations', done.conversations, 5),
+        mark('long_conversation', Math.floor(longestSeconds / 60), 8),
+        mark('hour_of_talking', Math.floor(done.seconds / 60), 60),
+        mark('week_streak', longest, 7),
+        mark('hundred_words', mostWords, 100),
+        mark('first_card', cards.length, 1),
+        mark('fifty_reviews', reviewLog.length, 50),
+      ],
+    };
   }
 
   function home(): Home {
@@ -771,6 +867,10 @@ export function createFakeApi(): FakeApi {
       await record('getHome', timeZone);
       return home();
     },
+    async getProgress(timeZone) {
+      await record('getProgress', timeZone);
+      return progress();
+    },
     async getConversations({ before, limit = PAGE_DEFAULT } = {}) {
       await record('getConversations', { before, limit });
       const older = counted().filter((conversation) => !before || conversation.startedAt < before);
@@ -876,12 +976,14 @@ export function createFakeApi(): FakeApi {
         reviews: card.reviews + 1,
       };
       cards = cards.map((candidate) => (candidate.id === id ? reviewed : candidate));
+      reviewLog.push({ id, rating });
       return reviewed;
     },
     async removeCard(id) {
       await record('removeCard', id);
       if (!cards.some((card) => card.id === id)) throw new ApiError('not_found', 404);
       cards = cards.filter((card) => card.id !== id);
+      reviewLog = reviewLog.filter((review) => review.id !== id);
       return deckSummary();
     },
     async requestConversationReport(id) {

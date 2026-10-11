@@ -1,13 +1,9 @@
-import { useMemo } from 'react';
 import { View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { motion, size } from '@konvami/design-tokens';
 import type { SessionReport } from '@konvami/api-client';
-import { Animate } from '@/components/motion';
+import { Meter } from '@/components/meter';
 import { Text } from '@/components/text';
 import { formatPercent } from '@/lib/format';
-import { fillKeyframes } from '@/lib/motion';
 
 /**
  * How much of the talking was the learner's, counted in words: a bar that fills to their share,
@@ -15,8 +11,6 @@ import { fillKeyframes } from '@/lib/motion';
  */
 export function TalkShare({ stats, partner }: { stats: SessionReport['stats']; partner: string }) {
   const { t, i18n } = useTranslation();
-  const reduced = useReducedMotion();
-  const fill = useMemo(() => fillKeyframes(reduced), [reduced]);
   const words = stats.learnerWords + stats.partnerWords;
   const share = words > 0 ? stats.learnerWords / words : 0;
   const percent = formatPercent(i18n.language, share);
@@ -25,28 +19,7 @@ export function TalkShare({ stats, partner }: { stats: SessionReport['stats']; p
       <Text variant="overline" tone="subtle">
         {t('report.share.title')}
       </Text>
-      <View
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel={t('report.share.label', { percent })}
-        accessibilityValue={{ min: 0, max: 100, now: Math.round(share * 100) }}
-        className="flex-row items-center gap-3"
-      >
-        <Text variant="stat">{percent}</Text>
-        <View
-          style={{ height: size.meterHeight }}
-          className="flex-1 overflow-hidden rounded-pill bg-track"
-        >
-          <Animate
-            keyframes={fill}
-            duration={motion.slow}
-            delay={motion.enter}
-            style={{ width: `${share * 100}%`, height: '100%', transformOrigin: 'left' }}
-          >
-            <View className="flex-1 rounded-pill bg-primary" />
-          </Animate>
-        </View>
-      </View>
+      <Meter share={share} value={percent} label={t('report.share.label', { percent })} />
       <View className="flex-row flex-wrap gap-x-4 gap-y-1">
         {[
           t('report.share.you', { count: stats.learnerWords }),

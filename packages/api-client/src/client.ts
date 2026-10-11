@@ -52,6 +52,11 @@ export type HomeExam = Schemas['HomeExamOut'];
 export type HomePartner = Schemas['HomePartnerOut'];
 export type Activity = Schemas['ActivityOut'];
 export type ActivityDay = Schemas['DayOut'];
+/** The Progress screen in one answer. */
+export type Progress = Schemas['ProgressOut'];
+export type ProgressWeek = Schemas['WeekOut'];
+export type MistakeKind = Schemas['MistakeKindOut'];
+export type Milestone = Schemas['MilestoneOut'];
 export type Conversation = Schemas['ConversationOut'];
 export type ConversationPage = Schemas['ConversationsOut'];
 export type Transcript = Schemas['TranscriptOut'];
@@ -172,6 +177,11 @@ export interface ApiClient {
    * days and the streak follow the learner's calendar.
    */
   getHome(timeZone?: string): Promise<Home>;
+  /**
+   * The Progress screen in one answer. `timeZone` is the device's, as for `getHome`: days and
+   * weeks follow the learner's calendar.
+   */
+  getProgress(timeZone?: string): Promise<Progress>;
   /** Past conversations, newest first. `before` is the `next` of the page read before. */
   getConversations(page?: { before?: string; limit?: number }): Promise<ConversationPage>;
   /** One conversation and what was said in it. Fails with `not_found`. */
@@ -312,6 +322,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     startVoiceCall: (purpose, sdp, details = {}) =>
       request('POST', '/v1/voice/calls', { purpose, sdp, ...details }),
     getHome: (timeZone) => request('GET', withQuery('/v1/home', { tz: timeZone })),
+    getProgress: (timeZone) => request('GET', withQuery('/v1/progress', { tz: timeZone })),
     getConversations: (page = {}) =>
       request('GET', withQuery('/v1/conversations', { before: page.before, limit: page.limit })),
     getConversation: (id) => request('GET', `/v1/conversations/${encodeURIComponent(id)}`),

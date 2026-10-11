@@ -228,6 +228,40 @@
         "title": "CardOut",
         "type": "object"
       },
+      "CardProgressOut": {
+        "additionalProperties": false,
+        "properties": {
+          "due": {
+            "title": "Due",
+            "type": "integer"
+          },
+          "learned": {
+            "title": "Learned",
+            "type": "integer"
+          },
+          "remembered": {
+            "title": "Remembered",
+            "type": "integer"
+          },
+          "reviews": {
+            "title": "Reviews",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "due",
+          "learned",
+          "reviews",
+          "remembered"
+        ],
+        "title": "CardProgressOut",
+        "type": "object"
+      },
       "CatalogOut": {
         "additionalProperties": false,
         "properties": {
@@ -977,6 +1011,83 @@
           "beard"
         ],
         "title": "LookModel",
+        "type": "object"
+      },
+      "MilestoneOut": {
+        "additionalProperties": false,
+        "properties": {
+          "current": {
+            "title": "Current",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reached": {
+            "title": "Reached",
+            "type": "boolean"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "current",
+          "target",
+          "reached"
+        ],
+        "title": "MilestoneOut",
+        "type": "object"
+      },
+      "MistakeKindOut": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "counts": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "counts"
+        ],
+        "title": "MistakeKindOut",
+        "type": "object"
+      },
+      "MistakeTrendsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/MistakeKindOut"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "weeks": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "weeks",
+          "kinds"
+        ],
+        "title": "MistakeTrendsOut",
         "type": "object"
       },
       "NamedLanguageOut": {
@@ -1840,6 +1951,76 @@
         "title": "ProfilePatch",
         "type": "object"
       },
+      "ProgressOut": {
+        "additionalProperties": false,
+        "description": "The Progress screen in one answer.",
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/ActivityOut"
+          },
+          "cards": {
+            "$ref": "#/components/schemas/CardProgressOut"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeLevelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "longestStreakDays": {
+            "title": "Longeststreakdays",
+            "type": "integer"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneOut"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "mistakes": {
+            "$ref": "#/components/schemas/MistakeTrendsOut"
+          },
+          "talk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TalkShareOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/WeekOut"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "language",
+          "level",
+          "activity",
+          "weeks",
+          "longestStreakDays",
+          "talk",
+          "mistakes",
+          "cards",
+          "milestones"
+        ],
+        "title": "ProgressOut",
+        "type": "object"
+      },
       "QueueCardOut": {
         "additionalProperties": false,
         "properties": {
@@ -2176,6 +2357,25 @@
         "title": "Stage",
         "type": "string"
       },
+      "TalkShareOut": {
+        "additionalProperties": false,
+        "properties": {
+          "learnerWords": {
+            "title": "Learnerwords",
+            "type": "integer"
+          },
+          "partnerWords": {
+            "title": "Partnerwords",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "learnerWords",
+          "partnerWords"
+        ],
+        "title": "TalkShareOut",
+        "type": "object"
+      },
       "TeachingModel": {
         "additionalProperties": false,
         "description": "How a persona treats mistakes and adapts to the learner. Every key is always present;\nnull means \"as the learner's profile says\" (or, for speed, the voice's own pace).",
@@ -2434,6 +2634,31 @@
           "url"
         ],
         "title": "VoiceSampleOut",
+        "type": "object"
+      },
+      "WeekOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "seconds",
+          "conversations"
+        ],
+        "title": "WeekOut",
         "type": "object"
       }
     }
@@ -4086,6 +4311,73 @@
           }
         },
         "summary": "Update Profile"
+      }
+    },
+    "/v1/progress": {
+      "get": {
+        "operationId": "getProgress",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tz",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tz"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Progress"
       }
     },
     "/v1/voice/calls": {

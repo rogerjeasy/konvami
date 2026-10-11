@@ -461,6 +461,23 @@ export interface paths {
         patch: operations["updateProfile"];
         trace?: never;
     };
+    "/v1/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Progress */
+        get: operations["getProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/voice/calls": {
         parameters: {
             query?: never;
@@ -596,6 +613,19 @@ export interface components {
             reviewedAt: string | null;
             /** Reviews */
             reviews: number;
+        };
+        /** CardProgressOut */
+        CardProgressOut: {
+            /** Due */
+            due: number;
+            /** Learned */
+            learned: number;
+            /** Remembered */
+            remembered: number;
+            /** Reviews */
+            reviews: number;
+            /** Total */
+            total: number;
         };
         /** CatalogOut */
         CatalogOut: {
@@ -809,6 +839,31 @@ export interface components {
              * @enum {string}
              */
             top: "teal" | "graphite" | "stone" | "amber";
+        };
+        /** MilestoneOut */
+        MilestoneOut: {
+            /** Current */
+            current: number;
+            /** Id */
+            id: string;
+            /** Reached */
+            reached: boolean;
+            /** Target */
+            target: number;
+        };
+        /** MistakeKindOut */
+        MistakeKindOut: {
+            /** Category */
+            category: string;
+            /** Counts */
+            counts: number[];
+        };
+        /** MistakeTrendsOut */
+        MistakeTrendsOut: {
+            /** Kinds */
+            kinds: components["schemas"]["MistakeKindOut"][];
+            /** Weeks */
+            weeks: string[];
         };
         /** NamedLanguageOut */
         NamedLanguageOut: {
@@ -1097,6 +1152,25 @@ export interface components {
             /** Changes */
             changes: components["schemas"]["ChangeIn"][];
         };
+        /**
+         * ProgressOut
+         * @description The Progress screen in one answer.
+         */
+        ProgressOut: {
+            activity: components["schemas"]["ActivityOut"];
+            cards: components["schemas"]["CardProgressOut"];
+            /** Language */
+            language: string;
+            level: components["schemas"]["HomeLevelOut"] | null;
+            /** Longeststreakdays */
+            longestStreakDays: number;
+            /** Milestones */
+            milestones: components["schemas"]["MilestoneOut"][];
+            mistakes: components["schemas"]["MistakeTrendsOut"];
+            talk: components["schemas"]["TalkShareOut"] | null;
+            /** Weeks */
+            weeks: components["schemas"]["WeekOut"][];
+        };
         /** QueueCardOut */
         QueueCardOut: {
             card: components["schemas"]["CardOut"];
@@ -1213,6 +1287,13 @@ export interface components {
          * @enum {string}
          */
         Stage: "essentials" | "review" | "placement" | "partners" | "ready" | "done";
+        /** TalkShareOut */
+        TalkShareOut: {
+            /** Learnerwords */
+            learnerWords: number;
+            /** Partnerwords */
+            partnerWords: number;
+        };
         /**
          * TeachingModel
          * @description How a persona treats mistakes and adapts to the learner. Every key is always present;
@@ -1290,6 +1371,18 @@ export interface components {
         VoiceSampleOut: {
             /** Url */
             url: string;
+        };
+        /** WeekOut */
+        WeekOut: {
+            /** Conversations */
+            conversations: number;
+            /** Seconds */
+            seconds: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
         };
     };
     responses: never;
@@ -2734,6 +2827,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getProgress: {
+        parameters: {
+            query?: {
+                tz?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

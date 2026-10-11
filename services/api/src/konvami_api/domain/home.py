@@ -65,6 +65,16 @@ class HomeView:
     recent: tuple[Conversation, ...]
 
 
+def level_view(
+    profile: Profile, language: str, skills: Mapping[str, str] | None
+) -> LevelView | None:
+    """The level practice starts at and where it came from; None before it is settled."""
+    stored = profile.fields.get((language, "starting_level"))
+    if stored is None:
+        return None
+    return LevelView(level=stored.value, source=stored.source, skills=skills)
+
+
 class HomeService:
     def __init__(
         self,
@@ -109,7 +119,7 @@ class HomeService:
         )
         return HomeView(
             language=language,
-            level=self._level(profile, language, result.levels if result else None),
+            level=level_view(profile, language, result.levels if result else None),
             focus=focus.areas,
             focus_source=focus.source,
             cards_due=self._cards.due_count(user_id),
@@ -119,14 +129,6 @@ class HomeService:
             activity=activity,
             recent=self._conversations.listed(user_id, limit=RECENT_CONVERSATIONS).conversations,
         )
-
-    def _level(
-        self, profile: Profile, language: str, skills: Mapping[str, str] | None
-    ) -> LevelView | None:
-        stored = profile.fields.get((language, "starting_level"))
-        if stored is None:
-            return None
-        return LevelView(level=stored.value, source=stored.source, skills=skills)
 
     def _exam(self, profile: Profile, language: str, today: dt.date) -> ExamView | None:
         exam = profile.value(language, "exam")

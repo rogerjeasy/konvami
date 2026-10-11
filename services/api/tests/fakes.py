@@ -1,13 +1,13 @@
 """In-memory stand-ins for the persistence layer, checked against the same contract tests as SQL."""
 
 from collections.abc import Sequence
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
-from konvami_api.domain.cards import Card
+from konvami_api.domain.cards import Card, CardTotals
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -19,7 +19,7 @@ from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
-from konvami_api.domain.reports import Report, Status, StoredReport
+from konvami_api.domain.reports import Report, ReportTotals, Status, StoredReport, WeekMistakes
 from konvami_api.domain.speech import SpeechTask
 from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
@@ -30,6 +30,14 @@ from konvami_api.domain.voice import (
     VoiceProviderError,
     VoiceSession,
 )
+
+
+def zone_of(timezone: str | None) -> tzinfo:
+    """The time zone a name stands for; an unknown or missing one means UTC, as in the database."""
+    try:
+        return ZoneInfo(timezone) if timezone else UTC
+    except (ZoneInfoNotFoundError, ValueError):
+        return UTC
 
 
 class FixedClock:
@@ -352,11 +360,11 @@ class InMemoryConversationRepository:
             )
         return history
 
+    def longest(self, user_id: UUID) -> int:
+        return max((c.seconds for c in self._counted(user_id)), default=0)
+
     def days(self, user_id: UUID, timezone: str | None, now: datetime) -> ActivityDays:
-        try:
-            zone = ZoneInfo(timezone) if timezone else UTC
-        except (ZoneInfoNotFoundError, ValueError):
-            zone = UTC
+        zone = zone_of(timezone)
         days: dict[Any, DayActivity] = {}
         for conversation in self._counted(user_id):
             day = conversation.started_at.astimezone(zone).date()
@@ -434,13 +442,42 @@ class InMemoryReportRepository:
     def load(self, call_id: str) -> StoredReport | None:
         return self.reports.get(call_id)
 
-    def latest(self, user_id: UUID) -> Report | None:
-        ready = [
+    def _ready(self, user_id: UUID) -> list[tuple[datetime, Report]]:
+        """The learner's ready reports, each with when its conversation started."""
+        return [
             (self._calls.sessions[call_id].started_at, stored.report)
             for call_id, stored in self.reports.items()
             if stored.report is not None and self._calls.sessions[call_id].user_id == user_id
         ]
+
+    def latest(self, user_id: UUID) -> Report | None:
+        ready = self._ready(user_id)
         return max(ready, key=lambda found: found[0])[1] if ready else None
+
+    def mistakes_by_week(
+        self, user_id: UUID, language: str, timezone: str | None, since: date
+    ) -> list[WeekMistakes]:
+        zone = zone_of(timezone)
+        counts: dict[tuple[date, str], int] = {}
+        for started_at, report in self._ready(user_id):
+            day = started_at.astimezone(zone).date()
+            week = day - timedelta(days=day.weekday())
+            if report.target != language or week < since:
+                continue
+            for mistake in report.mistakes:
+                if mistake.certain:
+                    key = (week, mistake.category)
+                    counts[key] = counts.get(key, 0) + 1
+        return [WeekMistakes(week, category, count) for (week, category), count in counts.items()]
+
+    def totals(self, user_id: UUID, language: str, since: datetime) -> ReportTotals:
+        ready = [found for found in self._ready(user_id) if found[1].target == language]
+        recent = [report.stats for started_at, report in ready if started_at >= since]
+        return ReportTotals(
+            learner_words=sum(stats.learner_words for stats in recent),
+            partner_words=sum(stats.partner_words for stats in recent),
+            most_words=max((report.stats.learner_words for _, report in ready), default=0),
+        )
 
 
 class RecordingReportStarter:
@@ -458,8 +495,8 @@ class InMemoryCardRepository:
     def __init__(self) -> None:
         # Per card: its owner, its language and what makes it the same card as another.
         self.cards: dict[UUID, tuple[UUID, str, str, Card]] = {}
-        # (card, rating) of every review, in order.
-        self.reviews: list[tuple[UUID, str]] = []
+        # (card, rating, when) of every review, in order.
+        self.reviews: list[tuple[UUID, str, datetime]] = []
 
     def _of(self, user_id: UUID, language: str) -> list[tuple[str, Card]]:
         return [
@@ -510,7 +547,8 @@ class InMemoryCardRepository:
         if stored is None or stored[0] != user_id or stored[3].reviews != reviews_before:
             return False
         self.cards[card.id] = (*stored[:3], card)
-        self.reviews.append((card.id, rating))
+        assert card.reviewed_at is not None
+        self.reviews.append((card.id, rating, card.reviewed_at))
         return True
 
     def remove(self, user_id: UUID, card_id: UUID) -> bool:
@@ -525,3 +563,15 @@ class InMemoryCardRepository:
     ) -> set[tuple[str, str]]:
         have: set[tuple[str, str]] = {(card.kind, key) for key, card in self._of(user_id, language)}
         return have & set(keys)
+
+    def totals(self, user_id: UUID, language: str, since: datetime) -> CardTotals:
+        mine = {card.id for _, card in self._of(user_id, language)}
+        # A removed card takes its reviews with it, as in the database.
+        reviews = [(rating, at) for card_id, rating, at in self.reviews if card_id in mine]
+        recent = [rating for rating, at in reviews if at >= since]
+        return CardTotals(
+            learned=sum(1 for _, card in self._of(user_id, language) if card.reviews > 0),
+            reviews=len(recent),
+            remembered=sum(1 for rating in recent if rating != "again"),
+            reviews_ever=len(reviews),
+        )

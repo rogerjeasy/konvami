@@ -149,6 +149,27 @@ def what_to_practise(next_steps: Sequence[str], weak_areas: Sequence[str]) -> Fo
     return Focus((), None)
 
 
+@dataclass(frozen=True)
+class WeekMistakes:
+    """How often one kind of mistake came up in the reports of one week's conversations."""
+
+    # The week's Monday, on the learner's calendar.
+    week: dt.date
+    category: str
+    count: int
+
+
+@dataclass(frozen=True)
+class ReportTotals:
+    """Words counted across a learner's reports."""
+
+    # Since a given moment: what the learner said, and what their partners said.
+    learner_words: int
+    partner_words: int
+    # The most the learner ever said in one conversation.
+    most_words: int
+
+
 class ReportError(Exception):
     """Why a report cannot be asked for, as a stable code."""
 
@@ -178,6 +199,17 @@ class ReportRepository(Protocol):
 
     def latest(self, user_id: UUID) -> Report | None:
         """The ready report of the learner's most recent conversation that has one."""
+
+    def mistakes_by_week(
+        self, user_id: UUID, language: str, timezone: str | None, since: dt.date
+    ) -> list[WeekMistakes]:
+        """The confirmed mistakes in the reports of conversations in `language`, counted per
+        kind and per week of the learner's calendar (an unknown or missing time zone means
+        UTC), for the weeks from the Monday `since` on."""
+
+    def totals(self, user_id: UUID, language: str, since: dt.datetime) -> ReportTotals:
+        """The words in the reports of conversations in `language`: said since `since`, and the
+        most the learner said in one conversation ever."""
 
 
 class ReportStarter(Protocol):
@@ -601,6 +633,17 @@ class ReportService:
         if latest is None or latest.target != self._profiles.get(user_id).target_language:
             return ()
         return latest.next_steps
+
+    def mistakes_by_week(
+        self, user_id: UUID, timezone: str | None, since: dt.date
+    ) -> list[WeekMistakes]:
+        """The confirmed mistakes of the language the learner is learning, per kind and week."""
+        language = self._profiles.get(user_id).target_language or ""
+        return self._repository.mistakes_by_week(user_id, language, timezone, since)
+
+    def totals(self, user_id: UUID, since: dt.datetime) -> ReportTotals:
+        language = self._profiles.get(user_id).target_language or ""
+        return self._repository.totals(user_id, language, since)
 
     def write(self, call_id: str) -> None:
         """Writes the report that was asked for. Runs apart from any request (`ReportStarter`),

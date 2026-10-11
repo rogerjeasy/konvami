@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from konvami_api.domain.accounts import DELETION_MEMORY
-from konvami_api.domain.cards import Card, Kind
+from konvami_api.domain.cards import Card, CardTotals, Kind
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -26,10 +26,12 @@ from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile, Source
 from konvami_api.domain.reports import (
     Mistake,
     Report,
+    ReportTotals,
     Rewrite,
     Stats,
     Status,
     StoredReport,
+    WeekMistakes,
     Word,
 )
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
@@ -292,15 +294,20 @@ _PARTNER_HISTORY = f"""
     GROUP BY s.persona_id
 """
 
+# The learner's time zone as the database knows it; a name it does not know counts as UTC.
+_ZONE = """
+    zone AS (
+        SELECT COALESCE(
+            (SELECT name FROM pg_timezone_names WHERE name = :timezone), 'UTC'
+        ) AS name
+    )
+"""
+
 # Days are cut in the learner's time zone, by the database, which knows every zone's rules. A
 # name it does not know counts as UTC. Always one row at least, so `today` is always there; its
 # other columns are null when the learner has not practised yet.
 _PRACTICE_DAYS = f"""
-    WITH zone AS (
-        SELECT COALESCE(
-            (SELECT name FROM pg_timezone_names WHERE name = :timezone), 'UTC'
-        ) AS name
-    ),
+    WITH {_ZONE},
     per_day AS (
         SELECT CAST(s.started_at AT TIME ZONE zone.name AS date) AS day,
                sum({_SECONDS}) AS seconds,
@@ -454,6 +461,67 @@ _KNOWN_CARDS = """
     FROM card c
     JOIN jsonb_array_elements(CAST(:keys AS jsonb)) AS wanted (item)
       ON c.kind = wanted.item ->> 'kind' AND c.front_key = wanted.item ->> 'key'
+    WHERE c.user_id = CAST(:user_id AS uuid) AND c.language = :language
+"""
+
+_LONGEST_CONVERSATION = f"""
+    SELECT CAST(COALESCE(max({_SECONDS}), 0) AS integer) AS seconds
+    FROM voice_session s
+    WHERE {_COUNTED}
+"""
+
+# Reports with their calls, as `r` and `s`, and the condition that picks a learner's ready
+# reports of conversations in one language.
+_REPORT_CALLS = "session_report r JOIN voice_session s ON s.call_id = r.call_id"
+_READY_REPORTS = """
+    s.user_id = CAST(:user_id AS uuid) AND r.status = 'ready'
+    AND r.content ->> 'target' = :language
+"""
+
+# Weeks begin on Monday and are cut in the learner's time zone, like days (see `_ZONE`). The
+# mistakes are counted by the database: the reports themselves would be megabytes to read.
+_MISTAKES_BY_WEEK = f"""
+    WITH {_ZONE},
+    found AS (
+        SELECT CAST(date_trunc('week', s.started_at AT TIME ZONE zone.name) AS date) AS week,
+               mistake.item ->> 'category' AS category
+        FROM zone,
+             {_REPORT_CALLS}
+             CROSS JOIN LATERAL jsonb_array_elements(r.content -> 'mistakes') AS mistake (item)
+        WHERE {_READY_REPORTS}
+          AND CAST(mistake.item ->> 'certain' AS boolean)
+    )
+    SELECT to_char(week, 'YYYY-MM-DD') AS week, category, CAST(count(*) AS integer) AS count
+    FROM found
+    WHERE week >= CAST(:since AS date)
+    GROUP BY week, category
+"""
+
+_LEARNER_WORDS = "CAST(r.content #>> '{stats,learner_words}' AS integer)"
+_PARTNER_WORDS = "CAST(r.content #>> '{stats,partner_words}' AS integer)"
+_RECENT_REPORT = "s.started_at >= CAST(:since AS timestamptz)"
+
+_REPORT_TOTALS = f"""
+    SELECT CAST(COALESCE(sum({_LEARNER_WORDS}) FILTER (WHERE {_RECENT_REPORT}), 0) AS integer)
+               AS learner_words,
+           CAST(COALESCE(sum({_PARTNER_WORDS}) FILTER (WHERE {_RECENT_REPORT}), 0) AS integer)
+               AS partner_words,
+           CAST(COALESCE(max({_LEARNER_WORDS}), 0) AS integer) AS most_words
+    FROM {_REPORT_CALLS}
+    WHERE {_READY_REPORTS}
+"""
+
+_RECENT_REVIEW = "v.reviewed_at >= CAST(:since AS timestamptz)"
+
+_CARD_TOTALS = f"""
+    SELECT CAST(count(DISTINCT c.id) FILTER (WHERE c.reviews > 0) AS integer) AS learned,
+           CAST(count(v.card_id) FILTER (WHERE {_RECENT_REVIEW}) AS integer) AS reviews,
+           CAST(
+               count(v.card_id) FILTER (WHERE {_RECENT_REVIEW} AND v.rating <> 'again')
+               AS integer
+           ) AS remembered,
+           CAST(count(v.card_id) AS integer) AS reviews_ever
+    FROM card c LEFT JOIN card_review v ON v.card_id = c.id
     WHERE c.user_id = CAST(:user_id AS uuid) AND c.language = :language
 """
 
@@ -758,6 +826,11 @@ class SqlConversationRepository:
         rows = self._client.execute(_LIST_TURNS, {"call_id": call_id})
         return [Turn(row["speaker"], row["text"]) for row in rows]
 
+    def longest(self, user_id: UUID) -> int:
+        rows = self._client.execute(_LONGEST_CONVERSATION, {"user_id": str(user_id)})
+        seconds: int = rows[0]["seconds"]
+        return seconds
+
     def partner_history(self, user_id: UUID) -> dict[UUID, PartnerHistory]:
         rows = self._client.execute(_PARTNER_HISTORY, {"user_id": str(user_id)})
         return {
@@ -838,6 +911,31 @@ class SqlReportRepository:
     def latest(self, user_id: UUID) -> Report | None:
         rows = self._client.execute(_LATEST_REPORT, {"user_id": str(user_id)})
         return _report(json.loads(rows[0]["content"])) if rows else None
+
+    def mistakes_by_week(
+        self, user_id: UUID, language: str, timezone: str | None, since: dt.date
+    ) -> list[WeekMistakes]:
+        rows = self._client.execute(
+            _MISTAKES_BY_WEEK,
+            {
+                "user_id": str(user_id),
+                "language": language,
+                "timezone": timezone,
+                "since": since.isoformat(),
+            },
+        )
+        return [
+            WeekMistakes(dt.date.fromisoformat(row["week"]), row["category"], row["count"])
+            for row in rows
+        ]
+
+    def totals(self, user_id: UUID, language: str, since: dt.datetime) -> ReportTotals:
+        rows = self._client.execute(
+            _REPORT_TOTALS,
+            {"user_id": str(user_id), "language": language, "since": since.isoformat()},
+        )
+        row = rows[0]
+        return ReportTotals(row["learner_words"], row["partner_words"], row["most_words"])
 
 
 def _card(row: dict[str, Any]) -> Card:
@@ -955,3 +1053,11 @@ class SqlCardRepository:
             _KNOWN_CARDS, {"user_id": str(user_id), "language": language, "keys": wanted}
         )
         return {(row["kind"], row["front_key"]) for row in rows}
+
+    def totals(self, user_id: UUID, language: str, since: dt.datetime) -> CardTotals:
+        rows = self._client.execute(
+            _CARD_TOTALS,
+            {"user_id": str(user_id), "language": language, "since": since.isoformat()},
+        )
+        row = rows[0]
+        return CardTotals(row["learned"], row["reviews"], row["remembered"], row["reviews_ever"])

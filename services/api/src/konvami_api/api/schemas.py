@@ -31,7 +31,7 @@ from konvami_api.domain.conversations import (
     Transcript,
 )
 from konvami_api.domain.fsrs import Rating
-from konvami_api.domain.home import HomeView
+from konvami_api.domain.home import HomeView, LevelView
 from konvami_api.domain.live_call import Speaker
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
 from konvami_api.domain.persona_parts import (
@@ -62,6 +62,7 @@ from konvami_api.domain.personas import (
 )
 from konvami_api.domain.placement import PlacementView
 from konvami_api.domain.profile import GLOBAL_SCOPE, Profile, Source
+from konvami_api.domain.progress import ProgressView
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
 from konvami_api.domain.voice import CallPurpose, CallStarted
@@ -687,6 +688,16 @@ class HomeLevelOut(ApiModel):
     # Level per skill from the placement test; null when it was not taken.
     skills: dict[str, StartingLevel] | None
 
+    @classmethod
+    def of(cls, level: LevelView) -> "HomeLevelOut":
+        return cls.model_validate(
+            {
+                "level": level.level,
+                "source": level.source,
+                "skills": None if level.skills is None else dict(level.skills),
+            }
+        )
+
 
 class HomeExamOut(ApiModel):
     type: str
@@ -737,6 +748,104 @@ class ActivityOut(ApiModel):
         )
 
 
+class WeekOut(ApiModel):
+    # The week's Monday, on the learner's calendar.
+    start: dt.date
+    seconds: int
+    conversations: int
+
+
+class TalkShareOut(ApiModel):
+    learner_words: int
+    partner_words: int
+
+
+class MistakeKindOut(ApiModel):
+    # One of the language pack's error categories, or "other".
+    category: str
+    # How often it came up in each of the weeks, the oldest first.
+    counts: list[int]
+
+
+class MistakeTrendsOut(ApiModel):
+    # The Mondays of the weeks the mistakes are counted in, the oldest first.
+    weeks: list[dt.date]
+    # The kinds that came up most, the most frequent first.
+    kinds: list[MistakeKindOut]
+
+
+class CardProgressOut(ApiModel):
+    total: int
+    due: int
+    # Cards reviewed at least once.
+    learned: int
+    # Reviews in the last month, and how many of them the learner remembered.
+    reviews: int
+    remembered: int
+
+
+class MilestoneOut(ApiModel):
+    id: str
+    # How far the learner is, never beyond the target, in the milestone's own unit.
+    current: int
+    target: int
+    reached: bool
+
+
+class ProgressOut(ApiModel):
+    """The Progress screen in one answer."""
+
+    language: str
+    level: HomeLevelOut | None
+    activity: ActivityOut
+    # The last eight weeks, the oldest first.
+    weeks: list[WeekOut]
+    # The most days in a row the learner ever practised.
+    longest_streak_days: int
+    # Words said in the last month's conversations; null until one of them has a report.
+    talk: TalkShareOut | None
+    mistakes: MistakeTrendsOut
+    cards: CardProgressOut
+    milestones: list[MilestoneOut]
+
+    @classmethod
+    def of(cls, progress: ProgressView) -> "ProgressOut":
+        talk, cards = progress.talk, progress.cards
+        return cls(
+            language=progress.language,
+            level=HomeLevelOut.of(progress.level) if progress.level else None,
+            activity=ActivityOut.of(progress.activity),
+            weeks=[
+                WeekOut(start=week.start, seconds=week.seconds, conversations=week.conversations)
+                for week in progress.weeks
+            ],
+            longest_streak_days=progress.longest_streak_days,
+            talk=TalkShareOut(learner_words=talk.learner_words, partner_words=talk.partner_words)
+            if talk
+            else None,
+            mistakes=MistakeTrendsOut(
+                weeks=list(progress.mistake_weeks),
+                kinds=[
+                    MistakeKindOut(category=trend.category, counts=list(trend.counts))
+                    for trend in progress.mistakes
+                ],
+            ),
+            cards=CardProgressOut(
+                total=cards.total,
+                due=cards.due,
+                learned=cards.learned,
+                reviews=cards.reviews,
+                remembered=cards.remembered,
+            ),
+            milestones=[
+                MilestoneOut(
+                    id=mark.id, current=mark.current, target=mark.target, reached=mark.reached
+                )
+                for mark in progress.milestones
+            ],
+        )
+
+
 class HomeOut(ApiModel):
     """The Today screen in one answer."""
 
@@ -761,15 +870,7 @@ class HomeOut(ApiModel):
         level, exam = home.level, home.exam
         return cls(
             language=home.language,
-            level=None
-            if level is None
-            else HomeLevelOut.model_validate(
-                {
-                    "level": level.level,
-                    "source": level.source,
-                    "skills": None if level.skills is None else dict(level.skills),
-                }
-            ),
+            level=HomeLevelOut.of(level) if level else None,
             focus=list(home.focus),
             focus_source=home.focus_source,
             cards_due=home.cards_due,

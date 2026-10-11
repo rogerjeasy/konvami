@@ -15,9 +15,9 @@ import psycopg
 import pytest
 
 from konvami_api.domain.accounts import AccountRepository
-from konvami_api.domain.cards import Card, CardRepository, card_key
+from konvami_api.domain.cards import Card, CardRepository, CardTotals, card_key
 from konvami_api.domain.conversations import ConversationRepository
-from konvami_api.domain.fsrs import Memory
+from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
@@ -27,10 +27,12 @@ from konvami_api.domain.reports import (
     Mistake,
     Report,
     ReportRepository,
+    ReportTotals,
     Rewrite,
     Stats,
     Status,
     StoredReport,
+    WeekMistakes,
     Word,
 )
 from konvami_api.domain.voice import (
@@ -1474,3 +1476,156 @@ def test_a_review_sent_twice_at_the_same_moment_is_stored_once(
 
     assert sorted(answers) == [False] * 11 + [True]
     assert db.execute("SELECT CAST(count(*) AS integer) AS n FROM card_review")[0]["n"] == 1
+
+
+# --- What the Progress screen reads ----------------------------------------------------------
+
+DAY = timedelta(days=1)
+# NOON is Friday 9 October 2026; its week starts on Monday 5.
+THIS_MONDAY = date(2026, 10, 5)
+LAST_MONDAY = date(2026, 9, 28)
+
+
+def test_the_longest_conversation_is_the_longest_one_that_counts(partners: Practice) -> None:
+    assert partners.conversations.longest(USER) == 0
+
+    talked(partners, "rtc_1", at=NOON - 3 * HOUR, minutes=5)
+    talked(partners, "rtc_2", at=NOON - 2 * HOUR, minutes=9)
+    # Nothing was said in the longest call, and the other one is someone else's.
+    talked(partners, "rtc_3", at=NOON - HOUR, minutes=10, learner_says=())
+    talked(partners, "rtc_4", at=NOON, minutes=10, partner=None, user=OTHER_USER)
+
+    assert partners.conversations.longest(USER) == 540
+
+
+def reported(
+    reports: Reports,
+    call_id: str,
+    at: datetime,
+    *,
+    user: UUID = USER,
+    categories: tuple[str, ...] = (),
+    unconfirmed: tuple[str, ...] = (),
+    words: tuple[int, int] = (20, 15),
+    target: str = "de",
+) -> None:
+    """A conversation at `at` whose ready report has a confirmed mistake of each of
+    `categories`, an unconfirmed one of each of `unconfirmed`, and `words` said by the learner
+    and by the partner."""
+    reports.calls.started(
+        VoiceSession(call_id, user, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", at)
+    )
+    mistakes = tuple(
+        Mistake(1, f"falsch {n}", f"richtig {n}", "…", category, "minor", certain)
+        for certain, group in ((True, categories), (False, unconfirmed))
+        for n, category in enumerate(group)
+    )
+    ask(reports.reports, call_id, at)
+    reports.reports.written(
+        call_id,
+        "ready",
+        replace(
+            REPORT,
+            target=target,
+            mistakes=mistakes,
+            stats=Stats(words[0], words[1], learner_turns=3, longest_turn_words=9),
+        ),
+    )
+
+
+def by_week(found: list[WeekMistakes]) -> list[tuple[date, str, int]]:
+    return sorted((item.week, item.category, item.count) for item in found)
+
+
+def test_confirmed_mistakes_are_counted_per_kind_and_week(reports: Reports) -> None:
+    reported(reports, "rtc_a", NOON - 7 * DAY, categories=("case_dative", "case_dative"))
+    reported(
+        reports,
+        "rtc_b",
+        NOON - DAY,
+        categories=("case_dative", "word_order_v2"),
+        unconfirmed=("negation",),
+    )
+    reported(reports, "rtc_c", NOON, categories=("word_order_v2", "word_order_v2"))
+    # Before the weeks asked for, in another language, or someone else's.
+    reported(reports, "rtc_d", NOON - 30 * DAY, categories=("plural_form",))
+    reported(reports, "rtc_e", NOON, categories=("conjugation",), target="fr")
+    reported(reports, "rtc_f", NOON, categories=("conjugation",), user=OTHER_USER)
+
+    found = reports.reports.mistakes_by_week(USER, "de", None, LAST_MONDAY)
+
+    assert by_week(found) == [
+        (LAST_MONDAY, "case_dative", 2),
+        (THIS_MONDAY, "case_dative", 1),
+        (THIS_MONDAY, "word_order_v2", 3),
+    ]
+
+
+def test_a_report_that_is_not_ready_has_no_mistakes_to_count(reports: Reports) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+
+    assert reports.reports.mistakes_by_week(USER, "de", None, LAST_MONDAY) == []
+
+
+@pytest.mark.parametrize("unknown", ["Mars/Olympus", "", None])
+def test_the_week_of_a_mistake_is_cut_in_the_learners_time_zone(
+    reports: Reports, unknown: str | None
+) -> None:
+    # Sunday 4 October, 23:30 in UTC: already Monday in Zurich.
+    late_sunday = datetime(2026, 10, 4, 23, 30, tzinfo=UTC)
+    reported(reports, "rtc_a", late_sunday, categories=("case_dative",))
+
+    zurich = reports.reports.mistakes_by_week(USER, "de", "Europe/Zurich", LAST_MONDAY)
+    utc = reports.reports.mistakes_by_week(USER, "de", unknown, LAST_MONDAY)
+
+    assert by_week(zurich) == [(THIS_MONDAY, "case_dative", 1)]
+    assert by_week(utc) == [(LAST_MONDAY, "case_dative", 1)]
+
+
+def test_words_are_added_up_since_a_moment_and_the_most_in_one_conversation_ever(
+    reports: Reports,
+) -> None:
+    reported(reports, "rtc_a", NOON - 40 * DAY, words=(400, 10))
+    reported(reports, "rtc_b", NOON - 3 * DAY, words=(60, 40))
+    reported(reports, "rtc_c", NOON, words=(90, 60))
+    reported(reports, "rtc_d", NOON, words=(900, 900), target="fr")
+    reported(reports, "rtc_e", NOON, words=(700, 700), user=OTHER_USER)
+    # A report that is not ready has no words yet.
+    ask(reports.reports, "rtc_1", NOON)
+
+    totals = reports.reports.totals(USER, "de", NOON - 30 * DAY)
+
+    assert totals == ReportTotals(learner_words=150, partner_words=100, most_words=400)
+    assert reports.reports.totals(USER, "it", NOON - 30 * DAY) == ReportTotals(0, 0, 0)
+
+
+def test_reviews_are_added_up_for_a_learners_deck(cards: CardRepository) -> None:
+    def review(number: int, position: int, rating: Rating, at: datetime) -> None:
+        after = card(number, reviewed_at=at, memory=Memory(2.0, 5.0), reviews=position)
+        assert cards.reviewed(USER, after, rating, position - 1) is True
+
+    for number in (1, 2, 3, 4):
+        add(cards, card(number, f"Wort{number}"))
+    add(cards, card(5, "mot"), language="fr")
+    add(cards, card(6, "Wort6"), user=OTHER_USER)
+    review(1, 1, "good", NOON - 45 * DAY)
+    review(1, 2, "good", NOON - 5 * DAY)
+    review(2, 1, "again", NOON - 5 * DAY)
+    review(3, 1, "easy", NOON)
+    cards.reviewed(
+        OTHER_USER, card(6, reviewed_at=NOON, memory=Memory(2.0, 5.0), reviews=1), "good", 0
+    )
+
+    totals = cards.totals(USER, "de", NOON - 30 * DAY)
+
+    assert totals == CardTotals(learned=3, reviews=3, remembered=2, reviews_ever=4)
+    assert cards.totals(USER, "fr", NOON - 30 * DAY) == CardTotals(0, 0, 0, 0)
+
+
+def test_a_removed_card_takes_its_reviews_with_it(cards: CardRepository) -> None:
+    add(cards, card(1))
+    cards.reviewed(USER, card(1, reviewed_at=NOON, memory=Memory(2.0, 5.0), reviews=1), "good", 0)
+
+    cards.remove(USER, card(1).id)
+
+    assert cards.totals(USER, "de", NOON - DAY) == CardTotals(0, 0, 0, 0)
