@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -636,3 +636,52 @@ def test_what_is_said_while_memory_is_off_stays_unread_when_it_is_turned_on_late
 
     assert len(world.text.tasks) == asked
     assert world.memories.view(USER).memories == ()
+
+
+FOUND_ZURICH = {
+    "kind": "fact",
+    "text": "Habite à Zurich.",
+    "day": None,
+    "importance": 3,
+    "turn": 1,
+    "replaces": None,
+}
+SAID = (
+    Turn("persona", "Hallo Amara! Wie geht's?"),
+    Turn("learner", "Gut. Ich wohne jetzt in Zürich und arbeite als Krankenschwester."),
+)
+
+
+def test_a_conversation_that_ends_with_memory_on_is_read_by_the_worker() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.talk(lena, at=NOON - timedelta(minutes=10), turns=SAID)
+
+    world.practice.concluded(USER, call_id, PracticeTools(), FinishedCall(NOON, "closed", {}, SAID))
+    world.text.answers.append({"memories": [FOUND_ZURICH]})
+    world.memories.write(call_id)
+
+    assert [memory.text for memory in world.memories.view(USER).memories] == ["Habite à Zurich."]
+
+
+def test_when_the_learners_choice_cannot_be_recorded_the_report_is_still_started() -> None:
+    """Spec §12.2: one step failing does not block another. Nothing is read for memories
+    then: without the choice on record, a conversation stays unread."""
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.talk(lena, at=NOON - timedelta(minutes=10), turns=SAID)
+
+    def broken(call_id: str, at: datetime) -> None:
+        raise RuntimeError("storage is down")
+
+    world.memory_store.allow = broken  # type: ignore[method-assign]
+
+    with pytest.raises(RuntimeError):
+        world.practice.concluded(
+            USER, call_id, PracticeTools(), FinishedCall(NOON, "closed", {}, SAID)
+        )
+
+    assert world.report_starter.started == [call_id]
+    asked = len(world.text.tasks)
+    world.memories.write(call_id)
+    assert len(world.text.tasks) == asked

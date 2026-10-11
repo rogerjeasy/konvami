@@ -583,12 +583,18 @@ class InMemoryMemoryRepository:
 
     def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
         self._calls = calls
+        # The calls that may be read, and those of them a worker has taken.
+        self._allowed: set[str] = set()
         self._read: set[str] = set()
         # Per memory: its owner, what makes it the same memory as another, and the memory.
         self.memories: dict[UUID, tuple[UUID, str, Memory]] = {}
 
+    def allow(self, call_id: str, at: datetime) -> None:
+        if call_id in self._calls.sessions:
+            self._allowed.add(call_id)
+
     def claim(self, call_id: str, at: datetime) -> bool:
-        if call_id not in self._calls.sessions or call_id in self._read:
+        if call_id not in self._allowed or call_id in self._read:
             return False
         self._read.add(call_id)
         return True

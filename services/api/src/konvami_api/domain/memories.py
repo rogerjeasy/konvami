@@ -117,12 +117,16 @@ class MemoriesError(Exception):
 
 
 class MemoryRepository(Protocol):
+    def allow(self, call_id: str, at: dt.datetime) -> None:
+        """Records that a call may be read for memories. Nothing for a call that does not
+        exist; one that was allowed or taken already stays as it is."""
+
     def claim(self, call_id: str, at: dt.datetime) -> bool:
-        """A worker takes a call to write its memories down. Only one is ever told True for a
-        call, until it is released; never for a call that does not exist."""
+        """A worker takes a call to write its memories down. Only a call that was allowed can
+        be taken, and only one worker is ever told True for it, until it is released."""
 
     def release(self, call_id: str) -> None:
-        """The call could not be read: it may be claimed again."""
+        """The call that was taken could not be read: it may be taken again."""
 
     def add(self, user_id: UUID, key: str, memory: Memory, limit: int) -> bool:
         """Stores a new memory. Not when the learner has one with that key already (for the
@@ -398,12 +402,13 @@ class MemoryService:
         return Recall(tuple(follow_ups), tuple(coming_up), tuple(notes))
 
     def after_call(self, user_id: UUID, call_id: str) -> None:
-        """A practice conversation has ended. While memory is off it is taken at once, so that
-        nobody reads it later: the worker can get to a conversation long after it (a report
-        that could not be started and is asked for again), when memory may be on again. What
-        counts is the learner's choice when they talked."""
-        if not self._profiles.get(user_id).memory_enabled:
-            self._repository.claim(call_id, self._clock())
+        """A practice conversation has ended: with memory on, it may be read for memories.
+        Only a conversation allowed here is ever read. The worker can get to one long after
+        it ended (a report that could not be started and is asked for again), so what counts
+        is the learner's choice when they talked; and where that choice is not on record (it
+        was off, or recording it failed), nothing is read, whatever happens later."""
+        if self._profiles.get(user_id).memory_enabled:
+            self._repository.allow(call_id, self._clock())
 
     def write(self, call_id: str) -> None:
         """Writes down what a conversation told about the learner. Runs apart from any request,
@@ -420,13 +425,14 @@ class MemoryService:
         # As for a report: too little was said to learn anything from it.
         if measure(turns).learner_words < MIN_LEARNER_WORDS:
             return
-        # A second invocation for the same conversation (a report asked for again) finds it
-        # taken: reading it twice would cost twice and write the same things down in other words.
+        # Not one that was never allowed (see `after_call`). And a second invocation for the
+        # same conversation (a report asked for again) finds it taken: reading it twice would
+        # cost twice and write the same things down in other words.
         if not self._repository.claim(call_id, self._clock()):
             return
         profile = self._profiles.get(user_id)
-        # Turned off since the conversation ended (see `after_call`): the conversation stays
-        # taken, and is not read once memory is on again either.
+        # Turned off since the conversation ended: the conversation stays taken, and is not
+        # read once memory is on again either.
         if not profile.memory_enabled:
             return
 

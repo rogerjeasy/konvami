@@ -37,6 +37,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0009_session_report",
         "0010_cards",
         "0011_memory",
+        "0012_memory_permission",
     ]
     assert {
         "app_user",

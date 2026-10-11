@@ -581,22 +581,32 @@ _REMOVE_MEMORY = """
     RETURNING id
 """
 
-# Taking a call is a write for its learner, so it begins like every other one (see
-# `_REQUEST_REPORT`). Of several workers at once, one gets its row back.
-_CLAIM_MEMORIES = """
+# Allowing a call to be read is a write for its learner, so it begins like every other one
+# (see `_REQUEST_REPORT`). A call that is there already, allowed or taken, stays as it is.
+_ALLOW_MEMORIES = """
     WITH call AS (
         SELECT call_id, user_id FROM voice_session WHERE call_id = :call_id
     ),
     owner AS (
         INSERT INTO app_user (id) SELECT user_id FROM call ON CONFLICT (id) DO NOTHING
     )
-    INSERT INTO memory_extraction (call_id, started_at)
-    SELECT call_id, CAST(:at AS timestamptz) FROM call
+    INSERT INTO memory_extraction (call_id, state, started_at)
+    SELECT call_id, 'allowed', CAST(:at AS timestamptz) FROM call
     ON CONFLICT (call_id) DO NOTHING
+"""
+
+# Only a call that was allowed can be taken (migration 0012), and of several workers at once
+# one gets its row back.
+_CLAIM_MEMORIES = """
+    UPDATE memory_extraction
+    SET state = 'taken', started_at = CAST(:at AS timestamptz)
+    WHERE call_id = :call_id AND state = 'allowed'
     RETURNING call_id
 """
 
-_RELEASE_MEMORIES = "DELETE FROM memory_extraction WHERE call_id = :call_id"
+_RELEASE_MEMORIES = """
+    UPDATE memory_extraction SET state = 'allowed' WHERE call_id = :call_id AND state = 'taken'
+"""
 
 
 def _moment(micros: int | None) -> dt.datetime | None:
@@ -1168,6 +1178,9 @@ def _memory_fields(user_id: UUID, key: str, memory: memories.Memory) -> dict[str
 class SqlMemoryRepository:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
+
+    def allow(self, call_id: str, at: dt.datetime) -> None:
+        self._client.execute(_ALLOW_MEMORIES, {"call_id": call_id, "at": at.isoformat()})
 
     def claim(self, call_id: str, at: dt.datetime) -> bool:
         rows = self._client.execute(_CLAIM_MEMORIES, {"call_id": call_id, "at": at.isoformat()})

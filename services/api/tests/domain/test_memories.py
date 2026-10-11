@@ -77,9 +77,12 @@ def memory_id(number: int) -> UUID:
 
 
 def talked(world: World, turns: tuple[Turn, ...] = TURNS) -> str:
-    """A learner of German (explained in French) and a conversation with Lena."""
+    """A learner of German (explained in French) and a conversation with Lena, which ended
+    as every practice conversation does: memory is told that it is over."""
     lena, _ = world.onboard()
-    return world.talk(lena, at=TALKED_AT, turns=turns)
+    call_id = world.talk(lena, at=TALKED_AT, turns=turns)
+    world.memories.after_call(USER, call_id)
+    return call_id
 
 
 def remembered(*memories: dict[str, Any], turns: tuple[Turn, ...] = TURNS) -> World:
@@ -164,6 +167,7 @@ def test_what_belongs_to_a_partner_is_not_kept_once_that_partner_is_gone() -> No
     world = World()
     lena, _ = world.onboard()
     call_id = world.talk(lena, at=TALKED_AT, turns=TURNS)
+    world.memories.after_call(USER, call_id)
     world.personas.remove(USER, lena.id)
     world.text.answers.append({"memories": [CAT, ZURICH]})
 
@@ -290,6 +294,7 @@ def talked_again(
     """A second conversation, `at` after the first, with the memories the model found in it."""
     world.clock.now = NOON + at
     call_id = world.talk(world.personas.partners(USER)[partner], at=TALKED_AT + at, turns=TURNS)
+    world.memories.after_call(USER, call_id)
     world.text.answers.append({"memories": list(memories)})
     world.memories.write(call_id)
     return call_id
@@ -780,7 +785,8 @@ def test_a_conversation_that_ended_while_memory_was_off_is_never_read() -> None:
     """The worker may only get to a conversation later (its report could not be started, and
     the learner asks for it again): what counts is whether memory was on when they talked."""
     world = World()
-    call_id = talked(world)
+    lena, _ = world.onboard()
+    call_id = world.talk(lena, at=TALKED_AT, turns=TURNS)
     settings(world, memory_enabled=False)
     world.memories.after_call(USER, call_id)
     settings(world, memory_enabled=True)
@@ -793,10 +799,24 @@ def test_a_conversation_that_ended_while_memory_was_off_is_never_read() -> None:
     assert world.memories.view(USER).memories == ()
 
 
+def test_a_conversation_whose_end_memory_was_not_told_of_is_never_read() -> None:
+    """One from before memory existed, or one whose end could not be recorded: without the
+    learner's choice on record, nothing is read."""
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.talk(lena, at=TALKED_AT, turns=TURNS)
+    world.text.answers.append({"memories": [ZURICH]})
+    asked = len(world.text.tasks)
+
+    world.memories.write(call_id)
+
+    assert len(world.text.tasks) == asked
+    assert world.memories.view(USER).memories == ()
+
+
 def test_a_conversation_that_ended_while_memory_was_on_is_read_when_the_worker_gets_to_it() -> None:
     world = World()
     call_id = talked(world)
-    world.memories.after_call(USER, call_id)
     world.text.answers.append({"memories": [ZURICH]})
 
     world.memories.write(call_id)

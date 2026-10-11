@@ -1810,12 +1810,30 @@ def test_a_memory_is_forgotten_by_its_owner_only(memories: Memories) -> None:
     assert keep(memories.memories, remembered(2)) is True
 
 
-def test_a_call_is_taken_once_to_write_its_memories_down(memories: Memories) -> None:
-    assert memories.memories.claim("rtc_1", NOON) is True
+def test_a_call_nobody_allowed_cannot_be_taken(memories: Memories) -> None:
+    """Without a record that it may be read, a conversation is not read: the record is made
+    when it ends with memory on, and whatever goes wrong before that leaves it unread."""
+    assert memories.memories.claim("rtc_1", NOON) is False
+
+
+def test_an_allowed_call_is_taken_once_to_write_its_memories_down(memories: Memories) -> None:
+    memories.memories.allow("rtc_1", NOON)
+
+    assert memories.memories.claim("rtc_1", NOON + HOUR) is True
+    assert memories.memories.claim("rtc_1", NOON + HOUR) is False
+
+
+def test_a_call_that_was_taken_is_not_allowed_anew(memories: Memories) -> None:
+    memories.memories.allow("rtc_1", NOON)
+    memories.memories.claim("rtc_1", NOON)
+
+    memories.memories.allow("rtc_1", NOON + HOUR)
+
     assert memories.memories.claim("rtc_1", NOON + HOUR) is False
 
 
 def test_a_call_that_was_let_go_can_be_taken_again(memories: Memories) -> None:
+    memories.memories.allow("rtc_1", NOON)
     memories.memories.claim("rtc_1", NOON)
 
     memories.memories.release("rtc_1")
@@ -1823,7 +1841,15 @@ def test_a_call_that_was_let_go_can_be_taken_again(memories: Memories) -> None:
     assert memories.memories.claim("rtc_1", NOON + HOUR) is True
 
 
-def test_a_call_that_does_not_exist_cannot_be_taken(memories: Memories) -> None:
+def test_letting_go_does_not_allow_a_call_that_never_was(memories: Memories) -> None:
+    memories.memories.release("rtc_1")
+
+    assert memories.memories.claim("rtc_1", NOON) is False
+
+
+def test_a_call_that_does_not_exist_cannot_be_allowed_or_taken(memories: Memories) -> None:
+    memories.memories.allow("rtc_ghost", NOON)
+
     assert memories.memories.claim("rtc_ghost", NOON) is False
     memories.memories.release("rtc_ghost")
 
@@ -1833,6 +1859,7 @@ def test_workers_arriving_together_take_a_call_once(db: SqlClient, postgres_uri:
     SqlVoiceSessionRepository(db).started(
         VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
     )
+    SqlMemoryRepository(db).allow("rtc_1", NOON)
     schema = db.execute("SELECT current_schema() AS name")[0]["name"]
     barrier = threading.Barrier(12)
 
@@ -1864,7 +1891,7 @@ def test_a_deleted_learner_has_no_memories_left(db: SqlClient) -> None:
     SqlVoiceSessionRepository(db).started(
         VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
     )
-    stored.claim("rtc_1", NOON)
+    stored.allow("rtc_1", NOON)
     keep(stored, remembered(1, source_call_id="rtc_1"))
 
     SqlAccountRepository(db).delete(USER, NOON)
