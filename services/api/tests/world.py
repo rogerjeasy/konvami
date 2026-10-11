@@ -13,6 +13,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.live_call import Turn
+from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
@@ -46,6 +47,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
+    InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
@@ -146,6 +148,19 @@ class World:
             clock=self.clock,
             new_id=lambda: next(card_ids),
         )
+        self.memory_store = InMemoryMemoryRepository(self.sessions)
+        # Memory ids in the order they are handed out: ...0001, ...0002, and so on.
+        memory_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{number:012d}") for number in range(1, 10_000))
+        self.memories = MemoryService(
+            profiles=self.profiles,
+            conversations=self.conversations,
+            sessions=self.sessions,
+            repository=self.memory_store,
+            text_model=self.text,
+            model="gpt-6-luna",
+            clock=self.clock,
+            new_id=lambda: next(memory_ids),
+        )
         self.practice = PracticeScript(
             profiles=self.profiles,
             onboarding=self.onboarding,
@@ -153,6 +168,7 @@ class World:
             placement=self.placement,
             conversations=self.conversations,
             reports=self.reports,
+            memories=self.memories,
         )
         self.voice = VoiceCallService(
             settings=VOICE,

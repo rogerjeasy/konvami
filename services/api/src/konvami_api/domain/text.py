@@ -30,3 +30,18 @@ class TextModelError(Exception):
 class TextModel(Protocol):
     def answer(self, task: TextTask) -> dict[str, Any]:
         """The answer as a JSON object matching the task's schema. Raises `TextModelError`."""
+
+
+def answer_object(properties: dict[str, Any]) -> dict[str, Any]:
+    """The schema of a JSON object in which every property is required, as a text model's strict
+    answers need."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(properties),
+        "properties": properties,
+    }
+
+
+def answer_list(items: dict[str, Any], most: int) -> dict[str, Any]:
+    return {"type": "array", "items": items, "maxItems": most}

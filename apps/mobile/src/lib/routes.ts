@@ -76,6 +76,8 @@ export const ROUTES = {
   accountStudio: '/account/partners/studio',
   /** 6.7 Privacy and AI. */
   accountPrivacy: '/account/privacy',
+  /** 6.10 What my partners know (one memory is changed at `memoryRoute(id)`). */
+  accountMemory: '/account/memory',
   /** 6.8 Security, with its two forms. */
   accountSecurity: '/account/security',
   accountPassword: '/account/security/password',
@@ -109,3 +111,7 @@ export const reportRoute = (id: string) =>
 /** 6.6 Persona Studio for one of the learner's partners. */
 export const studioRoute = (id: string) =>
   ({ pathname: '/account/partners/[id]', params: { id } }) as const satisfies Href;
+
+/** 6.11 One thing the learner's partners know, to reword or forget. */
+export const memoryRoute = (id: string) =>
+  ({ pathname: '/account/memory/[id]', params: { id } }) as const satisfies Href;

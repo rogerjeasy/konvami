@@ -24,7 +24,13 @@ from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.profile import ProfileService
-from konvami_api.domain.text import TextModel, TextModelError, TextTask
+from konvami_api.domain.text import (
+    TextModel,
+    TextModelError,
+    TextTask,
+    answer_list,
+    answer_object,
+)
 from konvami_api.domain.voice import VoiceSessionRepository
 
 # `none`: never asked for. `too_short`: the learner said too little to report on.
@@ -289,27 +295,12 @@ class _Review(_Answer):
     rewrites: list[_RewriteVerdict]
 
 
-def _object(properties: dict[str, Any]) -> dict[str, Any]:
-    """A JSON object in which every property is required, as the text model's strict answers
-    need."""
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "required": list(properties),
-        "properties": properties,
-    }
-
-
-def _list(items: dict[str, Any], most: int) -> dict[str, Any]:
-    return {"type": "array", "items": items, "maxItems": most}
-
-
 _STRING = {"type": "string"}
 _INTEGER = {"type": "integer"}
 
 
 def _analysis_schema(categories: Sequence[str]) -> dict[str, Any]:
-    mistake = _object(
+    mistake = answer_object(
         {
             "turn": _INTEGER,
             "original": _STRING,
@@ -319,24 +310,26 @@ def _analysis_schema(categories: Sequence[str]) -> dict[str, Any]:
             "severity": {"type": "string", "enum": list(get_args(Severity))},
         }
     )
-    rewrite = _object({"turn": _INTEGER, "original": _STRING, "natural": _STRING, "note": _STRING})
-    word = _object({"word": _STRING, "meaning": _STRING, "example": _STRING})
-    return _object(
+    rewrite = answer_object(
+        {"turn": _INTEGER, "original": _STRING, "natural": _STRING, "note": _STRING}
+    )
+    word = answer_object({"word": _STRING, "meaning": _STRING, "example": _STRING})
+    return answer_object(
         {
             "summary": _STRING,
-            "mistakes": _list(mistake, MAX_MISTAKES),
-            "rewrites": _list(rewrite, MAX_REWRITES),
-            "words": _list(word, MAX_WORDS),
-            "wins": _list(_STRING, MAX_WINS),
-            "next_steps": _list(_STRING, MAX_NEXT_STEPS),
+            "mistakes": answer_list(mistake, MAX_MISTAKES),
+            "rewrites": answer_list(rewrite, MAX_REWRITES),
+            "words": answer_list(word, MAX_WORDS),
+            "wins": answer_list(_STRING, MAX_WINS),
+            "next_steps": answer_list(_STRING, MAX_NEXT_STEPS),
         }
     )
 
 
-_REVIEW_SCHEMA = _object(
+_REVIEW_SCHEMA = answer_object(
     {
-        "mistakes": _list(
-            _object(
+        "mistakes": answer_list(
+            answer_object(
                 {
                     "id": _INTEGER,
                     "verdict": {"type": "string", "enum": list(get_args(MistakeVerdict))},
@@ -344,8 +337,8 @@ _REVIEW_SCHEMA = _object(
             ),
             MAX_MISTAKES,
         ),
-        "rewrites": _list(
-            _object(
+        "rewrites": answer_list(
+            answer_object(
                 {
                     "id": _INTEGER,
                     "verdict": {"type": "string", "enum": list(get_args(RewriteVerdict))},
@@ -432,6 +425,11 @@ Judge every item on its own, and answer for every id."""
 def words_in(text: str) -> tuple[str, ...]:
     """The words of a text, without capitals and punctuation: how two quotes are compared."""
     return tuple(re.findall(r"\w+", text.casefold()))
+
+
+def wording(text: str) -> str:
+    """A text's words alone, as one string: two texts with the same wording say the same."""
+    return " ".join(words_in(text))
 
 
 def _within(part: tuple[str, ...], whole: tuple[str, ...]) -> bool:

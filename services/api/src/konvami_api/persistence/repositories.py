@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+from konvami_api.domain import memories
 from konvami_api.domain.accounts import DELETION_MEMORY
 from konvami_api.domain.cards import Card, CardTotals, Kind
 from konvami_api.domain.conversations import (
@@ -523,6 +524,88 @@ _CARD_TOTALS = f"""
            CAST(count(v.card_id) AS integer) AS reviews_ever
     FROM card c LEFT JOIN card_review v ON v.card_id = c.id
     WHERE c.user_id = CAST(:user_id AS uuid) AND c.language = :language
+"""
+
+_MEMORY = f"""
+    SELECT CAST(id AS text) AS id, CAST(persona_id AS text) AS persona_id, kind, text,
+           to_char(day, 'YYYY-MM-DD') AS day, importance, source_call_id,
+           {epoch_micros("created_at")} AS created_at, {epoch_micros("updated_at")} AS updated_at
+    FROM memory
+"""
+
+# The index on a learner's words (migration 0011) refuses the same memory twice; any conflict
+# stores nothing. The limit bounds storage, as for cards: one over at the same moment harms
+# nobody.
+_ADD_MEMORY = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO memory
+        (id, user_id, persona_id, kind, text_key, text, day, importance, source_call_id,
+         created_at, updated_at)
+    SELECT CAST(:id AS uuid), CAST(:user_id AS uuid), CAST(:persona_id AS uuid), :kind,
+           :text_key, :text, CAST(:day AS date), :importance, CAST(:source_call_id AS text),
+           CAST(:created_at AS timestamptz), CAST(:updated_at AS timestamptz)
+    WHERE (SELECT count(*) FROM memory WHERE user_id = CAST(:user_id AS uuid)) < :limit
+    ON CONFLICT DO NOTHING
+    RETURNING id
+"""
+
+# Not when another of the learner's memories has these words already (for the same partner,
+# or for all of them): checked here, so that the answer is False rather than an error.
+_REPLACE_MEMORY = """
+    UPDATE memory
+    SET persona_id = CAST(:persona_id AS uuid), kind = :kind, text_key = :text_key,
+        text = :text, day = CAST(:day AS date), importance = :importance,
+        source_call_id = CAST(:source_call_id AS text),
+        updated_at = CAST(:updated_at AS timestamptz)
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+      AND NOT EXISTS (
+          SELECT 1
+          FROM memory other
+          WHERE other.user_id = CAST(:user_id AS uuid) AND other.id <> CAST(:id AS uuid)
+            AND other.text_key = :text_key
+            AND other.persona_id IS NOT DISTINCT FROM CAST(:persona_id AS uuid)
+      )
+    RETURNING id
+"""
+
+_LIST_MEMORIES = f"""
+    {_MEMORY}
+    WHERE user_id = CAST(:user_id AS uuid)
+    ORDER BY created_at DESC, id DESC
+"""
+
+_MEMORY_BY_ID = f"{_MEMORY} WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)"
+
+_REMOVE_MEMORY = """
+    DELETE FROM memory WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+    RETURNING id
+"""
+
+# Allowing a call to be read is a write for its learner, so it begins like every other one
+# (see `_REQUEST_REPORT`). A call that is there already, allowed or taken, stays as it is.
+_ALLOW_MEMORIES = """
+    WITH call AS (
+        SELECT call_id, user_id FROM voice_session WHERE call_id = :call_id
+    ),
+    owner AS (
+        INSERT INTO app_user (id) SELECT user_id FROM call ON CONFLICT (id) DO NOTHING
+    )
+    INSERT INTO memory_extraction (call_id, state, started_at)
+    SELECT call_id, 'allowed', CAST(:at AS timestamptz) FROM call
+    ON CONFLICT (call_id) DO NOTHING
+"""
+
+# Only a call that was allowed can be taken (migration 0012), and of several workers at once
+# one gets its row back.
+_CLAIM_MEMORIES = """
+    UPDATE memory_extraction
+    SET state = 'taken', started_at = CAST(:at AS timestamptz)
+    WHERE call_id = :call_id AND state = 'allowed'
+    RETURNING call_id
+"""
+
+_RELEASE_MEMORIES = """
+    UPDATE memory_extraction SET state = 'allowed' WHERE call_id = :call_id AND state = 'taken'
 """
 
 
@@ -1061,3 +1144,69 @@ class SqlCardRepository:
         )
         row = rows[0]
         return CardTotals(row["learned"], row["reviews"], row["remembered"], row["reviews_ever"])
+
+
+def _memory(row: dict[str, Any]) -> memories.Memory:
+    return memories.Memory(
+        id=UUID(row["id"]),
+        kind=row["kind"],
+        text=row["text"],
+        day=dt.date.fromisoformat(row["day"]) if row["day"] else None,
+        importance=row["importance"],
+        persona_id=UUID(row["persona_id"]) if row["persona_id"] else None,
+        source_call_id=row["source_call_id"],
+        created_at=from_epoch_micros(row["created_at"]),
+        updated_at=from_epoch_micros(row["updated_at"]),
+    )
+
+
+def _memory_fields(user_id: UUID, key: str, memory: memories.Memory) -> dict[str, Any]:
+    return {
+        "id": str(memory.id),
+        "user_id": str(user_id),
+        "persona_id": str(memory.persona_id) if memory.persona_id else None,
+        "kind": memory.kind,
+        "text_key": key,
+        "text": memory.text,
+        "day": memory.day.isoformat() if memory.day else None,
+        "importance": memory.importance,
+        "source_call_id": memory.source_call_id,
+        "updated_at": memory.updated_at.isoformat(),
+    }
+
+
+class SqlMemoryRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def allow(self, call_id: str, at: dt.datetime) -> None:
+        self._client.execute(_ALLOW_MEMORIES, {"call_id": call_id, "at": at.isoformat()})
+
+    def claim(self, call_id: str, at: dt.datetime) -> bool:
+        rows = self._client.execute(_CLAIM_MEMORIES, {"call_id": call_id, "at": at.isoformat()})
+        return bool(rows)
+
+    def release(self, call_id: str) -> None:
+        self._client.execute(_RELEASE_MEMORIES, {"call_id": call_id})
+
+    def add(self, user_id: UUID, key: str, memory: memories.Memory, limit: int) -> bool:
+        fields = _memory_fields(user_id, key, memory)
+        rows = self._client.execute(
+            _ADD_MEMORY, {**fields, "created_at": memory.created_at.isoformat(), "limit": limit}
+        )
+        return bool(rows)
+
+    def replace(self, user_id: UUID, key: str, memory: memories.Memory) -> bool:
+        return bool(self._client.execute(_REPLACE_MEMORY, _memory_fields(user_id, key, memory)))
+
+    def listed(self, user_id: UUID) -> list[memories.Memory]:
+        rows = self._client.execute(_LIST_MEMORIES, {"user_id": str(user_id)})
+        return [_memory(row) for row in rows]
+
+    def get(self, user_id: UUID, memory_id: UUID) -> memories.Memory | None:
+        rows = self._client.execute(_MEMORY_BY_ID, {"id": str(memory_id), "user_id": str(user_id)})
+        return _memory(rows[0]) if rows else None
+
+    def remove(self, user_id: UUID, memory_id: UUID) -> bool:
+        rows = self._client.execute(_REMOVE_MEMORY, {"id": str(memory_id), "user_id": str(user_id)})
+        return bool(rows)

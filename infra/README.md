@@ -82,6 +82,9 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
   (spec §6.5) and checks each correction a second time. The call worker function does it in an
   invocation of its own (`{"report": "<call id>"}`), started when the call ends or when the
   learner asks for a report again. Without a name, no report is written.
+  `text_models.memory` names the model that then reads the conversation once more for what the
+  learner's partners should know next time (spec §6.11), in the same invocation, after the
+  report. Without a name, nothing is remembered.
 - **Files (`modules/media`):** the private bucket `kv-dev-media-<account id>` for learners'
   photos (6.2 Personal) and the voices' samples (6.6 Persona Studio). Nothing in it is public:
   the API signs a short-lived upload form (JPEG only, at most 1 MB) or a short-lived address, so

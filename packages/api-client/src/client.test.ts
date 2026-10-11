@@ -426,6 +426,41 @@ describe('api client', () => {
     expect(calls[5]?.body).toEqual({ rating: 'good' });
   });
 
+  it('reads, sets, changes and forgets what partners know', async () => {
+    const memory = { id: 'mem/1', kind: 'event', text: 'Has a job interview.', day: '2026-10-16' };
+    const book = { enabled: true, avoidTopics: [], memories: [memory] };
+    const { fetch, calls } = fakeFetch(
+      json(200, book),
+      json(200, { ...book, enabled: false }),
+      json(200, { ...book, avoidTopics: ['politics'] }),
+      json(200, memory),
+      json(200, memory),
+      json(200, { ...book, memories: [] }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getMemories()).toEqual(book);
+    expect((await api.configureMemories({ enabled: false })).enabled).toBe(false);
+    await api.configureMemories({ avoidTopics: ['politics'] });
+    expect(await api.changeMemory('mem/1', { text: 'Interview at Planzer.' })).toEqual(memory);
+    await api.changeMemory('mem/1', { day: null });
+    expect((await api.removeMemory('mem/1')).memories).toEqual([]);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/memories',
+      'PATCH https://api.example.test/v1/memories',
+      'PATCH https://api.example.test/v1/memories',
+      'PATCH https://api.example.test/v1/memories/mem%2F1',
+      'PATCH https://api.example.test/v1/memories/mem%2F1',
+      'DELETE https://api.example.test/v1/memories/mem%2F1',
+    ]);
+    expect(calls[1]?.body).toEqual({ enabled: false });
+    expect(calls[2]?.body).toEqual({ avoidTopics: ['politics'] });
+    expect(calls[3]?.body).toEqual({ text: 'Interview at Planzer.' });
+    // Taking the day away is a change: the null is sent.
+    expect(calls[4]?.body).toEqual({ day: null });
+  });
+
   it('accepts a base URL with a trailing slash', async () => {
     const { fetch, calls } = fakeFetch(json(200, {}));
 

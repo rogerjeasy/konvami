@@ -1,5 +1,6 @@
 """The HTTP API. Handlers translate between HTTP and the domain services and decide nothing."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Annotated, Any
 from uuid import UUID
@@ -19,6 +20,10 @@ from konvami_api.api.schemas import (
     DeckOut,
     DeckSummaryOut,
     HomeOut,
+    MemoriesOut,
+    MemoryOut,
+    MemoryPatch,
+    MemorySettingsPatch,
     OnboardingOut,
     PersonaDescription,
     PersonaDraftOut,
@@ -48,9 +53,10 @@ from konvami_api.domain.cards import QUEUE_DEFAULT, CardService
 from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.home import HomeService
+from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.persona_parts import Voice
-from konvami_api.domain.personas import PersonaService
+from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
@@ -72,6 +78,7 @@ class Services:
     conversations: ConversationService
     reports: ReportService
     cards: CardService
+    memories: MemoryService
     home: HomeService
     progress: ProgressService
     accounts: AccountService
@@ -306,6 +313,46 @@ def _router(services: Services) -> APIRouter:
         services.cards.remove(user, card_id)
         deck = services.cards.deck(user, limit=1)
         return DeckSummaryOut(total=deck.total, due=deck.due)
+
+    def partners_named(user: UUID, memories: Sequence[Memory]) -> dict[UUID, Persona]:
+        """The partners whose names the memories need; they are read only when one does."""
+        if not any(memory.persona_id for memory in memories):
+            return {}
+        return {partner.id: partner for partner in services.personas.partners(user)}
+
+    def memories_of(user: UUID, book: MemoryBook) -> MemoriesOut:
+        return MemoriesOut.of(book, partners_named(user, book.memories))
+
+    @router.get("/memories", operation_id="getMemories")
+    def get_memories(user: CurrentUser) -> MemoriesOut:
+        """What the learner's partners know about them from earlier conversations."""
+        return memories_of(user, services.memories.view(user))
+
+    @router.patch("/memories", operation_id="configureMemories", responses=REFUSED)
+    def configure_memories(user: CurrentUser, settings: MemorySettingsPatch) -> MemoriesOut:
+        """Turns memory on or off, or names the topics partners leave alone."""
+        book = services.memories.configure(
+            user, enabled=settings.enabled, avoid_topics=settings.avoid_topics
+        )
+        return memories_of(user, book)
+
+    @router.patch(
+        "/memories/{memory_id}",
+        operation_id="changeMemory",
+        responses=NOT_FOUND | CONFLICT | REFUSED,
+    )
+    def change_memory(user: CurrentUser, memory_id: UUID, patch: MemoryPatch) -> MemoryOut:
+        # Only what the request named: a key left out is not a change, a null day is one.
+        changed = services.memories.change(user, memory_id, **patch.model_dump(exclude_unset=True))
+        return MemoryOut.of(changed, partners_named(user, [changed]))
+
+    @router.delete(
+        "/memories/{memory_id}", operation_id="removeMemory", responses=NOT_FOUND | REFUSED
+    )
+    def remove_memory(user: CurrentUser, memory_id: UUID) -> MemoriesOut:
+        """Forgets one memory for good."""
+        services.memories.remove(user, memory_id)
+        return memories_of(user, services.memories.view(user))
 
     @router.get("/account", operation_id="getAccount")
     def get_account(user: CurrentUser) -> AccountOut:

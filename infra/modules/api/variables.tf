@@ -73,15 +73,18 @@ variable "text_models" {
     partners and drafts a partner from a description in Persona Studio; speech speaks a voice's
     sample there (once per voice and language, then it is read from the media bucket); report
     writes a practice conversation's Session Report and checks each of its corrections a second
-    time (two requests per conversation). An empty name turns the job off: it then uses its
-    fallback (the examiner's own impression, the language pack's built-in partners) or, for
-    drafts, samples and reports, says it is unavailable.
+    time (two requests per conversation); memory reads the conversation once more for what the
+    learner's partners should know next time (spec §6.11; one request per conversation, by the
+    same worker, after the report). An empty name turns the job off: it then uses its fallback
+    (the examiner's own impression, the language pack's built-in partners) or, for drafts,
+    samples and reports, says it is unavailable; without a memory model nothing is remembered.
   EOT
   type = object({
     assessment = string
     personas   = string
     speech     = optional(string, "")
     report     = optional(string, "")
+    memory     = optional(string, "")
   })
 }
 

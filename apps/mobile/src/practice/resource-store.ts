@@ -25,6 +25,16 @@ export interface ResourceStore<Data> {
   refresh(): Promise<void>;
   /** `refresh`, but only when what is shown is older than `STALE_AFTER_MS`. */
   revisit(): Promise<void>;
+  /**
+   * Makes a change on the server and shows its result without reading everything again:
+   * `apply` turns what is shown and the server's answer into what to show. The answer is
+   * dropped when the store was reset meanwhile, or shows nothing. Rejects with what `request`
+   * rejects with; what is shown then stays as it is.
+   */
+  mutate<Answer>(
+    request: () => Promise<Answer>,
+    apply: (shown: Data, answer: Answer) => Data,
+  ): Promise<Answer>;
   /** Forgets everything (sign-out): the next account must not see this one's practice. */
   reset(): void;
 }
@@ -100,6 +110,15 @@ export function createResourceStore<Data>(
         return Promise.resolve();
       }
       return request ?? read(true);
+    },
+
+    async mutate(send, apply) {
+      const from = generation;
+      const answer = await send();
+      if (from === generation && state.phase === 'ready') {
+        setState({ ...state, data: apply(state.data, answer) });
+      }
+      return answer;
     },
 
     reset() {

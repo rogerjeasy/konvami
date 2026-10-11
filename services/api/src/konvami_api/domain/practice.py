@@ -2,8 +2,9 @@
 
 Two things live here: what the partner is told (built for every call from who they are and what
 is known about the learner, in the layers of spec §8.5) and what they can do (end the
-conversation). When it ends, its report is written (`domain/reports.py`). Memory and live
-corrections on screen build on this later.
+conversation). When it ends, its report is written (`domain/reports.py`) and what it told about
+the learner is remembered (`domain/memories.py`). Live corrections on screen build on this
+later.
 """
 
 import datetime as dt
@@ -13,6 +14,7 @@ from uuid import UUID
 
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.conversations import ConversationService, PartnerHistory
+from konvami_api.domain.memories import Memory, MemoryService, Recall
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.persona_parts import FormOfAddress, Role, Strictness, Style
 from konvami_api.domain.personas import (
@@ -55,6 +57,10 @@ class Learner:
     focus: Focus
     # Earlier conversations with this partner; None before the first one.
     history: PartnerHistory | None
+    # What the partner knows from before (spec §6.11); None while the learner has memory off.
+    memories: Recall | None = None
+    # What the learner asked every partner to leave alone, in their own words.
+    avoid_topics: tuple[str, ...] = ()
 
 
 class PracticeTools:
@@ -315,18 +321,78 @@ def _course(course: dict[str, Any] | None) -> str | None:
     return f'They follow the course or textbook "{course["name"]}"{chapter}.'
 
 
-def _history(history: PartnerHistory | None) -> str:
+def _history(history: PartnerHistory | None, remembers: bool) -> str:
     if history is None:
         return (
             "This is your first conversation with them. Open with a greeting, your first name "
             "and one easy question, nothing more: who you are comes out as you talk."
         )
     times = "1 time" if history.conversations == 1 else f"{history.conversations} times"
-    return (
+    met = (
         f"You have talked {times} before, most recently on {history.last_at.date().isoformat()}. "
-        "Greet them like someone you know. Do not introduce yourself again. You do not remember "
-        "what was said then: if they refer to it, say so honestly and ask them to tell you again."
+        "Greet them like someone you know. Do not introduce yourself again."
     )
+    if remembers:
+        # What they remember, and how to be honest about the rest, is a section of its own.
+        return met
+    return (
+        f"{met} You do not remember what was said then: if they refer to it, say so honestly "
+        "and ask them to tell you again."
+    )
+
+
+def _avoid(topics: tuple[str, ...]) -> str | None:
+    if not topics:
+        return None
+    listed = "\n".join(f"- {topic}" for topic in topics)
+    return (
+        "Never bring up these topics, which they asked the app to leave alone. If they raise "
+        "one themselves, answer briefly and kindly, ask nothing further about it and move on:\n"
+        f"{listed}"
+    )
+
+
+def _dated(memory: Memory, today: dt.date) -> str:
+    """A memory that is asked about or coming up: its day first, as a partner would think of
+    it."""
+    day = memory.day or today
+    when = "today" if day == today else f"{day.strftime('%A')}, {day.isoformat()}"
+    return f"- {when}: {memory.text}"
+
+
+def _noted(memory: Memory) -> str:
+    day = f" ({memory.day.isoformat()})" if memory.day else ""
+    return f"- {memory.text}{day}"
+
+
+def _remembered(recall: Recall | None, target: str, today: dt.date) -> str:
+    """The section on what the partner knows from before; empty when that is nothing."""
+    if recall is None or not (recall.follow_ups or recall.coming_up or recall.notes):
+        return ""
+    parts: list[str] = []
+    if recall.follow_ups:
+        parts.append(
+            "These have happened since you last talked. Ask how it went, early on and one at "
+            "a time, the way a friend would:"
+        )
+        parts += [_dated(memory, today) for memory in recall.follow_ups]
+    if recall.coming_up:
+        parts.append("Coming up for them. Mention it when it fits, or wish them well:")
+        parts += [_dated(memory, today) for memory in recall.coming_up]
+    if recall.notes:
+        parts.append("What else you know:")
+        parts += [_noted(memory) for memory in recall.notes]
+    return f"""
+# What you know from before
+Konvami keeps short notes from the learner's earlier conversations, and its partners share them:
+that is how you know these things, and you say so if asked. In each note the learner is the
+subject unless it names someone else. The notes may be in another language; you still speak
+{target}.
+{chr(10).join(parts)}
+Use this the way a friend would: bring one thing up when it fits, and never list or recite the
+notes. This is all you remember of earlier conversations: if they refer to anything else, say
+honestly that you do not recall it and ask them to tell you again.
+"""
 
 
 # How the things to practise are introduced, and what must not be mentioned, per source.
@@ -351,12 +417,14 @@ def practice_instructions(persona: Persona, learner: Learner, today: dt.date) ->
         if learner.exam
         else "They have not named an exam: practise general exam-style speaking."
     )
+    remembered = _remembered(learner.memories, target, today)
     about = [
         name,
         _goals(learner.goals, target),
         exam if learner.exam and persona.role != "exam_coach" else None,
         _course(learner.course),
-        _history(learner.history),
+        _history(learner.history, bool(remembered)),
+        _avoid(learner.avoid_topics),
     ]
     work = f"\nYou work as: {persona.occupation}." if persona.occupation else ""
     # Only a persona with a personality of their own gets the section: the starter partners
@@ -403,7 +471,7 @@ You are an AI and say so if asked; you never claim to be human. Today is
 
 # The learner
 {chr(10).join(line for line in about if line)}
-
+{remembered}
 # Language
 Speak {target}. {use.format(explanation=explanation, target=target)}
 If they ask how to say something, give the {target} phrase only, invite them to try it, and
@@ -449,8 +517,10 @@ class PracticeScript:
         placement: PlacementService,
         conversations: ConversationService,
         reports: ReportService,
+        memories: MemoryService,
     ) -> None:
         self._reports = reports
+        self._memories = memories
         self._profiles = profiles
         self._onboarding = onboarding
         self._personas = personas
@@ -465,18 +535,21 @@ class PracticeScript:
         persona = next((p for p in self._personas.partners(user_id) if p.id == persona_id), None)
         if persona is None:
             raise PersonaError("not_found")
-        learner = self._learner(user_id, account, persona)
+        learner = self._learner(user_id, account, persona, today)
         return Briefing(
             practice_instructions(persona, learner, today),
             voice=persona.voice,
             speed=teaching_of(persona).speed,
         )
 
-    def _learner(self, user_id: UUID, account: Account, persona: Persona) -> Learner:
+    def _learner(
+        self, user_id: UUID, account: Account, persona: Persona, today: dt.date
+    ) -> Learner:
         profile = self._profiles.get(user_id)
         catalog = self._profiles.catalog
         language = profile.target_language or ""
         result = self._placement.view(user_id).result
+        history = self._conversations.partner_history(user_id).get(persona.id)
         return Learner(
             first_name=account.first_name,
             target=catalog.english_name(language),
@@ -491,7 +564,11 @@ class PracticeScript:
             focus=what_to_practise(
                 self._reports.next_steps(user_id), result.weak_areas if result else ()
             ),
-            history=self._conversations.partner_history(user_id).get(persona.id),
+            history=history,
+            memories=self._memories.recall(
+                user_id, persona.id, today, history.last_at.date() if history else None
+            ),
+            avoid_topics=profile.avoid_topics,
         )
 
     def _exam(self, language: str, exam: dict[str, Any] | None) -> str | None:
@@ -512,4 +589,10 @@ class PracticeScript:
         return None
 
     def concluded(self, user_id: UUID, call_id: str, tools: ToolSet, call: FinishedCall) -> None:
-        self._reports.after_call(user_id, call_id)
+        # Whether the conversation may be read for memories is recorded before a worker is
+        # started for it. Should that fail, the conversation stays unread, and the report is
+        # started all the same (spec §12.2: one step failing does not block another).
+        try:
+            self._memories.after_call(user_id, call_id)
+        finally:
+            self._reports.after_call(user_id, call_id)

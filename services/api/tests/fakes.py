@@ -15,6 +15,7 @@ from konvami_api.domain.conversations import (
     PartnerHistory,
 )
 from konvami_api.domain.live_call import Turn
+from konvami_api.domain.memories import Memory
 from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
@@ -575,3 +576,62 @@ class InMemoryCardRepository:
             remembered=sum(1 for rating in recent if rating != "again"),
             reviews_ever=len(reviews),
         )
+
+
+class InMemoryMemoryRepository:
+    """Keeps memories, and which calls of an `InMemoryVoiceSessionRepository` were read."""
+
+    def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
+        self._calls = calls
+        # The calls that may be read, and those of them a worker has taken.
+        self._allowed: set[str] = set()
+        self._read: set[str] = set()
+        # Per memory: its owner, what makes it the same memory as another, and the memory.
+        self.memories: dict[UUID, tuple[UUID, str, Memory]] = {}
+
+    def allow(self, call_id: str, at: datetime) -> None:
+        if call_id in self._calls.sessions:
+            self._allowed.add(call_id)
+
+    def claim(self, call_id: str, at: datetime) -> bool:
+        if call_id not in self._allowed or call_id in self._read:
+            return False
+        self._read.add(call_id)
+        return True
+
+    def release(self, call_id: str) -> None:
+        self._read.discard(call_id)
+
+    def _same(self, user_id: UUID, key: str, memory: Memory) -> bool:
+        return any(
+            (owner, known, other.persona_id) == (user_id, key, memory.persona_id)
+            and other.id != memory.id
+            for owner, known, other in self.memories.values()
+        )
+
+    def add(self, user_id: UUID, key: str, memory: Memory, limit: int) -> bool:
+        if self._same(user_id, key, memory) or len(self.listed(user_id)) >= limit:
+            return False
+        self.memories[memory.id] = (user_id, key, memory)
+        return True
+
+    def replace(self, user_id: UUID, key: str, memory: Memory) -> bool:
+        stored = self.memories.get(memory.id)
+        if stored is None or stored[0] != user_id or self._same(user_id, key, memory):
+            return False
+        self.memories[memory.id] = (user_id, key, memory)
+        return True
+
+    def listed(self, user_id: UUID) -> list[Memory]:
+        mine = [memory for owner, _, memory in self.memories.values() if owner == user_id]
+        return sorted(mine, key=lambda m: (m.created_at, str(m.id)), reverse=True)
+
+    def get(self, user_id: UUID, memory_id: UUID) -> Memory | None:
+        stored = self.memories.get(memory_id)
+        return stored[2] if stored and stored[0] == user_id else None
+
+    def remove(self, user_id: UUID, memory_id: UUID) -> bool:
+        if self.get(user_id, memory_id) is None:
+            return False
+        del self.memories[memory_id]
+        return True

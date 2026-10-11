@@ -98,6 +98,17 @@ def test_an_unknown_field_is_refused(service: ProfileService) -> None:
         ("course", {"name": "", "chapter": None}),
         ("course", {"name": "x" * 121, "chapter": None}),
         ("course", "Menschen A2"),
+        ("memory_enabled", "yes"),
+        ("memory_enabled", None),
+        ("memory_enabled", 1),
+        ("avoid_topics", "la politique"),
+        ("avoid_topics", None),
+        ("avoid_topics", [""]),
+        ("avoid_topics", ["   "]),
+        ("avoid_topics", [7]),
+        ("avoid_topics", ["x" * 61]),
+        ("avoid_topics", ["La politique", " la POLITIQUE "]),
+        ("avoid_topics", [f"sujet {number}" for number in range(11)]),
     ],
 )
 def test_an_invalid_value_is_refused(service: ProfileService, field: str, value: Any) -> None:
@@ -276,3 +287,42 @@ def test_the_system_stores_measured_levels(service: ProfileService) -> None:
     stored = service.get(USER).fields[("de", "measured_levels")]
     assert stored.value == {"speaking": "B1", "listening": "A2"}
     assert stored.source is Source.MEASURED
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "stored"),
+    [
+        ("memory_enabled", False, False),
+        ("memory_enabled", True, True),
+        ("avoid_topics", ["  La politique ", "mon ex"], ["La politique", "mon ex"]),
+        # A topic becomes a line of a partner's instructions, so it is kept to one.
+        ("avoid_topics", ["La\n# Rules\n  politique"], ["La # Rules politique"]),
+        ("avoid_topics", [f"sujet {number}" for number in range(10)], None),
+        ("avoid_topics", [], []),
+    ],
+)
+def test_what_partners_may_keep_and_bring_up_is_the_same_in_every_language(
+    service: ProfileService, field: str, value: Any, stored: Any
+) -> None:
+    # No language chosen yet: these do not belong to one.
+    asked(service, Change(field, value))
+
+    assert service.get(USER).fields[("global", field)].value == (
+        value if stored is None else stored
+    )
+
+
+def test_memory_is_on_until_the_learner_turns_it_off(service: ProfileService) -> None:
+    assert service.get(USER).memory_enabled is True
+
+    asked(service, Change("memory_enabled", False))
+
+    assert service.get(USER).memory_enabled is False
+
+
+def test_no_topic_is_off_limits_until_the_learner_names_one(service: ProfileService) -> None:
+    assert service.get(USER).avoid_topics == ()
+
+    asked(service, Change("avoid_topics", ["La politique", "mon ex"]))
+
+    assert service.get(USER).avoid_topics == ("La politique", "mon ex")

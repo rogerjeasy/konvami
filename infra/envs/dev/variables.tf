@@ -119,17 +119,23 @@ variable "text_models" {
     second time. It is the stronger model, as for the placement test: a wrong correction costs
     the learner's trust (spec §16.1), and text costs little next to the call it reports on
     (spec §17.3 lever 1).
+    memory reads a practice conversation for what the learner's partners should know next time
+    (spec §6.11). It is the small model (spec §17.3 lever 5): the learner sees every memory and
+    can put it right, and what a partner said about their own life cannot be stored as a fact
+    about the learner whatever the model answers.
   EOT
   type = object({
     assessment = string
     personas   = string
     speech     = optional(string, "gpt-4o-mini-tts")
     report     = optional(string, "gpt-6.1-sol")
+    memory     = optional(string, "gpt-6-luna")
   })
   default = {
     assessment = "gpt-6.1-sol"
     personas   = "gpt-6-luna"
     speech     = "gpt-4o-mini-tts"
     report     = "gpt-6.1-sol"
+    memory     = "gpt-6-luna"
   }
 }

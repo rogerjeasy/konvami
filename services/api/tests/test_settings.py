@@ -96,3 +96,18 @@ def test_settings_written_before_there_were_reports_still_work() -> None:
 
     # Without a report model no report is written; everything else works.
     assert models.report == ""
+
+
+def test_the_memory_model_is_read_with_the_text_models() -> None:
+    models = text_models(
+        '{"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna", "memory": "gpt-6-luna"}'
+    )
+
+    assert models.memory == "gpt-6-luna"
+
+
+def test_settings_written_before_there_was_memory_still_work() -> None:
+    models = text_models('{"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna"}')
+
+    # Without a memory model nothing is written down after a conversation; everything else works.
+    assert models.memory == ""

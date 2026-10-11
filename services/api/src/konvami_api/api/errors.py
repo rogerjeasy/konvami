@@ -14,6 +14,7 @@ from konvami_api.domain.accounts import AccountError
 from konvami_api.domain.cards import CardError
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.errors import ServiceUnavailable
+from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.profile import ProfileError
@@ -61,6 +62,7 @@ _CARD_STATUS = {
     "no_such_item": 422,
     "not_certain": 422,
 }
+_MEMORY_STATUS = {"not_found": 404, "duplicate": 409}
 _REPORT_STATUS = {"nothing_to_report": 409, "consent_required": 403, "report_limit": 429}
 _UNAVAILABLE = 503
 
@@ -104,6 +106,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(CardError)
     async def _card_error(_: Request, error: CardError) -> JSONResponse:
         return _response(_CARD_STATUS.get(error.code, 422), error.code)
+
+    @app.exception_handler(MemoriesError)
+    async def _memory_error(_: Request, error: MemoriesError) -> JSONResponse:
+        return _response(_MEMORY_STATUS.get(error.code, 422), error.code)
 
     @app.exception_handler(ReportError)
     async def _report_error(_: Request, error: ReportError) -> JSONResponse:

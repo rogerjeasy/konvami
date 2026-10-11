@@ -116,8 +116,8 @@ function Identity({ home }: { home: Home | null }) {
 
 /**
  * 6.1 Profile (spec §14.1): who is signed in, and the way to everything about them: their
- * name and photo, what they are learning, their partners, their privacy choices and the
- * security of the account. Every number comes from their own practice.
+ * name and photo, what they are learning, their partners and what those know about them,
+ * their privacy choices and the security of the account. Every number comes from their own practice.
  */
 export function ProfileScreen() {
   const { t } = useTranslation();
@@ -183,6 +183,12 @@ export function ProfileScreen() {
               title={t('profile.rows.newPartner')}
               detail={t('profile.rows.newPartnerHint')}
               onPress={go(ROUTES.accountNewPartner)}
+            />
+            <ListRow
+              icon="file"
+              title={t('profile.rows.memory')}
+              detail={t('profile.rows.memoryHint')}
+              onPress={go(ROUTES.accountMemory)}
             />
           </ListGroup>
         </Section>

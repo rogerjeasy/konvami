@@ -37,6 +37,8 @@ type Json = Any
 
 GLOBAL_SCOPE = "global"
 TARGET_LANGUAGE = "target_language"
+MEMORY_ENABLED = "memory_enabled"
+AVOID_TOPICS = "avoid_topics"
 
 
 class Source(StrEnum):
@@ -76,6 +78,17 @@ class Profile:
     def target_language(self) -> str | None:
         target: str | None = self.value(GLOBAL_SCOPE, TARGET_LANGUAGE)
         return target
+
+    @property
+    def memory_enabled(self) -> bool:
+        """Whether partners keep and use memories of the learner (spec §6.11). On until the
+        learner turns it off."""
+        return self.value(GLOBAL_SCOPE, MEMORY_ENABLED) is not False
+
+    @property
+    def avoid_topics(self) -> tuple[str, ...]:
+        """What the learner does not want brought up or remembered, in their own words."""
+        return tuple(self.value(GLOBAL_SCOPE, AVOID_TOPICS) or ())
 
     def level(self, language: str) -> str | None:
         """The level practice runs at in a language: the one settled after the placement test,
@@ -127,6 +140,9 @@ class ProfileRepository(Protocol):
 GOAL_NOTE_MAX = 280
 COURSE_NAME_MAX = 120
 COURSE_CHAPTER_MAX = 60
+# A topic the learner wants left alone is a few words ("my divorce"), and they name a handful.
+AVOID_TOPIC_MAX = 60
+MAX_AVOID_TOPICS = 10
 
 # An ISO 639 code, as the app sends it ("en", "fr", "gsw"). Pydantic checks the pattern before it
 # lowercases, so the pattern accepts both cases.
@@ -184,6 +200,17 @@ class _Context:
 
 _LANGUAGE_CODE: TypeAdapter[str] = TypeAdapter(LanguageCode)
 _EXAM: TypeAdapter[Exam | None] = TypeAdapter(Exam | None)
+_TOPICS: TypeAdapter[list[str]] = TypeAdapter(
+    Annotated[
+        list[
+            Annotated[
+                str,
+                StringConstraints(strip_whitespace=True, min_length=1, max_length=AVOID_TOPIC_MAX),
+            ]
+        ],
+        Field(max_length=MAX_AVOID_TOPICS),
+    ]
+)
 
 
 def _typed(adapter: TypeAdapter[Any]) -> Callable[[Json, _Context], Json]:
@@ -215,6 +242,20 @@ def _exam(value: Json, context: _Context) -> Json:
     return exam.model_dump(mode="json")
 
 
+def one_line(text: str) -> str:
+    """A text on one line, its runs of spaces and line breaks made single spaces. What a
+    learner writes can become a line of a partner's instructions, where a line break could
+    pass for a new heading."""
+    return " ".join(text.split())
+
+
+def _avoid_topics(value: Json, _: _Context) -> Json:
+    topics = [one_line(topic) for topic in _TOPICS.validate_python(value, strict=True)]
+    if len({topic.casefold() for topic in topics}) != len(topics):
+        raise ValueError("a topic is listed twice")
+    return topics
+
+
 @dataclass(frozen=True)
 class FieldSpec:
     per_language: bool
@@ -238,6 +279,10 @@ FIELDS: Mapping[str, FieldSpec] = {
     "measured_levels": FieldSpec(
         True, _typed(TypeAdapter(dict[str, StartingLevel])), system_only=True
     ),
+    # Memory (spec §6.11, §6.1.2 "Privacy"): whether partners remember, and what they leave
+    # alone. About the person, not about one language.
+    MEMORY_ENABLED: FieldSpec(False, _typed(TypeAdapter(bool))),
+    AVOID_TOPICS: FieldSpec(False, _avoid_topics),
 }
 
 

@@ -20,6 +20,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
+from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
@@ -36,6 +37,7 @@ from konvami_api.persistence.repositories import (
     SqlCardRepository,
     SqlConversationRepository,
     SqlDraftLog,
+    SqlMemoryRepository,
     SqlOnboardingRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
@@ -153,6 +155,15 @@ def build_backend(
     cards = CardService(
         profiles=profiles, reports=reports, repository=SqlCardRepository(sql), clock=_now
     )
+    memories = MemoryService(
+        profiles=profiles,
+        conversations=conversations,
+        sessions=sessions,
+        repository=SqlMemoryRepository(sql),
+        text_model=text,
+        model=models.memory,
+        clock=_now,
+    )
     voice = VoiceCallService(
         settings=voice_settings(environment.get(VOICE_VARIABLE)),
         scripts={
@@ -165,6 +176,7 @@ def build_backend(
                 placement=placement,
                 conversations=conversations,
                 reports=reports,
+                memories=memories,
             ),
         },
         accounts=directory,
@@ -206,6 +218,7 @@ def build_backend(
         conversations=conversations,
         reports=reports,
         cards=cards,
+        memories=memories,
         home=home,
         progress=progress,
         accounts=accounts,
@@ -259,13 +272,19 @@ def migrate_handler(event: dict[str, Any], context: Any) -> dict[str, list[str]]
 
 def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     """The worker's two jobs, both too long for an API request: following a live call to its
-    end (`call_id`), and writing a conversation's report afterwards (`report`)."""
+    end (`call_id`), and what follows a conversation (`report`): writing its report, then
+    writing down what it told about the learner."""
     if "report" in event:
-        backend.services.reports.write(event["report"])
+        try:
+            backend.services.reports.write(event["report"])
+        finally:
+            # A failure in one step does not block the other (spec §12.2).
+            backend.services.memories.write(event["report"])
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
 
 
 def call_worker_handler(event: dict[str, Any], context: Any) -> None:
-    """Started by the API when a call is created, and again when its report is to be written."""
+    """Started by the API when a call is created, and again when its report and its memories
+    are to be written."""
     run_worker(_backend(), event)
