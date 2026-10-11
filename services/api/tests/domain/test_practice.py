@@ -3,11 +3,13 @@ from uuid import UUID
 
 import pytest
 
+from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MAX_MEMORIES, Memory
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.practice import PracticeTools
 from konvami_api.domain.profile import Change, Origin, Source
+from konvami_api.domain.voice import FinishedCall
 from tests.world import NOON, OTHER_USER, USER, World
 
 TODAY = NOON.date()
@@ -599,3 +601,38 @@ def test_a_partner_leaves_alone_what_the_learner_asked_to_leave_alone() -> None:
 
 def test_nothing_is_off_limits_until_the_learner_says_so() -> None:
     assert "Never bring up" not in instructions(World())
+
+
+def test_what_is_said_while_memory_is_off_stays_unread_when_it_is_turned_on_later() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    turns = (
+        Turn("persona", "Hallo Amara! Wie geht's?"),
+        Turn("learner", "Gut. Ich wohne jetzt in Zürich und arbeite als Krankenschwester."),
+    )
+    call_id = world.talk(lena, at=NOON - timedelta(minutes=10), turns=turns)
+    off = [Change("memory_enabled", False)]
+    world.profiles.apply(USER, off, source=Source.ASKED, origin=Origin.FORM)
+    # The report cannot be started now; the learner asks for it again later.
+    world.report_starter.fail = True
+
+    world.practice.concluded(
+        USER, call_id, PracticeTools(), FinishedCall(NOON, "closed", {}, turns)
+    )
+
+    on = [Change("memory_enabled", True)]
+    world.profiles.apply(USER, on, source=Source.ASKED, origin=Origin.FORM)
+    found = {
+        "kind": "fact",
+        "text": "Habite à Zurich.",
+        "day": None,
+        "importance": 3,
+        "turn": 1,
+        "replaces": None,
+    }
+    world.text.answers.append({"memories": [found]})
+    asked = len(world.text.tasks)
+    world.memories.write(call_id)
+
+    assert len(world.text.tasks) == asked
+    assert world.memories.view(USER).memories == ()

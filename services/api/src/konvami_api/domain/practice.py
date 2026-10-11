@@ -589,4 +589,7 @@ class PracticeScript:
         return None
 
     def concluded(self, user_id: UUID, call_id: str, tools: ToolSet, call: FinishedCall) -> None:
+        # First, and before anything that can fail: with memory off, the conversation is
+        # marked as not to be read before a worker is started for it.
+        self._memories.after_call(user_id, call_id)
         self._reports.after_call(user_id, call_id)

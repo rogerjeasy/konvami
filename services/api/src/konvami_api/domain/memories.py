@@ -397,6 +397,14 @@ class MemoryService:
         )[: MAX_RECALLED - len(told)]
         return Recall(tuple(follow_ups), tuple(coming_up), tuple(notes))
 
+    def after_call(self, user_id: UUID, call_id: str) -> None:
+        """A practice conversation has ended. While memory is off it is taken at once, so that
+        nobody reads it later: the worker can get to a conversation long after it (a report
+        that could not be started and is asked for again), when memory may be on again. What
+        counts is the learner's choice when they talked."""
+        if not self._profiles.get(user_id).memory_enabled:
+            self._repository.claim(call_id, self._clock())
+
     def write(self, call_id: str) -> None:
         """Writes down what a conversation told about the learner. Runs apart from any request,
         after the conversation's report, and once for a conversation."""
@@ -417,8 +425,8 @@ class MemoryService:
         if not self._repository.claim(call_id, self._clock()):
             return
         profile = self._profiles.get(user_id)
-        # The conversation stays taken: what was said while memory was off is never read, also
-        # not once it is on again.
+        # Turned off since the conversation ended (see `after_call`): the conversation stays
+        # taken, and is not read once memory is on again either.
         if not profile.memory_enabled:
             return
 

@@ -774,3 +774,31 @@ def test_a_topic_list_that_cannot_be_kept_is_refused_whole() -> None:
 
     assert (error.value.code, error.value.field) == ("invalid_value", "avoid_topics")
     assert world.memories.view(USER) == MemoryBook(True, ("La politique",), ())
+
+
+def test_a_conversation_that_ended_while_memory_was_off_is_never_read() -> None:
+    """The worker may only get to a conversation later (its report could not be started, and
+    the learner asks for it again): what counts is whether memory was on when they talked."""
+    world = World()
+    call_id = talked(world)
+    settings(world, memory_enabled=False)
+    world.memories.after_call(USER, call_id)
+    settings(world, memory_enabled=True)
+    world.text.answers.append({"memories": [ZURICH]})
+    asked = len(world.text.tasks)
+
+    world.memories.write(call_id)
+
+    assert len(world.text.tasks) == asked
+    assert world.memories.view(USER).memories == ()
+
+
+def test_a_conversation_that_ended_while_memory_was_on_is_read_when_the_worker_gets_to_it() -> None:
+    world = World()
+    call_id = talked(world)
+    world.memories.after_call(USER, call_id)
+    world.text.answers.append({"memories": [ZURICH]})
+
+    world.memories.write(call_id)
+
+    assert texts(world) == {"Habite à Zurich."}
