@@ -406,5 +406,5 @@ class HostScript:
     def started(self, user_id: UUID) -> None:
         return None
 
-    def concluded(self, user_id: UUID, tools: object, call: object) -> None:
+    def concluded(self, user_id: UUID, call_id: str, tools: object, call: object) -> None:
         return None

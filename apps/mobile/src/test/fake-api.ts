@@ -4,6 +4,7 @@ import {
   type ApiClient,
   type Catalog,
   type Conversation,
+  type ConversationReport,
   type Home,
   type HomePartner,
   type Onboarding,
@@ -15,6 +16,7 @@ import {
   type Profile,
   type ProfileChange,
   type ProfileSource,
+  type SessionReport,
   type TranscriptTurn,
 } from '@konvami/api-client';
 import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
@@ -91,6 +93,55 @@ export const FAKE_RESULT: PlacementResult = {
   overall: 'B1',
   weakAreas: ['Word order after “weil”: “weil sie ist ruhig”', 'Dative after “mit”'],
   measuredAt: FAKE_NOW,
+};
+
+/**
+ * The report on a conversation in which the learner said `FAKE_REPORT_SAYS`: two mistakes (the
+ * second one not confirmed by the second check), a more natural wording, two words, a win and
+ * two next steps. Explained in English.
+ */
+export const FAKE_REPORT_SAYS = [
+  'Gut. Ich habe nach Berlin gefahren mit der Bus.',
+  'Ich habe ein Museum besucht, weil es war sehr interessant.',
+];
+export const FAKE_REPORT: SessionReport = {
+  language: 'en',
+  summary: 'You told Lena about your weekend in Berlin and the museum you visited.',
+  mistakes: [
+    {
+      turn: 1,
+      original: 'Ich habe nach Berlin gefahren',
+      corrected: 'Ich bin nach Berlin gefahren',
+      explanation: 'Verbs of movement such as “fahren” form the Perfekt with “sein”.',
+      category: 'perfekt_auxiliary',
+      severity: 'noticeable',
+      certain: true,
+    },
+    {
+      turn: 2,
+      original: 'weil es war sehr interessant',
+      corrected: 'weil es sehr interessant war',
+      explanation: 'After “weil” the verb goes to the end.',
+      category: 'word_order_subordinate',
+      severity: 'minor',
+      certain: false,
+    },
+  ],
+  rewrites: [
+    {
+      turn: 2,
+      original: 'Ich habe ein Museum besucht',
+      natural: 'Ich war im Museum',
+      note: 'Shorter, and what people usually say.',
+    },
+  ],
+  words: [
+    { text: 'das Wochenende', meaning: 'weekend', example: 'Wie war dein Wochenende?' },
+    { text: 'die Ausstellung', meaning: 'exhibition', example: null },
+  ],
+  wins: ['You told a whole story in the past tense.'],
+  nextSteps: ['The Perfekt with “sein” for verbs of movement', 'Verb at the end after “weil”'],
+  stats: { learnerWords: 19, partnerWords: 14, learnerTurns: 2, longestTurnWords: 10 },
 };
 
 const BALANCED: Persona['personality'] = {
@@ -275,6 +326,15 @@ export interface FakeApi extends ApiClient {
   ): Conversation;
   /** Ends a call recorded with `ended: false`. */
   finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
+  /**
+   * Says where the report on a conversation stands, as the server's worker would leave it: a
+   * status, or a report that is ready (`FAKE_REPORT` unless one is given). A conversation
+   * nobody said anything about has none.
+   */
+  reported(
+    id: string,
+    state?: Exclude<ConversationReport['status'], 'ready'> | SessionReport,
+  ): void;
   /** Whether `deleteAccount` was called (and went through). */
   readonly deleted: boolean;
   /** The upload ids handed out so far, in order. */
@@ -297,6 +357,8 @@ export function createFakeApi(): FakeApi {
   let completed = false;
   /** Every practice call, with what was said in it. */
   const practice: { conversation: Conversation; turns: TranscriptTurn[] }[] = [];
+  /** Where each conversation's report stands; a conversation not in here has none. */
+  const reports = new Map<string, ConversationReport>();
   let picture: string | null = null;
   const uploads: string[] = [];
   let deleted = false;
@@ -442,6 +504,16 @@ export function createFakeApi(): FakeApi {
     };
   }
 
+  /** As on the server: the last report's next steps, and until then the placement test's. */
+  function focus(): Pick<Home, 'focus' | 'focusSource'> {
+    const latest = counted()
+      .map((conversation) => reports.get(conversation.id)?.report)
+      .find((report) => report);
+    if (latest?.nextSteps.length) return { focus: latest.nextSteps, focusSource: 'report' };
+    if (result?.weakAreas.length) return { focus: result.weakAreas, focusSource: 'placement' };
+    return { focus: [], focusSource: null };
+  }
+
   function home(): Home {
     if (onboarding().stage !== 'done') throw new ApiError('wrong_stage', 409);
     const language = target() ?? '';
@@ -471,7 +543,7 @@ export function createFakeApi(): FakeApi {
             skills: result?.levels ?? null,
           }
         : null,
-      focus: result?.weakAreas ?? [],
+      ...focus(),
       exam:
         exam && (daysLeft === null || daysLeft >= 0)
           ? {
@@ -590,6 +662,15 @@ export function createFakeApi(): FakeApi {
       entry.turns = turnsOf(learnerSays);
     },
 
+    reported(id, state = FAKE_REPORT) {
+      reports.set(
+        id,
+        typeof state === 'string'
+          ? { status: state, report: null }
+          : { status: 'ready', report: state },
+      );
+    },
+
     async getCatalog() {
       await record('getCatalog');
       return FAKE_CATALOG;
@@ -649,6 +730,26 @@ export function createFakeApi(): FakeApi {
       const entry = practice.find(({ conversation }) => conversation.id === id);
       if (!entry) throw new ApiError('not_found', 404);
       return { conversation: entry.conversation, turns: entry.turns };
+    },
+    async getConversationReport(id) {
+      await record('getConversationReport', id);
+      if (!practice.some(({ conversation }) => conversation.id === id)) {
+        throw new ApiError('not_found', 404);
+      }
+      return reports.get(id) ?? { status: 'none', report: null };
+    },
+    async requestConversationReport(id) {
+      await record('requestConversationReport', id);
+      const entry = practice.find(({ conversation }) => conversation.id === id);
+      if (!entry) throw new ApiError('not_found', 404);
+      if (!entry.conversation.endedAt || entry.conversation.learnerTurns === 0) {
+        throw new ApiError('nothing_to_report', 409);
+      }
+      const known = reports.get(id);
+      if (known && known.status !== 'failed') return known;
+      const pending: ConversationReport = { status: 'pending', report: null };
+      reports.set(id, pending);
+      return pending;
     },
     async getPlacement() {
       await record('getPlacement');
@@ -761,6 +862,12 @@ export function createFakeApi(): FakeApi {
       await record('removePersona', id);
       persona(id);
       personas = (personas ?? []).filter((candidate) => candidate.id !== id);
+      // As on the server: the conversations stay, without their partner.
+      for (const entry of practice) {
+        if (entry.conversation.partner?.id === id) {
+          entry.conversation = { ...entry.conversation, partner: null };
+        }
+      }
       return personas;
     },
     async confirmPartners() {

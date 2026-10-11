@@ -33,6 +33,23 @@ class LambdaCallStarter:
         )
 
 
+class LambdaReportStarter:
+    """Has a conversation's report written by the same worker function, in an invocation of its
+    own: writing takes longer than an API request may, and must not hold up the end of a call."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, call_id: str) -> None:
+        # As for a call: the worker reads whose conversation it is from the database.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"report": call_id}).encode(),
+        )
+
+
 def cached_secret(secrets: SecretsClient, secret_id: str) -> Callable[[], str]:
     """A reader for one secret: fetched on first use, then kept for the life of the container."""
     cache: list[str] = []

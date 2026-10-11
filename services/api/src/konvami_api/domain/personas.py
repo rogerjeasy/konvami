@@ -542,8 +542,7 @@ class PersonaService:
             "learner": {
                 "goals": profile.value(language, "goals"),
                 "exam": profile.value(language, "exam"),
-                "level": profile.value(language, "starting_level")
-                or profile.value(language, "self_assessed_level"),
+                "level": profile.level(language),
             },
         }
         task = TextTask(
@@ -674,8 +673,7 @@ class PersonaService:
             "learner": {
                 "goals": profile.value(language, "goals"),
                 "exam": profile.value(language, "exam"),
-                "level": profile.value(language, "starting_level")
-                or profile.value(language, "self_assessed_level"),
+                "level": profile.level(language),
             },
         }
         task = TextTask(

@@ -360,6 +360,23 @@ describe('api client', () => {
     ]);
   });
 
+  it('reads a conversation’s report, and asks for one', async () => {
+    const pending = { status: 'pending', report: null };
+    const { fetch, calls } = fakeFetch(
+      json(200, { status: 'none', report: null }),
+      json(200, pending),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getConversationReport('rtc/1')).toEqual({ status: 'none', report: null });
+    expect(await api.requestConversationReport('rtc/1')).toEqual(pending);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/conversations/rtc%2F1/report',
+      'POST https://api.example.test/v1/conversations/rtc%2F1/report',
+    ]);
+  });
+
   it('accepts a base URL with a trailing slash', async () => {
     const { fetch, calls } = fakeFetch(json(200, {}));
 

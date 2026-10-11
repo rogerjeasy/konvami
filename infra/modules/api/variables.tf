@@ -71,14 +71,17 @@ variable "text_models" {
     Text models for work that is not live conversation (spec §17.3: the smallest model that does
     the job well). assessment reads a placement test's transcript; personas writes the starter
     partners and drafts a partner from a description in Persona Studio; speech speaks a voice's
-    sample there (once per voice and language, then it is read from the media bucket). An empty
-    name turns the job off: it then uses its fallback (the examiner's own impression, the
-    language pack's built-in partners) or, for drafts and samples, says it is unavailable.
+    sample there (once per voice and language, then it is read from the media bucket); report
+    writes a practice conversation's Session Report and checks each of its corrections a second
+    time (two requests per conversation). An empty name turns the job off: it then uses its
+    fallback (the examiner's own impression, the language pack's built-in partners) or, for
+    drafts, samples and reports, says it is unavailable.
   EOT
   type = object({
     assessment = string
     personas   = string
     speech     = optional(string, "")
+    report     = optional(string, "")
   })
 }
 

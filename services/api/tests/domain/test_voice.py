@@ -437,6 +437,40 @@ def test_a_finished_practice_call_shows_up_as_a_conversation() -> None:
     assert (conversation.id, conversation.seconds, conversation.partner) == (call_id, 420, lena)
 
 
+def test_a_practice_conversation_that_ended_has_its_report_asked_for() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id).call_id
+    live = world.voice.live_call(call_id)
+    assert live is not None
+    live.handle(
+        {"type": "conversation.item.input_audio_transcription.completed", "transcript": "Hallo!"},
+        5,
+    )
+    live.closed()
+
+    world.voice.finished(call_id, live)
+
+    assert world.report_starter.started == [call_id]
+    assert world.reports.view(USER, call_id).status == "pending"
+
+
+def test_the_guides_calls_get_no_report() -> None:
+    world = World()
+    call_id = world.voice.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+    live = world.voice.live_call(call_id)
+    assert live is not None
+    live.handle(
+        {"type": "conversation.item.input_audio_transcription.completed", "transcript": "Bonjour"},
+        5,
+    )
+    live.closed()
+
+    world.voice.finished(call_id, live)
+
+    assert world.report_starter.started == []
+
+
 def test_the_guides_calls_have_no_partner() -> None:
     world = World()
 

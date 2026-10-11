@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Transcript } from '@konvami/api-client';
-import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
 import { ChatBubble } from '@/components/chat';
+import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
@@ -13,44 +12,14 @@ import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
 import { formatClock, wholeMinutes } from '@/lib/format';
+import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { relativeDayLabel } from '@/lib/relative-day';
-import { ROUTES } from '@/lib/routes';
-import { usePracticeServices } from '@/practice/services';
+import { reportRoute, ROUTES } from '@/lib/routes';
+import { useConversation, usePracticeServices } from '@/practice/services';
 
 // Stands between the parts of the line under the title ("Today · 14:05 · 8 min").
 const SEPARATOR = ' · ';
-
-type Reading =
-  | { phase: 'loading' }
-  | { phase: 'failed'; code: string }
-  | { phase: 'ready'; transcript: Transcript };
-
-/** Reads one conversation; `retry` reads it again after a failure. */
-function useTranscript(id: string): Reading & { retry: () => void } {
-  const { readConversation } = usePracticeServices();
-  const [reading, setReading] = useState<Reading>({ phase: 'loading' });
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let current = true;
-    readConversation(id).then(
-      (transcript) => current && setReading({ phase: 'ready', transcript }),
-      (error: unknown) => current && setReading({ phase: 'failed', code: apiErrorCode(error) }),
-    );
-    return () => {
-      current = false;
-    };
-  }, [readConversation, id, attempt]);
-
-  return {
-    ...reading,
-    retry: () => {
-      setReading({ phase: 'loading' });
-      setAttempt((count) => count + 1);
-    },
-  };
-}
 
 function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
   const { t, i18n } = useTranslation();
@@ -75,6 +44,19 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
           </Text>
         </View>
       </Reveal>
+      {/* A call counts as practice, and has a report, once the learner said something in it. */}
+      {conversation.endedAt && conversation.learnerTurns > 0 ? (
+        <Reveal delay={staggerDelay(1)}>
+          <ListGroup>
+            <ListRow
+              icon="file"
+              title={t('library.transcript.report')}
+              detail={t('library.transcript.reportHint')}
+              onPress={() => router.push(reportRoute(conversation.id))}
+            />
+          </ListGroup>
+        </Reveal>
+      ) : null}
       {turns.length === 0 ? (
         <Text tone="muted">{t('library.transcript.empty')}</Text>
       ) : (
@@ -101,15 +83,15 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
 
 /**
  * 5.6 Transcript: one past conversation as it was said, the partner on the left and the
- * learner on the right. Text only; the recording and the corrections arrive with the session
- * report.
+ * learner on the right, with the way to its report. Text only: the recording arrives with the
+ * audio library.
  */
 export function TranscriptScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
   const { clock } = usePracticeServices();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const reading = useTranscript(id ?? '');
+  const reading = useConversation(id ?? '');
 
   if (status !== 'signedIn') return <Redirect href={ROUTES.welcome} />;
   return (

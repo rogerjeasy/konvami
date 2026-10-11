@@ -34,6 +34,11 @@ class Conversation:
     # Filled in by `ConversationService`; a repository leaves it out.
     partner: Persona | None = None
 
+    @property
+    def counts(self) -> bool:
+        """Whether this call is practice: it has ended and the learner said something in it."""
+        return self.ended_at is not None and self.learner_turns > 0
+
 
 @dataclass(frozen=True)
 class ConversationPage:

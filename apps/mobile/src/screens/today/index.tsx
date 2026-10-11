@@ -74,7 +74,9 @@ function Day({ home, now }: { home: Home; now: Date }) {
   ];
   const about = [
     home.level ? <LevelCard key="level" level={home.level} /> : null,
-    home.focus.length ? <FocusCard key="focus" focus={home.focus} /> : null,
+    home.focus.length ? (
+      <FocusCard key="focus" focus={home.focus} source={home.focusSource} />
+    ) : null,
     home.exam ? <ExamCard key="exam" exam={home.exam} /> : null,
     home.recent.length ? (
       <Section

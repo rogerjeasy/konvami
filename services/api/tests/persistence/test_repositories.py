@@ -21,6 +21,16 @@ from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState,
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
 from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
+from konvami_api.domain.reports import (
+    Mistake,
+    Report,
+    ReportRepository,
+    Rewrite,
+    Stats,
+    Status,
+    StoredReport,
+    Word,
+)
 from konvami_api.domain.voice import (
     CallPurpose,
     FinishedCall,
@@ -35,6 +45,7 @@ from konvami_api.persistence.repositories import (
     SqlPersonaRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
+    SqlReportRepository,
     SqlVoiceSessionRepository,
 )
 from konvami_api.persistence.sql import SqlClient
@@ -46,6 +57,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryReportRepository,
     InMemoryVoiceSessionRepository,
 )
 from tests.persistence.pg import LocalSqlClient
@@ -992,3 +1004,247 @@ def test_deleting_a_learner_deletes_everything_stored_for_them(db: SqlClient) ->
         assert str(USER) not in {row["user_id"] for row in rows}, table
     assert db.execute("SELECT count(*) AS turns FROM voice_turn") == [{"turns": 0}]
     assert db.execute("SELECT CAST(id AS text) AS id FROM app_user") == [{"id": str(OTHER_USER)}]
+
+
+# --- Session reports -------------------------------------------------------------------------
+
+
+@dataclass
+class Reports:
+    calls: VoiceSessionRepository
+    reports: ReportRepository
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def reports(request: pytest.FixtureRequest) -> Reports:
+    """Report storage, with the call `rtc_1` there to write a report for."""
+    if request.param == "memory":
+        calls = InMemoryVoiceSessionRepository()
+        stored = Reports(calls, InMemoryReportRepository(calls))
+    else:
+        db: SqlClient = request.getfixturevalue("db")
+        stored = Reports(SqlVoiceSessionRepository(db), SqlReportRepository(db))
+    stored.calls.started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    return stored
+
+
+REPORT = Report(
+    target="de",
+    language="fr",
+    summary="Vous avez raconté votre week-end à Berlin : « très bien » !",
+    mistakes=(
+        Mistake(
+            turn=1,
+            original="mit der Bus",
+            corrected="mit dem Bus",
+            explanation="« mit » demande le datif.",
+            category="case_dative",
+            severity="minor",
+            certain=True,
+        ),
+        Mistake(
+            3, "weil es war gut", "weil es gut war", "Verbe à la fin.", "other", "noticeable", False
+        ),
+    ),
+    rewrites=(Rewrite(3, "Ich habe ein Museum besucht", "Ich war im Museum", "Plus courant."),),
+    words=(
+        Word("das Wochenende", "le week-end", "Wie war dein Wochenende?"),
+        Word("umsteigen", "changer (de train)", None),
+    ),
+    wins=("Un récit au passé.",),
+    next_steps=("Le Perfekt avec « sein ».", "Le datif après « mit »."),
+    stats=Stats(learner_words=22, partner_words=17, learner_turns=3, longest_turn_words=11),
+)
+
+
+STALE = timedelta(minutes=5)
+MOST = 3
+
+
+def ask(reports: ReportRepository, call_id: str, at: datetime) -> bool:
+    """Asks for a report as the service does: one that has been pending for `STALE` counts as
+    lost, and a report is asked for at most `MOST` times."""
+    return reports.request(call_id, at, stale_before=at - STALE, max_requests=MOST)
+
+
+def test_a_call_has_no_report_until_one_is_asked_for(reports: Reports) -> None:
+    assert reports.reports.load("rtc_1") is None
+
+
+def test_a_report_that_was_asked_for_is_pending_since_then(reports: Reports) -> None:
+    berlin = timezone(timedelta(hours=2))
+
+    ask(reports.reports, "rtc_1", NOON.astimezone(berlin))
+
+    assert reports.reports.load("rtc_1") == StoredReport("pending", NOON, None)
+
+
+def test_a_written_report_is_read_back_as_it_was_stored(reports: Reports) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+
+    reports.reports.written("rtc_1", "ready", REPORT)
+
+    assert reports.reports.load("rtc_1") == StoredReport("ready", NOON, REPORT)
+
+
+@pytest.mark.parametrize("status", ["failed", "too_short"])
+def test_a_report_that_was_not_written_keeps_why(reports: Reports, status: Status) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+
+    reports.reports.written("rtc_1", status, None)
+
+    assert reports.reports.load("rtc_1") == StoredReport(status, NOON, None)
+
+
+def test_only_the_first_of_two_requests_gets_to_start_a_report(reports: Reports) -> None:
+    first = ask(reports.reports, "rtc_1", NOON)
+    second = ask(reports.reports, "rtc_1", NOON + timedelta(seconds=1))
+
+    assert (first, second) == (True, False)
+    assert reports.reports.load("rtc_1") == StoredReport("pending", NOON, None)
+
+
+def test_a_failed_report_can_be_asked_for_again(reports: Reports) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+    reports.reports.written("rtc_1", "failed", None)
+
+    assert ask(reports.reports, "rtc_1", NOON + HOUR) is True
+    assert reports.reports.load("rtc_1") == StoredReport("pending", NOON + HOUR, None)
+
+
+def test_a_report_that_has_been_pending_too_long_can_be_asked_for_again(reports: Reports) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+
+    too_soon = ask(reports.reports, "rtc_1", NOON + STALE)
+    late_enough = ask(reports.reports, "rtc_1", NOON + STALE + timedelta(seconds=1))
+
+    assert (too_soon, late_enough) == (False, True)
+
+
+@pytest.mark.parametrize("status", ["ready", "too_short"])
+def test_a_report_that_is_settled_is_not_started_again(reports: Reports, status: Status) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+    reports.reports.written("rtc_1", status, REPORT if status == "ready" else None)
+    settled = reports.reports.load("rtc_1")
+
+    assert ask(reports.reports, "rtc_1", NOON + HOUR) is False
+    assert reports.reports.load("rtc_1") == settled
+
+
+def test_a_report_is_asked_for_only_so_many_times(reports: Reports) -> None:
+    answers = []
+    for attempt in range(MOST + 1):
+        answers.append(ask(reports.reports, "rtc_1", NOON + attempt * HOUR))
+        reports.reports.written("rtc_1", "failed", None)
+
+    assert answers == [True] * MOST + [False]
+    assert reports.reports.load("rtc_1") == StoredReport("failed", NOON + (MOST - 1) * HOUR, None)
+
+
+def test_a_pending_report_is_taken_by_one_worker_only(reports: Reports) -> None:
+    assert reports.reports.claim("rtc_1", NOON) is False
+    ask(reports.reports, "rtc_1", NOON)
+
+    first = reports.reports.claim("rtc_1", NOON)
+    second = reports.reports.claim("rtc_1", NOON)
+
+    assert (first, second) == (True, False)
+
+
+def test_a_report_asked_for_again_can_be_taken_again(reports: Reports) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+    reports.reports.claim("rtc_1", NOON)
+    reports.reports.written("rtc_1", "failed", None)
+    after_failure = reports.reports.claim("rtc_1", NOON)
+    ask(reports.reports, "rtc_1", NOON + HOUR)
+
+    assert after_failure is False
+    assert reports.reports.claim("rtc_1", NOON + HOUR) is True
+
+
+def test_requests_arriving_together_start_one_report(db: SqlClient, postgres_uri: str) -> None:
+    """Checking and marking are one statement: of twelve requests at the same moment exactly
+    one is told to start the writing, and of twelve workers exactly one gets to write."""
+    SqlVoiceSessionRepository(db).started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    schema = db.execute("SELECT current_schema() AS name")[0]["name"]
+
+    def together(act: Callable[[SqlReportRepository], bool]) -> list[bool]:
+        barrier = threading.Barrier(12)
+
+        def one() -> bool:
+            with psycopg.connect(postgres_uri, autocommit=True) as connection:
+                connection.execute(f'SET search_path TO "{schema}"')
+                barrier.wait()
+                return act(SqlReportRepository(LocalSqlClient(connection)))
+
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            return [future.result() for future in [pool.submit(one) for _ in range(12)]]
+
+    asked = together(lambda reports: ask(reports, "rtc_1", NOON))
+    taken = together(lambda reports: reports.claim("rtc_1", NOON))
+
+    assert sorted(asked) == [False] * 11 + [True]
+    assert sorted(taken) == [False] * 11 + [True]
+
+
+def test_nothing_is_stored_for_a_call_that_does_not_exist(reports: Reports) -> None:
+    asked = ask(reports.reports, "rtc_ghost", NOON)
+    reports.reports.written("rtc_ghost", "ready", REPORT)
+
+    assert asked is False
+
+    assert reports.reports.load("rtc_ghost") is None
+
+
+def test_a_report_nobody_asked_for_is_not_stored(reports: Reports) -> None:
+    reports.reports.written("rtc_1", "ready", REPORT)
+
+    assert reports.reports.load("rtc_1") is None
+
+
+def test_a_deleted_learner_has_no_reports_left(db: SqlClient) -> None:
+    stored = SqlReportRepository(db)
+    SqlVoiceSessionRepository(db).started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    ask(stored, "rtc_1", NOON)
+    stored.written("rtc_1", "ready", REPORT)
+
+    SqlAccountRepository(db).delete(USER, NOON)
+
+    assert stored.load("rtc_1") is None
+
+
+def test_the_latest_report_is_the_ready_one_of_the_learners_newest_conversation(
+    reports: Reports,
+) -> None:
+    def call(call_id: str, at: datetime, user: UUID = USER) -> None:
+        reports.calls.started(
+            VoiceSession(call_id, user, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", at)
+        )
+        ask(reports.reports, call_id, at)
+
+    older = replace(REPORT, summary="Avant-hier.")
+    newer = replace(REPORT, summary="Hier.")
+    call("rtc_2", NOON + 2 * HOUR)
+    call("rtc_3", NOON + HOUR)
+    call("rtc_4", NOON + 3 * HOUR)
+    call("rtc_theirs", NOON + 4 * HOUR, user=OTHER_USER)
+    # Written in another order than the conversations took place.
+    reports.reports.written("rtc_2", "ready", newer)
+    reports.reports.written("rtc_3", "ready", older)
+    reports.reports.written("rtc_4", "failed", None)
+    reports.reports.written("rtc_theirs", "ready", replace(REPORT, summary="Le leur."))
+
+    assert reports.reports.latest(USER) == newer
+
+
+def test_a_learner_without_a_ready_report_has_no_latest_one(reports: Reports) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+
+    assert reports.reports.latest(USER) is None
+    assert reports.reports.latest(OTHER_USER) is None

@@ -7,6 +7,7 @@ import type { Conversation } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Avatar } from '@/components/avatar/avatar';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { IconTile } from '@/components/icon-tile';
 import { Pop, Reveal } from '@/components/motion';
@@ -17,8 +18,9 @@ import { TextButton } from '@/components/text-button';
 import { wholeMinutes } from '@/lib/format';
 import { successFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
-import { conversationRoute, ROUTES } from '@/lib/routes';
-import { useHome, usePracticeServices } from '@/practice/services';
+import { conversationRoute, reportRoute, ROUTES } from '@/lib/routes';
+import type { ReportView } from '@/practice';
+import { useHome, usePracticeServices, useReport } from '@/practice/services';
 import { useTheme } from '@/theme';
 
 // The server saves a conversation when its call has closed, a moment after the app left it.
@@ -97,6 +99,67 @@ function Message({
   );
 }
 
+// Stands between the two counts of a finished report ("2 things to polish · 3 words to keep").
+const SEPARATOR = ' · ';
+/** The report was not written and will not arrive on its own: the learner can ask again. */
+const NOT_WRITTEN = ['failed', 'timeout'];
+
+/**
+ * Where the conversation's report stands, under the summary: being written, ready (with what is
+ * in it), or not written this time. Nothing when no report is to come.
+ */
+function ReportNews({ view }: { view: ReportView }) {
+  const { t } = useTranslation();
+  const { color } = useTheme();
+
+  if (view.phase === 'writing') {
+    return (
+      <View accessibilityLiveRegion="polite" className="flex-row items-center gap-2.5">
+        <ActivityIndicator size="small" color={color.primary} />
+        <Text variant="small" tone="muted">
+          {t('conversation.done.report.writing')}
+        </Text>
+      </View>
+    );
+  }
+  if (view.phase === 'ready') {
+    const { mistakes, words } = view.report;
+    const counts = [
+      mistakes.length ? t('conversation.done.report.polish', { count: mistakes.length }) : null,
+      words.length ? t('conversation.done.report.words', { count: words.length }) : null,
+    ].filter((count) => count !== null);
+    return (
+      <Pop style={{ alignSelf: 'stretch' }}>
+        <Card accessibilityLiveRegion="polite" className="flex-row items-center gap-3 p-3.5">
+          <View
+            aria-hidden
+            style={{ width: size.avatarSm, height: size.avatarSm }}
+            className="items-center justify-center rounded-md bg-primary-soft"
+          >
+            <Icon name="file" color={color.primaryText} size={size.iconMd} />
+          </View>
+          <View className="flex-1 gap-0.5">
+            <Text variant="label">{t('conversation.done.report.ready')}</Text>
+            {counts.length ? (
+              <Text variant="small" tone="muted">
+                {counts.join(SEPARATOR)}
+              </Text>
+            ) : null}
+          </View>
+        </Card>
+      </Pop>
+    );
+  }
+  if (view.phase === 'failed' && NOT_WRITTEN.includes(view.code)) {
+    return (
+      <Text variant="small" tone="muted" className="text-center">
+        {t('conversation.done.report.failed')}
+      </Text>
+    );
+  }
+  return null;
+}
+
 /** A conversation that counts: who it was with, how long, and the streak it kept going. */
 function Spoken({ conversation }: { conversation: Conversation }) {
   const { t } = useTranslation();
@@ -106,6 +169,7 @@ function Spoken({ conversation }: { conversation: Conversation }) {
   const { partner } = conversation;
   const duration = t('time.minutes', { count: wholeMinutes(conversation.seconds) });
   const activity = home.phase === 'ready' ? home.data.activity : null;
+  const { view: report } = useReport(conversation.id);
 
   // One success haptic, with the celebration it belongs to.
   useEffect(() => successFeedback(), []);
@@ -114,14 +178,25 @@ function Spoken({ conversation }: { conversation: Conversation }) {
     <StepLayout
       header={HEADER}
       actions={
-        <>
-          <Button label={t('conversation.done.home')} onPress={toToday} />
-          <TextButton
-            tone="primary"
-            label={t('conversation.done.transcript')}
-            onPress={() => router.replace(conversationRoute(conversation.id))}
-          />
-        </>
+        // Once the report is there it is the next thing to look at; it leads to the transcript.
+        report.phase === 'ready' ? (
+          <>
+            <Button
+              label={t('conversation.done.report.open')}
+              onPress={() => router.replace(reportRoute(conversation.id))}
+            />
+            <TextButton tone="primary" label={t('conversation.done.home')} onPress={toToday} />
+          </>
+        ) : (
+          <>
+            <Button label={t('conversation.done.home')} onPress={toToday} />
+            <TextButton
+              tone="primary"
+              label={t('conversation.done.transcript')}
+              onPress={() => router.replace(conversationRoute(conversation.id))}
+            />
+          </>
+        )
       }
     >
       <Message
@@ -143,16 +218,19 @@ function Spoken({ conversation }: { conversation: Conversation }) {
             : t('conversation.done.bodyNoPartner', { duration })
         }
         extra={
-          // Shown once Today's numbers have been read again and include this conversation.
-          activity?.practisedToday && activity.streakDays > 0 ? (
-            <Pop>
-              <Pill
-                tone="primary"
-                label={t('today.week.streak', { count: activity.streakDays })}
-                leading={<Icon name="flame" color={color.primaryText} size={size.iconSm} />}
-              />
-            </Pop>
-          ) : null
+          <>
+            {/* Shown once Today's numbers have been read again and include this conversation. */}
+            {activity?.practisedToday && activity.streakDays > 0 ? (
+              <Pop>
+                <Pill
+                  tone="primary"
+                  label={t('today.week.streak', { count: activity.streakDays })}
+                  leading={<Icon name="flame" color={color.primaryText} size={size.iconSm} />}
+                />
+              </Pop>
+            ) : null}
+            <ReportNews view={report} />
+          </>
         }
       />
     </StepLayout>
@@ -162,8 +240,9 @@ function Spoken({ conversation }: { conversation: Conversation }) {
 /**
  * 5.4 Conversation done: what a conversation that has just ended added up to. The server saves
  * it a moment after the call closes, so the screen waits for that, then brings Today and the
- * library up to date. A call in which nothing was said is not practice, and the screen says so
- * without making a fuss.
+ * library up to date. Its report is written in the minute that follows; the screen says so and
+ * offers it as soon as it is there. A call in which nothing was said is not practice, and the
+ * screen says so without making a fuss.
  */
 export function ConversationDoneScreen() {
   const { t } = useTranslation();

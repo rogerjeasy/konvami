@@ -100,6 +100,10 @@ export const conversationRoute = (id: string) =>
 export const conversationDoneRoute = (id: string) =>
   ({ pathname: '/conversations/[id]/done', params: { id } }) as const satisfies Href;
 
+/** 5.10 The Session Report on one conversation: what it showed and what to practise next. */
+export const reportRoute = (id: string) =>
+  ({ pathname: '/conversations/[id]/report', params: { id } }) as const satisfies Href;
+
 /** 6.6 Persona Studio for one of the learner's partners. */
 export const studioRoute = (id: string) =>
   ({ pathname: '/account/partners/[id]', params: { id } }) as const satisfies Href;

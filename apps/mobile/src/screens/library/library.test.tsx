@@ -150,6 +150,29 @@ describe('5.6 Transcript', () => {
     ]);
   });
 
+  it('leads to the report on the conversation', async () => {
+    const api = inApp();
+    api.talked(0, { id: 'rtc_1' });
+    await open(api, 'rtc_1');
+
+    const row = screen.getByRole('button', { name: 'Session report' });
+    expect(row.props.accessibilityHint).toBe('Corrections, new words and what to practise next');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/conversations/[id]/report',
+      params: { id: 'rtc_1' },
+    });
+  });
+
+  it('offers no report for a call in which the learner said nothing', async () => {
+    const api = inApp();
+    api.talked(0, { id: 'rtc_1', learnerSays: [] });
+    await open(api, 'rtc_1');
+
+    expect(screen.queryByRole('button', { name: 'Session report' })).toBeNull();
+  });
+
   it('goes back to where the learner came from', async () => {
     const api = inApp();
     api.talked(0, { id: 'rtc_1' });

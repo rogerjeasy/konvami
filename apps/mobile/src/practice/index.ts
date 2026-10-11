@@ -5,6 +5,7 @@ import { createPracticeServices } from './services';
 export * from './services';
 export type { HomeState, HomeStore } from './home-store';
 export type { LibraryState, LibraryStore } from './library-store';
+export type { ReportFollower, ReportView } from './report-follower';
 
 /** The app's practice services, on the real API and the device's own clock. */
 export const practiceServices = createPracticeServices(api, {

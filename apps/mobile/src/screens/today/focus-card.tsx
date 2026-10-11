@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
+import type { Home } from '@konvami/api-client';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { Pill } from '@/components/pill';
@@ -11,10 +12,17 @@ import { useTheme } from '@/theme';
 const SHOWN = 3;
 
 /**
- * What the placement test found worth working on, most useful first. Amber and friendly, never
- * a red list of mistakes (spec §14.3 "zero shame").
+ * What is worth working on, most useful first: the next steps of the last conversation's report
+ * or, until there is one, what the placement test found. Amber and friendly, never a red list
+ * of mistakes (spec §14.3 "zero shame").
  */
-export function FocusCard({ focus }: { focus: readonly string[] }) {
+export function FocusCard({
+  focus,
+  source,
+}: {
+  focus: readonly string[];
+  source: Home['focusSource'];
+}) {
   const { t } = useTranslation();
   const { color } = useTheme();
   return (
@@ -26,7 +34,7 @@ export function FocusCard({ focus }: { focus: readonly string[] }) {
           leading={<Icon name="edit" color={color.warnText} size={size.iconSm} />}
         />
         <Text variant="small" tone="subtle">
-          {t('today.focus.body')}
+          {t(source === 'report' ? 'today.focus.bodyReport' : 'today.focus.body')}
         </Text>
       </View>
       <View className="gap-2.5">

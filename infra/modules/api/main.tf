@@ -6,7 +6,8 @@
 # - A second function from the same package applies schema migrations; Terraform invokes it
 #   whenever the package changes.
 # - A third follows each live voice call from the server (onboarding design O2): the API starts
-#   it when it creates a call, and it runs the persona's tools until the call ends.
+#   it when it creates a call, and it runs the persona's tools until the call ends. The same
+#   function, started once more, writes a practice conversation's Session Report (spec §12.2).
 
 data "aws_region" "current" {}
 
@@ -187,7 +188,7 @@ resource "aws_cloudwatch_log_group" "call_worker" {
 
 resource "aws_lambda_function" "call_worker" {
   function_name = local.call_worker_name
-  description   = "Follows one live Konvami voice call: runs the persona's tools, ends it on time"
+  description   = "Follows one live Konvami voice call (tools, time limit), or writes a conversation's report"
   role          = aws_iam_role.api.arn
 
   filename         = data.archive_file.package.output_path
@@ -205,7 +206,8 @@ resource "aws_lambda_function" "call_worker" {
   depends_on = [aws_cloudwatch_log_group.call_worker, aws_iam_role_policy.api]
 }
 
-# A worker that failed is not started again: the call it belonged to is over by then.
+# A worker that failed is not started again: the call it belonged to is over by then, and a
+# report that was not written can be asked for again from the app.
 resource "aws_lambda_function_event_invoke_config" "call_worker" {
   function_name                = aws_lambda_function.call_worker.function_name
   maximum_retry_attempts       = 0

@@ -6,6 +6,7 @@ or did in it; a section with nothing behind it is left out, never filled in.
 import datetime as dt
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import Literal
 from uuid import UUID
 
 from konvami_api.domain.conversations import Activity, Conversation, ConversationService
@@ -13,6 +14,7 @@ from konvami_api.domain.onboarding import OnboardingError, OnboardingService, St
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Profile, ProfileService, Source
+from konvami_api.domain.reports import ReportService, what_to_practise
 
 RECENT_CONVERSATIONS = 3
 
@@ -48,8 +50,10 @@ class PartnerView:
 class HomeView:
     language: str
     level: LevelView | None
-    # Things to work on from the placement test, most useful first.
+    # Things to work on, most useful first, and where they come from: the last conversation's
+    # report or, until there is one, the placement test. None when there is nothing.
     focus: tuple[str, ...]
+    focus_source: Literal["report", "placement"] | None
     exam: ExamView | None
     partners: tuple[PartnerView, ...]
     # Who the main button talks to: the partner talked to last, or the first one.
@@ -67,8 +71,10 @@ class HomeService:
         personas: PersonaService,
         placement: PlacementService,
         conversations: ConversationService,
+        reports: ReportService,
         clock: Callable[[], dt.datetime],
     ) -> None:
+        self._reports = reports
         self._profiles = profiles
         self._onboarding = onboarding
         self._personas = personas
@@ -93,10 +99,14 @@ class HomeService:
             for persona in self._personas.partners(user_id)
             for met in [history.get(persona.id)]
         )
+        focus = what_to_practise(
+            self._reports.next_steps(user_id), result.weak_areas if result else ()
+        )
         return HomeView(
             language=language,
             level=self._level(profile, language, result.levels if result else None),
-            focus=result.weak_areas if result else (),
+            focus=focus.areas,
+            focus_source=focus.source,
             exam=self._exam(profile, language, activity.today),
             partners=partners,
             suggested_partner_id=_suggested(partners),

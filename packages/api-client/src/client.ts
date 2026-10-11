@@ -56,6 +56,13 @@ export type Conversation = Schemas['ConversationOut'];
 export type ConversationPage = Schemas['ConversationsOut'];
 export type Transcript = Schemas['TranscriptOut'];
 export type TranscriptTurn = Schemas['TurnOut'];
+/** A conversation's Session Report, or how far it is (`status`). */
+export type ConversationReport = Schemas['ReportOut'];
+export type ReportStatus = ConversationReport['status'];
+export type SessionReport = Schemas['SessionReportOut'];
+export type ReportMistake = Schemas['ReportMistakeOut'];
+export type ReportRewrite = Schemas['ReportRewriteOut'];
+export type ReportWord = Schemas['ReportWordOut'];
 
 /**
  * Why a call failed. Codes the server sends (`invalid_value`, `essentials_incomplete`, …) pass
@@ -158,6 +165,15 @@ export interface ApiClient {
   getConversations(page?: { before?: string; limit?: number }): Promise<ConversationPage>;
   /** One conversation and what was said in it. Fails with `not_found`. */
   getConversation(id: string): Promise<Transcript>;
+  /** The report on one conversation, or how far it is. Fails with `not_found`. */
+  getConversationReport(id: string): Promise<ConversationReport>;
+  /**
+   * Asks for a report that is not there (an earlier conversation, or one whose report failed).
+   * Answers at once with its status; the report is written in the background. Fails with
+   * `nothing_to_report`, `consent_required`, `unavailable` or, for a report that failed too
+   * often, `report_limit`.
+   */
+  requestConversationReport(id: string): Promise<ConversationReport>;
 }
 
 // The dev database pauses when idle and needs about 15 seconds to wake. The server answers 503
@@ -274,5 +290,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getConversations: (page = {}) =>
       request('GET', withQuery('/v1/conversations', { before: page.before, limit: page.limit })),
     getConversation: (id) => request('GET', `/v1/conversations/${encodeURIComponent(id)}`),
+    getConversationReport: (id) =>
+      request('GET', `/v1/conversations/${encodeURIComponent(id)}/report`),
+    requestConversationReport: (id) =>
+      request('POST', `/v1/conversations/${encodeURIComponent(id)}/report`),
   };
 }

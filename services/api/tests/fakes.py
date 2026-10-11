@@ -18,6 +18,7 @@ from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
+from konvami_api.domain.reports import Report, Status, StoredReport
 from konvami_api.domain.speech import SpeechTask
 from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
@@ -324,7 +325,7 @@ class InMemoryConversationRepository:
         return sorted(conversations, key=lambda c: c.started_at, reverse=True)
 
     def _counted(self, user_id: UUID) -> list[Conversation]:
-        return [c for c in self._practice(user_id) if c.ended_at and c.learner_turns > 0]
+        return [c for c in self._practice(user_id) if c.counts]
 
     def listed(self, user_id: UUID, limit: int, before: datetime | None) -> list[Conversation]:
         counted = self._counted(user_id)
@@ -390,3 +391,63 @@ class FakeSpeechModel:
             raise self.fail
         self.tasks.append(task)
         return f"mp3:{task.voice}".encode()
+
+
+class InMemoryReportRepository:
+    """Keeps reports for the calls of an `InMemoryVoiceSessionRepository`."""
+
+    def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
+        self._calls = calls
+        self.reports: dict[str, StoredReport] = {}
+        self._requests: dict[str, int] = {}
+        self._claimed: set[str] = set()
+
+    def request(
+        self, call_id: str, at: datetime, *, stale_before: datetime, max_requests: int
+    ) -> bool:
+        if call_id not in self._calls.sessions:
+            return False
+        stored = self.reports.get(call_id)
+        if stored is not None:
+            lost = stored.status == "pending" and stored.requested_at < stale_before
+            again = stored.status == "failed" or lost
+            if not again or self._requests[call_id] >= max_requests:
+                return False
+        self._requests[call_id] = self._requests.get(call_id, 0) + 1
+        self._claimed.discard(call_id)
+        self.reports[call_id] = StoredReport("pending", at.astimezone(UTC), None)
+        return True
+
+    def claim(self, call_id: str, at: datetime) -> bool:
+        stored = self.reports.get(call_id)
+        if stored is None or stored.status != "pending" or call_id in self._claimed:
+            return False
+        self._claimed.add(call_id)
+        return True
+
+    def written(self, call_id: str, status: Status, report: Report | None) -> None:
+        stored = self.reports.get(call_id)
+        if stored is not None:
+            self.reports[call_id] = StoredReport(status, stored.requested_at, report)
+
+    def load(self, call_id: str) -> StoredReport | None:
+        return self.reports.get(call_id)
+
+    def latest(self, user_id: UUID) -> Report | None:
+        ready = [
+            (self._calls.sessions[call_id].started_at, stored.report)
+            for call_id, stored in self.reports.items()
+            if stored.report is not None and self._calls.sessions[call_id].user_id == user_id
+        ]
+        return max(ready, key=lambda found: found[0])[1] if ready else None
+
+
+class RecordingReportStarter:
+    def __init__(self) -> None:
+        self.started: list[str] = []
+        self.fail = False
+
+    def start(self, call_id: str) -> None:
+        if self.fail:
+            raise RuntimeError("could not start the worker")
+        self.started.append(call_id)

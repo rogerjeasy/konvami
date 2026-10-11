@@ -1,5 +1,6 @@
 import {
   assertValidKeyframes,
+  fillKeyframes,
   growKeyframes,
   pct,
   popKeyframes,
@@ -16,6 +17,7 @@ describe('keyframes', () => {
         riseKeyframes(reduced),
         popKeyframes(reduced),
         growKeyframes(40, reduced),
+        fillKeyframes(reduced),
         slideUpKeyframes(reduced),
       ]) {
         expect(() => assertValidKeyframes(keyframes)).not.toThrow();
@@ -34,5 +36,13 @@ describe('keyframes', () => {
 
   it('reduced motion keeps only the fade', () => {
     expect(popKeyframes(true)).toEqual({ from: { opacity: 0 }, to: { opacity: 1 } });
+  });
+
+  it('fills a bar from its start, and only fades it in with reduced motion', () => {
+    expect(fillKeyframes(false)).toEqual({
+      from: { transform: [{ scaleX: 0 }] },
+      to: { transform: [{ scaleX: 1 }] },
+    });
+    expect(fillKeyframes(true)).toEqual({ from: { opacity: 0 }, to: { opacity: 1 } });
   });
 });

@@ -17,6 +17,7 @@ from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.reports import MAX_REQUESTS, Report, ReportService, Stats
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -39,8 +40,10 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryReportRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
+    RecordingReportStarter,
     ScriptedTextModel,
 )
 
@@ -110,12 +113,26 @@ class World:
         self.conversations = ConversationService(
             InMemoryConversationRepository(self.sessions), self.personas
         )
+        self.report_store = InMemoryReportRepository(self.sessions)
+        self.report_starter = RecordingReportStarter()
+        self.reports = ReportService(
+            profiles=self.profiles,
+            conversations=self.conversations,
+            sessions=self.sessions,
+            accounts=self.accounts,
+            repository=self.report_store,
+            starter=self.report_starter,
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            clock=self.clock,
+        )
         self.practice = PracticeScript(
             profiles=self.profiles,
             onboarding=self.onboarding,
             personas=self.personas,
             placement=self.placement,
             conversations=self.conversations,
+            reports=self.reports,
         )
         self.voice = VoiceCallService(
             settings=VOICE,
@@ -136,6 +153,7 @@ class World:
             personas=self.personas,
             placement=self.placement,
             conversations=self.conversations,
+            reports=self.reports,
             clock=self.clock,
         )
         self.files = InMemoryFileStore()
@@ -204,10 +222,12 @@ class World:
         minutes: float = 5,
         user: UUID = USER,
         learner_says: tuple[str, ...] = ("Hallo Lena!",),
+        turns: tuple[Turn, ...] | None = None,
         ended: bool = True,
     ) -> str:
         """Records a practice conversation as the broker and the worker would: started at `at`,
-        and (unless `ended` is False) finished `minutes` later. Returns its id."""
+        and (unless `ended` is False) finished `minutes` later. What was said is `turns`, or a
+        greeting and the lines of `learner_says`. Returns its id."""
         self._calls += 1
         call_id = f"rtc_past_{self._calls}"
         self.sessions.started(
@@ -221,8 +241,9 @@ class World:
             )
         )
         if ended:
-            turns = [Turn("persona", "Hallo! Wie geht's?")]
-            turns += [Turn("learner", line) for line in learner_says]
+            if turns is None:
+                greeting = Turn("persona", "Hallo! Wie geht's?")
+                turns = (greeting, *(Turn("learner", line) for line in learner_says))
             self.sessions.finish(
                 call_id,
                 FinishedCall(
@@ -233,3 +254,23 @@ class World:
                 ),
             )
         return call_id
+
+    def reported(self, call_id: str, *next_steps: str, target: str = "de") -> None:
+        """Stores a ready report for a conversation, as the worker would after writing it."""
+        now = self.clock()
+        self.report_store.request(call_id, now, stale_before=now, max_requests=MAX_REQUESTS)
+        self.report_store.written(
+            call_id,
+            "ready",
+            Report(
+                target=target,
+                language="fr",
+                summary="Vous avez parlé de votre week-end.",
+                mistakes=(),
+                rewrites=(),
+                words=(),
+                wins=(),
+                next_steps=next_steps,
+                stats=Stats(20, 15, 3, 9),
+            ),
+        )

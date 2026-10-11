@@ -1,7 +1,8 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { createFakeApi, FAKE_PERSONAS, type FakeApi } from '@/test/fake-api';
+import { POLL_MS } from '@/practice/report-follower';
+import { createFakeApi, FAKE_PERSONAS, FAKE_REPORT, type FakeApi } from '@/test/fake-api';
 import {
   createFakeVoiceEngine,
   FAKE_CALL_ID,
@@ -338,6 +339,97 @@ describe('5.4 Conversation done', () => {
       pathname: '/conversations/[id]',
       params: { id: FAKE_CALL_ID },
     });
+  });
+
+  it('says that the report is being written', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    api.reported(FAKE_CALL_ID, 'pending');
+    await open(api);
+
+    expect(await screen.findByText('Writing your report…')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'See my report' })).toBeNull();
+  });
+
+  it('offers the report as soon as it is written, with what is in it', async () => {
+    jest.useFakeTimers();
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    api.reported(FAKE_CALL_ID, 'pending');
+    await open(api);
+    await screen.findByText('Writing your report…');
+
+    api.reported(FAKE_CALL_ID);
+    await act(() => jest.advanceTimersByTimeAsync(POLL_MS));
+
+    expect(screen.getByText('Your report is ready')).toBeTruthy();
+    expect(screen.getByText('2 things to polish · 2 words to keep')).toBeTruthy();
+    expect(screen.queryByText('Writing your report…')).toBeNull();
+  });
+
+  it('opens the report, and still leads back to Today', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    api.reported(FAKE_CALL_ID);
+    await open(api);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'See my report' }));
+
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/conversations/[id]/report',
+      params: { id: FAKE_CALL_ID },
+    });
+    expect(screen.getByRole('button', { name: 'Back to Today' })).toBeTruthy();
+  });
+
+  it('counts only what a report has', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    api.reported(FAKE_CALL_ID, {
+      ...FAKE_REPORT,
+      mistakes: FAKE_REPORT.mistakes.slice(0, 1),
+      words: [],
+    });
+    await open(api);
+
+    expect(await screen.findByText('1 thing to polish')).toBeTruthy();
+  });
+
+  it('says so when the report could not be written', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    api.reported(FAKE_CALL_ID, 'failed');
+    await open(api);
+
+    expect(
+      await screen.findByText(
+        'Your report couldn’t be written this time. You can ask for it again from the transcript.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Read the transcript' })).toBeTruthy();
+  });
+
+  it.each(['too_short', undefined] as const)(
+    'says nothing about a report when there is none to come (%s)',
+    async (status) => {
+      const api = inApp();
+      api.talked(0, { id: FAKE_CALL_ID });
+      if (status) api.reported(FAKE_CALL_ID, status);
+      await open(api);
+      await screen.findByRole('header', { name: 'Nice talking, Amara!' });
+
+      await waitFor(() => expect(reads(api, 'getConversationReport')).toBe(1));
+      expect(screen.queryByText(/report/i)).toBeNull();
+    },
+  );
+
+  it('does not ask for the report of a call in which nothing was said', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID, learnerSays: [] });
+    await open(api);
+    await screen.findByRole('header', { name: 'That was a quick one' });
+
+    expect(reads(api, 'getConversationReport')).toBe(0);
   });
 
   it('leads back to Today', async () => {

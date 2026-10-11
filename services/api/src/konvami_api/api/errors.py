@@ -16,6 +16,7 @@ from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.profile import ProfileError
+from konvami_api.domain.reports import ReportError
 from konvami_api.domain.voice import VoiceError
 from konvami_api.domain.voices import SampleError
 
@@ -51,6 +52,7 @@ _PERSONA_STATUS = {
     "writer_unavailable": 503,
 }
 _SAMPLE_STATUS = {"no_language": 409}
+_REPORT_STATUS = {"nothing_to_report": 409, "consent_required": 403, "report_limit": 429}
 _UNAVAILABLE = 503
 
 
@@ -89,6 +91,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ConversationError)
     async def _conversation_error(_: Request, error: ConversationError) -> JSONResponse:
         return _response(404, error.code)
+
+    @app.exception_handler(ReportError)
+    async def _report_error(_: Request, error: ReportError) -> JSONResponse:
+        return _response(_REPORT_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(VoiceError)
     async def _voice_error(_: Request, error: VoiceError) -> JSONResponse:

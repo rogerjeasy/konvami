@@ -81,3 +81,18 @@ def test_settings_written_before_there_was_a_speech_model_still_work() -> None:
 
     # Without a speech model there are no voice samples; everything else works.
     assert models.speech == ""
+
+
+def test_the_report_model_is_read_with_the_text_models() -> None:
+    models = text_models(
+        '{"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna", "report": "gpt-6.1-sol"}'
+    )
+
+    assert models.report == "gpt-6.1-sol"
+
+
+def test_settings_written_before_there_were_reports_still_work() -> None:
+    models = text_models('{"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna"}')
+
+    # Without a report model no report is written; everything else works.
+    assert models.report == ""

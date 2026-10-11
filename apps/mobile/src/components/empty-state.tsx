@@ -12,20 +12,21 @@ import { staggerDelay } from '@/lib/motion';
  */
 export function EmptyState({
   icon,
+  lead,
   title,
   body,
   action,
 }: {
   icon: IconName;
+  /** Drawn in place of the icon's tile (a tile that moves while something is being made). */
+  lead?: ReactNode;
   title: string;
   body: string;
   action?: ReactNode;
 }) {
   return (
     <View className="w-full max-w-content flex-1 items-center justify-center gap-5 self-center py-10">
-      <Reveal>
-        <IconTile icon={icon} />
-      </Reveal>
+      <Reveal>{lead ?? <IconTile icon={icon} />}</Reveal>
       <Reveal delay={staggerDelay(1)}>
         <View className="items-center gap-2">
           <Text variant="heading" accessibilityRole="header" className="text-center">

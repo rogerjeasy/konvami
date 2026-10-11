@@ -19,6 +19,7 @@ from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.reports import ReportService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
@@ -34,8 +35,10 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryReportRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
+    RecordingReportStarter,
     ScriptedTextModel,
 )
 
@@ -185,6 +188,12 @@ def speech() -> FakeSpeechModel:
 
 
 @pytest.fixture
+def report_starter() -> RecordingReportStarter:
+    """Records the reports asked for; `services.reports.write` then stands in for the worker."""
+    return RecordingReportStarter()
+
+
+@pytest.fixture
 def services(
     clock: FixedClock,
     voice_provider: FakeVoiceProvider,
@@ -194,6 +203,7 @@ def services(
     directory: FakeAccountDirectory,
     account_records: InMemoryAccountRepository,
     speech: FakeSpeechModel,
+    report_starter: RecordingReportStarter,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -216,6 +226,17 @@ def services(
         clock=clock,
     )
     conversations = ConversationService(InMemoryConversationRepository(calls), personas)
+    reports = ReportService(
+        profiles=profiles,
+        conversations=conversations,
+        sessions=calls,
+        accounts=directory,
+        repository=InMemoryReportRepository(calls),
+        starter=report_starter,
+        text_model=text_model,
+        model="gpt-6.1-sol",
+        clock=clock,
+    )
     voice = VoiceCallService(
         settings=VOICE,
         scripts={
@@ -227,6 +248,7 @@ def services(
                 personas=personas,
                 placement=placement,
                 conversations=conversations,
+                reports=reports,
             ),
         },
         accounts=directory,
@@ -241,6 +263,7 @@ def services(
         personas=personas,
         placement=placement,
         conversations=conversations,
+        reports=reports,
         clock=clock,
     )
     # Upload ids in the order they are handed out: ...0001, ...0002, and so on.
@@ -260,6 +283,7 @@ def services(
         placement=placement,
         personas=personas,
         conversations=conversations,
+        reports=reports,
         home=home,
         accounts=accounts,
         voices=VoiceSampleService(

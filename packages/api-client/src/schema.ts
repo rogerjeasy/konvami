@@ -108,6 +108,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/conversations/{conversation_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation Report */
+        get: operations["getConversationReport"];
+        put?: never;
+        /**
+         * Request Conversation Report
+         * @description Asks for a report that is not there: for an earlier conversation, or again after one
+         *     failed. Answers at once; the report is written in the background.
+         */
+        post: operations["requestConversationReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/home": {
         parameters: {
             query?: never;
@@ -576,6 +598,8 @@ export interface components {
             exam: components["schemas"]["HomeExamOut"] | null;
             /** Focus */
             focus: string[];
+            /** Focussource */
+            focusSource: ("report" | "placement") | null;
             /** Language */
             language: string;
             level: components["schemas"]["HomeLevelOut"] | null;
@@ -924,6 +948,84 @@ export interface components {
         ProfilePatch: {
             /** Changes */
             changes: components["schemas"]["ChangeIn"][];
+        };
+        /** ReportMistakeOut */
+        ReportMistakeOut: {
+            /** Category */
+            category: string;
+            /** Certain */
+            certain: boolean;
+            /** Corrected */
+            corrected: string;
+            /** Explanation */
+            explanation: string;
+            /** Original */
+            original: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "blocks_meaning" | "noticeable" | "minor";
+            /** Turn */
+            turn: number;
+        };
+        /** ReportOut */
+        ReportOut: {
+            report: components["schemas"]["SessionReportOut"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "none" | "pending" | "ready" | "failed" | "too_short";
+        };
+        /** ReportRewriteOut */
+        ReportRewriteOut: {
+            /** Natural */
+            natural: string;
+            /** Note */
+            note: string;
+            /** Original */
+            original: string;
+            /** Turn */
+            turn: number;
+        };
+        /** ReportStatsOut */
+        ReportStatsOut: {
+            /** Learnerturns */
+            learnerTurns: number;
+            /** Learnerwords */
+            learnerWords: number;
+            /** Longestturnwords */
+            longestTurnWords: number;
+            /** Partnerwords */
+            partnerWords: number;
+        };
+        /** ReportWordOut */
+        ReportWordOut: {
+            /** Example */
+            example: string | null;
+            /** Meaning */
+            meaning: string;
+            /** Text */
+            text: string;
+        };
+        /** SessionReportOut */
+        SessionReportOut: {
+            /** Language */
+            language: string;
+            /** Mistakes */
+            mistakes: components["schemas"]["ReportMistakeOut"][];
+            /** Nextsteps */
+            nextSteps: string[];
+            /** Rewrites */
+            rewrites: components["schemas"]["ReportRewriteOut"][];
+            stats: components["schemas"]["ReportStatsOut"];
+            /** Summary */
+            summary: string;
+            /** Wins */
+            wins: string[];
+            /** Words */
+            words: components["schemas"]["ReportWordOut"][];
         };
         /**
          * Source
@@ -1314,6 +1416,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getConversationReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    requestConversationReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
