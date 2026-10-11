@@ -215,3 +215,49 @@ def test_a_partner_can_be_drafted_and_a_voice_sampled_with_the_configured_models
     assert result["statusCode"] == 409
     assert json.loads(result["body"]) == {"error": {"code": "no_language", "field": None}}
     stub.assert_no_pending_responses()
+
+
+def test_the_worker_writes_a_report_when_that_is_what_it_is_started_for(stub: Stubber) -> None:
+    """The same function follows calls and writes reports. Asked for a report, it looks the
+    call up in the database (here: no such call) and never reaches for the voice provider."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": "[]"},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [{"name": "call_id", "value": {"stringValue": "rtc_ghost"}}],
+            "formatRecordsAs": "JSON",
+        },
+    )
+
+    main.run_worker(backend, {"report": "rtc_ghost"})
+
+    stub.assert_no_pending_responses()
+
+
+def test_a_report_is_read_from_the_database(stub: Stubber) -> None:
+    """The entry point builds the report service; here only that its route answers."""
+    stub.add_response(
+        "execute_statement",
+        {"formattedRecords": "[]"},
+        {
+            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+            "database": "konvami",
+            "sql": ANY,
+            "parameters": [
+                {"name": "user_id", "value": {"stringValue": USER}},
+                {"name": "call_id", "value": {"stringValue": "rtc_ghost"}},
+            ],
+            "formatRecordsAs": "JSON",
+        },
+    )
+
+    result = invoke(stub, "GET", "/v1/conversations/rtc_ghost/report")
+
+    assert result["statusCode"] == 404
+    stub.assert_no_pending_responses()

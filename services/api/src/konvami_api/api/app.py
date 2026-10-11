@@ -29,6 +29,7 @@ from konvami_api.api.schemas import (
     PlacementOut,
     ProfileOut,
     ProfilePatch,
+    ReportOut,
     TranscriptOut,
     VoiceCallIn,
     VoiceCallOut,
@@ -43,6 +44,7 @@ from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.reports import ReportService
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
 
@@ -58,6 +60,7 @@ class Services:
     placement: PlacementService
     personas: PersonaService
     conversations: ConversationService
+    reports: ReportService
     home: HomeService
     accounts: AccountService
     voices: VoiceSampleService
@@ -228,6 +231,24 @@ def _router(services: Services) -> APIRouter:
     )
     def get_conversation(user: CurrentUser, conversation_id: str) -> TranscriptOut:
         return TranscriptOut.of(services.conversations.transcript(user, conversation_id))
+
+    @router.get(
+        "/conversations/{conversation_id}/report",
+        operation_id="getConversationReport",
+        responses=NOT_FOUND,
+    )
+    def get_conversation_report(user: CurrentUser, conversation_id: str) -> ReportOut:
+        return ReportOut.of(services.reports.view(user, conversation_id))
+
+    @router.post(
+        "/conversations/{conversation_id}/report",
+        operation_id="requestConversationReport",
+        responses=NOT_FOUND | CONFLICT | FORBIDDEN | UNAVAILABLE,
+    )
+    def request_conversation_report(user: CurrentUser, conversation_id: str) -> ReportOut:
+        """Asks for a report that is not there: for an earlier conversation, or again after one
+        failed. Answers at once; the report is written in the background."""
+        return ReportOut.of(services.reports.request(user, conversation_id))
 
     @router.get("/account", operation_id="getAccount")
     def get_account(user: CurrentUser) -> AccountOut:

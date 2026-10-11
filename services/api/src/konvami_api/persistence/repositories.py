@@ -2,6 +2,7 @@
 transaction (see `sql.py`); the owning `app_user` row is created on a user's first write.
 """
 
+import dataclasses
 import datetime as dt
 import json
 from collections.abc import Sequence
@@ -20,6 +21,15 @@ from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile, Source
+from konvami_api.domain.reports import (
+    Mistake,
+    Report,
+    Rewrite,
+    Stats,
+    Status,
+    StoredReport,
+    Word,
+)
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from konvami_api.persistence.sql import SqlClient, epoch_micros, from_epoch_micros
 
@@ -305,6 +315,42 @@ _PRACTICE_DAYS = f"""
            CAST(per_day.conversations AS integer) AS conversations
     FROM zone LEFT JOIN per_day ON true
     ORDER BY per_day.day DESC
+"""
+
+# Asking for a report is a write for the call's learner, so it begins like every other one
+# (see `_ENSURE_USER`). A call that does not exist, or whose account was deleted, gets nothing.
+_REQUEST_REPORT = """
+    WITH call AS (
+        SELECT call_id, user_id FROM voice_session WHERE call_id = :call_id
+    ),
+    owner AS (
+        INSERT INTO app_user (id) SELECT user_id FROM call ON CONFLICT (id) DO NOTHING
+    )
+    INSERT INTO session_report (call_id, status, requested_at, content)
+    SELECT call_id, 'pending', CAST(:requested_at AS timestamptz), NULL FROM call
+    ON CONFLICT (call_id) DO UPDATE
+        SET status = EXCLUDED.status, requested_at = EXCLUDED.requested_at, content = NULL
+"""
+
+_WRITE_REPORT = """
+    UPDATE session_report
+    SET status = :status, content = CAST(:content AS jsonb)
+    WHERE call_id = :call_id
+"""
+
+_LOAD_REPORT = f"""
+    SELECT status, {epoch_micros("requested_at")} AS requested_at,
+           CAST(content AS text) AS content
+    FROM session_report
+    WHERE call_id = :call_id
+"""
+
+_LATEST_REPORT = """
+    SELECT CAST(r.content AS text) AS content
+    FROM session_report r JOIN voice_session s ON s.call_id = r.call_id
+    WHERE s.user_id = CAST(:user_id AS uuid) AND r.status = 'ready'
+    ORDER BY s.started_at DESC, s.call_id DESC
+    LIMIT 1
 """
 
 
@@ -630,3 +676,47 @@ class SqlConversationRepository:
                 if row["day"] is not None
             ),
         )
+
+
+def _report(document: dict[str, Any]) -> Report:
+    """A report from the document `dataclasses.asdict` made of it."""
+    return Report(
+        target=document["target"],
+        language=document["language"],
+        summary=document["summary"],
+        mistakes=tuple(Mistake(**mistake) for mistake in document["mistakes"]),
+        rewrites=tuple(Rewrite(**rewrite) for rewrite in document["rewrites"]),
+        words=tuple(Word(**word) for word in document["words"]),
+        wins=tuple(document["wins"]),
+        next_steps=tuple(document["next_steps"]),
+        stats=Stats(**document["stats"]),
+    )
+
+
+class SqlReportRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def requested(self, call_id: str, at: dt.datetime) -> None:
+        self._client.execute(_REQUEST_REPORT, {"call_id": call_id, "requested_at": at.isoformat()})
+
+    def written(self, call_id: str, status: Status, report: Report | None) -> None:
+        content = None if report is None else json.dumps(dataclasses.asdict(report))
+        self._client.execute(
+            _WRITE_REPORT, {"call_id": call_id, "status": status, "content": content}
+        )
+
+    def load(self, call_id: str) -> StoredReport | None:
+        rows = self._client.execute(_LOAD_REPORT, {"call_id": call_id})
+        if not rows:
+            return None
+        row = rows[0]
+        return StoredReport(
+            status=row["status"],
+            requested_at=from_epoch_micros(row["requested_at"]),
+            report=_report(json.loads(row["content"])) if row["content"] else None,
+        )
+
+    def latest(self, user_id: UUID) -> Report | None:
+        rows = self._client.execute(_LATEST_REPORT, {"user_id": str(user_id)})
+        return _report(json.loads(rows[0]["content"])) if rows else None

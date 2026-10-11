@@ -575,6 +575,21 @@
             "title": "Focus",
             "type": "array"
           },
+          "focusSource": {
+            "anyOf": [
+              {
+                "enum": [
+                  "report",
+                  "placement"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focussource"
+          },
           "language": {
             "title": "Language",
             "type": "string"
@@ -620,6 +635,7 @@
           "language",
           "level",
           "focus",
+          "focusSource",
           "exam",
           "partners",
           "suggestedPartnerId",
@@ -1629,6 +1645,239 @@
         "title": "ProfilePatch",
         "type": "object"
       },
+      "ReportMistakeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "certain": {
+            "title": "Certain",
+            "type": "boolean"
+          },
+          "corrected": {
+            "title": "Corrected",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "blocks_meaning",
+              "noticeable",
+              "minor"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "turn": {
+            "title": "Turn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "turn",
+          "original",
+          "corrected",
+          "explanation",
+          "category",
+          "severity",
+          "certain"
+        ],
+        "title": "ReportMistakeOut",
+        "type": "object"
+      },
+      "ReportOut": {
+        "additionalProperties": false,
+        "properties": {
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionReportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "none",
+              "pending",
+              "ready",
+              "failed",
+              "too_short"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "report"
+        ],
+        "title": "ReportOut",
+        "type": "object"
+      },
+      "ReportRewriteOut": {
+        "additionalProperties": false,
+        "properties": {
+          "natural": {
+            "title": "Natural",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          },
+          "turn": {
+            "title": "Turn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "turn",
+          "original",
+          "natural",
+          "note"
+        ],
+        "title": "ReportRewriteOut",
+        "type": "object"
+      },
+      "ReportStatsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "learnerTurns": {
+            "title": "Learnerturns",
+            "type": "integer"
+          },
+          "learnerWords": {
+            "title": "Learnerwords",
+            "type": "integer"
+          },
+          "longestTurnWords": {
+            "title": "Longestturnwords",
+            "type": "integer"
+          },
+          "partnerWords": {
+            "title": "Partnerwords",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "learnerWords",
+          "partnerWords",
+          "learnerTurns",
+          "longestTurnWords"
+        ],
+        "title": "ReportStatsOut",
+        "type": "object"
+      },
+      "ReportWordOut": {
+        "additionalProperties": false,
+        "properties": {
+          "example": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Example"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "meaning",
+          "example"
+        ],
+        "title": "ReportWordOut",
+        "type": "object"
+      },
+      "SessionReportOut": {
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "mistakes": {
+            "items": {
+              "$ref": "#/components/schemas/ReportMistakeOut"
+            },
+            "title": "Mistakes",
+            "type": "array"
+          },
+          "nextSteps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Nextsteps",
+            "type": "array"
+          },
+          "rewrites": {
+            "items": {
+              "$ref": "#/components/schemas/ReportRewriteOut"
+            },
+            "title": "Rewrites",
+            "type": "array"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/ReportStatsOut"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "wins": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Wins",
+            "type": "array"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/ReportWordOut"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "language",
+          "summary",
+          "mistakes",
+          "rewrites",
+          "words",
+          "wins",
+          "nextSteps",
+          "stats"
+        ],
+        "title": "SessionReportOut",
+        "type": "object"
+      },
       "Source": {
         "description": "Where a value came from (spec \u00a711.2).",
         "enum": [
@@ -2247,6 +2496,153 @@
           }
         },
         "summary": "Get Conversation"
+      }
+    },
+    "/v1/conversations/{conversation_id}/report": {
+      "get": {
+        "operationId": "getConversationReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Conversation Report"
+      },
+      "post": {
+        "description": "Asks for a report that is not there: for an earlier conversation, or again after one\nfailed. Answers at once; the report is written in the background.",
+        "operationId": "requestConversationReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Request Conversation Report"
       }
     },
     "/v1/home": {

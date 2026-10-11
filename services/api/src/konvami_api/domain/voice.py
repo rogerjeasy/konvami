@@ -138,8 +138,8 @@ class CallScript(Protocol):
     def started(self, user_id: UUID) -> None:
         """The call exists."""
 
-    def concluded(self, user_id: UUID, tools: ToolSet, call: "FinishedCall") -> None:
-        """The call is over; `tools` are the ones it used."""
+    def concluded(self, user_id: UUID, call_id: str, tools: ToolSet, call: "FinishedCall") -> None:
+        """The call is over and stored under `call_id`; `tools` are the ones it used."""
 
 
 class CallStarter(Protocol):
@@ -273,4 +273,4 @@ class VoiceCallService:
             turns=tuple(call.turns),
         )
         self._sessions.finish(call_id, result)
-        self._scripts[session.purpose].concluded(session.user_id, call.tools, result)
+        self._scripts[session.purpose].concluded(session.user_id, call_id, call.tools, result)

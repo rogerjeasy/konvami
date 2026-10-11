@@ -115,15 +115,21 @@ variable "text_models" {
     starter partners (about 7 seconds on 2026-10-09) and drafts a partner from a description.
     speech is the model that speaks a voice's sample in Persona Studio: one sentence per voice
     and language, once, a fraction of a cent each.
+    report writes the Session Report after a practice conversation and checks its corrections a
+    second time. It is the stronger model, as for the placement test: a wrong correction costs
+    the learner's trust (spec §16.1), and text costs little next to the call it reports on
+    (spec §17.3 lever 1).
   EOT
   type = object({
     assessment = string
     personas   = string
     speech     = optional(string, "gpt-4o-mini-tts")
+    report     = optional(string, "gpt-6.1-sol")
   })
   default = {
     assessment = "gpt-6.1-sol"
     personas   = "gpt-6-luna"
     speech     = "gpt-4o-mini-tts"
+    report     = "gpt-6.1-sol"
   }
 }

@@ -24,6 +24,7 @@ from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.reports import ReportService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
@@ -36,10 +37,17 @@ from konvami_api.persistence.repositories import (
     SqlPersonaRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
+    SqlReportRepository,
     SqlVoiceSessionRepository,
 )
 from konvami_api.persistence.sql import SqlClient
-from konvami_api.providers.aws import LambdaCallStarter, LambdaClient, SecretsClient, cached_secret
+from konvami_api.providers.aws import (
+    LambdaCallStarter,
+    LambdaClient,
+    LambdaReportStarter,
+    SecretsClient,
+    cached_secret,
+)
 from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
 from konvami_api.providers.openai_realtime import OpenAiRealtime
 from konvami_api.providers.openai_speech import OpenAiSpeech
@@ -126,6 +134,19 @@ def build_backend(
     )
     conversations = ConversationService(SqlConversationRepository(sql), personas)
     directory = CognitoAccounts(clients.cognito, environment.get(_USER_POOL, ""))
+    sessions = SqlVoiceSessionRepository(sql)
+    worker = environment.get(_CALL_WORKER, "")
+    reports = ReportService(
+        profiles=profiles,
+        conversations=conversations,
+        sessions=sessions,
+        accounts=directory,
+        repository=SqlReportRepository(sql),
+        starter=LambdaReportStarter(clients.functions, worker),
+        text_model=text,
+        model=models.report,
+        clock=_now,
+    )
     voice = VoiceCallService(
         settings=voice_settings(environment.get(VOICE_VARIABLE)),
         scripts={
@@ -137,12 +158,13 @@ def build_backend(
                 personas=personas,
                 placement=placement,
                 conversations=conversations,
+                reports=reports,
             ),
         },
         accounts=directory,
         provider=realtime,
-        sessions=SqlVoiceSessionRepository(sql),
-        starter=LambdaCallStarter(clients.functions, environment.get(_CALL_WORKER, "")),
+        sessions=sessions,
+        starter=LambdaCallStarter(clients.functions, worker),
         clock=_now,
     )
     home = HomeService(
@@ -151,6 +173,7 @@ def build_backend(
         personas=personas,
         placement=placement,
         conversations=conversations,
+        reports=reports,
         clock=_now,
     )
     files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
@@ -165,6 +188,7 @@ def build_backend(
         placement=placement,
         personas=personas,
         conversations=conversations,
+        reports=reports,
         home=home,
         accounts=accounts,
         voices=VoiceSampleService(
@@ -215,7 +239,15 @@ def migrate_handler(event: dict[str, Any], context: Any) -> dict[str, list[str]]
     return {"applied": migrate_when_awake(client, attempts=MIGRATION_ATTEMPTS)}
 
 
+def run_worker(backend: Backend, event: dict[str, Any]) -> None:
+    """The worker's two jobs, both too long for an API request: following a live call to its
+    end (`call_id`), and writing a conversation's report afterwards (`report`)."""
+    if "report" in event:
+        backend.services.reports.write(event["report"])
+    else:
+        asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
+
+
 def call_worker_handler(event: dict[str, Any], context: Any) -> None:
-    """Follows one live voice call to its end. Started by the API when a call is created."""
-    backend = _backend()
-    asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
+    """Started by the API when a call is created, and again when its report is to be written."""
+    run_worker(_backend(), event)

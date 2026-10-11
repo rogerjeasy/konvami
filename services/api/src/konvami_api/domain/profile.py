@@ -77,6 +77,14 @@ class Profile:
         target: str | None = self.value(GLOBAL_SCOPE, TARGET_LANGUAGE)
         return target
 
+    def level(self, language: str) -> str | None:
+        """The level practice runs at in a language: the one settled after the placement test,
+        or until then the learner's own estimate."""
+        level: str | None = self.value(language, "starting_level") or self.value(
+            language, "self_assessed_level"
+        )
+        return level
+
 
 @dataclass(frozen=True)
 class Change:

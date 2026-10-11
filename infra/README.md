@@ -78,6 +78,10 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
 - **Text models:** the `text_models` variable names the model that assesses a placement test and
   the one that writes the starter partners. They use the same OpenAI key. With an empty name a
   job uses its fallback (the examiner's impression, the language pack's built-in partners).
+  `text_models.report` names the model that writes a practice conversation's Session Report
+  (spec §6.5) and checks each correction a second time. The call worker function does it in an
+  invocation of its own (`{"report": "<call id>"}`), started when the call ends or when the
+  learner asks for a report again. Without a name, no report is written.
 - **Files (`modules/media`):** the private bucket `kv-dev-media-<account id>` for learners'
   photos (6.2 Personal) and the voices' samples (6.6 Persona Studio). Nothing in it is public:
   the API signs a short-lived upload form (JPEG only, at most 1 MB) or a short-lived address, so
@@ -88,7 +92,8 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
   preview's origins are allowed to send and read files (CORS); native apps need none.
   `text_models.speech` names the model that speaks a voice's sample.
 - **Next, in build order (spec §10):** Sign in with Apple and Google on the user pool → S3 audio +
-  CloudFront signed URLs → SQS / Step Functions post-session pipeline → CloudWatch dashboards,
+  CloudFront signed URLs → SQS / Step Functions for the rest of the post-session pipeline (the
+  report is written by the call worker for now) → CloudWatch dashboards,
   X-Ray. Each arrives as a module in `modules/` plus a few lines in `envs/dev/main.tf`.
 
 ## Rules

@@ -548,6 +548,7 @@ def test_home_of_a_new_learner_has_partners_a_level_and_an_empty_week(
         "language": "de",
         "level": {"level": "A2", "source": "asked", "skills": None},
         "focus": [],
+        "focusSource": None,
         "exam": None,
         "partners": [
             {"persona": lena, "conversations": 0, "lastTalkedAt": None},
@@ -657,7 +658,7 @@ def test_home_shows_what_the_placement_test_measured(
     home = call("GET", "/v1/home").body
 
     assert home["level"] == {"level": "B1", "source": "measured", "skills": IMPRESSION}
-    assert home["focus"] == ["Perfekt mit sein"]
+    assert (home["focus"], home["focusSource"]) == (["Perfekt mit sein"], "placement")
 
 
 def test_there_is_no_home_before_onboarding_is_finished(call: Call) -> None:

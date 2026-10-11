@@ -2,7 +2,8 @@
 
 Two things live here: what the partner is told (built for every call from who they are and what
 is known about the learner, in the layers of spec §8.5) and what they can do (end the
-conversation). The session report, memory and live corrections on screen build on this later.
+conversation). When it ends, its report is written (`domain/reports.py`). Memory and live
+corrections on screen build on this later.
 """
 
 import datetime as dt
@@ -25,6 +26,7 @@ from konvami_api.domain.personas import (
 )
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.reports import Focus, ReportService, what_to_practise
 from konvami_api.domain.tools import ToolResult, ToolSet
 from konvami_api.domain.voice import Briefing, FinishedCall
 
@@ -49,7 +51,8 @@ class Learner:
     # The exam as a phrase ("the Goethe-Zertifikat B1 exam on 2026-12-01"), or None.
     exam: str | None
     course: dict[str, Any] | None
-    weak_areas: tuple[str, ...]
+    # What to steer the talk towards, and whether a report or the placement test said so.
+    focus: Focus
     # Earlier conversations with this partner; None before the first one.
     history: PartnerHistory | None
 
@@ -326,6 +329,13 @@ def _history(history: PartnerHistory | None) -> str:
     )
 
 
+# How the things to practise are introduced, and what must not be mentioned, per source.
+_FOCUS_SOURCE = {
+    "placement": ("Their placement test showed these.", "test"),
+    "report": ("The report on their last conversation suggested practising these.", "report"),
+}
+
+
 def practice_instructions(persona: Persona, learner: Learner, today: dt.date) -> str:
     """What a partner is told at the start of a practice conversation."""
     target, explanation = learner.target, learner.explanation
@@ -363,11 +373,12 @@ def practice_instructions(persona: Persona, learner: Learner, today: dt.date) ->
             f"The learner asked this partner to practise: {teaching.focus}. Steer the talk so "
             "it comes up naturally; never drill it."
         )
-    if learner.weak_areas:
-        listed = "\n".join(f"- {area}" for area in learner.weak_areas)
+    if learner.focus.areas:
+        listed = "\n".join(f"- {area}" for area in learner.focus.areas)
+        shown, source = _FOCUS_SOURCE[learner.focus.source or "placement"]
         practise.append(
-            "Their placement test showed these. Steer the talk so they come up naturally; "
-            f"never drill them and never mention the test.\n{listed}"
+            f"{shown} Steer the talk so they come up naturally; "
+            f"never drill them and never mention the {source}.\n{listed}"
         )
     weak = ""
     if practise:
@@ -437,7 +448,9 @@ class PracticeScript:
         personas: PersonaService,
         placement: PlacementService,
         conversations: ConversationService,
+        reports: ReportService,
     ) -> None:
+        self._reports = reports
         self._profiles = profiles
         self._onboarding = onboarding
         self._personas = personas
@@ -471,13 +484,13 @@ class PracticeScript:
                 profile.value(language, "explanation_language") or "en"
             ),
             explanation_usage=profile.value(language, "explanation_usage") or "when_stuck",
-            level=profile.value(language, "starting_level")
-            or profile.value(language, "self_assessed_level")
-            or DEFAULT_LEVEL,
+            level=profile.level(language) or DEFAULT_LEVEL,
             goals=profile.value(language, "goals"),
             exam=self._exam(language, profile.value(language, "exam")),
             course=profile.value(language, "course"),
-            weak_areas=result.weak_areas if result else (),
+            focus=what_to_practise(
+                self._reports.next_steps(user_id), result.weak_areas if result else ()
+            ),
             history=self._conversations.partner_history(user_id).get(persona.id),
         )
 
@@ -498,5 +511,5 @@ class PracticeScript:
     def started(self, user_id: UUID) -> None:
         return None
 
-    def concluded(self, user_id: UUID, tools: ToolSet, call: FinishedCall) -> None:
-        return None
+    def concluded(self, user_id: UUID, call_id: str, tools: ToolSet, call: FinishedCall) -> None:
+        self._reports.after_call(user_id, call_id)

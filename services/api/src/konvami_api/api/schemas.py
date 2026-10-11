@@ -58,6 +58,8 @@ from konvami_api.domain.personas import (
 )
 from konvami_api.domain.placement import PlacementView
 from konvami_api.domain.profile import GLOBAL_SCOPE, Profile, Source
+from konvami_api.domain.reports import Report, ReportState, Severity
+from konvami_api.domain.reports import Status as ReportStatus
 from konvami_api.domain.voice import CallPurpose, CallStarted
 
 # A request never needs more changes than the profile has fields.
@@ -481,6 +483,68 @@ class TranscriptOut(ApiModel):
         )
 
 
+class ReportMistakeOut(ApiModel):
+    # The turn of the transcript it is in, counted from 0.
+    turn: int
+    original: str
+    corrected: str
+    explanation: str
+    # One of the language pack's error categories, or "other".
+    category: str
+    severity: Severity
+    # False: the second check could not confirm it. Shown as a possible issue, never as a fact.
+    certain: bool
+
+
+class ReportRewriteOut(ApiModel):
+    turn: int
+    original: str
+    natural: str
+    note: str
+
+
+class ReportWordOut(ApiModel):
+    text: str
+    meaning: str
+    # The sentence of the conversation it came from; null without one.
+    example: str | None
+
+
+class ReportStatsOut(ApiModel):
+    learner_words: int
+    partner_words: int
+    learner_turns: int
+    longest_turn_words: int
+
+
+class SessionReportOut(ApiModel):
+    # The language the explanations are written in.
+    language: str
+    summary: str
+    mistakes: list[ReportMistakeOut]
+    rewrites: list[ReportRewriteOut]
+    words: list[ReportWordOut]
+    wins: list[str]
+    next_steps: list[str]
+    stats: ReportStatsOut
+
+    @classmethod
+    def of(cls, report: Report) -> "SessionReportOut":
+        return cls.model_validate(report, from_attributes=True)
+
+
+class ReportOut(ApiModel):
+    # "none": never asked for. "too_short": the learner said too little to report on.
+    status: ReportStatus
+    # Only when the status is "ready".
+    report: SessionReportOut | None
+
+    @classmethod
+    def of(cls, state: ReportState) -> "ReportOut":
+        report = state.report
+        return cls(status=state.status, report=SessionReportOut.of(report) if report else None)
+
+
 class HomeLevelOut(ApiModel):
     # The level practice starts at.
     level: StartingLevel
@@ -543,8 +607,10 @@ class HomeOut(ApiModel):
 
     language: str
     level: HomeLevelOut | None
-    # Things to work on from the placement test, most useful first.
+    # Things to work on, most useful first, and where they come from: the report on the last
+    # conversation or, until there is one, the placement test. Null when there is nothing.
     focus: list[str]
+    focus_source: Literal["report", "placement"] | None
     # Null without an exam, and once its day has passed.
     exam: HomeExamOut | None
     partners: list[HomePartnerOut]
@@ -568,6 +634,7 @@ class HomeOut(ApiModel):
                 }
             ),
             focus=list(home.focus),
+            focus_source=home.focus_source,
             exam=None
             if exam is None
             else HomeExamOut.model_validate(

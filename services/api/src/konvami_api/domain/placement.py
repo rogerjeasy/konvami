@@ -439,7 +439,7 @@ class PlacementScript:
     def started(self, user_id: UUID) -> None:
         self._placement.begin(user_id)
 
-    def concluded(self, user_id: UUID, tools: ToolSet, call: FinishedCall) -> None:
+    def concluded(self, user_id: UUID, call_id: str, tools: ToolSet, call: FinishedCall) -> None:
         # A call of this script always uses `PlacementTools`; anything else has nothing to assess.
         if isinstance(tools, PlacementTools):
             self._placement.conclude(user_id, tools, call.turns)

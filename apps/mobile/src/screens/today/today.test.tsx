@@ -150,6 +150,26 @@ describe('5.1 Today', () => {
     expect(screen.getByText('Dative after “mit”')).toBeTruthy();
   });
 
+  it('says that what to polish comes from the placement test, until there is a report', async () => {
+    await open(inApp({ measured: true }));
+
+    expect(
+      screen.getByText('From your placement test. Your partners bring these up as you talk.'),
+    ).toBeTruthy();
+  });
+
+  it('shows the next steps of the last report as what to polish', async () => {
+    const api = inApp({ measured: true });
+    api.reported(api.talked(0).id);
+    await open(api);
+
+    expect(
+      screen.getByText('From your last conversation. Your partners bring these up as you talk.'),
+    ).toBeTruthy();
+    expect(screen.getByText('Verb at the end after “weil”')).toBeTruthy();
+    expect(screen.queryByText('Dative after “mit”')).toBeNull();
+  });
+
   it('counts down to the exam', async () => {
     await open(inApp({ exam: { type: 'goethe', target_level: 'B1', date: '2026-12-01' } }));
 

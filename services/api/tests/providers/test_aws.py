@@ -7,7 +7,7 @@ import pytest
 from botocore.stub import Stubber
 
 from konvami_api.domain.voice import CallPurpose
-from konvami_api.providers.aws import LambdaCallStarter, cached_secret
+from konvami_api.providers.aws import LambdaCallStarter, LambdaReportStarter, cached_secret
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
 SECRET_ARN = "arn:aws:secretsmanager:eu-central-1:503002144480:secret:kv-dev-openai"  # noqa: S105
@@ -49,6 +49,20 @@ def test_the_call_worker_is_started_without_waiting_for_it(functions: Stubber) -
     LambdaCallStarter(functions.client, "kv-dev-call-worker").start(
         "rtc_1", USER, CallPurpose.ONBOARDING
     )
+
+
+def test_a_report_is_handed_to_the_worker_without_waiting_for_it(functions: Stubber) -> None:
+    functions.add_response(
+        "invoke",
+        {"StatusCode": 202},
+        {
+            "FunctionName": "kv-dev-call-worker",
+            "InvocationType": "Event",
+            "Payload": json.dumps({"report": "rtc_1"}).encode(),
+        },
+    )
+
+    LambdaReportStarter(functions.client, "kv-dev-call-worker").start("rtc_1")
 
 
 def test_a_secret_is_fetched_once_and_then_remembered(secrets: Stubber) -> None:

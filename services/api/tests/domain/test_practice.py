@@ -145,6 +145,19 @@ def test_the_partner_works_on_what_the_placement_test_found() -> None:
     assert "L'ordre des mots" in text
 
 
+def test_the_partner_works_on_what_the_last_report_suggested() -> None:
+    world = World()
+    lena, _ = world.onboard(measured=True)
+    world.reported(world.talk(lena, at=NOON), "Le Perfekt avec « sein »")
+
+    text = world.practice.prepare(USER, world.accounts.get(USER), TODAY, lena.id).instructions
+
+    assert "- Le Perfekt avec « sein »" in text
+    assert "never mention the report" in text
+    # The report is newer than the test: its advice takes the test's place.
+    assert "Le datif après « mit »" not in text
+
+
 def test_without_a_placement_test_nothing_is_made_up_to_work_on() -> None:
     assert "worth practising" not in instructions(World())
 

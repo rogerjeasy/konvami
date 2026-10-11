@@ -275,6 +275,8 @@ export const size = {
   headerButton: 44,
   /** One segment of the step progress bar. */
   progressHeight: 4,
+  /** A bar that shows a share of a whole (the learner's part of the talking). */
+  meterHeight: 8,
   /** One box of the verification code. */
   codeBoxWidth: 48,
   codeBoxHeight: 58,

@@ -83,6 +83,18 @@ export function growKeyframes(distance: number, reduced: boolean): Keyframes {
   };
 }
 
+/**
+ * Fills a bar from its start to its full length (a share, a score). The bar sets
+ * `transformOrigin` to its starting edge. Reduced motion keeps only the fade.
+ */
+export function fillKeyframes(reduced: boolean): Keyframes {
+  if (reduced) return FADE;
+  return {
+    from: { transform: [{ scaleX: 0 }] },
+    to: { transform: [{ scaleX: 1 }] },
+  };
+}
+
 // How far a sheet travels when it slides in (pt): enough to start below any sheet's top edge.
 const SHEET_TRAVEL = 320;
 

@@ -147,3 +147,25 @@ def test_there_is_no_home_before_onboarding_is_finished() -> None:
         world.home.view(USER, None)
 
     assert error.value.code == "wrong_stage"
+
+
+def test_after_a_report_today_shows_its_next_steps() -> None:
+    world = World()
+    lena, _ = world.onboard(measured=True)
+    before = world.home.view(USER, None)
+    world.reported(world.talk(lena, at=NOON - timedelta(hours=1)), "Le Perfekt avec « sein »")
+
+    after = world.home.view(USER, None)
+
+    assert (before.focus, before.focus_source) == (
+        ("Le datif après « mit »", "L'ordre des mots"),
+        "placement",
+    )
+    assert (after.focus, after.focus_source) == (("Le Perfekt avec « sein »",), "report")
+
+
+def test_with_nothing_to_work_on_today_names_no_source() -> None:
+    world = World()
+    world.onboard()
+
+    assert world.home.view(USER, None).focus_source is None

@@ -46,6 +46,9 @@ class LanguagePack:
     persona_templates: tuple[PersonaTemplate, ...] = ()
     # What a voice says as its sample in Persona Studio: a partner's first words.
     voice_sample: str = ""
+    # The kinds of mistake a learner's text can show (spec §13.3). A Session Report files every
+    # mistake under one of them; what only a recording shows (pronunciation, pace) is not here.
+    error_categories: tuple[str, ...] = ()
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
@@ -80,6 +83,26 @@ GERMAN = LanguagePack(
     code="de",
     available=True,
     voice_sample="Hallo! Schön, dich kennenzulernen. Worüber möchtest du heute sprechen?",
+    error_categories=(
+        "article_gender",
+        "case_accusative",
+        "case_dative",
+        "case_genitive",
+        "adjective_ending",
+        "word_order_v2",
+        "word_order_subordinate",
+        "separable_verb",
+        "perfekt_auxiliary",
+        "participle_form",
+        "conjugation",
+        "preposition_choice",
+        "two_way_preposition",
+        "plural_form",
+        "negation",
+        "register_du_sie",
+        "vocabulary_false_friend",
+        "lexical_choice",
+    ),
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),
         ExamFormat("telc", "telc Deutsch", CEFR_LEVELS),
