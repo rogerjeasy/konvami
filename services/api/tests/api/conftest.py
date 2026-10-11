@@ -10,6 +10,7 @@ from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import Account, AccountService
+from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
@@ -28,6 +29,7 @@ from tests.fakes import (
     FakeVoiceProvider,
     FixedClock,
     InMemoryAccountRepository,
+    InMemoryCardRepository,
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
@@ -237,6 +239,15 @@ def services(
         model="gpt-6.1-sol",
         clock=clock,
     )
+    # Card ids in the order they are handed out: ...0001, ...0002, and so on.
+    card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
+    cards = CardService(
+        profiles=profiles,
+        reports=reports,
+        repository=InMemoryCardRepository(),
+        clock=clock,
+        new_id=lambda: next(card_ids),
+    )
     voice = VoiceCallService(
         settings=VOICE,
         scripts={
@@ -264,6 +275,7 @@ def services(
         placement=placement,
         conversations=conversations,
         reports=reports,
+        cards=cards,
         clock=clock,
     )
     # Upload ids in the order they are handed out: ...0001, ...0002, and so on.
@@ -284,6 +296,7 @@ def services(
         personas=personas,
         conversations=conversations,
         reports=reports,
+        cards=cards,
         home=home,
         accounts=accounts,
         voices=VoiceSampleService(

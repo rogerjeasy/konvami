@@ -24,6 +24,7 @@ export type ButtonVariant = keyof typeof LOOK;
  */
 export function Button({
   label,
+  detail,
   variant = 'primary',
   leading,
   loading = false,
@@ -31,6 +32,8 @@ export function Button({
   ...rest
 }: Omit<PressableProps, 'children' | 'style'> & {
   label: string;
+  /** A quieter line under the label (when a card would come back). */
+  detail?: string;
   variant?: ButtonVariant;
   /** An icon or logo before the label. */
   leading?: ReactNode;
@@ -52,9 +55,16 @@ export function Button({
         className={`min-h-button w-full flex-row items-center justify-center gap-2.5 rounded-button border px-5 py-3 ${look.box} ${disabled ? 'opacity-disabled' : ''}`}
       >
         {loading ? <ActivityIndicator color={color[look.spinner]} /> : leading}
-        <Text variant="button" tone={look.tone} className="shrink text-center">
-          {label}
-        </Text>
+        <View className="shrink items-center">
+          <Text variant="button" tone={look.tone} className="text-center">
+            {label}
+          </Text>
+          {detail ? (
+            <Text variant="caption" tone={look.tone} className="text-center">
+              {detail}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </PressScale>
   );

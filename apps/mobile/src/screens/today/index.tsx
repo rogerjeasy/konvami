@@ -7,6 +7,7 @@ import { useSession } from '@/auth';
 import { AccountButton } from '@/components/account-button';
 import { Card } from '@/components/card';
 import { ConversationRow } from '@/components/conversation-row';
+import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
 import { Section } from '@/components/section';
@@ -69,6 +70,17 @@ function Day({ home, now }: { home: Home; now: Date }) {
         }}
         onOthers={() => router.navigate(ROUTES.talk)}
       />
+    ) : null,
+    // Shown only while cards are waiting: a count of zero is nothing to do.
+    home.cardsDue > 0 ? (
+      <ListGroup key="cards">
+        <ListRow
+          icon="book"
+          title={t('today.cards.title', { count: home.cardsDue })}
+          detail={t('today.cards.body')}
+          onPress={() => router.push(ROUTES.review)}
+        />
+      </ListGroup>
     ) : null,
     <WeekCard key="week" activity={home.activity} />,
   ];

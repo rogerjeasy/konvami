@@ -549,6 +549,7 @@ def test_home_of_a_new_learner_has_partners_a_level_and_an_empty_week(
         "level": {"level": "A2", "source": "asked", "skills": None},
         "focus": [],
         "focusSource": None,
+        "cardsDue": 0,
         "exam": None,
         "partners": [
             {"persona": lena, "conversations": 0, "lastTalkedAt": None},

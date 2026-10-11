@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
+from konvami_api.domain.cards import CardService
 from konvami_api.domain.conversations import Activity, Conversation, ConversationService
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.personas import Persona, PersonaService
@@ -54,6 +55,8 @@ class HomeView:
     # report or, until there is one, the placement test. None when there is nothing.
     focus: tuple[str, ...]
     focus_source: Literal["report", "placement"] | None
+    # Flashcards waiting to be reviewed.
+    cards_due: int
     exam: ExamView | None
     partners: tuple[PartnerView, ...]
     # Who the main button talks to: the partner talked to last, or the first one.
@@ -72,9 +75,11 @@ class HomeService:
         placement: PlacementService,
         conversations: ConversationService,
         reports: ReportService,
+        cards: CardService,
         clock: Callable[[], dt.datetime],
     ) -> None:
         self._reports = reports
+        self._cards = cards
         self._profiles = profiles
         self._onboarding = onboarding
         self._personas = personas
@@ -107,6 +112,7 @@ class HomeService:
             level=self._level(profile, language, result.levels if result else None),
             focus=focus.areas,
             focus_source=focus.source,
+            cards_due=self._cards.due_count(user_id),
             exam=self._exam(profile, language, activity.today),
             partners=partners,
             suggested_partner_id=_suggested(partners),

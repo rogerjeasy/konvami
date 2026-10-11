@@ -15,7 +15,9 @@ import psycopg
 import pytest
 
 from konvami_api.domain.accounts import AccountRepository
+from konvami_api.domain.cards import Card, CardRepository, card_key
 from konvami_api.domain.conversations import ConversationRepository
+from konvami_api.domain.fsrs import Memory
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
@@ -39,6 +41,7 @@ from konvami_api.domain.voice import (
 )
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
+    SqlCardRepository,
     SqlConversationRepository,
     SqlDraftLog,
     SqlOnboardingRepository,
@@ -51,6 +54,7 @@ from konvami_api.persistence.repositories import (
 from konvami_api.persistence.sql import SqlClient
 from tests.fakes import (
     InMemoryAccountRepository,
+    InMemoryCardRepository,
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryOnboardingRepository,
@@ -1248,3 +1252,225 @@ def test_a_learner_without_a_ready_report_has_no_latest_one(reports: Reports) ->
 
     assert reports.reports.latest(USER) is None
     assert reports.reports.latest(OTHER_USER) is None
+
+
+# --- Flashcards ------------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def cards(request: pytest.FixtureRequest) -> CardRepository:
+    if request.param == "memory":
+        return InMemoryCardRepository()
+    return SqlCardRepository(request.getfixturevalue("db"))
+
+
+def card(number: int, front: str = "das Wochenende", **changes: Any) -> Card:
+    """A new word card, made `number` minutes after noon and due at once."""
+    made = NOON + timedelta(minutes=number)
+    fields: dict[str, Any] = {
+        "id": UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}"),
+        "kind": "word",
+        "front": front,
+        "back": "le week-end : « samedi et dimanche »",
+        "note": "Wie war dein Wochenende?",
+        "explained_in": "fr",
+        "source_call_id": None,
+        "created_at": made,
+        "due_at": made,
+        "reviewed_at": None,
+        "memory": None,
+        "reviews": 0,
+        "lapses": 0,
+    }
+    return Card(**{**fields, **changes})
+
+
+def add(cards: CardRepository, new: Card, *, user: UUID = USER, language: str = "de") -> bool:
+    return cards.add(user, language, card_key(new.front), new, 100)
+
+
+def test_a_card_is_read_back_as_it_was_stored(cards: CardRepository) -> None:
+    berlin = timezone(timedelta(hours=2))
+    new = card(1, note=None, created_at=NOON.astimezone(berlin), due_at=NOON.astimezone(berlin))
+
+    stored = add(cards, new)
+
+    assert stored is True
+    assert cards.get(USER, new.id) == card(1, note=None, created_at=NOON, due_at=NOON)
+    assert cards.by_key(USER, "de", "word", "das wochenende") == cards.get(USER, new.id)
+
+
+def test_a_card_is_found_only_by_its_owner_kind_language_and_words(cards: CardRepository) -> None:
+    add(cards, card(1))
+
+    assert cards.get(OTHER_USER, card(1).id) is None
+    assert cards.get(USER, card(2).id) is None
+    assert cards.by_key(OTHER_USER, "de", "word", "das wochenende") is None
+    assert cards.by_key(USER, "fr", "word", "das wochenende") is None
+    assert cards.by_key(USER, "de", "correction", "das wochenende") is None
+    assert cards.by_key(USER, "de", "word", "wochenende") is None
+
+
+def test_the_same_card_is_not_stored_twice(cards: CardRepository) -> None:
+    add(cards, card(1))
+
+    assert add(cards, card(2, "Das Wochenende!")) is False
+    assert cards.get(USER, card(2).id) is None
+    # The same words are another card as a correction, in another language, for someone else.
+    assert add(cards, card(3, kind="correction")) is True
+    assert add(cards, card(4), language="fr") is True
+    assert add(cards, card(5), user=OTHER_USER) is True
+
+
+def test_a_deck_takes_only_so_many_cards(cards: CardRepository) -> None:
+    for number in (1, 2):
+        cards.add(USER, "de", f"wort{number}", card(number, f"Wort{number}"), 2)
+
+    assert cards.add(USER, "de", "wort3", card(3, "Wort3"), 2) is False
+    # The limit is per learner and language.
+    assert cards.add(USER, "fr", "mot", card(4, "mot"), 2) is True
+    assert cards.add(OTHER_USER, "de", "wort5", card(5, "Wort5"), 2) is True
+    assert cards.counts(USER, "de", NOON + HOUR) == (2, 2)
+
+
+def test_cards_are_listed_newest_first_page_by_page(cards: CardRepository) -> None:
+    for number in (1, 2, 3):
+        add(cards, card(number, f"Wort{number}"))
+    add(cards, card(4, "mot"), language="fr")
+    add(cards, card(5, "Wort5"), user=OTHER_USER)
+
+    assert [c.front for c in cards.listed(USER, "de", 2, None)] == ["Wort3", "Wort2"]
+    assert [c.front for c in cards.listed(USER, "de", 2, card(2).created_at)] == ["Wort1"]
+    assert cards.listed(USER, "it", 10, None) == []
+
+
+def test_the_cards_that_are_due_come_longest_waiting_first(cards: CardRepository) -> None:
+    add(cards, card(1, "Wort1", due_at=NOON + 3 * HOUR))
+    add(cards, card(2, "Wort2", due_at=NOON + HOUR))
+    add(cards, card(3, "Wort3", due_at=NOON + 2 * HOUR))
+    add(cards, card(4, "mot", due_at=NOON), language="fr")
+
+    at_two = NOON + 2 * HOUR
+
+    assert [c.front for c in cards.due(USER, "de", at_two, 10)] == ["Wort2", "Wort3"]
+    assert [c.front for c in cards.due(USER, "de", at_two, 1)] == ["Wort2"]
+    assert cards.counts(USER, "de", at_two) == (3, 2)
+    assert cards.counts(USER, "de", NOON) == (3, 0)
+    assert cards.counts(OTHER_USER, "de", at_two) == (0, 0)
+
+
+def test_a_review_is_stored_with_the_cards_new_memory(cards: CardRepository) -> None:
+    add(cards, card(1))
+    after = card(
+        1,
+        due_at=NOON + timedelta(days=2),
+        reviewed_at=NOON + HOUR,
+        memory=Memory(stability=2.3065, difficulty=2.118103970459015),
+        reviews=1,
+        lapses=0,
+    )
+
+    stored = cards.reviewed(USER, after, "good", 0)
+
+    assert stored is True
+    assert cards.get(USER, after.id) == after
+
+
+def test_a_review_is_stored_only_for_the_card_as_it_was_read(cards: CardRepository) -> None:
+    add(cards, card(1))
+    after = card(1, reviewed_at=NOON, memory=Memory(2.3065, 2.1181), reviews=1)
+    cards.reviewed(USER, after, "good", 0)
+    twice = replace(after, reviews=1, due_at=NOON + timedelta(days=9))
+
+    assert cards.reviewed(USER, twice, "good", 0) is False
+    assert cards.reviewed(OTHER_USER, replace(after, reviews=2), "good", 1) is False
+    assert cards.reviewed(USER, replace(card(2), reviews=1), "good", 0) is False
+    assert cards.get(USER, after.id) == after
+
+
+def test_a_card_is_removed_by_its_owner_only(cards: CardRepository) -> None:
+    add(cards, card(1))
+
+    assert cards.remove(OTHER_USER, card(1).id) is False
+    assert cards.remove(USER, card(2).id) is False
+    assert cards.remove(USER, card(1).id) is True
+    assert cards.get(USER, card(1).id) is None
+    # Its words are free for a new card.
+    assert add(cards, card(3)) is True
+
+
+def test_the_cards_a_learner_has_are_told_apart_from_those_they_have_not(
+    cards: CardRepository,
+) -> None:
+    add(cards, card(1))
+    add(cards, card(2, "mit der Bus", kind="correction"))
+    add(cards, card(3, "umsteigen"), user=OTHER_USER)
+
+    known = cards.known(
+        USER,
+        "de",
+        [("word", "das wochenende"), ("word", "umsteigen"), ("correction", "mit der bus")],
+    )
+
+    assert known == {("word", "das wochenende"), ("correction", "mit der bus")}
+    assert cards.known(USER, "de", []) == set()
+
+
+def test_a_card_remembers_the_conversation_it_came_from(db: SqlClient) -> None:
+    SqlVoiceSessionRepository(db).started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    cards = SqlCardRepository(db)
+
+    add(cards, card(1, source_call_id="rtc_1"))
+
+    stored = cards.get(USER, card(1).id)
+    assert stored is not None
+    assert stored.source_call_id == "rtc_1"
+
+
+def test_every_review_is_logged(db: SqlClient) -> None:
+    cards = SqlCardRepository(db)
+    add(cards, card(1))
+    first = card(1, reviewed_at=NOON, memory=Memory(0.212, 6.4133), reviews=1)
+    cards.reviewed(USER, first, "again", 0)
+    cards.reviewed(USER, replace(first, reviewed_at=NOON + HOUR, reviews=2), "good", 1)
+    cards.reviewed(USER, replace(first, reviews=2), "easy", 1)
+
+    log = db.execute("SELECT position, rating FROM card_review ORDER BY position")
+
+    assert [(row["position"], row["rating"]) for row in log] == [(1, "again"), (2, "good")]
+
+
+def test_a_deleted_learner_has_no_cards_left(db: SqlClient) -> None:
+    cards = SqlCardRepository(db)
+    add(cards, card(1))
+    cards.reviewed(USER, card(1, reviewed_at=NOON, memory=Memory(1.0, 5.0), reviews=1), "good", 0)
+
+    SqlAccountRepository(db).delete(USER, NOON)
+
+    assert cards.get(USER, card(1).id) is None
+    assert db.execute("SELECT 1 AS left FROM card_review") == []
+
+
+def test_a_review_sent_twice_at_the_same_moment_is_stored_once(
+    db: SqlClient, postgres_uri: str
+) -> None:
+    """Checking that the card is as it was read and storing the review are one statement: of
+    twelve reviews at once, one is stored."""
+    add(SqlCardRepository(db), card(1))
+    after = card(1, reviewed_at=NOON, memory=Memory(2.3065, 2.1181), reviews=1)
+    schema = db.execute("SELECT current_schema() AS name")[0]["name"]
+    barrier = threading.Barrier(12)
+
+    def review() -> bool:
+        with psycopg.connect(postgres_uri, autocommit=True) as connection:
+            connection.execute(f'SET search_path TO "{schema}"')
+            barrier.wait()
+            return SqlCardRepository(LocalSqlClient(connection)).reviewed(USER, after, "good", 0)
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        answers = [future.result() for future in [pool.submit(review) for _ in range(12)]]
+
+    assert sorted(answers) == [False] * 11 + [True]
+    assert db.execute("SELECT CAST(count(*) AS integer) AS n FROM card_review")[0]["n"] == 1

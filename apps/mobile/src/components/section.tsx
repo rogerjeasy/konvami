@@ -38,6 +38,8 @@ export function Section({
 }) {
   const { color } = useTheme();
   const [open, setOpen] = useState(true);
+  // What a screen reader hears for the heading: the title and how many things it holds.
+  const name = count === undefined ? title : `${title}, ${count}`;
   const heading = (
     <View className="shrink flex-row items-center gap-2">
       {tone === 'warn' ? (
@@ -51,6 +53,7 @@ export function Section({
           variant="overline"
           tone="subtle"
           accessibilityRole={collapsible ? undefined : 'header'}
+          accessibilityLabel={collapsible ? undefined : name}
           className="shrink"
         >
           {title}
@@ -79,7 +82,7 @@ export function Section({
     <View className="gap-1">
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={count === undefined ? title : `${title}, ${count}`}
+        accessibilityLabel={name}
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen((shown) => !shown)}
         className="min-h-tap flex-row items-center justify-between gap-3 active:opacity-pressed"

@@ -20,6 +20,7 @@ import { useConversation, usePracticeServices, useReport } from '@/practice/serv
 import { Natural, NextSteps, Polish, Wins, Words } from './sections';
 import { ReportStatus } from './status';
 import { TalkShare } from './talk-share';
+import { useCardSaver } from './use-card-saver';
 
 // Stands between the parts of the line under the title ("With Lena · Today · 8 min").
 const SEPARATOR = ' · ';
@@ -52,16 +53,17 @@ function Heading({ conversation }: { conversation: Conversation | null }) {
 }
 
 /** The report itself, read from top to bottom: what happened, what to polish, what to keep. */
-function Report({ report, partner }: { report: SessionReport; partner: string }) {
+function Report({ id, report, partner }: { id: string; report: SessionReport; partner: string }) {
+  const saver = useCardSaver(id, report);
   const parts = [
     <Card key="summary" className="gap-4 p-4">
       <Text>{report.summary}</Text>
       <View className="h-px bg-border" />
       <TalkShare stats={report.stats} partner={partner} />
     </Card>,
-    <Polish key="polish" mistakes={report.mistakes} />,
+    <Polish key="polish" mistakes={report.mistakes} saver={saver} />,
     <Natural key="natural" rewrites={report.rewrites} />,
-    <Words key="words" words={report.words} />,
+    <Words key="words" words={report.words} saver={saver} />,
     <Wins key="wins" wins={report.wins} />,
     <NextSteps key="next" steps={report.nextSteps} />,
   ];
@@ -75,7 +77,8 @@ function Report({ report, partner }: { report: SessionReport; partner: string })
 /**
  * 5.10 Session report: what a practice conversation showed (spec §6.5). A summary and the
  * learner's share of the talking, then the mistakes worth polishing, more natural wordings, the
- * words to keep, what went well and what to practise next. The server writes it in the minute
+ * words to keep, what went well and what to practise next. Words and confirmed corrections can
+ * be saved as flashcards from here (spec §6.7). The server writes the report in the minute
  * after a conversation, so the screen also waits for it, and offers to have one written for a
  * conversation that has none. Everything is read from the conversation's text: nothing here
  * needs the recording, and nothing is made up when a part is empty.
@@ -129,6 +132,7 @@ export function ReportScreen() {
         <>
           <Heading conversation={conversation} />
           <Report
+            id={id}
             report={view.report}
             partner={partner?.name ?? t('conversations.formerPartner')}
           />

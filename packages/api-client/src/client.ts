@@ -63,6 +63,17 @@ export type SessionReport = Schemas['SessionReportOut'];
 export type ReportMistake = Schemas['ReportMistakeOut'];
 export type ReportRewrite = Schemas['ReportRewriteOut'];
 export type ReportWord = Schemas['ReportWordOut'];
+/** A flashcard: a word with its meaning, or a sentence the learner said and how it is right. */
+export type Card = Schemas['CardOut'];
+export type CardKind = Card['kind'];
+/** Which word or correction of a conversation's report to make a card of. */
+export type CardSource = Schemas['CardIn'];
+export type Deck = Schemas['DeckOut'];
+export type DeckSummary = Schemas['DeckSummaryOut'];
+/** The cards to review now, each with when it would come back for every rating. */
+export type ReviewQueue = Schemas['QueueOut'];
+export type ReviewCard = Schemas['QueueCardOut'];
+export type Rating = Schemas['ReviewIn']['rating'];
 
 /**
  * Why a call failed. Codes the server sends (`invalid_value`, `essentials_incomplete`, …) pass
@@ -174,6 +185,20 @@ export interface ApiClient {
    * often, `report_limit`.
    */
   requestConversationReport(id: string): Promise<ConversationReport>;
+  /**
+   * Makes a flashcard of a word or a correction in a report; one that is a card already is
+   * answered with that card. Fails with `no_report`, `no_such_item`, `not_certain` (a
+   * correction nobody could confirm) or `too_many`.
+   */
+  saveCard(source: CardSource): Promise<Card>;
+  /** The learner's cards, newest first. `before` is the `next` of the page read before. */
+  getCards(page?: { before?: string; limit?: number }): Promise<Deck>;
+  /** The cards that are due, the one that has waited longest first. */
+  getDueCards(limit?: number): Promise<ReviewQueue>;
+  /** Stores how well a card was known. Fails with `conflict` when it was reviewed meanwhile. */
+  reviewCard(id: string, rating: Rating): Promise<Card>;
+  /** Removes a card; answers with what is left of the deck. */
+  removeCard(id: string): Promise<DeckSummary>;
 }
 
 // The dev database pauses when idle and needs about 15 seconds to wake. The server answers 503
@@ -294,5 +319,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('GET', `/v1/conversations/${encodeURIComponent(id)}/report`),
     requestConversationReport: (id) =>
       request('POST', `/v1/conversations/${encodeURIComponent(id)}/report`),
+    saveCard: (source) => request('POST', '/v1/cards', source),
+    getCards: (page = {}) =>
+      request('GET', withQuery('/v1/cards', { before: page.before, limit: page.limit })),
+    getDueCards: (limit) => request('GET', withQuery('/v1/cards/due', { limit })),
+    reviewCard: (id, rating) =>
+      request('POST', `/v1/cards/${encodeURIComponent(id)}/review`, { rating }),
+    removeCard: (id) => request('DELETE', `/v1/cards/${encodeURIComponent(id)}`),
   };
 }

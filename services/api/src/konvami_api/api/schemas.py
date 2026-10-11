@@ -2,6 +2,7 @@
 they are stored (`target_language`).
 """
 
+import dataclasses
 import datetime as dt
 from typing import Any, Literal
 from uuid import UUID
@@ -10,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from konvami_api.domain.accounts import AccountView, PictureUpload
+from konvami_api.domain.cards import Card, Deck, Queue, Saved
+from konvami_api.domain.cards import Kind as CardKind
 from konvami_api.domain.catalog import (
     CEFR_LEVELS,
     EXPLANATION_USAGES,
@@ -27,6 +30,7 @@ from konvami_api.domain.conversations import (
     ConversationPage,
     Transcript,
 )
+from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.home import HomeView
 from konvami_api.domain.live_call import Speaker
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
@@ -483,6 +487,111 @@ class TranscriptOut(ApiModel):
         )
 
 
+# A conversation's id is the voice provider's id for the call: short, never free text.
+MAX_CONVERSATION_ID_LENGTH = 128
+# A report lists far fewer words and mistakes than this.
+MAX_REPORT_INDEX = 100
+
+
+class CardIn(ApiModel):
+    """Which word or correction of a conversation's report to make a card of. The server reads
+    its content from the report; the app sends none."""
+
+    conversation_id: str = Field(min_length=1, max_length=MAX_CONVERSATION_ID_LENGTH)
+    kind: CardKind
+    # Its place among the report's words (kind "word") or mistakes (kind "correction").
+    index: int = Field(ge=0, le=MAX_REPORT_INDEX)
+
+
+class CardOut(ApiModel):
+    id: UUID
+    kind: CardKind
+    # A word and its meaning; or what the learner said and how it is right.
+    front: str
+    back: str
+    # A word: the sentence it came from. A correction: why. Null without one.
+    note: str | None
+    # The language the meaning or the reason is written in.
+    explained_in: str
+    # Null once the conversation it came from is gone.
+    conversation_id: str | None
+    created_at: dt.datetime
+    due_at: dt.datetime
+    # Null until the first review.
+    reviewed_at: dt.datetime | None
+    reviews: int
+    lapses: int
+
+    @classmethod
+    def of(cls, card: Card) -> "CardOut":
+        return cls(
+            id=card.id,
+            kind=card.kind,
+            front=card.front,
+            back=card.back,
+            note=card.note,
+            explained_in=card.explained_in,
+            conversation_id=card.source_call_id,
+            created_at=card.created_at,
+            due_at=card.due_at,
+            reviewed_at=card.reviewed_at,
+            reviews=card.reviews,
+            lapses=card.lapses,
+        )
+
+
+class DeckSummaryOut(ApiModel):
+    # How many cards the learner has in the language they are learning, and how many are due.
+    total: int
+    due: int
+
+
+class DeckOut(DeckSummaryOut):
+    cards: list[CardOut]
+    # Pass as `before` to read the next page; null on the last one.
+    next: dt.datetime | None
+
+    @classmethod
+    def of(cls, deck: Deck) -> "DeckOut":
+        return cls(
+            cards=[CardOut.of(card) for card in deck.cards],
+            next=deck.next,
+            total=deck.total,
+            due=deck.due,
+        )
+
+
+class QueueCardOut(ApiModel):
+    card: CardOut
+    # Seconds until the card would be due again, for each rating it could get now.
+    due_in: dict[Rating, int]
+
+
+class QueueOut(ApiModel):
+    cards: list[QueueCardOut]
+    # Every card that is due, of which `cards` are the first.
+    due: int
+
+    @classmethod
+    def of(cls, queue: Queue) -> "QueueOut":
+        return cls(
+            cards=[
+                QueueCardOut(
+                    card=CardOut.of(item.card),
+                    due_in={
+                        rating: round(wait.total_seconds()) for rating, wait in item.due_in.items()
+                    },
+                )
+                for item in queue.cards
+            ],
+            due=queue.due,
+        )
+
+
+class ReviewIn(ApiModel):
+    rating: Rating
+
+
 class ReportMistakeOut(ApiModel):
     # The turn of the transcript it is in, counted from 0.
     turn: int
@@ -494,6 +603,8 @@ class ReportMistakeOut(ApiModel):
     severity: Severity
     # False: the second check could not confirm it. Shown as a possible issue, never as a fact.
     certain: bool
+    # The learner has it as a card.
+    saved: bool
 
 
 class ReportRewriteOut(ApiModel):
@@ -508,6 +619,8 @@ class ReportWordOut(ApiModel):
     meaning: str
     # The sentence of the conversation it came from; null without one.
     example: str | None
+    # The learner has it as a card.
+    saved: bool
 
 
 class ReportStatsOut(ApiModel):
@@ -529,8 +642,26 @@ class SessionReportOut(ApiModel):
     stats: ReportStatsOut
 
     @classmethod
-    def of(cls, report: Report) -> "SessionReportOut":
-        return cls.model_validate(report, from_attributes=True)
+    def of(cls, report: Report, saved: Saved) -> "SessionReportOut":
+        return cls(
+            language=report.language,
+            summary=report.summary,
+            mistakes=[
+                ReportMistakeOut(**dataclasses.asdict(mistake), saved=known)
+                for mistake, known in zip(report.mistakes, saved.mistakes, strict=True)
+            ],
+            rewrites=[
+                ReportRewriteOut.model_validate(rewrite, from_attributes=True)
+                for rewrite in report.rewrites
+            ],
+            words=[
+                ReportWordOut(**dataclasses.asdict(word), saved=known)
+                for word, known in zip(report.words, saved.words, strict=True)
+            ],
+            wins=list(report.wins),
+            next_steps=list(report.next_steps),
+            stats=ReportStatsOut.model_validate(report.stats, from_attributes=True),
+        )
 
 
 class ReportOut(ApiModel):
@@ -540,9 +671,13 @@ class ReportOut(ApiModel):
     report: SessionReportOut | None
 
     @classmethod
-    def of(cls, state: ReportState) -> "ReportOut":
+    def of(cls, state: ReportState, saved: Saved | None) -> "ReportOut":
+        """`saved`: which of the report's words and mistakes are cards; with a report only."""
         report = state.report
-        return cls(status=state.status, report=SessionReportOut.of(report) if report else None)
+        return cls(
+            status=state.status,
+            report=SessionReportOut.of(report, saved) if report and saved else None,
+        )
 
 
 class HomeLevelOut(ApiModel):
@@ -611,6 +746,8 @@ class HomeOut(ApiModel):
     # conversation or, until there is one, the placement test. Null when there is nothing.
     focus: list[str]
     focus_source: Literal["report", "placement"] | None
+    # Flashcards waiting to be reviewed.
+    cards_due: int
     # Null without an exam, and once its day has passed.
     exam: HomeExamOut | None
     partners: list[HomePartnerOut]
@@ -635,6 +772,7 @@ class HomeOut(ApiModel):
             ),
             focus=list(home.focus),
             focus_source=home.focus_source,
+            cards_due=home.cards_due,
             exam=None
             if exam is None
             else HomeExamOut.model_validate(

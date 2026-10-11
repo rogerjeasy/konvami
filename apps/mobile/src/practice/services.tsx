@@ -7,12 +7,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { ApiClient, Transcript } from '@konvami/api-client';
+import type { ApiClient, Card, CardSource, Transcript } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
+import { createDeckStore, type DeckState, type DeckStore } from './deck-store';
 import { createHomeStore, type HomeState, type HomeStore } from './home-store';
 import { createLibraryStore, type LibraryState, type LibraryStore } from './library-store';
 import { createReportFollower, type ReportFollower, type ReportView } from './report-follower';
+import { createReviewSession, type ReviewSession, type ReviewState } from './review-session';
 
 /** What the device tells the app about time. Replaced in tests. */
 export interface DeviceClock {
@@ -34,6 +36,15 @@ export interface PracticeServices {
   readConversation: (id: string) => Promise<Transcript>;
   /** Follows one conversation's report for as long as a screen shows it. */
   followReport: (id: string) => ReportFollower;
+  /** The learner's flashcards. */
+  deck: DeckStore;
+  /**
+   * Makes a flashcard of a word or a correction in a report, then brings the deck and Today's
+   * count of due cards up to date. Rejects with an `ApiError` (`too_many`, `network`, …).
+   */
+  saveCard: (source: CardSource) => Promise<Card>;
+  /** One sitting of reviewing the cards that are due. */
+  reviewCards: () => ReviewSession;
   clock: DeviceClock;
 }
 
@@ -45,14 +56,29 @@ export function createPracticeServices(
     | 'getConversation'
     | 'getConversationReport'
     | 'requestConversationReport'
+    | 'saveCard'
+    | 'getCards'
+    | 'getDueCards'
+    | 'reviewCard'
+    | 'removeCard'
   >,
   clock: DeviceClock,
 ): PracticeServices {
+  const home = createHomeStore(api, clock);
+  const deck = createDeckStore(api);
   return {
-    home: createHomeStore(api, clock),
+    home,
     library: createLibraryStore(api),
     readConversation: (id) => api.getConversation(id),
     followReport: (id) => createReportFollower(api, id),
+    deck,
+    async saveCard(source) {
+      const card = await api.saveCard(source);
+      void deck.refresh();
+      void home.refresh();
+      return card;
+    },
+    reviewCards: () => createReviewSession(api),
     clock,
   };
 }
@@ -75,6 +101,7 @@ export function PracticeProvider({
     if (status !== 'signedOut') return;
     services.home.reset();
     services.library.reset();
+    services.deck.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
 }
@@ -95,6 +122,30 @@ export function useHome(): HomeState {
 export function useLibrary(): LibraryState {
   const { library } = usePracticeServices();
   return useSyncExternalStore(library.subscribe, library.getState, library.getState);
+}
+
+/** The learner's flashcards; re-renders when they change. */
+export function useDeck(): DeckState {
+  const { deck } = usePracticeServices();
+  return useSyncExternalStore(deck.subscribe, deck.getState, deck.getState);
+}
+
+/**
+ * One sitting of flashcard review, for as long as the screen that started it is open. When it
+ * is done, the deck and Today's count of due cards are read again.
+ */
+export function useReviewSession(): { state: ReviewState; session: ReviewSession } {
+  const { reviewCards, deck, home } = usePracticeServices();
+  const session = useMemo(() => reviewCards(), [reviewCards]);
+  const state = useSyncExternalStore(session.subscribe, session.getState, session.getState);
+  useEffect(() => void session.start(), [session]);
+  const done = state.phase === 'done';
+  useEffect(() => {
+    if (!done) return;
+    void deck.refresh();
+    void home.refresh();
+  }, [done, deck, home]);
+  return { state, session };
 }
 
 export type ConversationReading =

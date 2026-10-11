@@ -397,7 +397,7 @@ Judge every item on its own, and answer for every id."""
 # --- Reading the analyst's answer ----------------------------------------------------------------
 
 
-def _tokens(text: str) -> tuple[str, ...]:
+def words_in(text: str) -> tuple[str, ...]:
     """The words of a text, without capitals and punctuation: how two quotes are compared."""
     return tuple(re.findall(r"\w+", text.casefold()))
 
@@ -421,7 +421,7 @@ class _Said:
 
     def __init__(self, turns: Sequence[Turn]) -> None:
         self._turns = turns
-        self._tokens = [_tokens(turn.text) for turn in turns]
+        self._tokens = [words_in(turn.text) for turn in turns]
 
     def _learner_said(self, quote: tuple[str, ...], turn: int) -> bool:
         return (
@@ -433,14 +433,14 @@ class _Said:
     def learner_turn(self, quote: str, named: int) -> int | None:
         """The learner's turn a quote is from: the one named if it is there, else the first one
         that has it, else None."""
-        tokens = _tokens(quote)
+        tokens = words_in(quote)
         if not tokens:
             return None
         candidates = (named, *range(len(self._turns)))
         return next((turn for turn in candidates if self._learner_said(tokens, turn)), None)
 
     def anyone(self, sentence: str) -> bool:
-        tokens = _tokens(sentence)
+        tokens = words_in(sentence)
         return bool(tokens) and any(_within(tokens, said) for said in self._tokens)
 
 
@@ -452,9 +452,9 @@ def _mistakes(
     for item in found:
         original, corrected = _clip(item.original, QUOTE_MAX), _clip(item.corrected, QUOTE_MAX)
         turn = said.learner_turn(original, item.turn)
-        words = _tokens(original)
+        words = words_in(original)
         # Speech has no punctuation or capitals to get wrong: a correction must change a word.
-        if turn is None or words in seen or _tokens(corrected) in ((), words):
+        if turn is None or words in seen or words_in(corrected) in ((), words):
             continue
         seen.add(words)
         mistakes.append(
@@ -476,7 +476,7 @@ def _rewrites(found: Sequence[_FoundRewrite], said: _Said) -> list[Rewrite]:
     for item in found:
         original, natural = _clip(item.original, QUOTE_MAX), _clip(item.natural, QUOTE_MAX)
         turn = said.learner_turn(original, item.turn)
-        if turn is not None and _tokens(natural) not in ((), _tokens(original)):
+        if turn is not None and words_in(natural) not in ((), words_in(original)):
             rewrites.append(Rewrite(turn, original, natural, _clip(item.note)))
     return rewrites[:MAX_REWRITES]
 

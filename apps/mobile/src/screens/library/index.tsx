@@ -32,7 +32,7 @@ export function LibraryScreen() {
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;
   const now = new Date(clock.now());
-  const { conversations } = library;
+  const conversations = library.items;
   return (
     <TabScreen onRefresh={library.phase === 'ready' ? () => void store.refresh() : undefined}>
       <Reveal>

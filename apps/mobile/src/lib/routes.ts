@@ -62,6 +62,8 @@ export const ROUTES = {
   library: '/library',
   learn: '/learn',
   progress: '/progress',
+  /** 5.11 Review: the flashcards that are due, one at a time. */
+  review: '/review',
   /** 6.1 Profile: who the learner is, and the way to everything about their account. */
   account: '/account',
   /** 6.2 Personal: name, photo, app language. */

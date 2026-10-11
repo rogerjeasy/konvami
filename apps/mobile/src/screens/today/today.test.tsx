@@ -170,6 +170,22 @@ describe('5.1 Today', () => {
     expect(screen.queryByText('Dative after “mit”')).toBeNull();
   });
 
+  it('says how many cards are waiting and opens the review', async () => {
+    const api = inApp();
+    await api.learning();
+    await open(api);
+
+    await fireEvent.press(screen.getByRole('button', { name: '3 cards to review' }));
+
+    expect(router.push).toHaveBeenCalledWith('/review');
+  });
+
+  it('says nothing about cards when none is due', async () => {
+    await open();
+
+    expect(screen.queryByText(/to review/)).toBeNull();
+  });
+
   it('counts down to the exam', async () => {
     await open(inApp({ exam: { type: 'goethe', target_level: 'B1', date: '2026-12-01' } }));
 

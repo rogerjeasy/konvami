@@ -57,6 +57,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Cards */
+        get: operations["getCards"];
+        put?: never;
+        /**
+         * Save Card
+         * @description Makes a flashcard of a word or a correction in a conversation's report. Saving one
+         *     that is a card already answers with that card.
+         */
+        post: operations["saveCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Due Cards */
+        get: operations["getDueCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/{card_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Card */
+        delete: operations["removeCard"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/{card_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Card */
+        post: operations["reviewCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/catalog": {
         parameters: {
             query?: never;
@@ -469,6 +542,61 @@ export interface components {
          * @enum {string}
          */
         CallPurpose: "onboarding" | "placement" | "practice";
+        /**
+         * CardIn
+         * @description Which word or correction of a conversation's report to make a card of. The server reads
+         *     its content from the report; the app sends none.
+         */
+        CardIn: {
+            /** Conversationid */
+            conversationId: string;
+            /** Index */
+            index: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "word" | "correction";
+        };
+        /** CardOut */
+        CardOut: {
+            /** Back */
+            back: string;
+            /** Conversationid */
+            conversationId: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Dueat
+             * Format: date-time
+             */
+            dueAt: string;
+            /** Explainedin */
+            explainedIn: string;
+            /** Front */
+            front: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "word" | "correction";
+            /** Lapses */
+            lapses: number;
+            /** Note */
+            note: string | null;
+            /** Reviewedat */
+            reviewedAt: string | null;
+            /** Reviews */
+            reviews: number;
+        };
         /** CatalogOut */
         CatalogOut: {
             /** Examlevels */
@@ -526,6 +654,24 @@ export interface components {
             day: string;
             /** Seconds */
             seconds: number;
+        };
+        /** DeckOut */
+        DeckOut: {
+            /** Cards */
+            cards: components["schemas"]["CardOut"][];
+            /** Due */
+            due: number;
+            /** Next */
+            next: string | null;
+            /** Total */
+            total: number;
+        };
+        /** DeckSummaryOut */
+        DeckSummaryOut: {
+            /** Due */
+            due: number;
+            /** Total */
+            total: number;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -595,6 +741,8 @@ export interface components {
          */
         HomeOut: {
             activity: components["schemas"]["ActivityOut"];
+            /** Cardsdue */
+            cardsDue: number;
             exam: components["schemas"]["HomeExamOut"] | null;
             /** Focus */
             focus: string[];
@@ -949,6 +1097,21 @@ export interface components {
             /** Changes */
             changes: components["schemas"]["ChangeIn"][];
         };
+        /** QueueCardOut */
+        QueueCardOut: {
+            card: components["schemas"]["CardOut"];
+            /** Duein */
+            dueIn: {
+                [key: string]: number;
+            };
+        };
+        /** QueueOut */
+        QueueOut: {
+            /** Cards */
+            cards: components["schemas"]["QueueCardOut"][];
+            /** Due */
+            due: number;
+        };
         /** ReportMistakeOut */
         ReportMistakeOut: {
             /** Category */
@@ -961,6 +1124,8 @@ export interface components {
             explanation: string;
             /** Original */
             original: string;
+            /** Saved */
+            saved: boolean;
             /**
              * Severity
              * @enum {string}
@@ -1006,8 +1171,18 @@ export interface components {
             example: string | null;
             /** Meaning */
             meaning: string;
+            /** Saved */
+            saved: boolean;
             /** Text */
             text: string;
+        };
+        /** ReviewIn */
+        ReviewIn: {
+            /**
+             * Rating
+             * @enum {string}
+             */
+            rating: "again" | "hard" | "good" | "easy";
         };
         /** SessionReportOut */
         SessionReportOut: {
@@ -1292,6 +1467,258 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getCards: {
+        parameters: {
+            query?: {
+                limit?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeckOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    saveCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getDueCards: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removeCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeckSummaryOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reviewCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

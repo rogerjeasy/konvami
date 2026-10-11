@@ -32,6 +32,7 @@ export function CorrectionCard({
   better,
   explanation,
   note,
+  action,
   accessibilityLabel,
 }: {
   /** What kind of correction it is ("Dative"), in the corner. */
@@ -45,63 +46,69 @@ export function CorrectionCard({
   explanation: string;
   /** A quiet line under the explanation (why a correction is only a hint). */
   note?: string;
-  /** The whole card in one sentence, for a screen reader. */
+  /** Something to do with the correction (save it as a card), under the text. */
+  action?: ReactNode;
+  /** The card's text in one sentence, for a screen reader. */
   accessibilityLabel: string;
 }) {
   const { color } = useTheme();
   return (
-    <Card accessible accessibilityLabel={accessibilityLabel} className="gap-3 p-4">
-      {topic || badge ? (
-        <View className="flex-row flex-wrap items-center justify-between gap-2">
-          <Text variant="caption" tone="subtle" className="shrink">
-            {topic}
+    <Card className="gap-3 p-4">
+      {/* Read as one sentence; the action after it stays a control of its own. */}
+      <View accessible accessibilityLabel={accessibilityLabel} className="gap-3">
+        {topic || badge ? (
+          <View className="flex-row flex-wrap items-center justify-between gap-2">
+            <Text variant="caption" tone="subtle" className="shrink">
+              {topic}
+            </Text>
+            {badge ? <Badge label={badge} tone="surface" /> : null}
+          </View>
+        ) : null}
+        <View className="gap-1">
+          <Text variant="caption" tone="subtle">
+            {saidLabel}
           </Text>
-          {badge ? <Badge label={badge} tone="surface" /> : null}
+          <Text variant="callout" tone="muted">
+            {marked(said, (text, key) => (
+              <Text
+                key={key}
+                variant="callout"
+                tone="inherit"
+                className="underline"
+                style={{ textDecorationColor: color.warnMark }}
+              >
+                {text}
+              </Text>
+            ))}
+          </Text>
         </View>
-      ) : null}
-      <View className="gap-1">
-        <Text variant="caption" tone="subtle">
-          {saidLabel}
+        <View className="gap-1">
+          <Text variant="caption" tone="subtle">
+            {betterLabel}
+          </Text>
+          <Text variant="emphasis">
+            {marked(better, (text, key) => (
+              <Text
+                key={key}
+                variant="emphasis"
+                tone="primary"
+                className="rounded-sm bg-primary-soft"
+              >
+                {text}
+              </Text>
+            ))}
+          </Text>
+        </View>
+        <Text variant="small" tone="muted">
+          {explanation}
         </Text>
-        <Text variant="callout" tone="muted">
-          {marked(said, (text, key) => (
-            <Text
-              key={key}
-              variant="callout"
-              tone="inherit"
-              className="underline"
-              style={{ textDecorationColor: color.warnMark }}
-            >
-              {text}
-            </Text>
-          ))}
-        </Text>
+        {note ? (
+          <Text variant="caption" tone="subtle">
+            {note}
+          </Text>
+        ) : null}
       </View>
-      <View className="gap-1">
-        <Text variant="caption" tone="subtle">
-          {betterLabel}
-        </Text>
-        <Text variant="emphasis">
-          {marked(better, (text, key) => (
-            <Text
-              key={key}
-              variant="emphasis"
-              tone="primary"
-              className="rounded-sm bg-primary-soft"
-            >
-              {text}
-            </Text>
-          ))}
-        </Text>
-      </View>
-      <Text variant="small" tone="muted">
-        {explanation}
-      </Text>
-      {note ? (
-        <Text variant="caption" tone="subtle">
-          {note}
-        </Text>
-      ) : null}
+      {action}
     </Card>
   );
 }

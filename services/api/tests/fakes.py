@@ -7,6 +7,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
+from konvami_api.domain.cards import Card
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -451,3 +452,76 @@ class RecordingReportStarter:
         if self.fail:
             raise RuntimeError("could not start the worker")
         self.started.append(call_id)
+
+
+class InMemoryCardRepository:
+    def __init__(self) -> None:
+        # Per card: its owner, its language and what makes it the same card as another.
+        self.cards: dict[UUID, tuple[UUID, str, str, Card]] = {}
+        # (card, rating) of every review, in order.
+        self.reviews: list[tuple[UUID, str]] = []
+
+    def _of(self, user_id: UUID, language: str) -> list[tuple[str, Card]]:
+        return [
+            (key, card)
+            for owner, spoken, key, card in self.cards.values()
+            if owner == user_id and spoken == language
+        ]
+
+    def add(self, user_id: UUID, language: str, key: str, card: Card, limit: int) -> bool:
+        deck = self._of(user_id, language)
+        same = any(known == key and other.kind == card.kind for known, other in deck)
+        if same or len(deck) >= limit:
+            return False
+        self.cards[card.id] = (user_id, language, key, card)
+        return True
+
+    def by_key(self, user_id: UUID, language: str, kind: str, key: str) -> Card | None:
+        return next(
+            (
+                card
+                for known, card in self._of(user_id, language)
+                if (card.kind, known) == (kind, key)
+            ),
+            None,
+        )
+
+    def get(self, user_id: UUID, card_id: UUID) -> Card | None:
+        stored = self.cards.get(card_id)
+        return stored[3] if stored and stored[0] == user_id else None
+
+    def listed(
+        self, user_id: UUID, language: str, limit: int, before: datetime | None
+    ) -> list[Card]:
+        cards = [card for _, card in self._of(user_id, language)]
+        newest_first = sorted(cards, key=lambda c: (c.created_at, str(c.id)), reverse=True)
+        return [c for c in newest_first if before is None or c.created_at < before][:limit]
+
+    def due(self, user_id: UUID, language: str, now: datetime, limit: int) -> list[Card]:
+        waiting = [card for _, card in self._of(user_id, language) if card.due_at <= now]
+        return sorted(waiting, key=lambda c: (c.due_at, c.created_at, str(c.id)))[:limit]
+
+    def counts(self, user_id: UUID, language: str, now: datetime) -> tuple[int, int]:
+        cards = [card for _, card in self._of(user_id, language)]
+        return len(cards), sum(1 for card in cards if card.due_at <= now)
+
+    def reviewed(self, user_id: UUID, card: Card, rating: str, reviews_before: int) -> bool:
+        stored = self.cards.get(card.id)
+        if stored is None or stored[0] != user_id or stored[3].reviews != reviews_before:
+            return False
+        self.cards[card.id] = (*stored[:3], card)
+        self.reviews.append((card.id, rating))
+        return True
+
+    def remove(self, user_id: UUID, card_id: UUID) -> bool:
+        stored = self.cards.get(card_id)
+        if stored is None or stored[0] != user_id:
+            return False
+        del self.cards[card_id]
+        return True
+
+    def known(
+        self, user_id: UUID, language: str, keys: Sequence[tuple[str, str]]
+    ) -> set[tuple[str, str]]:
+        have: set[tuple[str, str]] = {(card.kind, key) for key, card in self._of(user_id, language)}
+        return have & set(keys)

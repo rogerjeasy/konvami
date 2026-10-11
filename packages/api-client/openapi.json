@@ -97,6 +97,137 @@
         "title": "CallPurpose",
         "type": "string"
       },
+      "CardIn": {
+        "additionalProperties": false,
+        "description": "Which word or correction of a conversation's report to make a card of. The server reads\nits content from the report; the app sends none.",
+        "properties": {
+          "conversationId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Conversationid",
+            "type": "string"
+          },
+          "index": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "word",
+              "correction"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversationId",
+          "kind",
+          "index"
+        ],
+        "title": "CardIn",
+        "type": "object"
+      },
+      "CardOut": {
+        "additionalProperties": false,
+        "properties": {
+          "back": {
+            "title": "Back",
+            "type": "string"
+          },
+          "conversationId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversationid"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "dueAt": {
+            "format": "date-time",
+            "title": "Dueat",
+            "type": "string"
+          },
+          "explainedIn": {
+            "title": "Explainedin",
+            "type": "string"
+          },
+          "front": {
+            "title": "Front",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "word",
+              "correction"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lapses": {
+            "title": "Lapses",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reviewedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedat"
+          },
+          "reviews": {
+            "title": "Reviews",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "front",
+          "back",
+          "note",
+          "explainedIn",
+          "conversationId",
+          "createdAt",
+          "dueAt",
+          "reviewedAt",
+          "reviews",
+          "lapses"
+        ],
+        "title": "CardOut",
+        "type": "object"
+      },
       "CatalogOut": {
         "additionalProperties": false,
         "properties": {
@@ -320,6 +451,65 @@
           "seconds"
         ],
         "title": "DayOut",
+        "type": "object"
+      },
+      "DeckOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/CardOut"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "due": {
+            "title": "Due",
+            "type": "integer"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "due",
+          "cards",
+          "next"
+        ],
+        "title": "DeckOut",
+        "type": "object"
+      },
+      "DeckSummaryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "due": {
+            "title": "Due",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "due"
+        ],
+        "title": "DeckSummaryOut",
         "type": "object"
       },
       "ErrorBody": {
@@ -558,6 +748,10 @@
           "activity": {
             "$ref": "#/components/schemas/ActivityOut"
           },
+          "cardsDue": {
+            "title": "Cardsdue",
+            "type": "integer"
+          },
           "exam": {
             "anyOf": [
               {
@@ -636,6 +830,7 @@
           "level",
           "focus",
           "focusSource",
+          "cardsDue",
           "exam",
           "partners",
           "suggestedPartnerId",
@@ -1645,6 +1840,57 @@
         "title": "ProfilePatch",
         "type": "object"
       },
+      "QueueCardOut": {
+        "additionalProperties": false,
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/CardOut"
+          },
+          "dueIn": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "again",
+                "hard",
+                "good",
+                "easy"
+              ]
+            },
+            "title": "Duein",
+            "type": "object"
+          }
+        },
+        "required": [
+          "card",
+          "dueIn"
+        ],
+        "title": "QueueCardOut",
+        "type": "object"
+      },
+      "QueueOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/QueueCardOut"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "due": {
+            "title": "Due",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cards",
+          "due"
+        ],
+        "title": "QueueOut",
+        "type": "object"
+      },
       "ReportMistakeOut": {
         "additionalProperties": false,
         "properties": {
@@ -1668,6 +1914,10 @@
             "title": "Original",
             "type": "string"
           },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          },
           "severity": {
             "enum": [
               "blocks_meaning",
@@ -1689,7 +1939,8 @@
           "explanation",
           "category",
           "severity",
-          "certain"
+          "certain",
+          "saved"
         ],
         "title": "ReportMistakeOut",
         "type": "object"
@@ -1802,6 +2053,10 @@
             "title": "Meaning",
             "type": "string"
           },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -1810,9 +2065,30 @@
         "required": [
           "text",
           "meaning",
-          "example"
+          "example",
+          "saved"
         ],
         "title": "ReportWordOut",
+        "type": "object"
+      },
+      "ReviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "rating": {
+            "enum": [
+              "again",
+              "hard",
+              "good",
+              "easy"
+            ],
+            "title": "Rating",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating"
+        ],
+        "title": "ReviewIn",
         "type": "object"
       },
       "SessionReportOut": {
@@ -2342,6 +2618,330 @@
           }
         },
         "summary": "Start Picture Upload"
+      }
+    },
+    "/v1/cards": {
+      "get": {
+        "operationId": "getCards",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Cards"
+      },
+      "post": {
+        "description": "Makes a flashcard of a word or a correction in a conversation's report. Saving one\nthat is a card already answers with that card.",
+        "operationId": "saveCard",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Save Card"
+      }
+    },
+    "/v1/cards/due": {
+      "get": {
+        "operationId": "getDueCards",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Due Cards"
+      }
+    },
+    "/v1/cards/{card_id}": {
+      "delete": {
+        "operationId": "removeCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Remove Card"
+      }
+    },
+    "/v1/cards/{card_id}/review": {
+      "post": {
+        "operationId": "reviewCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Review Card"
       }
     },
     "/v1/catalog": {

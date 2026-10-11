@@ -12,8 +12,12 @@ from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
 from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
+    CardIn,
+    CardOut,
     CatalogOut,
     ConversationsOut,
+    DeckOut,
+    DeckSummaryOut,
     HomeOut,
     OnboardingOut,
     PersonaDescription,
@@ -29,13 +33,17 @@ from konvami_api.api.schemas import (
     PlacementOut,
     ProfileOut,
     ProfilePatch,
+    QueueOut,
     ReportOut,
+    ReviewIn,
     TranscriptOut,
     VoiceCallIn,
     VoiceCallOut,
     VoiceSampleOut,
 )
 from konvami_api.domain.accounts import AccountService
+from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
+from konvami_api.domain.cards import QUEUE_DEFAULT, CardService
 from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.home import HomeService
@@ -44,7 +52,7 @@ from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
-from konvami_api.domain.reports import ReportService
+from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
 
@@ -61,6 +69,7 @@ class Services:
     personas: PersonaService
     conversations: ConversationService
     reports: ReportService
+    cards: CardService
     home: HomeService
     accounts: AccountService
     voices: VoiceSampleService
@@ -232,13 +241,17 @@ def _router(services: Services) -> APIRouter:
     def get_conversation(user: CurrentUser, conversation_id: str) -> TranscriptOut:
         return TranscriptOut.of(services.conversations.transcript(user, conversation_id))
 
+    def report_of(user: UUID, state: ReportState) -> ReportOut:
+        saved = services.cards.saved(user, state.report) if state.report else None
+        return ReportOut.of(state, saved)
+
     @router.get(
         "/conversations/{conversation_id}/report",
         operation_id="getConversationReport",
         responses=NOT_FOUND,
     )
     def get_conversation_report(user: CurrentUser, conversation_id: str) -> ReportOut:
-        return ReportOut.of(services.reports.view(user, conversation_id))
+        return report_of(user, services.reports.view(user, conversation_id))
 
     @router.post(
         "/conversations/{conversation_id}/report",
@@ -248,7 +261,40 @@ def _router(services: Services) -> APIRouter:
     def request_conversation_report(user: CurrentUser, conversation_id: str) -> ReportOut:
         """Asks for a report that is not there: for an earlier conversation, or again after one
         failed. Answers at once; the report is written in the background."""
-        return ReportOut.of(services.reports.request(user, conversation_id))
+        return report_of(user, services.reports.request(user, conversation_id))
+
+    @router.post("/cards", operation_id="saveCard", responses=NOT_FOUND | CONFLICT | REFUSED)
+    def save_card(user: CurrentUser, item: CardIn) -> CardOut:
+        """Makes a flashcard of a word or a correction in a conversation's report. Saving one
+        that is a card already answers with that card."""
+        return CardOut.of(services.cards.save(user, item.conversation_id, item.kind, item.index))
+
+    @router.get("/cards", operation_id="getCards", responses=REFUSED)
+    def get_cards(
+        user: CurrentUser,
+        limit: int = CARDS_PAGE_DEFAULT,
+        # The `next` of the page before.
+        before: AwareDatetime | None = None,
+    ) -> DeckOut:
+        return DeckOut.of(services.cards.deck(user, limit=limit, before=before))
+
+    @router.get("/cards/due", operation_id="getDueCards", responses=REFUSED)
+    def get_due_cards(user: CurrentUser, limit: int = QUEUE_DEFAULT) -> QueueOut:
+        return QueueOut.of(services.cards.queue(user, limit=limit))
+
+    @router.post(
+        "/cards/{card_id}/review",
+        operation_id="reviewCard",
+        responses=NOT_FOUND | CONFLICT | REFUSED,
+    )
+    def review_card(user: CurrentUser, card_id: UUID, review: ReviewIn) -> CardOut:
+        return CardOut.of(services.cards.review(user, card_id, review.rating))
+
+    @router.delete("/cards/{card_id}", operation_id="removeCard", responses=NOT_FOUND | REFUSED)
+    def remove_card(user: CurrentUser, card_id: UUID) -> DeckSummaryOut:
+        services.cards.remove(user, card_id)
+        deck = services.cards.deck(user, limit=1)
+        return DeckSummaryOut(total=deck.total, due=deck.due)
 
     @router.get("/account", operation_id="getAccount")
     def get_account(user: CurrentUser) -> AccountOut:

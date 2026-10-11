@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountService
+from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.home import HomeService
@@ -17,7 +18,14 @@ from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
-from konvami_api.domain.reports import MAX_REQUESTS, Report, ReportService, Stats
+from konvami_api.domain.reports import (
+    MAX_REQUESTS,
+    Mistake,
+    Report,
+    ReportService,
+    Stats,
+    Word,
+)
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -33,6 +41,7 @@ from tests.fakes import (
     FakeVoiceProvider,
     FixedClock,
     InMemoryAccountRepository,
+    InMemoryCardRepository,
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
@@ -126,6 +135,16 @@ class World:
             model="gpt-6.1-sol",
             clock=self.clock,
         )
+        self.card_store = InMemoryCardRepository()
+        # Card ids in the order they are handed out: ...0001, ...0002, and so on.
+        card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
+        self.cards = CardService(
+            profiles=self.profiles,
+            reports=self.reports,
+            repository=self.card_store,
+            clock=self.clock,
+            new_id=lambda: next(card_ids),
+        )
         self.practice = PracticeScript(
             profiles=self.profiles,
             onboarding=self.onboarding,
@@ -154,6 +173,7 @@ class World:
             placement=self.placement,
             conversations=self.conversations,
             reports=self.reports,
+            cards=self.cards,
             clock=self.clock,
         )
         self.files = InMemoryFileStore()
@@ -255,7 +275,14 @@ class World:
             )
         return call_id
 
-    def reported(self, call_id: str, *next_steps: str, target: str = "de") -> None:
+    def reported(
+        self,
+        call_id: str,
+        *next_steps: str,
+        target: str = "de",
+        words: tuple[Word, ...] = (),
+        mistakes: tuple[Mistake, ...] = (),
+    ) -> None:
         """Stores a ready report for a conversation, as the worker would after writing it."""
         now = self.clock()
         self.report_store.request(call_id, now, stale_before=now, max_requests=MAX_REQUESTS)
@@ -266,9 +293,9 @@ class World:
                 target=target,
                 language="fr",
                 summary="Vous avez parlé de votre week-end.",
-                mistakes=(),
+                mistakes=mistakes,
                 rewrites=(),
-                words=(),
+                words=words,
                 wins=(),
                 next_steps=next_steps,
                 stats=Stats(20, 15, 3, 9),

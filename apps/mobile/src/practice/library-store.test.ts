@@ -10,14 +10,15 @@ function setup(conversations = 0) {
 }
 
 const ids = (store: ReturnType<typeof createLibraryStore>) =>
-  store.getState().conversations.map((conversation) => conversation.id);
+  store.getState().items.map((conversation) => conversation.id);
 const pages = (api: FakeApi) => api.calls.filter(([method]) => method === 'getConversations');
 
 describe('library store', () => {
   it('starts empty and not loaded', () => {
     expect(setup().store.getState()).toEqual({
       phase: 'idle',
-      conversations: [],
+      items: [],
+      summary: null,
       hasMore: false,
       error: null,
       loadingMore: false,
@@ -140,6 +141,6 @@ describe('library store', () => {
     release();
     await loading;
 
-    expect(store.getState()).toMatchObject({ phase: 'idle', conversations: [] });
+    expect(store.getState()).toMatchObject({ phase: 'idle', items: [] });
   });
 });

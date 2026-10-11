@@ -142,6 +142,7 @@ def test_a_written_report_is_read_in_full(
                     "category": "perfekt_auxiliary",
                     "severity": "noticeable",
                     "certain": True,
+                    "saved": False,
                 },
                 {
                     "turn": 1,
@@ -151,6 +152,7 @@ def test_a_written_report_is_read_in_full(
                     "category": "case_dative",
                     "severity": "minor",
                     "certain": False,
+                    "saved": False,
                 },
             ],
             "rewrites": [
@@ -166,8 +168,14 @@ def test_a_written_report_is_read_in_full(
                     "text": "das Wochenende",
                     "meaning": "weekend",
                     "example": "Wie war dein Wochenende?",
+                    "saved": False,
                 },
-                {"text": "die Ausstellung", "meaning": "exhibition", "example": None},
+                {
+                    "text": "die Ausstellung",
+                    "meaning": "exhibition",
+                    "example": None,
+                    "saved": False,
+                },
             ],
             "wins": ["You told a whole story in the past tense."],
             "nextSteps": ["The Perfekt with sein for verbs of movement."],

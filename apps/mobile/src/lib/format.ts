@@ -80,6 +80,14 @@ export function daysAgo(iso: string, now: Date): number {
   return Math.max(calendarDay(now) - calendarDay(new Date(iso)), 0);
 }
 
+/**
+ * How many calendar days after `now` a moment is, on the device's calendar: 0 is today,
+ * 1 tomorrow, whatever the hours between them. A moment in the past counts as today.
+ */
+export function daysUntil(iso: string, now: Date): number {
+  return Math.max(calendarDay(new Date(iso)) - calendarDay(now), 0);
+}
+
 /** A past day in a few characters ("30 Sept"); the year is added when it is not this year. */
 export function formatShortDate(locale: string, iso: string, now: Date): string {
   const date = new Date(iso);
