@@ -723,6 +723,8 @@ export const it: Translation = {
         open: 'Vedi il mio resoconto',
         failed:
           'Questa volta non è stato possibile scrivere il resoconto. Puoi richiederlo di nuovo rileggendo la conversazione.',
+        tooShort:
+          'Troppo breve per un resoconto questa volta. Parla un po’ più a lungo e ne avrai uno.',
       },
     },
   },

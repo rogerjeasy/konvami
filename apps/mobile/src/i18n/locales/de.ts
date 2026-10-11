@@ -724,6 +724,7 @@ export const de: Translation = {
         open: 'Meinen Bericht ansehen',
         failed:
           'Dein Bericht konnte diesmal nicht geschrieben werden. Du kannst ihn beim Nachlesen des Gesprächs noch einmal anfordern.',
+        tooShort: 'Diesmal zu kurz für einen Bericht. Sprich etwas länger, dann bekommst du einen.',
       },
     },
   },
