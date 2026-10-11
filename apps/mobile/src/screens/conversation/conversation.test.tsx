@@ -409,19 +409,29 @@ describe('5.4 Conversation done', () => {
     expect(screen.getByRole('button', { name: 'Read the transcript' })).toBeTruthy();
   });
 
-  it.each(['too_short', undefined] as const)(
-    'says nothing about a report when there is none to come (%s)',
-    async (status) => {
-      const api = inApp();
-      api.talked(0, { id: FAKE_CALL_ID });
-      if (status) api.reported(FAKE_CALL_ID, status);
-      await open(api);
-      await screen.findByRole('header', { name: 'Nice talking, Amara!' });
+  it('says so when the learner said too little for a report, so they know why none comes', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    api.reported(FAKE_CALL_ID, 'too_short');
+    await open(api);
 
-      await waitFor(() => expect(reads(api, 'getConversationReport')).toBe(1));
-      expect(screen.queryByText(/report/i)).toBeNull();
-    },
-  );
+    expect(
+      await screen.findByText(
+        'Too short for a report this time. Talk a little longer and you’ll get one.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'See my report' })).toBeNull();
+  });
+
+  it('says nothing about a report when none was asked for', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    await open(api);
+    await screen.findByRole('header', { name: 'Nice talking, Amara!' });
+
+    await waitFor(() => expect(reads(api, 'getConversationReport')).toBe(1));
+    expect(screen.queryByText(/report/i)).toBeNull();
+  });
 
   it('does not ask for the report of a call in which nothing was said', async () => {
     const api = inApp();

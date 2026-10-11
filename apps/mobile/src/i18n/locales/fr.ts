@@ -724,6 +724,8 @@ export const fr: Translation = {
         open: 'Voir mon bilan',
         failed:
           'Ton bilan n’a pas pu être rédigé cette fois. Tu peux le redemander en relisant la conversation.',
+        tooShort:
+          'Trop court pour un bilan cette fois. Parle un peu plus longtemps et tu en auras un.',
       },
     },
   },

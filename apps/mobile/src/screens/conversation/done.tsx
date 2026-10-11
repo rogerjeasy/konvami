@@ -106,7 +106,9 @@ const NOT_WRITTEN = ['failed', 'timeout'];
 
 /**
  * Where the conversation's report stands, under the summary: being written, ready (with what is
- * in it), or not written this time. Nothing when no report is to come.
+ * in it), not written this time, or not to come because too little was said (a learner who
+ * waits for a report, or for words to keep, is told why there are none). Nothing when no report
+ * was asked for.
  */
 function ReportNews({ view }: { view: ReportView }) {
   const { t } = useTranslation();
@@ -150,10 +152,11 @@ function ReportNews({ view }: { view: ReportView }) {
       </Pop>
     );
   }
-  if (view.phase === 'failed' && NOT_WRITTEN.includes(view.code)) {
+  const notWritten = view.phase === 'failed' && NOT_WRITTEN.includes(view.code);
+  if (notWritten || view.phase === 'tooShort') {
     return (
       <Text variant="small" tone="muted" className="text-center">
-        {t('conversation.done.report.failed')}
+        {t(notWritten ? 'conversation.done.report.failed' : 'conversation.done.report.tooShort')}
       </Text>
     );
   }

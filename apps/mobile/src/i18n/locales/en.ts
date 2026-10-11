@@ -711,6 +711,7 @@ export const en = {
         open: 'See my report',
         failed:
           'Your report couldn’t be written this time. You can ask for it again from the transcript.',
+        tooShort: 'Too short for a report this time. Talk a little longer and you’ll get one.',
       },
     },
   },
