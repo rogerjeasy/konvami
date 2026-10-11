@@ -17,7 +17,7 @@ import { backOr } from '@/lib/navigation';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { callRoute, conversationRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices, useReport } from '@/practice/services';
-import { Natural, NextSteps, Polish, Wins, Words } from './sections';
+import { Keep, Natural, NextSteps, Polish, Wins, Words } from './sections';
 import { ReportStatus } from './status';
 import { TalkShare } from './talk-share';
 import { useCardSaver } from './use-card-saver';
@@ -61,6 +61,13 @@ function Report({ id, report, partner }: { id: string; report: SessionReport; pa
       <View className="h-px bg-border" />
       <TalkShare stats={report.stats} partner={partner} />
     </Card>,
+    <Keep
+      key="keep"
+      mistakes={report.mistakes}
+      words={report.words}
+      saver={saver}
+      onOpenLearn={() => router.navigate(ROUTES.learn)}
+    />,
     <Polish key="polish" mistakes={report.mistakes} saver={saver} />,
     <Natural key="natural" rewrites={report.rewrites} />,
     <Words key="words" words={report.words} saver={saver} />,
@@ -78,7 +85,7 @@ function Report({ id, report, partner }: { id: string; report: SessionReport; pa
  * 5.10 Session report: what a practice conversation showed (spec §6.5). A summary and the
  * learner's share of the talking, then the mistakes worth polishing, more natural wordings, the
  * words to keep, what went well and what to practise next. Words and confirmed corrections can
- * be saved as flashcards from here (spec §6.7). The server writes the report in the minute
+ * be saved as flashcards from here, one by one or all at once (spec §6.7). The server writes the report in the minute
  * after a conversation, so the screen also waits for it, and offers to have one written for a
  * conversation that has none. Everything is read from the conversation's text: nothing here
  * needs the recording, and nothing is made up when a part is empty.
