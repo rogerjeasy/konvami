@@ -7,6 +7,7 @@ from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MAX_MEMORIES, Memory
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
+from konvami_api.domain.practice import HELP_NOTE
 from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.voice import FinishedCall
 from tests.world import NOON, OTHER_USER, USER, World
@@ -731,3 +732,21 @@ def test_the_partner_knows_when_to_ask_the_tutor() -> None:
 
     assert "ask_tutor" in text
     assert "own words" in text
+
+
+# --- Help during a conversation (spec §6.4 help buttons) ----------------------------------------
+
+
+@pytest.mark.parametrize("kind", ["stuck", "slower", "repeat", "translate", "explain"])
+def test_the_partner_knows_what_each_help_button_asks_for(kind: str) -> None:
+    text = instructions(World())
+
+    assert f"{HELP_NOTE}{kind}" in text
+
+
+def test_help_is_given_in_the_learners_explanation_language() -> None:
+    text = instructions(World())
+
+    # The learner of the test world has explanations in French.
+    help_part = text[text.index(HELP_NOTE) :]
+    assert "French" in help_part
