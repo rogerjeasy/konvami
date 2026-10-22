@@ -300,7 +300,8 @@ describe('api client', () => {
 
   it.each([
     [403, 'consent_required'],
-    [429, 'call_limit'],
+    [429, 'minutes_used_up'],
+    [503, 'voice_paused'],
     [503, 'voice_unavailable'],
   ])('passes on why a voice call was refused (%i)', async (status, code) => {
     const { fetch, calls } = fakeFetch(json(status, { error: { code, field: null } }));
@@ -488,6 +489,28 @@ describe('api client', () => {
       'PATCH https://api.example.test/v1/recordings',
     ]);
     expect(calls[1]?.body).toEqual({ kept: false });
+  });
+
+  it('reads the voice minutes and, for the owner, the costs of a month', async () => {
+    const allowance = {
+      weeklySeconds: 3600,
+      usedSeconds: 600,
+      remainingSeconds: 3000,
+      resetsAt: '2026-10-26T00:00:00Z',
+    };
+    const { fetch, calls } = fakeFetch(
+      json(200, allowance),
+      json(403, { error: { code: 'not_owner', field: null } }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getVoiceAllowance()).toEqual(allowance);
+    await expect(api.getCosts('2026-09-01')).rejects.toMatchObject({ code: 'not_owner' });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/voice/allowance',
+      'GET https://api.example.test/v1/owner/costs?month=2026-09-01',
+    ]);
   });
 
   it('reads, sets, changes and forgets what partners know', async () => {
