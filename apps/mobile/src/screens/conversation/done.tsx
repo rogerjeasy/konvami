@@ -20,8 +20,9 @@ import { successFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { conversationRoute, reportRoute, ROUTES } from '@/lib/routes';
 import type { ReportView } from '@/practice';
-import { useHome, usePracticeServices, useReport } from '@/practice/services';
+import { useHome, usePracticeServices, useReport, useScenarios } from '@/practice/services';
 import { useTheme } from '@/theme';
+import { Goals } from './goals';
 
 // The server saves a conversation when its call has closed, a moment after the app left it.
 // It is asked this often (ms), this many times: half a minute, far beyond a normal save.
@@ -164,6 +165,21 @@ function ReportNews({ view }: { view: ReportView }) {
 }
 
 /** A conversation that counts: who it was with, how long, and the streak it kept going. */
+/** After a role-play: how many of its goals the learner reached, and which. */
+function GoalsReached({ id, reached }: { id: string; reached: readonly string[] }) {
+  const { t } = useTranslation();
+  const scenario = useScenarios().scenarios?.find((s) => s.id === id);
+  if (!scenario) return null;
+  return (
+    <View className="items-center gap-1.5">
+      <Text variant="labelMedium" className="text-center">
+        {t('conversation.goals.reached', { count: reached.length, total: scenario.goals.length })}
+      </Text>
+      <Goals scenario={scenario} reached={reached} />
+    </View>
+  );
+}
+
 function Spoken({ conversation }: { conversation: Conversation }) {
   const { t } = useTranslation();
   const { color } = useTheme();
@@ -231,6 +247,9 @@ function Spoken({ conversation }: { conversation: Conversation }) {
                   leading={<Icon name="flame" color={color.primaryText} size={size.iconSm} />}
                 />
               </Pop>
+            ) : null}
+            {conversation.scenario ? (
+              <GoalsReached id={conversation.scenario} reached={conversation.goalsReached} />
             ) : null}
             <ReportNews view={report} />
           </>

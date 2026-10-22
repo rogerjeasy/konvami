@@ -94,9 +94,12 @@ export const ROUTES = {
 export const partnerRoute = (id: string) =>
   ({ pathname: '/onboarding/partners/[id]', params: { id } }) as const satisfies Href;
 
-/** 5.3 A live conversation with one of the learner's partners. */
-export const callRoute = (personaId: string) =>
-  ({ pathname: '/call/[personaId]', params: { personaId } }) as const satisfies Href;
+/** 5.3 A live conversation with one of the learner's partners; with `scenario`, a role-play. */
+export const callRoute = (personaId: string, scenario?: string) =>
+  ({
+    pathname: '/call/[personaId]',
+    params: scenario ? { personaId, scenario } : { personaId },
+  }) as const satisfies Href;
 
 /** 5.6 One past conversation, to read again. */
 export const conversationRoute = (id: string) =>

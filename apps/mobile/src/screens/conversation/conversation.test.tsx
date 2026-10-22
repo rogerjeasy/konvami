@@ -80,8 +80,11 @@ describe('5.3 Conversation', () => {
     api = inApp(),
     voice = createFakeVoiceEngine(),
     personaId = LENA.id,
-  }: { api?: FakeApi; voice?: FakeVoiceEngine; personaId?: string } = {}) {
-    jest.mocked(useLocalSearchParams).mockReturnValue({ personaId });
+    scenario,
+  }: { api?: FakeApi; voice?: FakeVoiceEngine; personaId?: string; scenario?: string } = {}) {
+    jest
+      .mocked(useLocalSearchParams)
+      .mockReturnValue(scenario ? { personaId, scenario } : { personaId });
     await renderScreen(<LiveConversationScreen />, { api, voice, signedIn: true });
     return { api, voice };
   }
@@ -183,6 +186,33 @@ describe('5.3 Conversation', () => {
     await fireEvent.press(screen.getByRole('switch', { name: 'Show what Lena says' }));
 
     expect(screen.getByText('Was hast du am Wochenende gemacht?')).toBeTruthy();
+  });
+
+  it('rehearses the role-play that was chosen and ticks off its goals', async () => {
+    const { voice } = await live({ scenario: 'bakery' });
+
+    expect(voice.openedScenarios).toEqual(['bakery']);
+    expect(await screen.findByLabelText('Order two things: still to do')).toBeTruthy();
+    expect(screen.getByLabelText('Pay and say goodbye: still to do')).toBeTruthy();
+
+    await play(voice, {
+      type: 'conversation.item.done',
+      item: {
+        id: 'item_out',
+        type: 'function_call_output',
+        call_id: 'call_1',
+        output: JSON.stringify({ task: 'order', reached: 1, goals: 3 }),
+      },
+    });
+
+    expect(screen.getByLabelText('Order two things: reached')).toBeTruthy();
+  });
+
+  it('shows no goals in a free conversation', async () => {
+    const { voice } = await live();
+
+    expect(voice.openedScenarios).toEqual([undefined]);
+    expect(screen.queryByLabelText(/still to do$/)).toBeNull();
   });
 
   it('ends the call when the learner ends it and shows what it added up to', async () => {
@@ -312,6 +342,25 @@ describe('5.4 Conversation done', () => {
     expect(screen.getByText('You talked with Lena for 8 min.')).toBeTruthy();
     // The streak comes with Today's numbers, which are read again once the conversation is saved.
     expect(await screen.findByText('1-day streak')).toBeTruthy();
+  });
+
+  it('says how many of a role-play’s goals the learner reached', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID, scenario: 'bakery', goalsReached: ['order', 'price'] });
+    await open(api);
+
+    expect(await screen.findByText('Goals reached: 2 of 3')).toBeTruthy();
+    expect(screen.getByLabelText('Order two things: reached')).toBeTruthy();
+    expect(screen.getByLabelText('Pay and say goodbye: still to do')).toBeTruthy();
+  });
+
+  it('counts no goals after a free conversation', async () => {
+    const api = inApp();
+    api.talked(0, { id: FAKE_CALL_ID });
+    await open(api);
+
+    await screen.findByRole('header', { name: 'Nice talking, Amara!' });
+    expect(screen.queryByText(/^Goals reached/)).toBeNull();
   });
 
   it('waits while the conversation is being saved', async () => {
