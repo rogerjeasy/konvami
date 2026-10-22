@@ -17,7 +17,7 @@ def test_a_new_account_has_no_picture(call: Call) -> None:
     response = call("GET", "/v1/account")
 
     assert response.status == 200
-    assert response.body == {"picture": None}
+    assert response.body == {"picture": None, "owner": False}
 
 
 def test_the_app_is_given_a_form_to_send_a_picture_with(call: Call) -> None:
@@ -39,9 +39,9 @@ def test_a_sent_picture_is_confirmed_and_then_shown(call: Call, files: InMemoryF
 
     address = f"https://files.test/users/{USER}/picture/{FIRST_UPLOAD}.jpg?expires=3600"
     assert response.status == 200
-    assert response.body == {"picture": {"url": address}}
+    assert response.body == {"picture": {"url": address}, "owner": False}
     assert call("GET", "/v1/account").body == response.body
-    assert call("GET", "/v1/account", subject=OTHER_USER).body == {"picture": None}
+    assert call("GET", "/v1/account", subject=OTHER_USER).body == {"picture": None, "owner": False}
 
 
 def test_a_picture_that_was_never_sent_is_not_found(call: Call) -> None:
@@ -80,7 +80,7 @@ def test_a_picture_can_be_removed(call: Call, files: InMemoryFileStore) -> None:
     response = call("DELETE", "/v1/account/picture")
 
     assert response.status == 200
-    assert response.body == {"picture": None}
+    assert response.body == {"picture": None, "owner": False}
     assert files.keys() == []
 
 

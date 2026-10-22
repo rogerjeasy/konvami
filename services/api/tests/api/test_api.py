@@ -194,16 +194,6 @@ def test_a_voice_call_needs_consent_to_the_voice_provider(call: Call) -> None:
     assert response.body == {"error": {"code": "consent_required", "field": None}}
 
 
-def test_voice_calls_stop_at_the_daily_limit(call: Call) -> None:
-    call("POST", "/v1/voice/calls", OFFER)
-    call("POST", "/v1/voice/calls", OFFER)
-
-    response = call("POST", "/v1/voice/calls", OFFER)
-
-    assert response.status == 429
-    assert response.body == {"error": {"code": "call_limit", "field": None}}
-
-
 def test_a_voice_provider_outage_is_reported_as_unavailable(
     call: Call, voice_provider: FakeVoiceProvider
 ) -> None:

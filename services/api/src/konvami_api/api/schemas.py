@@ -8,7 +8,7 @@ from collections.abc import Callable, Mapping
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool
 from pydantic.alias_generators import to_camel
 
 from konvami_api.domain.accounts import AccountView, PictureUpload
@@ -31,6 +31,7 @@ from konvami_api.domain.conversations import (
     ConversationPage,
     Transcript,
 )
+from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.home import HomeView, LevelView
 from konvami_api.domain.live_call import Speaker, TurnAudio
@@ -1108,10 +1109,102 @@ class AccountOut(ApiModel):
     """What the backend keeps for an account. Name and email live with the identity provider."""
 
     picture: PictureOut | None
+    # The account may open the owner's view of the costs.
+    owner: bool
 
     @classmethod
-    def of(cls, view: AccountView) -> "AccountOut":
-        return cls(picture=PictureOut(url=view.picture_url) if view.picture_url else None)
+    def of(cls, view: AccountView, owner: bool) -> "AccountOut":
+        picture = PictureOut(url=view.picture_url) if view.picture_url else None
+        return cls(picture=picture, owner=owner)
+
+
+class AllowanceOut(ApiModel):
+    """The learner's voice minutes this week, in seconds (spec §6.19)."""
+
+    weekly_seconds: int
+    used_seconds: int
+    remaining_seconds: int
+    # When the week's minutes come back.
+    resets_at: AwareDatetime
+
+    @classmethod
+    def of(cls, allowance: Allowance) -> "AllowanceOut":
+        return cls(
+            weekly_seconds=allowance.weekly_seconds,
+            used_seconds=allowance.used_seconds,
+            remaining_seconds=allowance.remaining_seconds,
+            resets_at=allowance.resets_at,
+        )
+
+
+class DaySpendOut(ApiModel):
+    day: dt.date
+    usd: float
+
+
+class ShareOut(ApiModel):
+    # A feature or a provider.
+    key: str
+    usd: float
+    requests: int
+
+
+class LearnerSpendOut(ApiModel):
+    user_id: UUID
+    # The learner's first name; null when the account is gone or has none.
+    name: str | None
+    usd: float
+    requests: int
+    voice_seconds: int
+
+
+class CostsOut(ApiModel):
+    """A month's estimated spending, for the owner (spec §6.19). Estimates from usage counts and
+    the configured prices, not the providers' invoices."""
+
+    month: dt.date
+    level: Level
+    target_usd: float
+    ceiling_usd: float
+    total_usd: float
+    # Requests to a model without a price: the total is too low by their cost.
+    unpriced: int
+    # Days with spending, oldest first (UTC).
+    days: list[DaySpendOut]
+    features: list[ShareOut]
+    providers: list[ShareOut]
+    # The learners who cost the most, most first.
+    learners: list[LearnerSpendOut]
+
+    @classmethod
+    def of(cls, report: CostReport) -> "CostsOut":
+        spending = report.spending
+        return cls(
+            month=report.month,
+            level=report.level,
+            target_usd=report.budget.target_usd,
+            ceiling_usd=report.budget.ceiling_usd,
+            total_usd=round(spending.total_usd, 2),
+            unpriced=spending.unpriced,
+            days=[DaySpendOut(day=d.day, usd=round(d.usd, 2)) for d in spending.days],
+            features=[_share(share) for share in spending.features],
+            providers=[_share(share) for share in spending.providers],
+            learners=[
+                LearnerSpendOut(
+                    user_id=learner.user_id,
+                    name=report.names.get(learner.user_id),
+                    usd=round(learner.usd, 2),
+                    requests=learner.requests,
+                    voice_seconds=learner.voice_seconds,
+                )
+                for learner in spending.learners
+                if learner.user_id is not None
+            ],
+        )
+
+
+def _share(share: Share) -> ShareOut:
+    return ShareOut(key=share.key, usd=round(share.usd, 2), requests=share.requests)
 
 
 class PictureUploadOut(ApiModel):

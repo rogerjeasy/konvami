@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException
 from konvami_api.domain.accounts import AccountError
 from konvami_api.domain.cards import CardError
 from konvami_api.domain.conversations import ConversationError
+from konvami_api.domain.costs import CostError
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
@@ -43,7 +44,7 @@ class ApiError(Exception):
 
 _HTTP_CODES = {404: "not_found", 405: "method_not_allowed"}
 # Why a voice call cannot start, as HTTP: not allowed, too many, or not possible right now.
-_VOICE_STATUS = {"not_authenticated": 401, "consent_required": 403, "call_limit": 429}
+_VOICE_STATUS = {"not_authenticated": 401, "consent_required": 403, "minutes_used_up": 429}
 _VOICE_UNAVAILABLE = 503
 _ACCOUNT_STATUS = {"upload_not_found": 404, "invalid_picture": 422}
 _PERSONA_STATUS = {
@@ -131,6 +132,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(TutorError)
     async def _tutor_error(_: Request, error: TutorError) -> JSONResponse:
         return _response(_TUTOR_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(CostError)
+    async def _cost_error(_: Request, error: CostError) -> JSONResponse:
+        return _response(403, error.code)
 
     @app.exception_handler(VoiceError)
     async def _voice_error(_: Request, error: VoiceError) -> JSONResponse:
