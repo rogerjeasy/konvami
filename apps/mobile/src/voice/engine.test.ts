@@ -53,7 +53,8 @@ describe('starting', () => {
 
   it.each([
     ['consent_required', 'consent_required'],
-    ['call_limit', 'call_limit'],
+    ['minutes_used_up', 'minutes_used_up'],
+    ['voice_paused', 'voice_paused'],
     ['voice_unavailable', 'voice_unavailable'],
     ['network', 'network'],
     ['not_configured', 'voice_unavailable'],

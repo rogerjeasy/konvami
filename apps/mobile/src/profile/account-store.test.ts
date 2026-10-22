@@ -18,7 +18,7 @@ function setup({ send }: { send?: PictureSender } = {}) {
 
 describe('the account store', () => {
   it('knows nothing until it has loaded', () => {
-    expect(setup().store.getState()).toEqual({ phase: 'idle', pictureUrl: null });
+    expect(setup().store.getState()).toEqual({ phase: 'idle', pictureUrl: null, owner: false });
   });
 
   it('reads whether the learner has a photo', async () => {
@@ -30,7 +30,17 @@ describe('the account store', () => {
     expect(store.getState()).toEqual({
       phase: 'ready',
       pictureUrl: 'https://files.test/users/amara/picture/earlier.jpg',
+      owner: false,
     });
+  });
+
+  it('knows whether the account is the owner’s', async () => {
+    const { api, store } = setup();
+    api.beOwner();
+
+    await store.load();
+
+    expect(store.getState().owner).toBe(true);
   });
 
   it('loads once, however often it is asked', async () => {
@@ -48,7 +58,7 @@ describe('the account store', () => {
 
     await store.load();
 
-    expect(store.getState()).toEqual({ phase: 'failed', pictureUrl: null });
+    expect(store.getState()).toEqual({ phase: 'failed', pictureUrl: null, owner: false });
     await store.load();
     expect(store.getState().phase).toBe('ready');
   });
@@ -122,6 +132,6 @@ describe('the account store', () => {
     release();
     await loading;
 
-    expect(store.getState()).toEqual({ phase: 'idle', pictureUrl: null });
+    expect(store.getState()).toEqual({ phase: 'idle', pictureUrl: null, owner: false });
   });
 });

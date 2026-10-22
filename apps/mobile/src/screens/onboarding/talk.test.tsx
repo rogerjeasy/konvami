@@ -206,9 +206,10 @@ describe('4.1 Talk with Mia', () => {
     ],
     ['unsupported', 'Voice needs the full Konvami app. In this preview, please use the form.'],
     [
-      'call_limit',
-      'You’ve reached today’s limit for the spoken setup. Use the form, or try again tomorrow.',
+      'minutes_used_up',
+      'You’ve used this week’s voice minutes. Please use the form. They come back on Monday, October 12.',
     ],
+    ['voice_paused', 'Voice is paused for now. Please use the form.'],
     [
       'voice_unavailable',
       'Voice isn’t available right now. Try again in a moment, or use the form.',

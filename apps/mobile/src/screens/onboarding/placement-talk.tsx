@@ -14,6 +14,8 @@ import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
 import { useOnboardingStore } from '@/onboarding/services';
 import { SETUP } from '@/screens/create-account/sample-content';
+import { useMinutesBack } from '@/profile/services';
+import { withLine } from '@/voice/problems';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
 
 /**
@@ -29,7 +31,8 @@ const PROBLEM_KEY = {
   no_microphone: 'onboarding.placement.talk.problems.no_microphone',
   unsupported: 'onboarding.placement.talk.problems.unsupported',
   consent_required: 'onboarding.placement.talk.problems.consent_required',
-  call_limit: 'onboarding.placement.talk.problems.call_limit',
+  minutes_used_up: 'onboarding.placement.talk.problems.minutes_used_up',
+  voice_paused: 'onboarding.placement.talk.problems.voice_paused',
   voice_unavailable: 'onboarding.placement.talk.problems.voice_unavailable',
   lost: 'onboarding.placement.talk.problems.lost',
   network: 'errors.network',
@@ -80,7 +83,8 @@ function Test({ onRetry }: { onRetry: () => void }) {
   // A typed line can only be taken while it is the learner's turn: the provider refuses one
   // while the examiner is still answering.
   const learnersTurn = live && ['listening', 'hearing'].includes(conversation.phase);
-  const callProblem = call.problem ? t(problemKey(call.problem)) : null;
+  const minutesBack = useMinutesBack(call.problem === 'minutes_used_up');
+  const callProblem = call.problem ? withLine(t(problemKey(call.problem)), minutesBack) : null;
 
   return (
     <CallStage
