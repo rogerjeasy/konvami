@@ -18,6 +18,14 @@ from konvami_api.domain.conversations import (
     DayActivity,
     PartnerHistory,
 )
+from konvami_api.domain.costs import (
+    ChargeRecord,
+    DaySpend,
+    LearnerSpend,
+    Level,
+    Share,
+    Spending,
+)
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
@@ -218,15 +226,16 @@ _LIST_QUESTIONS = f"""
 
 _START_SESSION = f"""
     WITH {_ENSURE_USER}
-    INSERT INTO voice_session (call_id, user_id, purpose, model, started_at, persona_id, scenario)
+    INSERT INTO voice_session
+        (call_id, user_id, purpose, model, started_at, persona_id, scenario, max_seconds)
     VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
-            CAST(:persona_id AS uuid), :scenario)
+            CAST(:persona_id AS uuid), :scenario, CAST(:max_seconds AS integer))
 """
 
 _LOAD_SESSION = f"""
     SELECT call_id, CAST(user_id AS text) AS user_id, purpose, model,
            {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id,
-           scenario
+           scenario, max_seconds
     FROM voice_session
     WHERE call_id = :call_id
 """
@@ -235,8 +244,14 @@ _GOALS_REACHED = """
     UPDATE voice_session SET goals_reached = CAST(:goals AS jsonb) WHERE call_id = :call_id
 """
 
-_COUNT_SESSIONS = """
-    SELECT count(*) AS calls
+# An ended call counts what it lasted; one still running all the time it was granted.
+_VOICE_SECONDS = """
+    SELECT CAST(COALESCE(sum(
+        CASE WHEN ended_at IS NOT NULL
+             THEN floor(extract(epoch FROM ended_at - started_at))
+             ELSE COALESCE(max_seconds, 0)
+        END
+    ), 0) AS integer) AS seconds
     FROM voice_session
     WHERE user_id = CAST(:user_id AS uuid) AND started_at >= CAST(:since AS timestamptz)
 """
@@ -777,6 +792,7 @@ class SqlVoiceSessionRepository:
                 "started_at": session.started_at.isoformat(),
                 "persona_id": str(session.persona_id) if session.persona_id else None,
                 "scenario": session.scenario,
+                "max_seconds": session.max_seconds,
             },
         )
 
@@ -793,16 +809,17 @@ class SqlVoiceSessionRepository:
             started_at=from_epoch_micros(row["started_at"]),
             persona_id=UUID(row["persona_id"]) if row["persona_id"] else None,
             scenario=row["scenario"],
+            max_seconds=row["max_seconds"],
         )
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
         self._client.execute(_GOALS_REACHED, {"call_id": call_id, "goals": json.dumps(goals)})
 
-    def count_since(self, user_id: UUID, since: dt.datetime) -> int:
+    def seconds_since(self, user_id: UUID, since: dt.datetime) -> int:
         rows = self._client.execute(
-            _COUNT_SESSIONS, {"user_id": str(user_id), "since": since.isoformat()}
+            _VOICE_SECONDS, {"user_id": str(user_id), "since": since.isoformat()}
         )
-        return int(rows[0]["calls"])
+        return int(rows[0]["seconds"])
 
     def finish(self, call_id: str, result: FinishedCall) -> None:
         turns = [
@@ -1351,3 +1368,130 @@ class SqlMemoryRepository:
     def remove(self, user_id: UUID, memory_id: UUID) -> bool:
         rows = self._client.execute(_REMOVE_MEMORY, {"id": str(memory_id), "user_id": str(user_id)})
         return bool(rows)
+
+
+# The learner is named only while their account exists (`app_user`); a deleted one's request
+# still counts, without them.
+_ADD_CHARGE = """
+    INSERT INTO usage_charge (user_id, feature, provider, model, units, usd, priced, charged_at)
+    VALUES ((SELECT id FROM app_user WHERE id = CAST(:user_id AS uuid)), :feature, :provider,
+            :model, CAST(:units AS jsonb), CAST(:usd AS numeric), :priced,
+            CAST(:at AS timestamptz))
+"""
+
+_RANGE = """
+    charged_at >= CAST(:since AS timestamptz) AND charged_at < CAST(:until AS timestamptz)
+"""
+
+_TOTAL_CHARGES = f"""
+    SELECT CAST(COALESCE(sum(usd), 0) AS double precision) AS usd
+    FROM usage_charge
+    WHERE {_RANGE}
+"""
+
+# The owner's view in one statement: each part is a JSON array, most spent first.
+_SPENDING = f"""
+    WITH spent AS (SELECT * FROM usage_charge WHERE {_RANGE})
+    SELECT
+        (SELECT CAST(COALESCE(sum(usd), 0) AS double precision) FROM spent) AS total,
+        (SELECT CAST(count(*) AS integer) FROM spent WHERE NOT priced) AS unpriced,
+        (SELECT CAST(COALESCE(jsonb_agg(jsonb_build_array(day, usd) ORDER BY day), '[]')
+                     AS text)
+         FROM (SELECT to_char(charged_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day,
+                      CAST(sum(usd) AS double precision) AS usd
+               FROM spent GROUP BY 1) AS days) AS days,
+        (SELECT CAST(COALESCE(jsonb_agg(jsonb_build_array(feature, usd, requests)
+                                        ORDER BY usd DESC, feature), '[]') AS text)
+         FROM (SELECT feature, CAST(sum(usd) AS double precision) AS usd,
+                      count(*) AS requests
+               FROM spent GROUP BY feature) AS features) AS features,
+        (SELECT CAST(COALESCE(jsonb_agg(jsonb_build_array(provider, usd, requests)
+                                        ORDER BY usd DESC, provider), '[]') AS text)
+         FROM (SELECT provider, CAST(sum(usd) AS double precision) AS usd,
+                      count(*) AS requests
+               FROM spent GROUP BY provider) AS providers) AS providers,
+        (SELECT CAST(COALESCE(jsonb_agg(jsonb_build_array(user_id, usd, requests, seconds)
+                                        ORDER BY usd DESC, user_id), '[]') AS text)
+         FROM (SELECT CAST(user_id AS text) AS user_id,
+                      CAST(sum(usd) AS double precision) AS usd, count(*) AS requests,
+                      CAST(COALESCE(sum(CAST(units ->> 'call_seconds' AS double precision)), 0)
+                           AS integer) AS seconds
+               FROM spent WHERE user_id IS NOT NULL
+               GROUP BY user_id
+               ORDER BY usd DESC, user_id
+               LIMIT :top) AS learners) AS learners
+"""
+
+_FIRST_ALERT = """
+    INSERT INTO spend_alert (month, level) VALUES (CAST(:month AS date), :level)
+    ON CONFLICT (month, level) DO NOTHING
+    RETURNING 1 AS first
+"""
+
+_FORGET_ALERT = """
+    DELETE FROM spend_alert WHERE month = CAST(:month AS date) AND level = :level
+"""
+
+
+def _range(since: dt.datetime, until: dt.datetime) -> dict[str, str]:
+    return {"since": since.isoformat(), "until": until.isoformat()}
+
+
+class SqlChargeRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def add(self, record: ChargeRecord) -> None:
+        self._client.execute(
+            _ADD_CHARGE,
+            {
+                "user_id": str(record.user_id) if record.user_id else None,
+                "feature": record.feature.value,
+                "provider": record.provider,
+                "model": record.model,
+                "units": json.dumps(dict(record.units)),
+                # As text: a float parameter would lose digits on the way to numeric.
+                "usd": repr(record.usd),
+                "priced": record.priced,
+                "at": record.at.isoformat(),
+            },
+        )
+
+    def total(self, since: dt.datetime, until: dt.datetime) -> float:
+        rows = self._client.execute(_TOTAL_CHARGES, _range(since, until))
+        return float(rows[0]["usd"])
+
+    def spending(self, since: dt.datetime, until: dt.datetime, top: int) -> Spending:
+        [row] = self._client.execute(_SPENDING, {**_range(since, until), "top": top})
+        return Spending(
+            total_usd=float(row["total"]),
+            unpriced=int(row["unpriced"]),
+            days=tuple(
+                DaySpend(dt.date.fromisoformat(day), float(usd))
+                for day, usd in json.loads(row["days"])
+            ),
+            features=_shares(row["features"]),
+            providers=_shares(row["providers"]),
+            learners=tuple(
+                LearnerSpend(UUID(user_id), float(usd), int(requests), int(seconds))
+                for user_id, usd, requests, seconds in json.loads(row["learners"])
+            ),
+        )
+
+
+def _shares(raw: str) -> tuple[Share, ...]:
+    return tuple(Share(key, float(usd), int(requests)) for key, usd, requests in json.loads(raw))
+
+
+class SqlAlertLog:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def first(self, month: dt.date, level: Level) -> bool:
+        rows = self._client.execute(
+            _FIRST_ALERT, {"month": month.isoformat(), "level": level.value}
+        )
+        return bool(rows)
+
+    def forget(self, month: dt.date, level: Level) -> None:
+        self._client.execute(_FORGET_ALERT, {"month": month.isoformat(), "level": level.value})

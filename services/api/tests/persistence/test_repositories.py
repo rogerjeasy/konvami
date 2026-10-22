@@ -313,15 +313,34 @@ def test_a_started_call_can_be_found_by_its_id(sessions: Sessions) -> None:
     assert sessions.repository.get("rtc_other") is None
 
 
-def test_calls_are_counted_per_learner_from_a_point_in_time(sessions: Sessions) -> None:
-    sessions.repository.started(session("rtc_1", at=NOON - timedelta(hours=30)))
-    sessions.repository.started(session("rtc_2", at=NOON - timedelta(hours=2)))
-    sessions.repository.started(session("rtc_3", at=NOON))
-    sessions.repository.started(session("rtc_4", user=OTHER_USER, at=NOON))
+def test_a_session_keeps_the_time_it_was_granted(sessions: Sessions) -> None:
+    granted = replace(session("rtc_1"), max_seconds=600)
+    sessions.repository.started(granted)
 
-    assert sessions.repository.count_since(USER, NOON - timedelta(hours=24)) == 2
-    assert sessions.repository.count_since(USER, NOON) == 1
-    assert sessions.repository.count_since(OTHER_USER, NOON - timedelta(hours=24)) == 1
+    assert sessions.repository.get("rtc_1") == granted
+
+
+def test_voice_seconds_are_counted_per_learner_from_a_point_in_time(sessions: Sessions) -> None:
+    def call(call_id: str, at: datetime, user: UUID = USER, granted: int | None = 600) -> None:
+        sessions.repository.started(replace(session(call_id, user, at), max_seconds=granted))
+
+    def end(call_id: str, at: datetime) -> None:
+        sessions.repository.finish(call_id, FinishedCall(at, "closed", USAGE, ()))
+
+    week = NOON - timedelta(days=3)
+    call("rtc_before", week - timedelta(hours=1))
+    end("rtc_before", week + timedelta(minutes=5))
+    call("rtc_ended", NOON - timedelta(hours=2))
+    end("rtc_ended", NOON - timedelta(hours=2) + timedelta(seconds=245))
+    # A call still running counts with all the time it was granted.
+    call("rtc_running", NOON)
+    # One from before the time was kept counts with what it lasted, or nothing while running.
+    call("rtc_old_running", NOON, granted=None)
+    call("rtc_other", NOON, user=OTHER_USER)
+
+    assert sessions.repository.seconds_since(USER, week) == 245 + 600
+    assert sessions.repository.seconds_since(OTHER_USER, week) == 600
+    assert sessions.repository.seconds_since(USER, NOON + timedelta(seconds=1)) == 0
 
 
 def test_a_finished_call_keeps_its_outcome_usage_and_what_was_said(sessions: Sessions) -> None:
