@@ -523,6 +523,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/recordings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recordings
+         * @description Whether the audio of the learner's conversations is kept (spec §6.6).
+         */
+        get: operations["getRecordings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Configure Recordings
+         * @description Keeps recordings, or stops: stopping deletes every recording kept so far.
+         */
+        patch: operations["configureRecordings"];
+        trace?: never;
+    };
     "/v1/voice/calls": {
         parameters: {
             query?: never;
@@ -1298,6 +1322,16 @@ export interface components {
             /** Due */
             due: number;
         };
+        /** RecordingsOut */
+        RecordingsOut: {
+            /** Kept */
+            kept: boolean;
+        };
+        /** RecordingsPatch */
+        RecordingsPatch: {
+            /** Kept */
+            kept: boolean;
+        };
         /** ReportMistakeOut */
         ReportMistakeOut: {
             /** Category */
@@ -1437,8 +1471,16 @@ export interface components {
             /** Turns */
             turns: components["schemas"]["TurnOut"][];
         };
+        /** TurnAudioOut */
+        TurnAudioOut: {
+            /** Milliseconds */
+            milliseconds: number;
+            /** Url */
+            url: string;
+        };
         /** TurnOut */
         TurnOut: {
+            audio: components["schemas"]["TurnAudioOut"] | null;
             /**
              * Speaker
              * @enum {string}
@@ -1446,6 +1488,8 @@ export interface components {
             speaker: "learner" | "persona";
             /** Text */
             text: string;
+            /** Verbatim */
+            verbatim: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -3170,6 +3214,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRecordings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    configureRecordings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

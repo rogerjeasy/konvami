@@ -5,8 +5,10 @@ a second, independent pass checks every correction before the learner sees it, b
 correction is worse than none. What the second pass rejects is left out; what it cannot confirm
 is kept, marked as uncertain, and never shown as a fact.
 
-A report is read from the conversation's text. What needs the learner's voice (pace, pauses,
-pronunciation) is not in it until recordings exist (spec §6.6).
+A report is read from the conversation's text: for a learner turn that was recorded, the
+verbatim text written from its audio after the call (spec §9.4), with the live one beside it
+where the two differ. What needs listening to the learner's voice (pace, pauses, pronunciation)
+is not in it.
 """
 
 import datetime as dt
@@ -229,7 +231,7 @@ def _words(text: str) -> int:
 
 
 def measure(turns: Sequence[Turn]) -> Stats:
-    learner = [_words(turn.text) for turn in turns if turn.speaker == "learner"]
+    learner = [_words(turn.said) for turn in turns if turn.speaker == "learner"]
     return Stats(
         learner_words=sum(learner),
         partner_words=sum(_words(turn.text) for turn in turns if turn.speaker == "persona"),
@@ -359,6 +361,12 @@ The learner's lines were written down by speech recognition, which tends to tidy
 and sometimes mishears. Report only what the text shows. When a slip could as well be a
 mishearing (a name, a word that sounds alike), leave it out.
 
+Some learner turns were written down a second time after the conversation, from the recording,
+by a pass told to keep mistakes exactly as they were said: then `text` is that version, and
+`live`, when it is there, is what the live speech recognition wrote. Go by `text`. Where the two
+differ, the difference is often a mistake the live recognition tidied away; either may still
+have misheard a name or a word that sounds alike.
+
 Write to the learner ("you") in {explanation}, warmly and plainly, and quote {target} as it is.
 Where {explanation} has a familiar form of address, use it, as the app does. Never grade them
 and never mention a level.
@@ -445,19 +453,29 @@ def _lines(lines: Sequence[str], most: int) -> tuple[str, ...]:
     return tuple(clipped for line in lines if (clipped := _clip(line)))[:most]
 
 
+def _line(number: int, turn: Turn) -> dict[str, Any]:
+    """One turn as the analyst reads it: what was said, and what the live pass heard when that
+    was something else."""
+    line: dict[str, Any] = {"turn": number, "speaker": turn.speaker, "text": turn.said}
+    if wording(turn.said) != wording(turn.text):
+        line["live"] = turn.text
+    return line
+
+
 class _Said:
     """What was said, to hold the analyst's quotes against: a model can quote words nobody
-    said, and a correction of those must never reach the learner."""
+    said, and a correction of those must never reach the learner. A quote may come from either
+    text of a turn (see `_line`)."""
 
     def __init__(self, turns: Sequence[Turn]) -> None:
         self._turns = turns
-        self._tokens = [words_in(turn.text) for turn in turns]
+        self._tokens = [{words_in(turn.said), words_in(turn.text)} for turn in turns]
 
     def _learner_said(self, quote: tuple[str, ...], turn: int) -> bool:
         return (
             0 <= turn < len(self._turns)
             and self._turns[turn].speaker == "learner"
-            and _within(quote, self._tokens[turn])
+            and any(_within(quote, text) for text in self._tokens[turn])
         )
 
     def learner_turn(self, quote: str, named: int) -> int | None:
@@ -471,7 +489,9 @@ class _Said:
 
     def anyone(self, sentence: str) -> bool:
         tokens = words_in(sentence)
-        return bool(tokens) and any(_within(tokens, said) for said in self._tokens)
+        return bool(tokens) and any(
+            _within(tokens, text) for texts in self._tokens for text in texts
+        )
 
 
 def _mistakes(
@@ -668,10 +688,7 @@ class ReportService:
         content = {
             "level": profile.level(language) or DEFAULT_LEVEL,
             "partner": partner.name if partner else None,
-            "transcript": [
-                {"turn": number, "speaker": turn.speaker, "text": turn.text}
-                for number, turn in enumerate(turns)
-            ],
+            "transcript": [_line(number, turn) for number, turn in enumerate(turns)],
         }
         try:
             analysis = self._analyse(pack, target, explanation, content)
@@ -727,7 +744,7 @@ class ReportService:
             "mistakes": [
                 {
                     "id": number,
-                    "learner_said": turns[mistake.turn].text,
+                    "learner_said": turns[mistake.turn].said,
                     "original": mistake.original,
                     "corrected": mistake.corrected,
                     "explanation": mistake.explanation,
@@ -737,7 +754,7 @@ class ReportService:
             "rewrites": [
                 {
                     "id": number,
-                    "learner_said": turns[rewrite.turn].text,
+                    "learner_said": turns[rewrite.turn].said,
                     "original": rewrite.original,
                     "natural": rewrite.natural,
                 }

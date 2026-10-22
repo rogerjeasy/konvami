@@ -18,13 +18,14 @@ from konvami_api.domain.accounts import AccountRepository
 from konvami_api.domain.cards import Card, CardRepository, CardTotals, card_key
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.fsrs import Memory, Rating
-from konvami_api.domain.live_call import Turn
+from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.memories import Memory as Remembered
 from konvami_api.domain.memories import MemoryRepository, memory_key
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
 from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
+from konvami_api.domain.recordings import RecordingRepository
 from konvami_api.domain.reports import (
     Mistake,
     Report,
@@ -53,6 +54,7 @@ from konvami_api.persistence.repositories import (
     SqlPersonaRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
+    SqlRecordingRepository,
     SqlReportRepository,
     SqlVoiceSessionRepository,
 )
@@ -67,6 +69,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryVoiceSessionRepository,
 )
@@ -625,16 +628,25 @@ class Practice:
     calls: VoiceSessionRepository
     personas: PersonaRepository
     conversations: ConversationRepository
+    recordings: RecordingRepository
 
 
 @pytest.fixture(params=["memory", "postgres"])
 def practice(request: pytest.FixtureRequest) -> Practice:
     if request.param == "memory":
         calls = InMemoryVoiceSessionRepository()
-        return Practice(calls, InMemoryPersonaRepository(), InMemoryConversationRepository(calls))
+        return Practice(
+            calls,
+            InMemoryPersonaRepository(),
+            InMemoryConversationRepository(calls),
+            InMemoryRecordingRepository(calls),
+        )
     db: SqlClient = request.getfixturevalue("db")
     return Practice(
-        SqlVoiceSessionRepository(db), SqlPersonaRepository(db), SqlConversationRepository(db)
+        SqlVoiceSessionRepository(db),
+        SqlPersonaRepository(db),
+        SqlConversationRepository(db),
+        SqlRecordingRepository(db),
     )
 
 
@@ -746,6 +758,67 @@ def test_the_turns_of_a_conversation_are_read_in_order(partners: Practice) -> No
     assert partners.conversations.turns("rtc_unknown") == []
 
 
+def audio(call_id: str, item: str, user: UUID = USER) -> TurnAudio:
+    return TurnAudio(f"users/{user}/recordings/{call_id}/{item}.wav", 1250)
+
+
+def recorded(practice: Practice, call_id: str, user: UUID = USER) -> None:
+    """A conversation whose two turns were recorded."""
+    practice.calls.started(
+        VoiceSession(call_id, user, CallPurpose.PRACTICE, "m", NOON, persona_id=LENA.id)
+    )
+    turns = (
+        Turn("persona", "Wo warst du?", audio=audio(call_id, "item_1", user)),
+        Turn("learner", "Ich bin in Berlin.", audio=audio(call_id, "item_2", user)),
+    )
+    practice.calls.finish(call_id, FinishedCall(NOON + HOUR, "closed", USAGE, turns))
+
+
+def test_a_turn_keeps_its_recording(partners: Practice) -> None:
+    recorded(partners, "rtc_1")
+
+    turns = partners.conversations.turns("rtc_1")
+
+    assert [turn.audio for turn in turns] == [audio("rtc_1", "item_1"), audio("rtc_1", "item_2")]
+    assert [turn.verbatim for turn in turns] == [None, None]
+
+
+def test_a_turn_keeps_what_the_verbatim_pass_wrote(partners: Practice) -> None:
+    recorded(partners, "rtc_1")
+
+    partners.recordings.set_verbatim("rtc_1", audio("rtc_1", "item_2").key, "Ich habe Berlin.")
+
+    assert [turn.verbatim for turn in partners.conversations.turns("rtc_1")] == [
+        None,
+        "Ich habe Berlin.",
+    ]
+
+
+def test_a_calls_recordings_can_be_forgotten_and_its_text_stays(partners: Practice) -> None:
+    recorded(partners, "rtc_1")
+    recorded(partners, "rtc_2")
+    partners.recordings.set_verbatim("rtc_1", audio("rtc_1", "item_2").key, "Ich habe Berlin.")
+
+    partners.recordings.forget("rtc_1")
+
+    first = partners.conversations.turns("rtc_1")
+    assert [turn.audio for turn in first] == [None, None]
+    assert first[1].verbatim == "Ich habe Berlin."
+    assert all(turn.audio for turn in partners.conversations.turns("rtc_2"))
+
+
+def test_all_of_a_learners_recordings_can_be_forgotten(partners: Practice) -> None:
+    partners.personas.add(OTHER_USER, "de", [persona(3, "Lena")])
+    recorded(partners, "rtc_1")
+    recorded(partners, "rtc_2")
+    recorded(partners, "rtc_theirs", OTHER_USER)
+
+    partners.recordings.forget_all(USER)
+
+    assert not [t for c in ("rtc_1", "rtc_2") for t in partners.conversations.turns(c) if t.audio]
+    assert all(turn.audio for turn in partners.conversations.turns("rtc_theirs"))
+
+
 def test_each_partners_history_counts_only_conversations_that_count(partners: Practice) -> None:
     talked(partners, "rtc_1", at=NOON - 30 * HOUR)
     talked(partners, "rtc_2", at=NOON - 3 * HOUR)
@@ -798,7 +871,10 @@ def test_an_unknown_time_zone_means_utc(practice: Practice, unknown: str) -> Non
 
 def test_removing_a_partner_keeps_their_conversations(db: SqlClient) -> None:
     practice = Practice(
-        SqlVoiceSessionRepository(db), SqlPersonaRepository(db), SqlConversationRepository(db)
+        SqlVoiceSessionRepository(db),
+        SqlPersonaRepository(db),
+        SqlConversationRepository(db),
+        SqlRecordingRepository(db),
     )
     practice.personas.add(USER, "de", [LENA])
     talked(practice, "rtc_1", at=NOON)
@@ -994,7 +1070,10 @@ def test_deleting_a_learner_deletes_everything_stored_for_them(db: SqlClient) ->
             user, "de", PlacementResult({"speaking": "A2"}, "A2", ("Dativ",), NOON)
         )
     practice = Practice(
-        SqlVoiceSessionRepository(db), SqlPersonaRepository(db), SqlConversationRepository(db)
+        SqlVoiceSessionRepository(db),
+        SqlPersonaRepository(db),
+        SqlConversationRepository(db),
+        SqlRecordingRepository(db),
     )
     practice.personas.add(USER, "de", [LENA])
     talked(practice, "rtc_1", at=NOON)

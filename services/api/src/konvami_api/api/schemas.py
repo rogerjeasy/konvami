@@ -4,7 +4,7 @@ they are stored (`target_language`).
 
 import dataclasses
 import datetime as dt
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -33,7 +33,7 @@ from konvami_api.domain.conversations import (
 )
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.home import HomeView, LevelView
-from konvami_api.domain.live_call import Speaker
+from konvami_api.domain.live_call import Speaker, TurnAudio
 from konvami_api.domain.memories import TEXT_MAX as MEMORY_TEXT_MAX
 from konvami_api.domain.memories import Kind as MemoryKind
 from konvami_api.domain.memories import Memory, MemoryBook
@@ -481,9 +481,24 @@ class ConversationsOut(ApiModel):
         )
 
 
+class TurnAudioOut(ApiModel):
+    # A short-lived address that plays the turn (a WAV file).
+    url: str
+    milliseconds: int
+
+    @classmethod
+    def of(cls, audio: TurnAudio, address: Callable[[TurnAudio], str]) -> "TurnAudioOut":
+        return cls(url=address(audio), milliseconds=audio.milliseconds)
+
+
 class TurnOut(ApiModel):
     speaker: Speaker
+    # As the live speech recognition wrote it down.
     text: str
+    # A learner turn written down again from its recording, keeping their mistakes (spec §9.4).
+    verbatim: str | None
+    # Null without a recording.
+    audio: TurnAudioOut | None
 
 
 class TranscriptOut(ApiModel):
@@ -491,11 +506,30 @@ class TranscriptOut(ApiModel):
     turns: list[TurnOut]
 
     @classmethod
-    def of(cls, transcript: Transcript) -> "TranscriptOut":
+    def of(cls, transcript: Transcript, address: Callable[[TurnAudio], str]) -> "TranscriptOut":
+        """`address` makes the address a recording is played from."""
         return cls(
             conversation=ConversationOut.of(transcript.conversation),
-            turns=[TurnOut(speaker=turn.speaker, text=turn.text) for turn in transcript.turns],
+            turns=[
+                TurnOut(
+                    speaker=turn.speaker,
+                    text=turn.text,
+                    verbatim=turn.verbatim,
+                    audio=TurnAudioOut.of(turn.audio, address) if turn.audio else None,
+                )
+                for turn in transcript.turns
+            ],
         )
+
+
+class RecordingsOut(ApiModel):
+    # Whether the audio of conversations is kept for the learner to hear again.
+    kept: bool
+
+
+class RecordingsPatch(ApiModel):
+    # Strict: "no" and 0 are not answers to a privacy setting.
+    kept: StrictBool
 
 
 # A conversation's id is the voice provider's id for the call: short, never free text.

@@ -1,6 +1,6 @@
 import { ApiError, type PictureUpload } from '@konvami/api-client';
 import type { PickedPicture, PickResult, PictureDevice } from '@/profile/pictures';
-import type { SamplePlayer } from '@/profile/sample-player';
+import type { ClipPlayer } from '@/lib/clip-player';
 
 /**
  * The device's side of the Profile screens for tests: a photo picker that answers what the
@@ -9,7 +9,7 @@ import type { SamplePlayer } from '@/profile/sample-player';
  */
 export interface FakeProfileDevice {
   pictures: PictureDevice;
-  samples: SamplePlayer;
+  samples: ClipPlayer;
   /** What the picker answers next (a chosen picture by default). */
   nextPick(result: PickResult): void;
   /** Makes the next upload fail with this code. */
@@ -21,7 +21,7 @@ export interface FakeProfileDevice {
   /** Every clip that was started, in order. */
   readonly played: readonly string[];
   /** Lets the clip that is playing reach its end. */
-  finishSample(): void;
+  finishClip(): void;
 }
 
 export const FAKE_PICTURE: PickedPicture = { uri: 'file:///tmp/picked.jpg' };
@@ -47,7 +47,7 @@ export function createFakeProfileDevice(): FakeProfileDevice {
     },
     nextPick: (result) => void (pick = result),
     failNextSend: (code) => void (sendFailure = code),
-    finishSample: stop,
+    finishClip: stop,
     pictures: {
       pick: async () => pick,
       async send(upload, picture) {

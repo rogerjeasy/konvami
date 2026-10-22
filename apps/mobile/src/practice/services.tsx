@@ -10,6 +10,7 @@ import {
 import type { ApiClient, Card, CardSource, Progress, Transcript } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
+import type { ClipPlayer } from '@/lib/clip-player';
 import { createDeckStore, type DeckState, type DeckStore } from './deck-store';
 import { createHomeStore, type HomeState, type HomeStore } from './home-store';
 import { createLibraryStore, type LibraryState, type LibraryStore } from './library-store';
@@ -49,6 +50,8 @@ export interface PracticeServices {
   /** One sitting of reviewing the cards that are due. */
   reviewCards: () => ReviewSession;
   clock: DeviceClock;
+  /** Plays a conversation's recordings (and, in Persona Studio, a voice's sample). */
+  clips: ClipPlayer;
 }
 
 export function createPracticeServices(
@@ -67,6 +70,7 @@ export function createPracticeServices(
     | 'removeCard'
   >,
   clock: DeviceClock,
+  clips: ClipPlayer,
 ): PracticeServices {
   const home = createHomeStore(api, clock);
   const deck = createDeckStore(api);
@@ -85,6 +89,7 @@ export function createPracticeServices(
     },
     reviewCards: () => createReviewSession(api),
     clock,
+    clips,
   };
 }
 

@@ -22,12 +22,14 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
     FakeAccountDirectory,
     FakeSpeechModel,
+    FakeTranscriber,
     FakeVoiceProvider,
     FixedClock,
     InMemoryAccountRepository,
@@ -40,6 +42,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
@@ -267,6 +270,15 @@ def services(
         model="gpt-6-luna",
         clock=clock,
     )
+    recordings = RecordingService(
+        profiles=profiles,
+        conversations=conversations,
+        sessions=calls,
+        repository=InMemoryRecordingRepository(calls),
+        files=files,
+        transcriber=FakeTranscriber(files),
+        model="gpt-transcribe",
+    )
     voice = VoiceCallService(
         settings=VOICE,
         scripts={
@@ -280,6 +292,7 @@ def services(
                 conversations=conversations,
                 reports=reports,
                 memories=memories,
+                recordings=recordings,
             ),
         },
         accounts=directory,
@@ -287,6 +300,7 @@ def services(
         sessions=calls,
         starter=RecordingCallStarter(),
         clock=clock,
+        recordings=recordings,
     )
     home = HomeService(
         profiles=profiles,
@@ -330,6 +344,7 @@ def services(
         home=home,
         progress=progress,
         accounts=accounts,
+        recordings=recordings,
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
         ),

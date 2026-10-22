@@ -750,6 +750,10 @@ export const fr: Translation = {
       line: '{{speaker}} : {{text}}',
       report: 'Bilan de la conversation',
       reportHint: 'Corrections, nouveaux mots et quoi travailler ensuite',
+      playPartner: 'Écouter ce que {{name}} a dit',
+      playFormer: 'Écouter ce qu’a dit ton ancien partenaire',
+      playYou: 'Écouter ce que tu as dit',
+      stopPlaying: 'Arrêter la lecture',
     },
   },
   report: {
@@ -1130,6 +1134,17 @@ export const fr: Translation = {
       note: 'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Un changement s’applique dès ta prochaine conversation.',
       delete: 'Supprimer le compte',
       deleteHint: 'Supprime ton compte et tout ce qu’il contient',
+      recordings: {
+        label: 'Garder les enregistrements de mes conversations',
+        on: 'Tu peux réécouter tes conversations. Personne d’autre ne peut les écouter.',
+        off: 'Les conversations sont gardées en texte. Ta voix sert au bilan, puis elle est supprimée.',
+        loadFailed: 'Ton choix sur les enregistrements n’a pas pu être chargé.',
+        confirmTitle: 'Supprimer tes enregistrements ?',
+        confirmBody:
+          'Tous les enregistrements gardés jusqu’ici sont supprimés pour de bon. Tes transcriptions et tes bilans restent.',
+        confirm: 'Supprimer les enregistrements',
+        cancel: 'Les garder',
+      },
     },
     security: {
       title: 'Sécurité',
@@ -1174,7 +1189,7 @@ export const fr: Translation = {
         account: 'Ton compte et ta connexion',
         profile: 'Ton profil, ton niveau et tes objectifs',
         partners: 'Tes partenaires',
-        conversations: 'Toutes les conversations et transcriptions',
+        conversations: 'Toutes les conversations, transcriptions et enregistrements',
         photo: 'Ta photo',
       },
       password: 'Ton mot de passe',

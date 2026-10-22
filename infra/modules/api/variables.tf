@@ -75,8 +75,10 @@ variable "text_models" {
     writes a practice conversation's Session Report and checks each of its corrections a second
     time (two requests per conversation); memory reads the conversation once more for what the
     learner's partners should know next time (spec §6.11; one request per conversation, by the
-    same worker, after the report). An empty name turns the job off: it then uses its fallback
-    (the examiner's own impression, the language pack's built-in partners) or, for drafts,
+    same worker, after the report); verbatim is a transcription model that writes each recorded
+    learner turn down a second time, keeping their mistakes, before the report is written (spec
+    §9.4). An empty name turns the job off: it then uses its fallback (the examiner's own
+    impression, the language pack's built-in partners, the live transcript) or, for drafts,
     samples and reports, says it is unavailable; without a memory model nothing is remembered.
   EOT
   type = object({
@@ -85,6 +87,7 @@ variable "text_models" {
     speech     = optional(string, "")
     report     = optional(string, "")
     memory     = optional(string, "")
+    verbatim   = optional(string, "")
   })
 }
 

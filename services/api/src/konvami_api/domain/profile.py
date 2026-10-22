@@ -39,6 +39,7 @@ GLOBAL_SCOPE = "global"
 TARGET_LANGUAGE = "target_language"
 MEMORY_ENABLED = "memory_enabled"
 AVOID_TOPICS = "avoid_topics"
+RECORDINGS_KEPT = "recordings_kept"
 
 
 class Source(StrEnum):
@@ -84,6 +85,12 @@ class Profile:
         """Whether partners keep and use memories of the learner (spec §6.11). On until the
         learner turns it off."""
         return self.value(GLOBAL_SCOPE, MEMORY_ENABLED) is not False
+
+    @property
+    def recordings_kept(self) -> bool:
+        """Whether the audio of the learner's conversations is kept for them to hear again
+        (spec §6.6, §6.1.2 "Privacy"). On until the learner turns it off."""
+        return self.value(GLOBAL_SCOPE, RECORDINGS_KEPT) is not False
 
     @property
     def avoid_topics(self) -> tuple[str, ...]:
@@ -283,6 +290,8 @@ FIELDS: Mapping[str, FieldSpec] = {
     # alone. About the person, not about one language.
     MEMORY_ENABLED: FieldSpec(False, _typed(TypeAdapter(bool))),
     AVOID_TOPICS: FieldSpec(False, _avoid_topics),
+    # Recordings (spec §6.6): whether the audio of a conversation is kept after its report.
+    RECORDINGS_KEPT: FieldSpec(False, _typed(TypeAdapter(bool))),
 }
 
 

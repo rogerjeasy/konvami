@@ -1,13 +1,14 @@
 """The worker that joins a live call: the loop around `LiveCall`, and its WebSocket connection."""
 
 import asyncio
+import base64
 import json
 from typing import Any
 
 import pytest
 from websockets.asyncio.server import ServerConnection, serve
 
-from konvami_api.domain.live_call import LiveCall
+from konvami_api.domain.live_call import KeepAudio, LiveCall, TurnAudio
 from konvami_api.domain.tools import ToolResult
 from konvami_api.worker import CallClosed, WebSocketConnection, run_call
 
@@ -146,6 +147,61 @@ def test_a_call_that_closes_while_the_server_is_answering_ends_quietly() -> None
     assert call.outcome == "closed"
 
 
+LEARNER_SAID = {
+    "type": "conversation.item.input_audio_transcription.completed",
+    "item_id": "item_2",
+    "transcript": "Ich habe nach Berlin gefahren.",
+}
+
+
+def learner_audio(pcm: bytes) -> dict[str, Any]:
+    return {
+        "type": "conversation.item.retrieved",
+        "item": {
+            "id": "item_2",
+            "type": "message",
+            "role": "user",
+            "content": [{"type": "input_audio", "audio": base64.b64encode(pcm).decode()}],
+        },
+    }
+
+
+def recorded(tools: OneTool) -> LiveCall:
+    return LiveCall(tools, max_seconds=MAX, wrap_up_seconds=5, goodbye_grace_seconds=3, record=True)
+
+
+def test_a_turns_audio_is_stored_and_becomes_part_of_the_turn() -> None:
+    kept: list[KeepAudio] = []
+
+    def keep(audio: KeepAudio) -> TurnAudio:
+        kept.append(audio)
+        return TurnAudio(f"recordings/{audio.item_id}.wav", 1000)
+
+    call = recorded(OneTool())
+    connection = ScriptedConnection([LEARNER_SAID, learner_audio(b"\x01\x00")], then_close=True)
+
+    asyncio.run(run_call(call, connection, lambda: None, lambda: connection.seconds, keep))
+
+    assert kept == [KeepAudio("item_2", "learner", b"\x01\x00")]
+    assert call.turns[0].audio == TurnAudio("recordings/item_2.wav", 1000)
+
+
+def test_audio_that_cannot_be_stored_leaves_the_turn_without_it_and_the_call_goes_on() -> None:
+    def keep(audio: KeepAudio) -> TurnAudio:
+        raise RuntimeError("bucket unreachable")
+
+    tools = OneTool()
+    call = recorded(tools)
+    connection = ScriptedConnection(
+        [LEARNER_SAID, learner_audio(b"\x01\x00"), tool_reply("save_level")], then_close=True
+    )
+
+    asyncio.run(run_call(call, connection, lambda: None, lambda: connection.seconds, keep))
+
+    assert call.turns[0].audio is None
+    assert tools.calls == [("save_level", {})]
+
+
 # --- The real WebSocket connection, against a local server ------------------------------------
 
 
@@ -183,6 +239,22 @@ def test_events_travel_both_ways_as_json() -> None:
         "authorization": "Bearer k",
         "received": {"type": "response.create"},
     }
+
+
+def test_a_long_turns_audio_fits_in_one_message() -> None:
+    # A minute of speech: 24 kHz, 16-bit, in base64 (about 3.8 MB).
+    audio = "A" * (24_000 * 2 * 60 * 4 // 3)
+
+    async def handler(websocket: ServerConnection) -> None:
+        await websocket.send(json.dumps({"type": "conversation.item.retrieved", "audio": audio}))
+        await asyncio.sleep(0.5)
+
+    async def use(connection: WebSocketConnection) -> dict[str, Any] | None:
+        return await connection.receive(timeout=5)
+
+    event = asyncio.run(_with_server(handler, use))
+    assert event is not None
+    assert event["audio"] == audio
 
 
 def test_a_quiet_second_is_reported_as_nothing_not_as_an_error() -> None:
@@ -310,3 +382,48 @@ def test_an_unknown_call_is_not_followed() -> None:
             raise AssertionError("must not hang up")
 
     asyncio.run(follow_call(NoCalls(), NeverUsed(), "rtc_ghost"))  # type: ignore[arg-type]
+
+
+def test_a_practice_calls_audio_is_stored_as_the_call_goes() -> None:
+    from konvami_api.domain.voice import CallPurpose
+    from konvami_api.worker import follow_call
+    from tests.world import USER, World
+
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, "v=0 offer", lena.id).call_id
+    asked: list[dict[str, Any]] = []
+
+    async def provider_side(websocket: ServerConnection) -> None:
+        await websocket.recv()  # the persona is started
+        await websocket.send(json.dumps(LEARNER_SAID))
+        asked.append(json.loads(await websocket.recv()))
+        await websocket.send(json.dumps(learner_audio(b"\x01\x00" * 2_400)))
+        await asyncio.sleep(0.2)
+
+    class LocalRealtime:
+        def __init__(self, port: int) -> None:
+            self.port = port
+
+        def sideband_url(self, call: str) -> str:
+            return f"ws://127.0.0.1:{self.port}/v1/realtime?call_id={call}"
+
+        def sideband_headers(self) -> dict[str, str]:
+            return {}
+
+        def hang_up(self, call: str) -> None:
+            world.provider.hang_up(call)
+
+    async def scenario() -> None:
+        async with serve(provider_side, "127.0.0.1", 0) as server:
+            await follow_call(
+                world.voice, LocalRealtime(server.sockets[0].getsockname()[1]), call_id
+            )
+
+    asyncio.run(scenario())
+
+    assert asked[0]["type"] == "conversation.item.retrieve"
+    [turn] = world.sessions.finished[call_id].turns
+    assert turn.audio is not None
+    assert turn.audio.milliseconds == 100
+    assert world.files.keys() == [turn.audio.key]

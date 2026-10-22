@@ -714,8 +714,8 @@ def test_a_transcript_is_read_with_its_conversation(
             "learnerTurns": 1,
         },
         "turns": [
-            {"speaker": "persona", "text": "Hallo! Wie geht's?"},
-            {"speaker": "learner", "text": "Gut, danke!"},
+            {"speaker": "persona", "text": "Hallo! Wie geht's?", "verbatim": None, "audio": None},
+            {"speaker": "learner", "text": "Gut, danke!", "verbatim": None, "audio": None},
         ],
     }
 

@@ -736,6 +736,10 @@ export const en = {
       line: '{{speaker}}: {{text}}',
       report: 'Session report',
       reportHint: 'Corrections, new words and what to practise next',
+      playPartner: 'Play what {{name}} said',
+      playFormer: 'Play what your former partner said',
+      playYou: 'Play what you said',
+      stopPlaying: 'Stop playing',
     },
   },
   report: {
@@ -1115,6 +1119,17 @@ export const en = {
       note: 'Your partners are always AI and never claim to be human. A change applies from your next conversation.',
       delete: 'Delete account',
       deleteHint: 'Removes your account and everything in it',
+      recordings: {
+        label: 'Keep recordings of my conversations',
+        on: 'You can listen to your conversations again. Only you can play them.',
+        off: 'Conversations are kept as text. Your voice is used for the report, then deleted.',
+        loadFailed: 'Your choice about recordings couldn’t be loaded.',
+        confirmTitle: 'Delete your recordings?',
+        confirmBody:
+          'Every recording kept so far is deleted for good. Your transcripts and reports stay.',
+        confirm: 'Delete recordings',
+        cancel: 'Keep them',
+      },
     },
     security: {
       title: 'Security',
@@ -1159,7 +1174,7 @@ export const en = {
         account: 'Your account and sign-in',
         profile: 'Your profile, level and goals',
         partners: 'Your partners',
-        conversations: 'Every conversation and transcript',
+        conversations: 'Every conversation, transcript and recording',
         photo: 'Your photo',
       },
       password: 'Your password',

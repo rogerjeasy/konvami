@@ -2245,6 +2245,34 @@
         "title": "QueueOut",
         "type": "object"
       },
+      "RecordingsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "kept": {
+            "title": "Kept",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kept"
+        ],
+        "title": "RecordingsOut",
+        "type": "object"
+      },
+      "RecordingsPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "kept": {
+            "title": "Kept",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kept"
+        ],
+        "title": "RecordingsPatch",
+        "type": "object"
+      },
       "ReportMistakeOut": {
         "additionalProperties": false,
         "properties": {
@@ -2664,9 +2692,38 @@
         "title": "TranscriptOut",
         "type": "object"
       },
+      "TurnAudioOut": {
+        "additionalProperties": false,
+        "properties": {
+          "milliseconds": {
+            "title": "Milliseconds",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "milliseconds"
+        ],
+        "title": "TurnAudioOut",
+        "type": "object"
+      },
       "TurnOut": {
         "additionalProperties": false,
         "properties": {
+          "audio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TurnAudioOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "speaker": {
             "enum": [
               "learner",
@@ -2678,11 +2735,24 @@
           "text": {
             "title": "Text",
             "type": "string"
+          },
+          "verbatim": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verbatim"
           }
         },
         "required": [
           "speaker",
-          "text"
+          "text",
+          "verbatim",
+          "audio"
         ],
         "title": "TurnOut",
         "type": "object"
@@ -4766,6 +4836,82 @@
           }
         },
         "summary": "Get Progress"
+      }
+    },
+    "/v1/recordings": {
+      "get": {
+        "description": "Whether the audio of the learner's conversations is kept (spec \u00a76.6).",
+        "operationId": "getRecordings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Recordings"
+      },
+      "patch": {
+        "description": "Keeps recordings, or stops: stopping deletes every recording kept so far.",
+        "operationId": "configureRecordings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Configure Recordings"
       }
     },
     "/v1/voice/calls": {

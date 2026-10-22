@@ -1,7 +1,6 @@
 import { api } from '@/api';
 import { practiceServices } from '@/practice';
 import { devicePictures } from './device-pictures';
-import { createSamplePlayer } from './sample-player';
 import { createProfileServices } from './services';
 
 export * from './services';
@@ -12,6 +11,7 @@ export type { PartnersState, PartnersStore } from './partners-store';
 /** The app's profile services, on the real API, photo picker and audio player. */
 export const profileServices = createProfileServices(api, {
   pictures: devicePictures,
-  samples: createSamplePlayer(),
+  // One player for the whole app: a sample and a recording never play over each other.
+  samples: practiceServices.clips,
   onPartnersChanged: () => void practiceServices.home.refresh(),
 });

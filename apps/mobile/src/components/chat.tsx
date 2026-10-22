@@ -13,6 +13,7 @@ export function ChatBubble({
   children,
   gloss,
   decorative = false,
+  accessibilityLabel,
 }: {
   from: 'persona' | 'learner';
   children: ReactNode;
@@ -20,11 +21,15 @@ export function ChatBubble({
   gloss?: string;
   /** Inside an illustration: caps text growth so the drawing keeps its shape. */
   decorative?: boolean;
+  /** Makes the bubble one element for a screen reader, heard as this (who said what). */
+  accessibilityLabel?: string;
 }) {
   const persona = from === 'persona';
   const scale = decorative ? ILLUSTRATION_MAX_FONT_SCALE : undefined;
   return (
     <View
+      accessible={accessibilityLabel !== undefined}
+      accessibilityLabel={accessibilityLabel}
       className={`max-w-[80%] rounded-card px-3.5 py-3 ${
         persona
           ? 'self-start rounded-bl-sm border border-border bg-chip'

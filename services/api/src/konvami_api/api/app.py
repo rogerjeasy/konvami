@@ -40,6 +40,8 @@ from konvami_api.api.schemas import (
     ProfilePatch,
     ProgressOut,
     QueueOut,
+    RecordingsOut,
+    RecordingsPatch,
     ReportOut,
     ReviewIn,
     TranscriptOut,
@@ -60,6 +62,7 @@ from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
@@ -82,6 +85,7 @@ class Services:
     home: HomeService
     progress: ProgressService
     accounts: AccountService
+    recordings: RecordingService
     voices: VoiceSampleService
 
 
@@ -257,7 +261,8 @@ def _router(services: Services) -> APIRouter:
         "/conversations/{conversation_id}", operation_id="getConversation", responses=NOT_FOUND
     )
     def get_conversation(user: CurrentUser, conversation_id: str) -> TranscriptOut:
-        return TranscriptOut.of(services.conversations.transcript(user, conversation_id))
+        transcript = services.conversations.transcript(user, conversation_id)
+        return TranscriptOut.of(transcript, services.recordings.address)
 
     def report_of(user: UUID, state: ReportState) -> ReportOut:
         saved = services.cards.saved(user, state.report) if state.report else None
@@ -322,6 +327,16 @@ def _router(services: Services) -> APIRouter:
 
     def memories_of(user: UUID, book: MemoryBook) -> MemoriesOut:
         return MemoriesOut.of(book, partners_named(user, book.memories))
+
+    @router.get("/recordings", operation_id="getRecordings")
+    def get_recordings(user: CurrentUser) -> RecordingsOut:
+        """Whether the audio of the learner's conversations is kept (spec §6.6)."""
+        return RecordingsOut(kept=services.recordings.kept(user))
+
+    @router.patch("/recordings", operation_id="configureRecordings", responses=REFUSED)
+    def configure_recordings(user: CurrentUser, settings: RecordingsPatch) -> RecordingsOut:
+        """Keeps recordings, or stops: stopping deletes every recording kept so far."""
+        return RecordingsOut(kept=services.recordings.configure(user, kept=settings.kept))
 
     @router.get("/memories", operation_id="getMemories")
     def get_memories(user: CurrentUser) -> MemoriesOut:

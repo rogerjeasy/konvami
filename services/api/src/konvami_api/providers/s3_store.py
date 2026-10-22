@@ -75,6 +75,11 @@ class S3FileStore:
         start: bytes = answer["Body"].read()
         return start
 
+    def read(self, key: str) -> bytes:
+        answer = self._s3.get_object(Bucket=self._bucket, Key=key)
+        body: bytes = answer["Body"].read()
+        return body
+
     def save(self, key: str, body: bytes, content_type: str) -> None:
         self._s3.put_object(Bucket=self._bucket, Key=key, Body=body, ContentType=content_type)
 

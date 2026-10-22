@@ -1,11 +1,20 @@
 """The server's side of a live voice call, driven by the provider's events as they really look."""
 
+import base64
 import json
 from typing import Any
 
 import pytest
 
-from konvami_api.domain.live_call import HangUp, LiveCall, Send, Turn
+from konvami_api.domain.live_call import (
+    AUDIO_DRAIN_SECONDS,
+    HangUp,
+    KeepAudio,
+    LiveCall,
+    Send,
+    Turn,
+    TurnAudio,
+)
 from konvami_api.domain.tools import ToolResult
 
 MAX = 480
@@ -300,3 +309,165 @@ def test_closing_does_not_overwrite_how_the_call_already_ended(call: LiveCall) -
     call.closed()
 
     assert call.outcome == "timed_out"
+
+
+# --- Recording (spec §6.6): the server asks for each turn's audio and hands it on -------------
+
+
+def retrieve(item_id: str) -> Send:
+    return Send(
+        {
+            "type": "conversation.item.retrieve",
+            "event_id": f"retrieve_{item_id}",
+            "item_id": item_id,
+        }
+    )
+
+
+def retrieved(item_id: str, role: str, pcm: bytes | None) -> dict[str, Any]:
+    kind = "input_audio" if role == "user" else "output_audio"
+    part: dict[str, Any] = {"type": kind, "transcript": "…"}
+    if pcm is not None:
+        part["audio"] = base64.b64encode(pcm).decode()
+    return {
+        "type": "conversation.item.retrieved",
+        "event_id": "event_9",
+        "item": {
+            "id": item_id,
+            "object": "realtime.item",
+            "type": "message",
+            "status": "completed",
+            "role": role,
+            "content": [part],
+        },
+    }
+
+
+def retrieve_failed(item_id: str) -> dict[str, Any]:
+    return {
+        "type": "error",
+        "event_id": "event_10",
+        "error": {
+            "type": "invalid_request_error",
+            "code": "item_not_found",
+            "message": "Item not found",
+            "event_id": f"retrieve_{item_id}",
+        },
+    }
+
+
+@pytest.fixture
+def recorded(tools: ScriptedTools) -> LiveCall:
+    return LiveCall(
+        tools,
+        max_seconds=MAX,
+        wrap_up_seconds=WRAP_UP,
+        goodbye_grace_seconds=GRACE,
+        record=True,
+    )
+
+
+def persona_reply(item_id: str = "item_3") -> dict[str, Any]:
+    return response_done({**spoken("Hallo Amara! Schön, dass du da bist."), "id": item_id})
+
+
+def test_an_unrecorded_call_asks_for_no_audio(call: LiveCall) -> None:
+    assert call.handle(LEARNER_SAID, 6) == []
+    call.handle(PERSONA_SAID, 8)
+    assert call.handle(persona_reply(), 9) == []
+
+
+def test_the_learners_audio_is_asked_for_once_their_turn_is_written_down(
+    recorded: LiveCall,
+) -> None:
+    assert recorded.handle(LEARNER_SAID, 6) == [retrieve("item_2")]
+
+
+def test_the_partners_audio_is_asked_for_once_their_reply_is_done(recorded: LiveCall) -> None:
+    assert recorded.handle(PERSONA_SAID, 8) == []
+
+    assert recorded.handle(persona_reply(), 9) == [retrieve("item_3")]
+
+
+def test_a_reply_that_was_not_spoken_is_not_asked_for(recorded: LiveCall) -> None:
+    assert recorded.handle(response_done(spoken("Nur Text")), 9) == []
+
+
+def test_the_audio_that_comes_back_is_handed_on_with_the_turn_it_belongs_to(
+    recorded: LiveCall,
+) -> None:
+    recorded.handle(LEARNER_SAID, 6)
+
+    actions = recorded.handle(retrieved("item_2", "user", b"\x01\x00\x02\x00"), 7)
+
+    assert actions == [KeepAudio("item_2", "learner", b"\x01\x00\x02\x00")]
+
+
+def test_audio_nobody_asked_for_is_ignored(recorded: LiveCall) -> None:
+    assert recorded.handle(retrieved("item_7", "user", b"\x01\x00"), 7) == []
+
+
+def test_an_item_without_audio_needs_nothing(recorded: LiveCall) -> None:
+    recorded.handle(LEARNER_SAID, 6)
+
+    assert recorded.handle(retrieved("item_2", "user", None), 7) == []
+
+
+def test_kept_audio_is_part_of_the_turn(recorded: LiveCall) -> None:
+    recorded.handle(PERSONA_SAID, 2)
+    recorded.handle(LEARNER_SAID, 6)
+
+    recorded.audio_kept("item_2", TurnAudio("users/u/recordings/c/item_2.wav", 1500))
+
+    assert recorded.turns == [
+        Turn("persona", "Hallo Amara! Schön, dass du da bist."),
+        Turn(
+            "learner",
+            "Ich möchte Deutsch lernen.",
+            audio=TurnAudio("users/u/recordings/c/item_2.wav", 1500),
+        ),
+    ]
+
+
+def test_at_the_time_limit_the_call_waits_briefly_for_audio_still_on_its_way(
+    recorded: LiveCall,
+) -> None:
+    recorded.handle(LEARNER_SAID, MAX - 2)
+
+    assert recorded.tick(MAX) == []
+    assert not recorded.ended
+
+    actions = recorded.handle(retrieved("item_2", "user", b"\x01\x00"), MAX + 1)
+
+    assert actions == [KeepAudio("item_2", "learner", b"\x01\x00"), HangUp()]
+    assert recorded.outcome == "timed_out"
+
+
+def test_the_wait_for_audio_has_a_limit(recorded: LiveCall) -> None:
+    recorded.handle(LEARNER_SAID, MAX - 2)
+    recorded.tick(MAX)
+
+    assert recorded.tick(MAX + AUDIO_DRAIN_SECONDS - 1) == []
+    assert recorded.tick(MAX + AUDIO_DRAIN_SECONDS) == [HangUp()]
+    assert recorded.outcome == "timed_out"
+
+
+def test_audio_that_cannot_be_retrieved_is_no_longer_waited_for(recorded: LiveCall) -> None:
+    recorded.handle(LEARNER_SAID, MAX - 2)
+    recorded.tick(MAX)
+
+    assert recorded.handle(retrieve_failed("item_2"), MAX + 1) == [HangUp()]
+
+
+def test_while_waiting_for_audio_nothing_else_is_done(
+    recorded: LiveCall, tools: ScriptedTools
+) -> None:
+    recorded.handle(LEARNER_SAID, MAX - 2)
+    recorded.tick(MAX)
+
+    assert recorded.handle(response_done(function_call("save_level", "{}")), MAX + 1) == []
+    assert tools.calls == []
+
+
+def test_with_no_audio_on_its_way_the_call_ends_at_once(recorded: LiveCall) -> None:
+    assert recorded.tick(MAX) == [HangUp()]
