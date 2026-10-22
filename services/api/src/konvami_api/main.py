@@ -18,6 +18,7 @@ from konvami_api.domain.accounts import AccountService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
+from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.memories import MemoryService
@@ -36,7 +37,9 @@ from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
+    SqlAlertLog,
     SqlCardRepository,
+    SqlChargeRepository,
     SqlConversationRepository,
     SqlDraftLog,
     SqlMemoryRepository,
@@ -55,6 +58,8 @@ from konvami_api.providers.aws import (
     LambdaClient,
     LambdaReportStarter,
     SecretsClient,
+    SnsClient,
+    SnsNotifier,
     cached_secret,
 )
 from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
@@ -63,7 +68,14 @@ from konvami_api.providers.openai_speech import OpenAiSpeech
 from konvami_api.providers.openai_text import OpenAiText
 from konvami_api.providers.openai_transcription import OpenAiTranscription
 from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
-from konvami_api.settings import TEXT_MODELS_VARIABLE, VOICE_VARIABLE, text_models, voice_settings
+from konvami_api.settings import (
+    COSTS_VARIABLE,
+    TEXT_MODELS_VARIABLE,
+    VOICE_VARIABLE,
+    cost_settings,
+    text_models,
+    voice_settings,
+)
 from konvami_api.worker import follow_call
 
 _DB_SETTINGS = {
@@ -77,6 +89,8 @@ _OPENAI_SECRET = "KONVAMI_OPENAI_SECRET_ARN"  # noqa: S105 - the name of a setti
 _CALL_WORKER = "KONVAMI_CALL_WORKER"
 # The private bucket for photos and voice samples (infra/modules/media).
 _MEDIA_BUCKET = "KONVAMI_MEDIA_BUCKET"
+# The SNS topic the owner's budget alerts are emailed through (infra/modules/budget).
+_ALERT_TOPIC = "KONVAMI_ALERT_TOPIC_ARN"
 
 # Each attempt waits about 20 seconds for a paused database; waking takes about 15.
 MIGRATION_ATTEMPTS = 4
@@ -91,6 +105,7 @@ class Clients:
     functions: LambdaClient
     secrets: SecretsClient
     s3: S3
+    sns: SnsClient
 
 
 @dataclass(frozen=True)
@@ -122,8 +137,18 @@ def build_backend(
     profiles = ProfileService(SqlProfileRepository(sql), CATALOG, _now)
     onboarding = OnboardingService(profiles, SqlOnboardingRepository(sql), _now)
     openai_key = cached_secret(clients.secrets, environment.get(_OPENAI_SECRET, ""))
+    costs = cost_settings(environment.get(COSTS_VARIABLE))
+    charges = SqlChargeRepository(sql)
+    guard = SpendGuard(
+        budget=costs.budget,
+        charges=charges,
+        alerts=SqlAlertLog(sql),
+        notifier=SnsNotifier(clients.sns, environment.get(_ALERT_TOPIC, "")),
+        clock=_now,
+    )
+    meter = Meter(prices=costs.prices, charges=charges, guard=guard, clock=_now)
     realtime = OpenAiRealtime(openai_key)
-    text = OpenAiText(openai_key)
+    text = OpenAiText(openai_key, meter=meter)
     models = text_models(environment.get(TEXT_MODELS_VARIABLE))
     placement = PlacementService(
         profiles=profiles,
@@ -176,7 +201,7 @@ def build_backend(
         sessions=sessions,
         repository=SqlRecordingRepository(sql),
         files=files,
-        transcriber=OpenAiTranscription(openai_key),
+        transcriber=OpenAiTranscription(openai_key, meter=meter),
         model=models.verbatim,
     )
     tutor = TutorService(
@@ -213,6 +238,8 @@ def build_backend(
         starter=LambdaCallStarter(clients.functions, worker),
         clock=_now,
         recordings=recordings,
+        guard=guard,
+        meter=meter,
     )
     home = HomeService(
         profiles=profiles,
@@ -253,7 +280,17 @@ def build_backend(
         recordings=recordings,
         tutor=tutor,
         voices=VoiceSampleService(
-            profiles=profiles, files=files, speech=OpenAiSpeech(openai_key), model=models.speech
+            profiles=profiles,
+            files=files,
+            speech=OpenAiSpeech(openai_key, meter=meter),
+            model=models.speech,
+        ),
+        costs=CostService(
+            owners=costs.owners,
+            budget=costs.budget,
+            charges=charges,
+            accounts=directory,
+            clock=_now,
         ),
     )
     return Backend(services, realtime)
@@ -276,6 +313,7 @@ def _clients() -> Clients:
         functions=boto3.client("lambda"),
         secrets=boto3.client("secretsmanager"),
         s3=s3_client(),
+        sns=boto3.client("sns"),
     )
 
 

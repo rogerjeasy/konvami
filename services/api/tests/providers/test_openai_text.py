@@ -1,9 +1,12 @@
 import json
+from dataclasses import replace
 from typing import Any
+from uuid import UUID
 
 import httpx
 import pytest
 
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.text import TextModelError, TextTask
 from konvami_api.providers.openai_text import OpenAiText
 
@@ -147,3 +150,47 @@ def test_a_task_without_a_time_limit_gets_the_background_one() -> None:
     model(respond).answer(TASK)
 
     assert seen["request"].extensions["timeout"]["read"] == 90
+
+
+class RecordingMeter:
+    def __init__(self) -> None:
+        self.recorded: list[tuple[Any, str, str, dict[str, float]]] = []
+
+    def record(self, charge: Any, provider: str, model: str, units: Any) -> None:
+        self.recorded.append((charge, provider, model, dict(units)))
+
+
+def test_what_an_answer_used_is_metered_for_the_tasks_charge() -> None:
+    meter = RecordingMeter()
+    answer = completed('{"grammar":"A1"}')
+    answer["usage"]["input_tokens_details"]["cached_tokens"] = 64
+    respond = lambda _: httpx.Response(200, json=answer)  # noqa: E731
+    text = OpenAiText(
+        lambda: KEY, httpx.Client(transport=httpx.MockTransport(respond)), meter=meter
+    )
+    charge = Charge(UUID("11111111-1111-4111-8111-111111111111"), Feature.REPORT)
+
+    text.answer(replace(TASK, charge=charge))
+
+    assert meter.recorded == [
+        (
+            charge,
+            "openai",
+            "gpt-6.1-sol",
+            {"input_tokens": 34, "cached_input_tokens": 64, "output_tokens": 143},
+        )
+    ]
+
+
+def test_an_answer_that_cannot_be_read_is_still_metered() -> None:
+    # It was paid for all the same.
+    meter = RecordingMeter()
+    respond = lambda _: httpx.Response(200, json=completed("not json"))  # noqa: E731
+    text = OpenAiText(
+        lambda: KEY, httpx.Client(transport=httpx.MockTransport(respond)), meter=meter
+    )
+
+    with pytest.raises(TextModelError):
+        text.answer(TASK)
+
+    assert [model for _, _, model, _ in meter.recorded] == ["gpt-6.1-sol"]

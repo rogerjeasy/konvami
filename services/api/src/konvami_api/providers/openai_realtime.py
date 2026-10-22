@@ -19,6 +19,8 @@ TIMEOUT_SECONDS = 15.0
 
 
 class OpenAiRealtime:
+    name = "openai"
+
     def __init__(self, api_key: Callable[[], str], http: httpx.Client | None = None) -> None:
         self._api_key = api_key
         self._http = http or httpx.Client(timeout=TIMEOUT_SECONDS)

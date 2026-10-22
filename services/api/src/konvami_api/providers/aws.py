@@ -16,6 +16,24 @@ class SecretsClient(Protocol):
     def get_secret_value(self, **kwargs: Any) -> dict[str, Any]: ...
 
 
+class SnsClient(Protocol):
+    def publish(self, **kwargs: Any) -> dict[str, Any]: ...
+
+
+class SnsNotifier:
+    """Emails the owner through an SNS topic with their address subscribed (the budget alerts,
+    infra/modules/budget)."""
+
+    def __init__(self, sns: SnsClient, topic_arn: str) -> None:
+        self._sns = sns
+        self._topic_arn = topic_arn
+
+    def notify(self, subject: str, message: str) -> None:
+        if not self._topic_arn:
+            raise RuntimeError("no alert topic is configured")
+        self._sns.publish(TopicArn=self._topic_arn, Subject=subject, Message=message)
+
+
 class LambdaCallStarter:
     """Starts the call worker as its own Lambda invocation, which outlives the API request."""
 
