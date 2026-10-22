@@ -801,6 +801,7 @@ export const de: Translation = {
       title: 'Das feilen wir noch',
       empty: 'Diesmal ist kein Fehler aufgefallen.',
       unsure: 'Unsicher',
+      explain: 'Erklären',
       unsureNote: 'Das konnten wir nicht bestätigen. Nimm es als Hinweis, nicht als Regel.',
     },
     natural: {
@@ -869,6 +870,8 @@ export const de: Translation = {
   },
   learn: {
     title: 'Lernen',
+    tutorRow: 'Den Tutor fragen',
+    tutorHint: 'Grammatik, Wörter, wie man etwas sagt',
     body: 'Wörter und Korrekturen aus deinen Gesprächen – zurück, kurz bevor du sie vergisst.',
     loading: 'Deine Karten werden geladen',
     loadFailed: 'Deine Karten konnten nicht geladen werden.',
@@ -911,6 +914,24 @@ export const de: Translation = {
       removeFailed: 'Diese Karte konnte nicht entfernt werden. Versuch es noch einmal.',
     },
     later: 'Eine Grammatikübersicht und ein Phrasenbuch sind in Arbeit.',
+  },
+  tutor: {
+    title: 'Den Tutor fragen',
+    body: 'Frag alles zu der Sprache, die du lernst: eine Regel, ein Wort, wie man etwas sagt.',
+    loading: 'Deine Fragen werden geöffnet',
+    loadFailed: 'Deine Fragen konnten nicht geladen werden.',
+    field: 'Deine Frage',
+    placeholder: 'Warum „dem Bus“ und nicht „den Bus“?',
+    ask: 'Fragen',
+    thinking: 'Der Tutor denkt nach …',
+    you: 'Deine Frage: {{question}}',
+    unsure: 'Nicht sicher',
+    unsureNote: 'Hier ist sich der Tutor nicht sicher. Nimm es als Möglichkeit, nicht als Regel.',
+    failed: 'Der Tutor konnte gerade nicht antworten. Versuch es gleich noch einmal.',
+    limit: 'Du hast heute schon viel gefragt. Morgen ist der Tutor wieder da.',
+    consent:
+      'Der Tutor braucht deine Zustimmung, Fragen an unseren KI-Anbieter zu senden (Profil › Datenschutz und KI).',
+    notFound: 'Diese Korrektur kann nicht mehr erklärt werden.',
   },
   review: {
     close: 'Wiederholen beenden',

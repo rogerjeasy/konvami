@@ -802,6 +802,7 @@ export const fr: Translation = {
       title: 'On peaufine ça',
       empty: 'Aucune erreur ne ressort cette fois.',
       unsure: 'Pas sûr',
+      explain: 'Expliquer',
       unsureNote:
         'Nous n’avons pas pu confirmer celle-ci. Prends-la comme une piste, pas comme une règle.',
     },
@@ -871,6 +872,8 @@ export const fr: Translation = {
   },
   learn: {
     title: 'Apprendre',
+    tutorRow: 'Demander au tuteur',
+    tutorHint: 'Grammaire, mots, comment dire quelque chose',
     body: 'Les mots et corrections de tes conversations, de retour juste avant que tu les oublies.',
     loading: 'Chargement de tes cartes',
     loadFailed: 'Impossible de charger tes cartes.',
@@ -913,6 +916,25 @@ export const fr: Translation = {
       removeFailed: 'Impossible de retirer cette carte. Réessaie.',
     },
     later: 'Une carte de la grammaire et un carnet de phrases sont en préparation.',
+  },
+  tutor: {
+    title: 'Demander au tuteur',
+    body: 'Pose n’importe quelle question sur la langue que tu apprends : une règle, un mot, comment dire quelque chose.',
+    loading: 'Ouverture de tes questions',
+    loadFailed: 'Tes questions n’ont pas pu être chargées.',
+    field: 'Ta question',
+    placeholder: 'Pourquoi « dem Bus » et pas « den Bus » ?',
+    ask: 'Demander',
+    thinking: 'Le tuteur réfléchit…',
+    you: 'Ta question : {{question}}',
+    unsure: 'Pas sûr',
+    unsureNote:
+      'Le tuteur n’est pas sûr de celle-ci. Prends-la comme une possibilité, pas comme une règle.',
+    failed: 'Le tuteur n’a pas pu répondre pour l’instant. Réessaie dans un moment.',
+    limit: 'Tu as posé beaucoup de questions aujourd’hui. Le tuteur revient demain.',
+    consent:
+      'Le tuteur a besoin de ton accord pour envoyer des questions à notre fournisseur d’IA (Profil › Confidentialité et IA).',
+    notFound: 'Cette correction ne peut plus être expliquée.',
   },
   review: {
     close: 'Arrêter la révision',

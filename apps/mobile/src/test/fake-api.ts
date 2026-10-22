@@ -24,6 +24,8 @@ import {
   type SessionReport,
   type TranscriptTurn,
   type TurnAudio,
+  type TutorAnswer,
+  type TutorQuestion,
 } from '@konvami/api-client';
 import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
 
@@ -120,6 +122,17 @@ export const FAKE_RESULT: PlacementResult = {
  * second one not confirmed by the second check), a more natural wording, two words, a win and
  * two next steps. Explained in English.
  */
+/** What the fake Tutor answers to every question. */
+export const FAKE_TUTOR_ANSWER: TutorAnswer = {
+  explanation: 'After “mit”, German always uses the dative: der Bus becomes dem Bus.',
+  examples: [
+    { text: 'Ich fahre mit dem Bus.', translation: 'I take the bus.' },
+    { text: 'Ich spreche mit der Lehrerin.', translation: 'I talk to the teacher.' },
+  ],
+  topic: 'case_dative',
+  unsure: false,
+};
+
 export const FAKE_REPORT_SAYS = [
   'Gut. Ich habe nach Berlin gefahren mit der Bus.',
   'Ich habe ein Museum besucht, weil es war sehr interessant.',
@@ -410,6 +423,15 @@ export interface FakeApi extends ApiClient {
       verbatim?: (string | null)[];
     },
   ): Conversation;
+  /**
+   * Questions asked to the Tutor earlier, oldest first, as the server keeps them; `answer`
+   * replaces parts of `FAKE_TUTOR_ANSWER`.
+   */
+  askedTutor(
+    questions: { question: string; answer?: Partial<TutorAnswer>; minutesAgo?: number }[],
+  ): void;
+  /** What the Tutor answers next (by default `FAKE_TUTOR_ANSWER`). */
+  nextTutorAnswer(answer: Partial<TutorAnswer>): void;
   /** Ends a call recorded with `ended: false`. */
   finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
   /**
@@ -467,6 +489,21 @@ export function createFakeApi(): FakeApi {
   /** What partners know about the learner, newest first, and what the learner set. */
   let memories: Memory[] = [];
   let memoryEnabled = true;
+  // Newest first, as the server lists them.
+  let tutorQuestions: TutorQuestion[] = [];
+  let tutorAnswer: TutorAnswer = FAKE_TUTOR_ANSWER;
+  const keepQuestion = (question: string, source: TutorQuestion['source'], at: number) => {
+    const kept: TutorQuestion = {
+      id: `q_${tutorQuestions.length + 1}`,
+      askedAt: new Date(at).toISOString(),
+      question,
+      answer: tutorAnswer,
+      source,
+    };
+    tutorAnswer = FAKE_TUTOR_ANSWER;
+    tutorQuestions = [kept, ...tutorQuestions];
+    return kept;
+  };
   let recordingsKept = true;
   let avoidTopics: string[] = [];
   let picture: string | null = null;
@@ -1122,6 +1159,31 @@ export function createFakeApi(): FakeApi {
       }
       if (settings.enabled !== undefined) memoryEnabled = settings.enabled;
       return memoryBook();
+    },
+    askedTutor(questions) {
+      for (const { question, answer, minutesAgo = 60 } of questions) {
+        tutorAnswer = { ...FAKE_TUTOR_ANSWER, ...answer };
+        keepQuestion(question, 'text', now - minutesAgo * MINUTE_MS);
+      }
+    },
+    nextTutorAnswer(answer) {
+      tutorAnswer = { ...FAKE_TUTOR_ANSWER, ...answer };
+    },
+    async getTutorQuestions() {
+      await record('getTutorQuestions');
+      return { questions: tutorQuestions };
+    },
+    async askTutor(question) {
+      await record('askTutor', question);
+      const text = question.trim();
+      if (!text || text.length > 500) throw new ApiError('invalid_value', 422);
+      return keepQuestion(text, 'text', now);
+    },
+    async explainCorrection(conversationId, index) {
+      await record('explainCorrection', conversationId, index);
+      const mistake = reports.get(conversationId)?.report?.mistakes[index];
+      if (!mistake) throw new ApiError('not_found', 404);
+      return keepQuestion(`${mistake.original} → ${mistake.corrected}`, 'report', now);
     },
     async getRecordings() {
       await record('getRecordings');

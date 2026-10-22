@@ -801,6 +801,7 @@ export const it: Translation = {
       title: 'Rifiniamolo',
       empty: 'Questa volta non è emerso nessun errore.',
       unsure: 'Non sicuro',
+      explain: 'Spiega',
       unsureNote:
         'Non siamo riusciti a confermarla. Prendila come uno spunto, non come una regola.',
     },
@@ -870,6 +871,8 @@ export const it: Translation = {
   },
   learn: {
     title: 'Impara',
+    tutorRow: 'Chiedi al tutor',
+    tutorHint: 'Grammatica, parole, come si dice qualcosa',
     body: 'Parole e correzioni dalle tue conversazioni, di ritorno poco prima che tu le dimentichi.',
     loading: 'Carico le tue schede',
     loadFailed: 'Non è stato possibile caricare le tue schede.',
@@ -912,6 +915,25 @@ export const it: Translation = {
       removeFailed: 'Non è stato possibile rimuovere questa scheda. Riprova.',
     },
     later: 'Una mappa della grammatica e un frasario sono in preparazione.',
+  },
+  tutor: {
+    title: 'Chiedi al tutor',
+    body: 'Chiedi qualsiasi cosa sulla lingua che stai imparando: una regola, una parola, come si dice qualcosa.',
+    loading: 'Apertura delle tue domande',
+    loadFailed: 'Non è stato possibile caricare le tue domande.',
+    field: 'La tua domanda',
+    placeholder: 'Perché « dem Bus » e non « den Bus »?',
+    ask: 'Chiedi',
+    thinking: 'Il tutor sta pensando…',
+    you: 'La tua domanda: {{question}}',
+    unsure: 'Non sicuro',
+    unsureNote:
+      'Il tutor non è sicuro di questa. Prendila come una possibilità, non come una regola.',
+    failed: 'Il tutor non ha potuto rispondere ora. Riprova tra un momento.',
+    limit: 'Oggi hai fatto molte domande. Il tutor torna domani.',
+    consent:
+      'Il tutor ha bisogno del tuo consenso per inviare domande al nostro fornitore di IA (Profilo › Privacy e IA).',
+    notFound: 'Questa correzione non può più essere spiegata.',
   },
   review: {
     close: 'Interrompi il ripasso',
