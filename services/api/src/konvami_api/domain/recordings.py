@@ -116,26 +116,32 @@ class RecordingService:
             return
         user_id = session.user_id
         profile = self._profiles.get(user_id)
-        language = profile.target_language or ""
-        if self._model and language:
-            target = self._profiles.catalog.english_name(language)
-            for turn in self._conversations.transcript(user_id, call_id).turns:
-                if turn.speaker != "learner" or turn.audio is None or turn.verbatim is not None:
-                    continue
-                task = TranscriptionTask(
-                    model=self._model,
-                    audio=self._files.read(turn.audio.key),
-                    language=language,
-                    prompt=_verbatim_prompt(target),
-                )
-                try:
-                    text = self._transcriber.transcribe(task).strip()
-                except TranscriptionError:
-                    continue
-                if text:
-                    self._repository.set_verbatim(call_id, turn.audio.key, text)
-        if not profile.recordings_kept:
-            self._forget(user_id, call_id)
+        try:
+            self._verbatim(user_id, call_id, profile.target_language or "")
+        finally:
+            # Whatever broke off the pass, audio the learner does not keep must not stay.
+            if not profile.recordings_kept:
+                self._forget(user_id, call_id)
+
+    def _verbatim(self, user_id: UUID, call_id: str, language: str) -> None:
+        if not self._model or not language:
+            return
+        target = self._profiles.catalog.english_name(language)
+        for turn in self._conversations.transcript(user_id, call_id).turns:
+            if turn.speaker != "learner" or turn.audio is None or turn.verbatim is not None:
+                continue
+            task = TranscriptionTask(
+                model=self._model,
+                audio=self._files.read(turn.audio.key),
+                language=language,
+                prompt=_verbatim_prompt(target),
+            )
+            try:
+                text = self._transcriber.transcribe(task).strip()
+            except TranscriptionError:
+                continue
+            if text:
+                self._repository.set_verbatim(call_id, turn.audio.key, text)
 
     def kept(self, user_id: UUID) -> bool:
         return self._profiles.get(user_id).recordings_kept

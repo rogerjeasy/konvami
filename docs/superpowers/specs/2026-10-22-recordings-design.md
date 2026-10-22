@@ -88,6 +88,9 @@ Details:
   recording kept so far.
 - A conversation that does not count (the learner said nothing) has its audio deleted when it
   ends.
+- The deletion runs whatever happens to the verbatim pass (a failed read or transcription
+  does not skip it). Known gap: if the report worker never starts for a conversation, its audio
+  stays until the report is asked for again; a nightly sweep of unprocessed calls would close it.
 
 ### The verbatim pass
 

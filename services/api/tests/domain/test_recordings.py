@@ -192,3 +192,17 @@ def test_an_unknown_call_is_not_transcribed(world: World) -> None:
     world.recordings.transcribe("rtc_ghost")
 
     assert world.transcriber.tasks == []
+
+
+def test_audio_the_learner_does_not_keep_is_deleted_even_when_the_pass_breaks_off(
+    world: World,
+) -> None:
+    keep_none(world)
+    call_id = recorded_call(world)
+    world.transcriber.fail = RuntimeError("storage unreachable")
+
+    with pytest.raises(RuntimeError):
+        world.recordings.transcribe(call_id)
+
+    assert world.files.keys() == []
+    assert [turn.audio for turn in turns(world, call_id)] == [None, None]
