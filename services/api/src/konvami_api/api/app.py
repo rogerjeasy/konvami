@@ -45,6 +45,10 @@ from konvami_api.api.schemas import (
     ReportOut,
     ReviewIn,
     TranscriptOut,
+    TutorCorrectionIn,
+    TutorQuestionIn,
+    TutorQuestionOut,
+    TutorQuestionsOut,
     VoiceCallIn,
     VoiceCallOut,
     VoiceSampleOut,
@@ -64,6 +68,7 @@ from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService, ReportState
+from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
 
@@ -86,6 +91,7 @@ class Services:
     progress: ProgressService
     accounts: AccountService
     recordings: RecordingService
+    tutor: TutorService
     voices: VoiceSampleService
 
 
@@ -95,6 +101,7 @@ NOT_AUTHENTICATED: Responses = {401: {"model": ErrorBody}}
 REFUSED: Responses = {422: {"model": ErrorBody}}
 CONFLICT: Responses = {409: {"model": ErrorBody}}
 NOT_FOUND: Responses = {404: {"model": ErrorBody}}
+TUTOR_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 429, 503)}
 CALL_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 429, 503)}
 LIMITED: Responses = {429: {"model": ErrorBody}}
 UNAVAILABLE: Responses = {503: {"model": ErrorBody}}
@@ -327,6 +334,32 @@ def _router(services: Services) -> APIRouter:
 
     def memories_of(user: UUID, book: MemoryBook) -> MemoriesOut:
         return MemoriesOut.of(book, partners_named(user, book.memories))
+
+    @router.get("/tutor/questions", operation_id="getTutorQuestions")
+    def get_tutor_questions(user: CurrentUser) -> TutorQuestionsOut:
+        """The questions the learner asked the Tutor, newest first."""
+        return TutorQuestionsOut(
+            questions=[TutorQuestionOut.of(q) for q in services.tutor.history(user)]
+        )
+
+    @router.post(
+        "/tutor/questions",
+        operation_id="askTutor",
+        responses=REFUSED | CONFLICT | TUTOR_REFUSED,
+    )
+    def ask_tutor(user: CurrentUser, asked: TutorQuestionIn) -> TutorQuestionOut:
+        """Asks the Tutor a question about the language learned (spec §6.8)."""
+        return TutorQuestionOut.of(services.tutor.ask(user, asked.question))
+
+    @router.post(
+        "/tutor/corrections",
+        operation_id="explainCorrection",
+        responses=NOT_FOUND | CONFLICT | TUTOR_REFUSED,
+    )
+    def explain_correction(user: CurrentUser, asked: TutorCorrectionIn) -> TutorQuestionOut:
+        """Asks the Tutor about one correction of a conversation's report (spec §6.5)."""
+        question = services.tutor.explain_correction(user, asked.conversation_id, asked.index)
+        return TutorQuestionOut.of(question)
 
     @router.get("/recordings", operation_id="getRecordings")
     def get_recordings(user: CurrentUser) -> RecordingsOut:

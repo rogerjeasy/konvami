@@ -58,6 +58,8 @@ class TextModels:
     # Writes a recorded learner turn down a second time, keeping their mistakes (spec §9.4).
     # A transcription model, set the same way. Empty: no verbatim pass.
     verbatim: str = ""
+    # Answers the learner's questions about the language (spec §6.8): accuracy matters.
+    tutor: str = ""
 
 
 class _TextModels(BaseModel):
@@ -65,11 +67,13 @@ class _TextModels(BaseModel):
 
     assessment: str
     personas: str
-    # Left out by settings written before voice samples, reports, memory or recordings existed.
+    # Left out by settings written before voice samples, reports, memory, recordings or the
+    # Tutor existed.
     speech: str = ""
     report: str = ""
     memory: str = ""
     verbatim: str = ""
+    tutor: str = ""
 
 
 def text_models(raw: str | None) -> TextModels:
@@ -87,4 +91,5 @@ def text_models(raw: str | None) -> TextModels:
         report=models.report,
         memory=models.memory,
         verbatim=models.verbatim,
+        tutor=models.tutor,
     )

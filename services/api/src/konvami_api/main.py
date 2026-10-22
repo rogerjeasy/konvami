@@ -29,6 +29,7 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
+from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
@@ -45,6 +46,7 @@ from konvami_api.persistence.repositories import (
     SqlProfileRepository,
     SqlRecordingRepository,
     SqlReportRepository,
+    SqlTutorRepository,
     SqlVoiceSessionRepository,
 )
 from konvami_api.persistence.sql import SqlClient
@@ -177,6 +179,16 @@ def build_backend(
         transcriber=OpenAiTranscription(openai_key),
         model=models.verbatim,
     )
+    tutor = TutorService(
+        profiles=profiles,
+        accounts=directory,
+        conversations=conversations,
+        reports=reports,
+        repository=SqlTutorRepository(sql),
+        text_model=text,
+        model=models.tutor,
+        clock=_now,
+    )
     voice = VoiceCallService(
         settings=voice_settings(environment.get(VOICE_VARIABLE)),
         scripts={
@@ -237,6 +249,7 @@ def build_backend(
         progress=progress,
         accounts=accounts,
         recordings=recordings,
+        tutor=tutor,
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=OpenAiSpeech(openai_key), model=models.speech
         ),

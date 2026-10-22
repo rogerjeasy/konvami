@@ -75,6 +75,9 @@ from konvami_api.domain.profile import (
 from konvami_api.domain.progress import ProgressView
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
+from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
+from konvami_api.domain.tutor import Source as TutorSource
+from konvami_api.domain.tutor import TutorQuestion
 from konvami_api.domain.voice import CallPurpose, CallStarted
 
 # A request never needs more changes than the profile has fields.
@@ -530,6 +533,63 @@ class RecordingsOut(ApiModel):
 class RecordingsPatch(ApiModel):
     # Strict: "no" and 0 are not answers to a privacy setting.
     kept: StrictBool
+
+
+class ExampleOut(ApiModel):
+    # A sentence in the language learned, and its translation.
+    text: str
+    translation: str
+
+
+class TutorAnswerOut(ApiModel):
+    explanation: str
+    examples: list[ExampleOut]
+    # The grammar note the answer rests on (a mistake category); null when none applies.
+    topic: str | None
+    # The Tutor could not settle it: show it as a possibility, never as a fact.
+    unsure: bool
+
+
+class TutorQuestionOut(ApiModel):
+    id: UUID
+    asked_at: dt.datetime
+    question: str
+    answer: TutorAnswerOut
+    source: TutorSource
+
+    @classmethod
+    def of(cls, question: TutorQuestion) -> "TutorQuestionOut":
+        answer = question.answer
+        return cls(
+            id=question.id,
+            asked_at=question.asked_at,
+            question=question.question,
+            answer=TutorAnswerOut(
+                explanation=answer.explanation,
+                examples=[
+                    ExampleOut(text=e.text, translation=e.translation) for e in answer.examples
+                ],
+                topic=answer.topic,
+                unsure=answer.unsure,
+            ),
+            source=question.source,
+        )
+
+
+class TutorQuestionsOut(ApiModel):
+    # Newest first.
+    questions: list[TutorQuestionOut]
+
+
+class TutorQuestionIn(ApiModel):
+    # Checked again by the Tutor (blank, too long); the limit here keeps a huge body out.
+    question: Annotated[str, Field(max_length=TUTOR_QUESTION_MAX)]
+
+
+class TutorCorrectionIn(ApiModel):
+    conversation_id: Annotated[str, Field(min_length=1, max_length=200)]
+    # The correction's place in the report's list, from 0.
+    index: Annotated[int, Field(ge=0)]
 
 
 # A conversation's id is the voice provider's id for the call: short, never free text.
