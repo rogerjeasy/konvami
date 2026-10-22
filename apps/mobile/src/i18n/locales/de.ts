@@ -393,8 +393,9 @@ export const de: Translation = {
           'Für Sprache brauchst du die vollständige Konvami-App. Nutze in dieser Vorschau bitte das Formular.',
         consent_required:
           'Für Sprache brauchen wir deine Zustimmung, Audio mit unserem KI-Anbieter zu teilen. Du kannst auch das Formular nutzen.',
-        call_limit:
-          'Das heutige Limit für die Einrichtung per Sprache ist erreicht. Nutze das Formular oder versuch es morgen wieder.',
+        minutes_used_up:
+          'Du hast deine Sprechminuten für diese Woche aufgebraucht. Nutze bitte das Formular.',
+        voice_paused: 'Sprache ist gerade pausiert. Nutze bitte das Formular.',
         voice_unavailable:
           'Sprache ist gerade nicht verfügbar. Versuch es gleich noch einmal oder nutze das Formular.',
         lost: 'Die Verbindung wurde unterbrochen. Alles, was du bisher gesagt hast, ist gespeichert.',
@@ -455,8 +456,9 @@ export const de: Translation = {
             'Für Sprache brauchst du die vollständige Konvami-App. Überspring den Test in dieser Vorschau vorerst.',
           consent_required:
             'Für Sprache brauchen wir deine Zustimmung, Audio mit unserem KI-Anbieter zu teilen. Du kannst den Test vorerst überspringen.',
-          call_limit:
-            'Das heutige Limit für Sprechtests ist erreicht. Überspring ihn vorerst und versuch es morgen wieder.',
+          minutes_used_up:
+            'Du hast deine Sprechminuten für diese Woche aufgebraucht. Überspring den Test vorerst.',
+          voice_paused: 'Sprache ist gerade pausiert. Überspring den Test vorerst.',
           voice_unavailable:
             'Sprache ist gerade nicht verfügbar. Versuch es gleich noch einmal oder überspring den Test vorerst.',
           lost: 'Die Verbindung wurde unterbrochen. Du kannst den Test neu starten oder vorerst überspringen.',
@@ -584,6 +586,7 @@ export const de: Translation = {
       hearing: 'Ich höre dir zu',
     },
     muted: 'Dein Mikrofon ist aus',
+    minutesBack: 'Sie sind am {{day}} wieder da.',
     mute: 'Mikrofon ausschalten',
     unmute: 'Mikrofon einschalten',
   },
@@ -718,7 +721,9 @@ export const de: Translation = {
         'Sprache braucht die vollständige Konvami-App. In dieser Vorschau ist sie nicht verfügbar.',
       consent_required:
         'Für Sprache brauchen wir deine Zustimmung, Audio mit unserem KI-Anbieter zu teilen.',
-      call_limit: 'Du hast das heutige Limit für Gespräche erreicht. Komm morgen wieder.',
+      minutes_used_up: 'Du hast deine Sprechminuten für diese Woche aufgebraucht.',
+      voice_paused:
+        'Gespräche sind gerade pausiert. Karten, Berichte und der Tutor funktionieren weiter.',
       voice_unavailable: 'Sprache ist gerade nicht verfügbar. Versuche es gleich noch einmal.',
       not_found: 'Diesen Partner gibt es nicht mehr.',
     },
@@ -1201,7 +1206,57 @@ export const de: Translation = {
       backToList: 'Zurück zur Liste',
     },
   },
+  costs: {
+    dayValue: '{{day}}: {{amount}}',
+    title: 'Kosten',
+    body: 'Geschätzt aus dem, was jede Anfrage verbraucht hat, und den eingestellten Preisen, nicht aus den Rechnungen der Anbieter.',
+    previous: 'Vorheriger Monat',
+    next: 'Nächster Monat',
+    spent: 'Geschätzte Ausgaben',
+    ofTarget: 'Ziel {{target}} · Sprache stoppt bei {{ceiling}}',
+    spoken: '{{spent}} vom Ziel {{target}}',
+    level: {
+      normal: 'Im Ziel',
+      economy: 'Über dem Ziel: neue Gespräche nutzen das günstigere Sprachmodell',
+      paused: 'Obergrenze erreicht: neue Sprachgespräche sind gestoppt',
+    },
+    days: 'Pro Tag',
+    features: 'Pro Funktion',
+    providers: 'Pro Anbieter',
+    learners: 'Lernende mit den höchsten Kosten',
+    requests_one: '{{count}} Anfrage',
+    requests_other: '{{count}} Anfragen',
+    learnerDetail: '{{minutes}} Sprechmin. · {{requests}}',
+    noName: 'Ohne Namen (Konto {{id}})',
+    unpriced_one: '{{count}} Anfrage nutzte ein Modell ohne Preis, die Summe ist also zu niedrig.',
+    unpriced_other:
+      '{{count}} Anfragen nutzten ein Modell ohne Preis, die Summe ist also zu niedrig.',
+    empty: 'Diesen Monat wurde nichts ausgegeben.',
+    loadFailed: 'Die Kosten können gerade nicht gelesen werden.',
+    notOwner: 'Nur das Konto des Inhabers sieht die Kosten.',
+    feature: {
+      voice_onboarding: 'Einrichtung per Sprache',
+      voice_placement: 'Einstufungstest',
+      voice_practice: 'Gespräche',
+      placement_assessment: 'Auswertung des Einstufungstests',
+      partners: 'Partner schreiben',
+      report: 'Gesprächsberichte',
+      report_check: 'Zweite Prüfung der Berichte',
+      memory: 'Gedächtnis',
+      tutor: 'Tutor',
+      verbatim: 'Zweite Transkription',
+      voice_sample: 'Stimmproben',
+    },
+  },
   profile: {
+    minutes: {
+      left_one: 'Noch {{count}} Minute',
+      left_other: 'Noch {{count}} Minuten',
+      ofWeekly: 'von {{weekly}} diese Woche',
+      spoken: 'Noch {{left}} von {{weekly}} Sprechminuten diese Woche',
+      usedUp: 'Die Minuten dieser Woche sind aufgebraucht.',
+      loadFailed: 'Deine Sprechminuten können gerade nicht angezeigt werden.',
+    },
     title: 'Profil',
     noName: 'Dein Name',
     learning: 'Lernt {{language}}',
@@ -1212,11 +1267,15 @@ export const de: Translation = {
       spoken: '{{label}}: {{value}}',
     },
     groups: {
+      voice: 'Sprechminuten',
+      owner: 'Inhaber',
       you: 'Du',
       partners: 'Partner',
       privacy: 'Datenschutz und Sicherheit',
     },
     rows: {
+      costs: 'Kosten',
+      costsHint: 'Was Konvami ausgibt, pro Tag, Funktion und Lernendem',
       personal: 'Persönliches',
       personalHint: 'Name, Foto und App-Sprache',
       learning: 'Lernen',

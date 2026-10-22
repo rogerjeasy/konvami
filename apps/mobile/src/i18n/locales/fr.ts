@@ -393,8 +393,8 @@ export const fr: Translation = {
           'La voix nécessite l’application Konvami complète. Dans cet aperçu, utilise le formulaire.',
         consent_required:
           'La voix nécessite ton accord pour partager l’audio avec notre fournisseur d’IA. Tu peux aussi utiliser le formulaire.',
-        call_limit:
-          'Tu as atteint la limite du jour pour la configuration vocale. Utilise le formulaire, ou réessaie demain.',
+        minutes_used_up: 'Tu as utilisé tes minutes vocales de la semaine. Utilise le formulaire.',
+        voice_paused: 'La voix est en pause pour le moment. Utilise le formulaire.',
         voice_unavailable:
           'La voix n’est pas disponible pour le moment. Réessaie dans un instant, ou utilise le formulaire.',
         lost: 'La connexion a été interrompue. Tout ce que tu as dit jusqu’ici est enregistré.',
@@ -455,8 +455,9 @@ export const fr: Translation = {
             'La voix nécessite l’application Konvami complète. Dans cet aperçu, passe le test pour l’instant.',
           consent_required:
             'La voix nécessite ton accord pour partager l’audio avec notre fournisseur d’IA. Tu peux passer le test pour l’instant.',
-          call_limit:
-            'Tu as atteint la limite de tests oraux pour aujourd’hui. Passe-le pour l’instant et réessaie demain.',
+          minutes_used_up:
+            'Tu as utilisé tes minutes vocales de la semaine. Passe le test pour l’instant.',
+          voice_paused: 'La voix est en pause pour le moment. Passe le test pour l’instant.',
           voice_unavailable:
             'La voix n’est pas disponible pour le moment. Réessaie dans un instant, ou passe le test pour l’instant.',
           lost: 'La connexion a été interrompue. Tu peux recommencer le test ou le passer pour l’instant.',
@@ -583,6 +584,7 @@ export const fr: Translation = {
       hearing: 'Je t’écoute',
     },
     muted: 'Ton micro est coupé',
+    minutesBack: 'Elles reviennent le {{day}}.',
     mute: 'Couper le micro',
     unmute: 'Réactiver le micro',
   },
@@ -718,7 +720,9 @@ export const fr: Translation = {
         'La voix nécessite l’application Konvami complète. Elle n’est pas disponible dans cet aperçu.',
       consent_required:
         'La voix nécessite ton accord pour partager l’audio avec notre fournisseur d’IA.',
-      call_limit: 'Tu as atteint la limite de conversations pour aujourd’hui. Reviens demain.',
+      minutes_used_up: 'Tu as utilisé tes minutes vocales de la semaine.',
+      voice_paused:
+        'Les conversations sont en pause pour le moment. Tes cartes, tes bilans et le tuteur fonctionnent toujours.',
       voice_unavailable: 'La voix n’est pas disponible pour le moment. Réessaie dans un instant.',
       not_found: 'Ce partenaire n’existe plus.',
     },
@@ -1204,7 +1208,57 @@ export const fr: Translation = {
       backToList: 'Retour à la liste',
     },
   },
+  costs: {
+    dayValue: '{{day}} : {{amount}}',
+    title: 'Coûts',
+    body: 'Estimés d’après ce que chaque requête a utilisé et les prix configurés, pas d’après les factures des fournisseurs.',
+    previous: 'Mois précédent',
+    next: 'Mois suivant',
+    spent: 'Dépenses estimées',
+    ofTarget: 'Objectif {{target}} · la voix s’arrête à {{ceiling}}',
+    spoken: '{{spent}} sur l’objectif de {{target}}',
+    level: {
+      normal: 'Dans l’objectif',
+      economy: 'Objectif dépassé : les nouveaux appels utilisent le modèle vocal moins cher',
+      paused: 'Plafond atteint : les nouveaux appels vocaux sont arrêtés',
+    },
+    days: 'Par jour',
+    features: 'Par fonction',
+    providers: 'Par fournisseur',
+    learners: 'Apprenants les plus coûteux',
+    requests_one: '{{count}} requête',
+    requests_other: '{{count}} requêtes',
+    learnerDetail: '{{minutes}} min de voix · {{requests}}',
+    noName: 'Sans nom (compte {{id}})',
+    unpriced_one: '{{count}} requête a utilisé un modèle sans prix : le total est donc trop bas.',
+    unpriced_other:
+      '{{count}} requêtes ont utilisé un modèle sans prix : le total est donc trop bas.',
+    empty: 'Rien n’a été dépensé ce mois-ci.',
+    loadFailed: 'Les coûts ne peuvent pas être lus pour le moment.',
+    notOwner: 'Seul le compte du propriétaire voit les coûts.',
+    feature: {
+      voice_onboarding: 'Configuration vocale',
+      voice_placement: 'Test de niveau',
+      voice_practice: 'Conversations',
+      placement_assessment: 'Évaluation du test de niveau',
+      partners: 'Rédaction des partenaires',
+      report: 'Bilans de conversation',
+      report_check: 'Seconde vérification des bilans',
+      memory: 'Mémoire',
+      tutor: 'Tuteur',
+      verbatim: 'Seconde transcription',
+      voice_sample: 'Échantillons de voix',
+    },
+  },
   profile: {
+    minutes: {
+      left_one: '{{count}} minute restante',
+      left_other: '{{count}} minutes restantes',
+      ofWeekly: 'sur {{weekly}} cette semaine',
+      spoken: 'Il reste {{left}} minutes vocales sur {{weekly}} cette semaine',
+      usedUp: 'Les minutes de la semaine sont épuisées.',
+      loadFailed: 'Tes minutes vocales ne peuvent pas être affichées pour le moment.',
+    },
     title: 'Profil',
     noName: 'Ton prénom',
     learning: 'Langue apprise : {{language}}',
@@ -1215,11 +1269,15 @@ export const fr: Translation = {
       spoken: '{{label}} : {{value}}',
     },
     groups: {
+      voice: 'Minutes vocales',
+      owner: 'Propriétaire',
       you: 'Toi',
       partners: 'Partenaires',
       privacy: 'Confidentialité et sécurité',
     },
     rows: {
+      costs: 'Coûts',
+      costsHint: 'Ce que Konvami dépense, par jour, fonction et apprenant',
       personal: 'Informations personnelles',
       personalHint: 'Prénom, photo et langue de l’app',
       learning: 'Apprentissage',
