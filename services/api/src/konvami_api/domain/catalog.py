@@ -7,6 +7,7 @@ others are listed so the app can say they are coming.
 from dataclasses import dataclass
 from typing import Literal, get_args
 
+from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
 from konvami_api.domain.persona_parts import PersonaTemplate
 
 CefrLevel = Literal["A1", "A2", "B1", "B2", "C1", "C2"]
@@ -49,9 +50,14 @@ class LanguagePack:
     # The kinds of mistake a learner's text can show (spec §13.3). A Session Report files every
     # mistake under one of them; what only a recording shows (pronunciation, pace) is not here.
     error_categories: tuple[str, ...] = ()
+    # The rule behind each kind of mistake, in the same order: what the Tutor rests on.
+    grammar: tuple[GrammarNote, ...] = ()
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
+
+    def note(self, topic: str) -> GrammarNote | None:
+        return next((note for note in self.grammar if note.topic == topic), None)
 
 
 @dataclass(frozen=True)
@@ -103,6 +109,7 @@ GERMAN = LanguagePack(
         "vocabulary_false_friend",
         "lexical_choice",
     ),
+    grammar=GERMAN_NOTES,
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),
         ExamFormat("telc", "telc Deutsch", CEFR_LEVELS),

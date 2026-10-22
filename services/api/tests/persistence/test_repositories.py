@@ -38,6 +38,7 @@ from konvami_api.domain.reports import (
     WeekMistakes,
     Word,
 )
+from konvami_api.domain.tutor import Example, TutorAnswer, TutorQuestion, TutorRepository
 from konvami_api.domain.voice import (
     CallPurpose,
     FinishedCall,
@@ -56,6 +57,7 @@ from konvami_api.persistence.repositories import (
     SqlProfileRepository,
     SqlRecordingRepository,
     SqlReportRepository,
+    SqlTutorRepository,
     SqlVoiceSessionRepository,
 )
 from konvami_api.persistence.sql import SqlClient
@@ -71,6 +73,7 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
 )
 from tests.persistence.pg import LocalSqlClient
@@ -1077,6 +1080,8 @@ def test_deleting_a_learner_deletes_everything_stored_for_them(db: SqlClient) ->
     )
     practice.personas.add(USER, "de", [LENA])
     talked(practice, "rtc_1", at=NOON)
+    SqlTutorRepository(db).reserve(USER, NOON.date(), 5)
+    SqlTutorRepository(db).save(USER, question(1, NOON))
     owned = [
         row["table_name"]
         for row in db.execute(
@@ -1093,6 +1098,57 @@ def test_deleting_a_learner_deletes_everything_stored_for_them(db: SqlClient) ->
         assert str(USER) not in {row["user_id"] for row in rows}, table
     assert db.execute("SELECT count(*) AS turns FROM voice_turn") == [{"turns": 0}]
     assert db.execute("SELECT CAST(id AS text) AS id FROM app_user") == [{"id": str(OTHER_USER)}]
+
+
+# --- Ask-the-Tutor -------------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def tutor(request: pytest.FixtureRequest) -> TutorRepository:
+    if request.param == "memory":
+        return InMemoryTutorRepository()
+    return SqlTutorRepository(request.getfixturevalue("db"))
+
+
+def question(
+    number: int, at: datetime, source: Any = "text", topic: str | None = "case_dative"
+) -> TutorQuestion:
+    return TutorQuestion(
+        id=UUID(f"dddddddd-dddd-4ddd-8ddd-{number:012d}"),
+        asked_at=at,
+        question=f"Warum « dem » ? ({number})",
+        answer=TutorAnswer(
+            explanation="Après « mit », le datif.",
+            examples=(Example("Ich fahre mit dem Bus.", "Je prends le bus."),),
+            topic=topic,
+            unsure=number % 2 == 0,
+        ),
+        source=source,
+    )
+
+
+def test_a_question_is_read_back_as_it_was_kept(tutor: TutorRepository) -> None:
+    kept = question(1, NOON, source="report", topic=None)
+
+    tutor.save(USER, kept)
+
+    assert tutor.listed(USER, 10) == [kept]
+    assert tutor.listed(OTHER_USER, 10) == []
+
+
+def test_questions_are_listed_newest_first_up_to_a_limit(tutor: TutorRepository) -> None:
+    for number in (1, 2, 3):
+        tutor.save(USER, question(number, NOON + timedelta(minutes=number)))
+
+    assert [str(q.id)[-1] for q in tutor.listed(USER, 2)] == ["3", "2"]
+
+
+def test_questions_are_counted_per_learner_and_day_up_to_the_limit(tutor: TutorRepository) -> None:
+    assert tutor.reserve(USER, NOON.date(), 2)
+    assert tutor.reserve(USER, NOON.date(), 2)
+    assert not tutor.reserve(USER, NOON.date(), 2)
+    assert tutor.reserve(OTHER_USER, NOON.date(), 2)
+    assert tutor.reserve(USER, NOON.date() + timedelta(days=1), 2)
 
 
 # --- Session reports -------------------------------------------------------------------------

@@ -15,7 +15,7 @@ import { wholeMinutes } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { relativeDayLabel } from '@/lib/relative-day';
-import { callRoute, conversationRoute, ROUTES } from '@/lib/routes';
+import { callRoute, conversationRoute, explainRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices, useReport } from '@/practice/services';
 import { Keep, Natural, NextSteps, Polish, Wins, Words } from './sections';
 import { ReportStatus } from './status';
@@ -68,7 +68,12 @@ function Report({ id, report, partner }: { id: string; report: SessionReport; pa
       saver={saver}
       onOpenLearn={() => router.navigate(ROUTES.learn)}
     />,
-    <Polish key="polish" mistakes={report.mistakes} saver={saver} />,
+    <Polish
+      key="polish"
+      mistakes={report.mistakes}
+      saver={saver}
+      onExplain={(index) => router.push(explainRoute(id, index))}
+    />,
     <Natural key="natural" rewrites={report.rewrites} />,
     <Words key="words" words={report.words} saver={saver} />,
     <Wins key="wins" wins={report.wins} />,

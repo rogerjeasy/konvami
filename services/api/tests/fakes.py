@@ -25,6 +25,7 @@ from konvami_api.domain.reports import Report, ReportTotals, Status, StoredRepor
 from konvami_api.domain.speech import SpeechTask, TranscriptionTask
 from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
+from konvami_api.domain.tutor import TutorQuestion
 from konvami_api.domain.voice import (
     CallPurpose,
     CreatedCall,
@@ -449,6 +450,26 @@ class InMemoryRecordingRepository:
         for session in self._calls.sessions.values():
             if session.user_id == user_id:
                 self.forget(session.call_id)
+
+
+class InMemoryTutorRepository:
+    def __init__(self) -> None:
+        self.days: dict[tuple[UUID, date], int] = {}
+        self.questions: dict[UUID, list[TutorQuestion]] = {}
+
+    def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
+        used = self.days.get((user_id, day), 0)
+        if used >= limit:
+            return False
+        self.days[(user_id, day)] = used + 1
+        return True
+
+    def save(self, user_id: UUID, question: TutorQuestion) -> None:
+        self.questions.setdefault(user_id, []).append(question)
+
+    def listed(self, user_id: UUID, limit: int) -> list[TutorQuestion]:
+        newest = sorted(self.questions.get(user_id, []), key=lambda q: q.asked_at, reverse=True)
+        return newest[:limit]
 
 
 class InMemoryReportRepository:

@@ -121,3 +121,10 @@ def test_the_verbatim_model_is_read_with_the_text_models() -> None:
 
 def test_settings_written_before_there_were_recordings_have_no_verbatim_pass() -> None:
     assert text_models('{"assessment": "a", "personas": "p"}').verbatim == ""
+
+
+def test_the_tutor_model_is_read_with_the_text_models() -> None:
+    assert text_models('{"assessment": "a", "personas": "p", "tutor": "gpt-6.1-sol"}').tutor == (
+        "gpt-6.1-sol"
+    )
+    assert text_models('{"assessment": "a", "personas": "p"}').tutor == ""

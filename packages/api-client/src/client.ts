@@ -86,6 +86,9 @@ export type MemoryKind = Memory['kind'];
 export type Memories = Schemas['MemoriesOut'];
 /** The settings to change; the ones left out stay. */
 export type MemorySettings = { enabled?: boolean; avoidTopics?: string[] };
+/** A question asked to the Tutor and its answer. */
+export type TutorQuestion = Schemas['TutorQuestionOut'];
+export type TutorAnswer = Schemas['TutorAnswerOut'];
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
 /** A turn's recording: a short-lived address to play it from, and how long it lasts. */
@@ -233,6 +236,15 @@ export interface ApiClient {
   changeMemory(id: string, change: MemoryChange): Promise<Memory>;
   /** Forgets a memory for good; answers with what is left. */
   removeMemory(id: string): Promise<Memories>;
+  /** The questions asked to the Tutor, newest first. */
+  getTutorQuestions(): Promise<{ questions: TutorQuestion[] }>;
+  /**
+   * Asks the Tutor a question. Fails with `invalid_value`, `tutor_limit`, `consent_required` or
+   * `unavailable`.
+   */
+  askTutor(question: string): Promise<TutorQuestion>;
+  /** Asks the Tutor about correction `index` of a conversation's report. Fails as `askTutor`, or `not_found`. */
+  explainCorrection(conversationId: string, index: number): Promise<TutorQuestion>;
   /** Whether recordings are kept. */
   getRecordings(): Promise<Recordings>;
   /** Keeps recordings or stops; stopping deletes every recording kept so far. */
@@ -367,6 +379,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     removeCard: (id) => request('DELETE', `/v1/cards/${encodeURIComponent(id)}`),
     getMemories: () => request('GET', '/v1/memories'),
     configureMemories: (settings) => request('PATCH', '/v1/memories', settings),
+    getTutorQuestions: () => request('GET', '/v1/tutor/questions'),
+    askTutor: (question) => request('POST', '/v1/tutor/questions', { question }),
+    explainCorrection: (conversationId, index) =>
+      request('POST', '/v1/tutor/corrections', { conversationId, index }),
     getRecordings: () => request('GET', '/v1/recordings'),
     configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
     changeMemory: (id, change) =>

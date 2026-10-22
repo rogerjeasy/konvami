@@ -30,6 +30,7 @@ from konvami_api.domain.reports import (
     Word,
 )
 from konvami_api.domain.text import TextModelError
+from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import (
     CallPurpose,
     FinishedCall,
@@ -56,6 +57,7 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
     RecordingReportStarter,
@@ -176,6 +178,20 @@ class World:
             transcriber=self.transcriber,
             model="gpt-transcribe",
         )
+        self.tutor_store = InMemoryTutorRepository()
+        # Question ids in the order they are handed out: ...0001, ...0002, and so on.
+        question_ids = (UUID(f"dddddddd-dddd-4ddd-8ddd-{n:012d}") for n in range(1, 10_000))
+        self.tutor = TutorService(
+            profiles=self.profiles,
+            accounts=self.accounts,
+            conversations=self.conversations,
+            reports=self.reports,
+            repository=self.tutor_store,
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            clock=self.clock,
+            new_id=lambda: next(question_ids),
+        )
         self.practice = PracticeScript(
             profiles=self.profiles,
             onboarding=self.onboarding,
@@ -185,6 +201,7 @@ class World:
             reports=self.reports,
             memories=self.memories,
             recordings=self.recordings,
+            tutor=self.tutor,
         )
         self.voice = VoiceCallService(
             settings=VOICE,

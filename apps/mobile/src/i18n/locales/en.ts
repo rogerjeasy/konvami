@@ -788,6 +788,7 @@ export const en = {
       title: 'Let’s polish this',
       empty: 'No mistakes stood out this time.',
       unsure: 'Not sure',
+      explain: 'Explain this',
       unsureNote: 'We couldn’t confirm this one. Take it as a hint, not as a rule.',
     },
     natural: {
@@ -856,6 +857,8 @@ export const en = {
   },
   learn: {
     title: 'Learn',
+    tutorRow: 'Ask the tutor',
+    tutorHint: 'Grammar, words, how to say something',
     body: 'Words and corrections from your conversations, back just before you would forget them.',
     loading: 'Loading your cards',
     loadFailed: 'Your cards couldn’t be loaded.',
@@ -898,6 +901,24 @@ export const en = {
       removeFailed: 'This card couldn’t be removed. Try again.',
     },
     later: 'A grammar map and a phrasebook are on the way.',
+  },
+  tutor: {
+    title: 'Ask the tutor',
+    body: 'Ask anything about the language you’re learning: a rule, a word, how to say something.',
+    loading: 'Opening your questions',
+    loadFailed: 'Your questions couldn’t be loaded.',
+    field: 'Your question',
+    placeholder: 'Why “dem Bus” and not “den Bus”?',
+    ask: 'Ask',
+    thinking: 'The tutor is thinking…',
+    you: 'You asked: {{question}}',
+    unsure: 'Not sure',
+    unsureNote: 'The tutor isn’t sure about this one. Take it as a possibility, not as a rule.',
+    failed: 'The tutor couldn’t answer just now. Try again in a moment.',
+    limit: 'You’ve asked a lot today. The tutor is back tomorrow.',
+    consent:
+      'The tutor needs your agreement to send questions to our AI provider (Profile › Privacy and AI).',
+    notFound: 'This correction can’t be explained any more.',
   },
   review: {
     close: 'Stop reviewing',
