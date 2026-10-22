@@ -131,6 +131,9 @@ export function conversationReducer(state: ConversationState, event: unknown): C
         ...withCaption(state, 'learner', text(e.id), () => text(e.text), true),
         phase: 'thinking',
       };
+    case 'learner.help':
+      // Sent by the app itself (`VoiceEngine.help`): the partner answers it next.
+      return { ...state, phase: 'thinking' };
     case 'conversation.item.done': {
       const item = e.item as { type?: unknown; output?: unknown } | undefined;
       return item?.type === 'function_call_output' ? withToolResult(state, item.output) : state;

@@ -269,3 +269,13 @@ it('ignores events it has no use for', () => {
 
   expect(after(...noise)).toEqual(INITIAL_CONVERSATION);
 });
+
+describe('help', () => {
+  it('waits for the partner once the learner asked for help', () => {
+    const listening = { ...INITIAL_CONVERSATION, phase: 'listening' as const };
+
+    expect(conversationReducer(listening, { type: 'learner.help', kind: 'stuck' }).phase).toBe(
+      'thinking',
+    );
+  });
+});

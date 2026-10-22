@@ -1,5 +1,6 @@
 import type { CallPurpose } from '@konvami/api-client';
 import { VoiceError, type VoiceEngine, type VoiceErrorCode } from '@/voice/engine';
+import type { HelpKind } from '@/voice/help';
 
 /**
  * A `VoiceEngine` for tests: no microphone and no network. A test plays the call by emitting
@@ -15,6 +16,8 @@ export interface FakeVoiceEngine extends VoiceEngine {
   readonly muted: boolean;
   /** Every line said through `say`, in order. */
   readonly said: readonly string[];
+  /** Every kind of help asked for through `help`, in order. */
+  readonly helped: readonly HelpKind[];
   /** What each call that used this engine was for (filled by the test renderer). */
   readonly openedFor: CallPurpose[];
   /** The partner each of those calls was with; undefined for the guide's calls. */
@@ -31,6 +34,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
   let gate: Promise<void> = Promise.resolve();
   const state = { starts: 0, stops: 0, muted: false };
   const said: string[] = [];
+  const helped: HelpKind[] = [];
   const emit = (event: unknown) => listeners.forEach((listener) => listener(event));
   return {
     get starts() {
@@ -43,6 +47,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
       return state.muted;
     },
     said,
+    helped,
     openedFor: [],
     openedWith: [],
     emit,
@@ -71,6 +76,10 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
     say(text) {
       said.push(text);
       emit({ type: 'learner.typed', id: `typed_${said.length}`, text });
+    },
+    help(kind) {
+      helped.push(kind);
+      emit({ type: 'learner.help', kind });
     },
     subscribe(listener) {
       listeners.add(listener);
