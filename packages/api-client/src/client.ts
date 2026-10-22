@@ -19,8 +19,12 @@ export interface VoiceCallDetails {
   personaId?: string;
   /** Today on the device's calendar ("2026-10-10"), so a persona names the right weekday. */
   localDate?: string;
+  /** A practice call that rehearses a role-play: a scenario id from the catalog. */
+  scenario?: string;
 }
 export type Placement = Schemas['PlacementOut'];
+/** A role-play a language offers: its id, level and goal ids (the app names them). */
+export type Scenario = Schemas['ScenarioOut'];
 export type PlacementStatus = Schemas['PlacementStatus'];
 export type PlacementResult = Schemas['PlacementResultOut'];
 export type PlacementChoice = Schemas['PlacementDecision']['use'];
