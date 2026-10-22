@@ -35,6 +35,7 @@ from konvami_api.domain.reports import (
     WeekMistakes,
     Word,
 )
+from konvami_api.domain.tutor import Example, TutorAnswer, TutorQuestion
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from konvami_api.persistence.sql import SqlClient, epoch_micros, from_epoch_micros
 
@@ -188,6 +189,31 @@ _RESERVE_DRAFT = f"""
     ON CONFLICT (user_id, day) DO UPDATE SET drafts = persona_draft_day.drafts + 1
         WHERE persona_draft_day.drafts < :limit
     RETURNING drafts
+"""
+
+_RESERVE_QUESTION = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO tutor_day (user_id, day, questions)
+    VALUES (CAST(:user_id AS uuid), CAST(:day AS date), 1)
+    ON CONFLICT (user_id, day) DO UPDATE SET questions = tutor_day.questions + 1
+        WHERE tutor_day.questions < :limit
+    RETURNING questions
+"""
+
+_SAVE_QUESTION = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO tutor_question (id, user_id, asked_at, question, answer, source)
+    VALUES (CAST(:id AS uuid), CAST(:user_id AS uuid), CAST(:asked_at AS timestamptz), :question,
+            CAST(:answer AS jsonb), :source)
+"""
+
+_LIST_QUESTIONS = f"""
+    SELECT CAST(id AS text) AS id, {epoch_micros("asked_at")} AS asked_at, question,
+           CAST(answer AS text) AS answer, source
+    FROM tutor_question
+    WHERE user_id = CAST(:user_id AS uuid)
+    ORDER BY asked_at DESC, id DESC
+    LIMIT :limit
 """
 
 _START_SESSION = f"""
@@ -801,6 +827,60 @@ class SqlRecordingRepository:
 
     def forget_all(self, user_id: UUID) -> None:
         self._client.execute(_FORGET_ALL_RECORDINGS, {"user_id": str(user_id)})
+
+
+class SqlTutorRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def reserve(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        if limit < 1:
+            return False
+        rows = self._client.execute(
+            _RESERVE_QUESTION, {"user_id": str(user_id), "day": day.isoformat(), "limit": limit}
+        )
+        return bool(rows)
+
+    def save(self, user_id: UUID, question: TutorQuestion) -> None:
+        answer = question.answer
+        self._client.execute(
+            _SAVE_QUESTION,
+            {
+                "id": str(question.id),
+                "user_id": str(user_id),
+                "asked_at": question.asked_at.isoformat(),
+                "question": question.question,
+                "answer": json.dumps(
+                    {
+                        "explanation": answer.explanation,
+                        "examples": [dataclasses.asdict(example) for example in answer.examples],
+                        "topic": answer.topic,
+                        "unsure": answer.unsure,
+                    }
+                ),
+                "source": question.source,
+            },
+        )
+
+    def listed(self, user_id: UUID, limit: int) -> list[TutorQuestion]:
+        rows = self._client.execute(_LIST_QUESTIONS, {"user_id": str(user_id), "limit": limit})
+        return [_tutor_question(row) for row in rows]
+
+
+def _tutor_question(row: dict[str, Any]) -> TutorQuestion:
+    answer = json.loads(row["answer"])
+    return TutorQuestion(
+        id=UUID(row["id"]),
+        asked_at=from_epoch_micros(row["asked_at"]),
+        question=row["question"],
+        answer=TutorAnswer(
+            explanation=answer["explanation"],
+            examples=tuple(Example(**example) for example in answer["examples"]),
+            topic=answer["topic"],
+            unsure=answer["unsure"],
+        ),
+        source=row["source"],
+    )
 
 
 class SqlPlacementRepository:
