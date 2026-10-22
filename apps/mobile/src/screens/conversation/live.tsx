@@ -5,10 +5,15 @@ import { useTranslation } from 'react-i18next';
 import type { Persona } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
 import { CallStage } from '@/components/call-stage';
+import type { IconName } from '@/components/icon';
+import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { NoticeBox } from '@/components/notice-box';
+import { Sheet } from '@/components/sheet';
 import { StepLayout } from '@/components/step-layout';
+import { Switch } from '@/components/switch';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useCountdown } from '@/hooks/use-countdown';
@@ -17,6 +22,8 @@ import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
 import { conversationDoneRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
+import { setPartnerCaptions, usePreferences } from '@/preferences';
+import { HELP_KINDS, type HelpKind } from '@/voice/help';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
 
 /** Failures with their own explanation; anything else reads as the general message. */
@@ -57,11 +64,72 @@ function TimeLeft({ seconds }: { seconds: number }) {
   );
 }
 
+// The help sheet's rows, in order, with their icons.
+const HELP_ICONS: Record<HelpKind, IconName> = {
+  stuck: 'compass',
+  slower: 'clock',
+  repeat: 'refresh',
+  translate: 'globe',
+  explain: 'info',
+};
+
+/**
+ * What the learner can ask for during a conversation (spec §6.4 help buttons), and whether the
+ * partner's words are shown. Asking closes the sheet; the partner answers right away.
+ */
+function HelpSheet({
+  visible,
+  name,
+  onHelp,
+  onClose,
+}: {
+  visible: boolean;
+  name: string;
+  onHelp: (kind: HelpKind) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { partnerCaptions } = usePreferences();
+  return (
+    <Sheet visible={visible} title={t('conversation.help.title')} onClose={onClose}>
+      <View className="gap-4 pt-1">
+        <ListGroup>
+          {HELP_KINDS.map((kind) => (
+            <ListRow
+              key={kind}
+              icon={HELP_ICONS[kind]}
+              title={t(`conversation.help.${kind}`)}
+              detail={t(`conversation.help.${kind}Hint`, { name })}
+              onPress={() => onHelp(kind)}
+            />
+          ))}
+        </ListGroup>
+        <Card className="flex-row items-center gap-3 p-3.5">
+          <View className="flex-1 gap-1">
+            <Text variant="labelMedium">{t('conversation.help.captions', { name })}</Text>
+            <Text variant="small" tone="muted">
+              {t('conversation.help.captionsHint')}
+            </Text>
+          </View>
+          <Switch
+            label={t('conversation.help.captions', { name })}
+            value={partnerCaptions}
+            onValueChange={(shown) => void setPartnerCaptions(shown)}
+          />
+        </Card>
+      </View>
+    </Sheet>
+  );
+}
+
 /** One live call with a partner. Mounted anew for every attempt (see `LiveConversationScreen`). */
 function Call({ partner, onRetry }: { partner: Persona; onRetry: () => void }) {
   const { t } = useTranslation();
   const call = useVoiceCall('practice', partner.id);
   const { conversation, callId, stop } = call;
+  const { partnerCaptions } = usePreferences();
+  const [helping, setHelping] = useState(false);
+  const canHelp = call.status === 'live' && !conversation.finished;
 
   /** Ends the call and shows what it added up to; a call that never connected just closes. */
   const leave = useCallback(() => {
@@ -92,6 +160,9 @@ function Call({ partner, onRetry }: { partner: Persona; onRetry: () => void }) {
       hint={t('conversation.hint', { name: partner.name })}
       finishedLabel={t('conversation.finished')}
       problem={call.problem && !lost ? t(problemKey(call.problem)) : null}
+      hiddenPersonaText={
+        partnerCaptions ? null : t('conversation.help.hidden', { name: partner.name })
+      }
       header={
         <View className="min-h-tap flex-row items-center justify-end pb-2">
           {call.status === 'live' && call.maxSeconds ? (
@@ -100,13 +171,34 @@ function Call({ partner, onRetry }: { partner: Persona; onRetry: () => void }) {
         </View>
       }
       mainAction={
-        <Button
-          variant="secondary"
-          label={t('conversation.end')}
-          onPress={() => {
-            commitFeedback();
-            leave();
-          }}
+        <>
+          <Button
+            variant="secondary"
+            label={t('conversation.end')}
+            onPress={() => {
+              commitFeedback();
+              leave();
+            }}
+          />
+          {/* A modal: where it sits in the tree does not change where it shows. */}
+          <HelpSheet
+            visible={helping && canHelp}
+            name={partner.name}
+            onClose={() => setHelping(false)}
+            onHelp={(kind) => {
+              commitFeedback();
+              setHelping(false);
+              call.help(kind);
+            }}
+          />
+        </>
+      }
+      sideAction={
+        <TextButton
+          tone="primary"
+          disabled={!canHelp}
+          label={t('conversation.help.open')}
+          onPress={() => setHelping(true)}
         />
       }
       failedActions={
@@ -125,8 +217,9 @@ function Call({ partner, onRetry }: { partner: Persona; onRetry: () => void }) {
 
 /**
  * 5.3 Conversation: a live practice conversation with one of the learner's partners (spec §6.4).
- * The partner speaks first; the screen shows who is speaking, the latest line of each side and
- * how much time is left. It ends when the learner ends it, when the partner has said goodbye,
+ * The partner speaks first; the screen shows who is speaking, the latest line of each side (the
+ * partner's can be hidden, to practise listening) and how much time is left. Help (stuck,
+ * slower, repeat, translate, explain) is a tap away. It ends when the learner ends it, when the partner has said goodbye,
  * or when the time is up, and then shows what it added up to.
  */
 export function LiveConversationScreen() {

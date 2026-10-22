@@ -87,6 +87,8 @@ export function CallStage({
   finishedLabel,
   progress,
   mainAction,
+  sideAction,
+  hiddenPersonaText = null,
   problem,
   failedActions,
 }: {
@@ -106,6 +108,13 @@ export function CallStage({
    * takes the button's place, and the microphone control becomes a quiet text action under it.
    */
   mainAction?: ReactNode;
+  /** A quiet action beside the microphone control under `mainAction` ("Help"). */
+  sideAction?: ReactNode;
+  /**
+   * Shown instead of the persona's words when the learner hid them to practise listening;
+   * null shows the words.
+   */
+  hiddenPersonaText?: string | null;
   /** The message for the call's failure, when it has failed. */
   problem: string | null;
   /** What the learner can do after a failure. */
@@ -188,9 +197,15 @@ export function CallStage({
           ) : null}
           {lines.map((line) =>
             line.speaker === 'persona' ? (
-              <Text key={line.id} variant="emphasis" className="text-center">
-                {line.text}
-              </Text>
+              hiddenPersonaText ? (
+                <Text key={line.id} tone="muted" className="text-center">
+                  {hiddenPersonaText}
+                </Text>
+              ) : (
+                <Text key={line.id} variant="emphasis" className="text-center">
+                  {line.text}
+                </Text>
+              )
             ) : (
               <ChatBubble key={line.id} from="learner">
                 {line.text}
@@ -214,12 +229,15 @@ export function CallStage({
           <>
             {mainAction}
             {mainAction ? (
-              <TextButton
-                tone="primary"
-                disabled={!live || conversation.finished}
-                label={muteLabel}
-                onPress={toggleMute}
-              />
+              <View className="flex-row flex-wrap justify-center gap-x-2">
+                <TextButton
+                  tone="primary"
+                  disabled={!live || conversation.finished}
+                  label={muteLabel}
+                  onPress={toggleMute}
+                />
+                {sideAction}
+              </View>
             ) : (
               <Button
                 variant="secondary"
