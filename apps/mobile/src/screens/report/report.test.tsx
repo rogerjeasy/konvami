@@ -284,6 +284,19 @@ describe('5.10 Session report', () => {
     expect(screen.getByRole('button', { name: 'Save “das Wochenende” as a card' })).toBeTruthy();
   });
 
+  it('asks the tutor to explain a correction', async () => {
+    await openReady();
+
+    const explain = screen.getAllByRole('button', { name: 'Explain this' });
+    expect(explain).toHaveLength(FAKE_REPORT.mistakes.length);
+    await fireEvent.press(explain[1]!);
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/tutor',
+      params: { conversation: ID, correction: '1' },
+    });
+  });
+
   it('starts another conversation with the same partner', async () => {
     await openReady();
 

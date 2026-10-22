@@ -64,6 +64,8 @@ export const ROUTES = {
   progress: '/progress',
   /** 5.11 Review: the flashcards that are due, one at a time. */
   review: '/review',
+  /** 5.12 Ask the tutor (a question about a report's correction is `explainRoute`). */
+  tutor: '/tutor',
   /** 6.1 Profile: who the learner is, and the way to everything about their account. */
   account: '/account',
   /** 6.2 Personal: name, photo, app language. */
@@ -115,3 +117,10 @@ export const studioRoute = (id: string) =>
 /** 6.11 One thing the learner's partners know, to reword or forget. */
 export const memoryRoute = (id: string) =>
   ({ pathname: '/account/memory/[id]', params: { id } }) as const satisfies Href;
+
+/** 5.12 Ask the tutor, asking at once about correction `index` of a conversation's report. */
+export const explainRoute = (conversationId: string, index: number) =>
+  ({
+    pathname: '/tutor',
+    params: { conversation: conversationId, correction: String(index) },
+  }) as const satisfies Href;

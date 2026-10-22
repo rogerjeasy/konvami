@@ -547,6 +547,50 @@ export interface paths {
         patch: operations["configureRecordings"];
         trace?: never;
     };
+    "/v1/tutor/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Explain Correction
+         * @description Asks the Tutor about one correction of a conversation's report (spec §6.5).
+         */
+        post: operations["explainCorrection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tutor/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tutor Questions
+         * @description The questions the learner asked the Tutor, newest first.
+         */
+        get: operations["getTutorQuestions"];
+        put?: never;
+        /**
+         * Ask Tutor
+         * @description Asks the Tutor a question about the language learned (spec §6.8).
+         */
+        post: operations["askTutor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/voice/calls": {
         parameters: {
             query?: never;
@@ -791,6 +835,13 @@ export interface components {
             levels: ("A1" | "A2" | "B1" | "B2" | "C1" | "C2")[];
             /** Name */
             name: string;
+        };
+        /** ExampleOut */
+        ExampleOut: {
+            /** Text */
+            text: string;
+            /** Translation */
+            translation: string;
         };
         /** FieldOut */
         FieldOut: {
@@ -1490,6 +1541,55 @@ export interface components {
             text: string;
             /** Verbatim */
             verbatim: string | null;
+        };
+        /** TutorAnswerOut */
+        TutorAnswerOut: {
+            /** Examples */
+            examples: components["schemas"]["ExampleOut"][];
+            /** Explanation */
+            explanation: string;
+            /** Topic */
+            topic: string | null;
+            /** Unsure */
+            unsure: boolean;
+        };
+        /** TutorCorrectionIn */
+        TutorCorrectionIn: {
+            /** Conversationid */
+            conversationId: string;
+            /** Index */
+            index: number;
+        };
+        /** TutorQuestionIn */
+        TutorQuestionIn: {
+            /** Question */
+            question: string;
+        };
+        /** TutorQuestionOut */
+        TutorQuestionOut: {
+            answer: components["schemas"]["TutorAnswerOut"];
+            /**
+             * Askedat
+             * Format: date-time
+             */
+            askedAt: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Question */
+            question: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "text" | "report" | "call";
+        };
+        /** TutorQuestionsOut */
+        TutorQuestionsOut: {
+            /** Questions */
+            questions: components["schemas"]["TutorQuestionOut"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -3280,6 +3380,200 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    explainCorrection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TutorCorrectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorQuestionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getTutorQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorQuestionsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    askTutor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TutorQuestionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorQuestionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

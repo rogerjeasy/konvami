@@ -7,7 +7,6 @@ from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MAX_MEMORIES, Memory
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
-from konvami_api.domain.practice import PracticeTools
 from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.voice import FinishedCall
 from tests.world import NOON, OTHER_USER, USER, World
@@ -228,9 +227,9 @@ def test_a_practice_call_needs_a_partner() -> None:
 
 
 def test_the_partner_can_end_the_conversation_when_the_learner_says_goodbye() -> None:
-    tools = PracticeTools()
+    tools = World().practice.tools(USER)
 
-    assert [tool["name"] for tool in tools.definitions()] == ["end_conversation"]
+    assert [tool["name"] for tool in tools.definitions()] == ["end_conversation", "ask_tutor"]
     result = tools.run("end_conversation", {})
     assert result.finished
     # The same answer as the guide's finishing tools, so the app follows every call alike.
@@ -238,7 +237,7 @@ def test_the_partner_can_end_the_conversation_when_the_learner_says_goodbye() ->
 
 
 def test_a_tool_the_partner_does_not_have_changes_nothing() -> None:
-    result = PracticeTools().run("save_target_language", {"language": "de"})
+    result = World().practice.tools(USER).run("save_target_language", {"language": "de"})
 
     assert not result.finished
     assert result.output == {"done": False, "reason": "unknown_tool"}
@@ -617,7 +616,7 @@ def test_what_is_said_while_memory_is_off_stays_unread_when_it_is_turned_on_late
     world.report_starter.fail = True
 
     world.practice.concluded(
-        USER, call_id, PracticeTools(), FinishedCall(NOON, "closed", {}, turns)
+        USER, call_id, world.practice.tools(USER), FinishedCall(NOON, "closed", {}, turns)
     )
 
     on = [Change("memory_enabled", True)]
@@ -657,7 +656,9 @@ def test_a_conversation_that_ends_with_memory_on_is_read_by_the_worker() -> None
     lena, _ = world.onboard()
     call_id = world.talk(lena, at=NOON - timedelta(minutes=10), turns=SAID)
 
-    world.practice.concluded(USER, call_id, PracticeTools(), FinishedCall(NOON, "closed", {}, SAID))
+    world.practice.concluded(
+        USER, call_id, world.practice.tools(USER), FinishedCall(NOON, "closed", {}, SAID)
+    )
     world.text.answers.append({"memories": [FOUND_ZURICH]})
     world.memories.write(call_id)
 
@@ -678,10 +679,55 @@ def test_when_the_learners_choice_cannot_be_recorded_the_report_is_still_started
 
     with pytest.raises(RuntimeError):
         world.practice.concluded(
-            USER, call_id, PracticeTools(), FinishedCall(NOON, "closed", {}, SAID)
+            USER, call_id, world.practice.tools(USER), FinishedCall(NOON, "closed", {}, SAID)
         )
 
     assert world.report_starter.started == [call_id]
     asked = len(world.text.tasks)
     world.memories.write(call_id)
     assert len(world.text.tasks) == asked
+
+
+# --- Ask-the-Tutor during a call (spec §8.4, §12.3) --------------------------------------------
+
+TUTOR_ANSWER = {
+    "explanation": "Après « mit », le datif : dem Bus.",
+    "examples": [{"text": "Ich fahre mit dem Bus.", "translation": "Je prends le bus."}],
+    "topic": "case_dative",
+    "unsure": False,
+}
+
+
+def test_the_partner_asks_the_tutor_and_is_told_what_to_explain() -> None:
+    world = World()
+    world.onboard()
+    world.text.answers.append(TUTOR_ANSWER)
+    tools = world.practice.tools(USER)
+
+    result = tools.run("ask_tutor", {"question": "Why dem?", "about": "mit der Bus"})
+
+    assert not result.finished
+    assert result.output == {
+        "answered": True,
+        "explanation": "Après « mit », le datif : dem Bus.",
+        "example": "Ich fahre mit dem Bus.",
+        "example_translation": "Je prends le bus.",
+    }
+    assert world.tutor.history(USER)[0].question == "Why dem?"
+
+
+def test_the_tutor_is_asked_only_with_a_question() -> None:
+    world = World()
+    world.onboard()
+
+    result = world.practice.tools(USER).run("ask_tutor", {"question": "  ", "about": None})
+
+    assert result.output == {"answered": False, "reason": "invalid_arguments"}
+    assert world.tutor.history(USER) == []
+
+
+def test_the_partner_knows_when_to_ask_the_tutor() -> None:
+    text = instructions(World())
+
+    assert "ask_tutor" in text
+    assert "own words" in text

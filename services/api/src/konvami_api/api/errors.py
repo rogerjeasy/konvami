@@ -19,6 +19,7 @@ from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.reports import ReportError
+from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.voice import VoiceError
 from konvami_api.domain.voices import SampleError
 
@@ -64,6 +65,13 @@ _CARD_STATUS = {
 }
 _MEMORY_STATUS = {"not_found": 404, "duplicate": 409}
 _REPORT_STATUS = {"nothing_to_report": 409, "consent_required": 403, "report_limit": 429}
+_TUTOR_STATUS = {
+    "invalid_value": 422,
+    "consent_required": 403,
+    "not_found": 404,
+    "no_language": 409,
+    "tutor_limit": 429,
+}
 _UNAVAILABLE = 503
 
 
@@ -114,6 +122,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ReportError)
     async def _report_error(_: Request, error: ReportError) -> JSONResponse:
         return _response(_REPORT_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(TutorError)
+    async def _tutor_error(_: Request, error: TutorError) -> JSONResponse:
+        return _response(_TUTOR_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(VoiceError)
     async def _voice_error(_: Request, error: VoiceError) -> JSONResponse:
