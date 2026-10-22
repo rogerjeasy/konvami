@@ -201,6 +201,7 @@ class World:
             reports=self.reports,
             memories=self.memories,
             recordings=self.recordings,
+            tutor=self.tutor,
         )
         self.voice = VoiceCallService(
             settings=VOICE,

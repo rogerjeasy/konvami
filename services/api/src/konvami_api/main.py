@@ -203,6 +203,7 @@ def build_backend(
                 reports=reports,
                 memories=memories,
                 recordings=recordings,
+                tutor=tutor,
             ),
         },
         accounts=directory,

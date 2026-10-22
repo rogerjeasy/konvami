@@ -380,7 +380,7 @@ def test_a_practice_call_has_the_partners_voice_instructions_and_time_limit() ->
     assert session["model"] == "gpt-realtime-2.1-mini"
     assert "You are Jonas" in session["instructions"]
     assert session["audio"]["output"] == {"voice": "cedar"}
-    assert [tool["name"] for tool in session["tools"]] == ["end_conversation"]
+    assert [tool["name"] for tool in session["tools"]] == ["end_conversation", "ask_tutor"]
     # Learners pause to think in a language they are learning.
     assert session["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
 

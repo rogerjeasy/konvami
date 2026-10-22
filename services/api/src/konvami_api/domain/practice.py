@@ -31,9 +31,11 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import Focus, ReportService, what_to_practise
 from konvami_api.domain.tools import ToolResult, ToolSet
+from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import Briefing, FinishedCall
 
 END = "end_conversation"
+ASK_TUTOR = "ask_tutor"
 # Used when the profile has no level at all, which onboarding does not allow.
 DEFAULT_LEVEL = "A1"
 
@@ -65,7 +67,11 @@ class Learner:
 
 
 class PracticeTools:
-    """A partner's tools. They keep nothing: every call gets the same ones."""
+    """A partner's tools, for one learner's call."""
+
+    def __init__(self, tutor: TutorService, user_id: UUID) -> None:
+        self._tutor = tutor
+        self._user_id = user_id
 
     def definitions(self) -> list[dict[str, Any]]:
         return [
@@ -81,12 +87,42 @@ class PracticeTools:
                     "required": [],
                     "additionalProperties": False,
                 },
-            }
+            },
+            {
+                "type": "function",
+                "name": ASK_TUTOR,
+                "description": (
+                    "Ask the app's tutor a question the learner has about the language: a rule, "
+                    "why something is said a certain way, or how to say something. Returns an "
+                    "accurate explanation and an example to put in your own words."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "The learner's question, as they asked it.",
+                        },
+                        "about": {
+                            "type": ["string", "null"],
+                            "description": "The sentence the question is about, if there is one.",
+                        },
+                    },
+                    "required": ["question", "about"],
+                    "additionalProperties": False,
+                },
+            },
         ]
 
     def run(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         if name == END:
             return ToolResult({"done": True}, finished=True)
+        if name == ASK_TUTOR:
+            question, about = arguments.get("question"), arguments.get("about")
+            if not isinstance(question, str) or not question.strip():
+                return ToolResult({"answered": False, "reason": "invalid_arguments"})
+            about_text = about if isinstance(about, str) else None
+            return ToolResult(self._tutor.in_call(self._user_id, question, about_text))
         return ToolResult({"done": False, "reason": "unknown_tool"})
 
 
@@ -496,6 +532,11 @@ Their level is {level}. {_SPEAKING.get(level, _SPEAKING[DEFAULT_LEVEL])}
 - Keep it friendly and suitable for everyone, whatever your backstory or character says.
   Decline kindly anything else, and medical, legal or financial advice, and return to the
   conversation.
+- When they ask how something works, why it is said a certain way, or how to say something,
+  call {ASK_TUTOR} with their question and the sentence it is about. Then explain its answer in
+  your own words, briefly and in the language it is written in, say its example, ask them to
+  make one sentence of their own with it, and go back to where you were. If it has no answer,
+  say only what you are sure of.
 - When they say goodbye or want to stop, call {END}, then say a short warm goodbye.
 - Never announce what you are about to say ("a short goodbye", "a small grammar note"): just
   say it.
@@ -520,7 +561,9 @@ class PracticeScript:
         reports: ReportService,
         memories: MemoryService,
         recordings: RecordingService,
+        tutor: TutorService,
     ) -> None:
+        self._tutor = tutor
         self._reports = reports
         self._memories = memories
         self._recordings = recordings
@@ -586,7 +629,7 @@ class PracticeScript:
         return f"the {name} exam{when}" if name else f"an exam{when}"
 
     def tools(self, user_id: UUID) -> PracticeTools:
-        return PracticeTools()
+        return PracticeTools(self._tutor, user_id)
 
     def started(self, user_id: UUID) -> None:
         return None
