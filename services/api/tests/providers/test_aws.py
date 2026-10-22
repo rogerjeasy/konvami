@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterator
+from typing import Any
 from uuid import UUID
 
 import boto3
@@ -7,7 +8,12 @@ import pytest
 from botocore.stub import Stubber
 
 from konvami_api.domain.voice import CallPurpose
-from konvami_api.providers.aws import LambdaCallStarter, LambdaReportStarter, cached_secret
+from konvami_api.providers.aws import (
+    LambdaCallStarter,
+    LambdaReportStarter,
+    SnsNotifier,
+    cached_secret,
+)
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
 SECRET_ARN = "arn:aws:secretsmanager:eu-central-1:503002144480:secret:kv-dev-openai"  # noqa: S105
@@ -78,3 +84,33 @@ def test_a_secret_is_fetched_once_and_then_remembered(secrets: Stubber) -> None:
 
 def test_a_secret_is_not_fetched_until_it_is_needed(secrets: Stubber) -> None:
     cached_secret(secrets.client, SECRET_ARN)
+
+
+class RecordingSns:
+    def __init__(self) -> None:
+        self.published: list[dict[str, Any]] = []
+
+    def publish(self, **kwargs: Any) -> dict[str, Any]:
+        self.published.append(kwargs)
+        return {"MessageId": "m-1"}
+
+
+def test_a_budget_alert_is_published_to_the_owners_topic() -> None:
+    sns = RecordingSns()
+    topic = "arn:aws:sns:eu-central-1:503002144480:kv-dev-budget-alerts"
+
+    SnsNotifier(sns, topic).notify("Konvami: passed the $150 target", "Spend is $151.20.")
+
+    assert sns.published == [
+        {
+            "TopicArn": topic,
+            "Subject": "Konvami: passed the $150 target",
+            "Message": "Spend is $151.20.",
+        }
+    ]
+
+
+def test_without_a_topic_an_alert_cannot_be_sent() -> None:
+    # The guard then tries again with the next request.
+    with pytest.raises(RuntimeError):
+        SnsNotifier(RecordingSns(), "").notify("subject", "message")

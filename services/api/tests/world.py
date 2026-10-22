@@ -10,6 +10,7 @@ from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
+from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.live_call import Turn
@@ -46,7 +47,9 @@ from tests.fakes import (
     FakeVoiceProvider,
     FixedClock,
     InMemoryAccountRepository,
+    InMemoryAlertLog,
     InMemoryCardRepository,
+    InMemoryChargeRepository,
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
@@ -60,6 +63,7 @@ from tests.fakes import (
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
+    RecordingNotifier,
     RecordingReportStarter,
     ScriptedTextModel,
 )
@@ -81,8 +85,37 @@ VOICE = VoiceSettings(
     },
     voice="marin",
     transcription_model="gpt-transcribe",
-    daily_call_limit=3,
+    weekly_seconds=3600,
+    economy_models={
+        CallPurpose.ONBOARDING: "gpt-realtime-2.1-mini",
+        CallPurpose.PLACEMENT: "gpt-realtime-2.1-mini",
+    },
 )
+PRICES = {
+    "gpt-realtime-2.1": {
+        "input_text_tokens": 4.0,
+        "input_audio_tokens": 32.0,
+        "cached_input_text_tokens": 0.4,
+        "cached_input_audio_tokens": 0.4,
+        "output_text_tokens": 24.0,
+        "output_audio_tokens": 64.0,
+    },
+    "gpt-realtime-2.1-mini": {
+        "input_text_tokens": 0.6,
+        "input_audio_tokens": 10.0,
+        "cached_input_text_tokens": 0.06,
+        "cached_input_audio_tokens": 0.3,
+        "output_text_tokens": 2.4,
+        "output_audio_tokens": 20.0,
+    },
+    "gpt-6.1-sol": {"input_tokens": 2.0, "cached_input_tokens": 0.1, "output_tokens": 10.0},
+    "gpt-6-luna": {"input_tokens": 0.1, "cached_input_tokens": 0.01, "output_tokens": 0.5},
+    "gpt-transcribe": {"audio_seconds": 75.0},
+    "gpt-4o-mini-tts": {"characters": 17.0},
+}
+BUDGET = Budget(target_usd=150, ceiling_usd=250)
+# The account that may see the costs.
+OWNER = UUID("33333333-3333-4333-8333-333333333333")
 LEVELS = {
     "speaking": "A2",
     "listening": "B1",
@@ -95,6 +128,16 @@ LEVELS = {
 class World:
     def __init__(self, now: datetime = NOON) -> None:
         self.clock = FixedClock(now)
+        self.charges = InMemoryChargeRepository()
+        self.notifier = RecordingNotifier()
+        self.guard = SpendGuard(
+            budget=BUDGET,
+            charges=self.charges,
+            alerts=InMemoryAlertLog(),
+            notifier=self.notifier,
+            clock=self.clock,
+        )
+        self.meter = Meter(prices=PRICES, charges=self.charges, guard=self.guard, clock=self.clock)
         self.profiles = ProfileService(InMemoryProfileRepository(), CATALOG, self.clock)
         self.onboarding = OnboardingService(
             self.profiles, InMemoryOnboardingRepository(), self.clock
@@ -217,6 +260,15 @@ class World:
             starter=self.starter,
             clock=self.clock,
             recordings=self.recordings,
+            guard=self.guard,
+            meter=self.meter,
+        )
+        self.costs = CostService(
+            owners=frozenset({OWNER}),
+            budget=BUDGET,
+            charges=self.charges,
+            accounts=self.accounts,
+            clock=self.clock,
         )
         self.home = HomeService(
             profiles=self.profiles,

@@ -47,6 +47,7 @@ def clients(stub: Stubber, s3: Any = None) -> main.Clients:
         functions=Unused(),
         secrets=Unused(),
         s3=s3 or Unused(),
+        sns=Unused(),
     )
 
 

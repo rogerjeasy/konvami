@@ -112,10 +112,18 @@ class LiveCall:
             "input_text_tokens": 0,
             "input_audio_tokens": 0,
             "cached_input_tokens": 0,
+            # The cached tokens split by kind: cached audio and text cost differently.
+            "cached_input_text_tokens": 0,
+            "cached_input_audio_tokens": 0,
             "output_text_tokens": 0,
             "output_audio_tokens": 0,
         }
         self.outcome: Outcome | None = None
+
+    @property
+    def max_seconds(self) -> int:
+        """The longest the call may last."""
+        return self._max
 
     @property
     def tools(self) -> ToolSet:
@@ -299,6 +307,9 @@ class LiveCall:
         self.usage["input_text_tokens"] += int(taken.get("text_tokens") or 0)
         self.usage["input_audio_tokens"] += int(taken.get("audio_tokens") or 0)
         self.usage["cached_input_tokens"] += int(taken.get("cached_tokens") or 0)
+        cached = taken.get("cached_tokens_details") or {}
+        self.usage["cached_input_text_tokens"] += int(cached.get("text_tokens") or 0)
+        self.usage["cached_input_audio_tokens"] += int(cached.get("audio_tokens") or 0)
         self.usage["output_text_tokens"] += int(given.get("text_tokens") or 0)
         self.usage["output_audio_tokens"] += int(given.get("audio_tokens") or 0)
 

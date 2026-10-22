@@ -7,8 +7,10 @@ export type VoiceErrorCode =
   | 'no_microphone'
   /** The account has not agreed to the voice provider (2.5 AI data consent). */
   | 'consent_required'
-  /** The day's calls are used up. */
-  | 'call_limit'
+  /** The learner's voice minutes for this week are used up (they come back on Monday). */
+  | 'minutes_used_up'
+  /** Voice calls are stopped for everyone for now: the month's spending reached its ceiling. */
+  | 'voice_paused'
   /** The voice service cannot take a call right now. */
   | 'voice_unavailable'
   | 'network'

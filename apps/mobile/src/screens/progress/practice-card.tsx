@@ -1,19 +1,11 @@
-import { useMemo } from 'react';
 import { View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { motion, size } from '@konvami/design-tokens';
 import type { Progress, ProgressWeek } from '@konvami/api-client';
+import { BarChart } from '@/components/bar-chart';
 import { Card } from '@/components/card';
-import { Animate } from '@/components/motion';
 import { Text } from '@/components/text';
 import { formatDayOfYear, wholeMinutes } from '@/lib/format';
-import { growKeyframes, staggerDelay } from '@/lib/motion';
 
-// A week with practice is never drawn shorter than this (pt): a minute must still be a bar.
-const SHORTEST_BAR = 6;
-// A week without practice is a line on the baseline, so the chart still shows that week.
-const EMPTY_BAR = 2;
 // The least room a number and its label get (pt): the longest label, "conversations", fits on
 // one line. On a narrow phone the third number then moves to a second row instead of breaking.
 const STAT_MIN_WIDTH = 92;
@@ -35,59 +27,20 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-/** The minutes of each week as bars that grow from the baseline, the oldest week first. */
+/** The minutes of each week as bars, the oldest week first. */
 function WeekBars({ weeks }: { weeks: readonly ProgressWeek[] }) {
   const { t, i18n } = useTranslation();
-  const reduced = useReducedMotion();
-  const most = Math.max(...weeks.map((week) => week.seconds), 1);
   return (
-    <View style={{ height: size.chartHeight }} className="flex-row items-end gap-2">
-      {weeks.map((week, i) => {
-        const height =
-          week.seconds > 0
-            ? Math.max(SHORTEST_BAR, Math.round((week.seconds / most) * size.chartHeight))
-            : EMPTY_BAR;
-        return (
-          <View
-            key={week.start}
-            accessible
-            accessibilityLabel={t('progress.practice.weekLabel', {
-              date: formatDayOfYear(i18n.language, week.start),
-              minutes: t('time.minutes', { count: wholeMinutes(week.seconds) }),
-            })}
-            style={{ height }}
-            // The bar slides up inside its own box, which clips it until it is in place.
-            className="flex-1 overflow-hidden rounded-sm"
-          >
-            <Bar height={height} order={i} filled={week.seconds > 0} reduced={reduced} />
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-function Bar({
-  height,
-  order,
-  filled,
-  reduced,
-}: {
-  height: number;
-  order: number;
-  filled: boolean;
-  reduced: boolean;
-}) {
-  const grow = useMemo(() => growKeyframes(height, reduced), [height, reduced]);
-  return (
-    <Animate
-      keyframes={grow}
-      duration={motion.slow}
-      delay={motion.enter + staggerDelay(order)}
-      style={{ flex: 1 }}
-    >
-      <View className={`flex-1 rounded-sm ${filled ? 'bg-primary' : 'bg-track'}`} />
-    </Animate>
+    <BarChart
+      bars={weeks.map((week) => ({
+        key: week.start,
+        value: week.seconds,
+        label: t('progress.practice.weekLabel', {
+          date: formatDayOfYear(i18n.language, week.start),
+          minutes: t('time.minutes', { count: wholeMinutes(week.seconds) }),
+        }),
+      }))}
+    />
   );
 }
 

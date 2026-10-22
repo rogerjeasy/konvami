@@ -18,6 +18,10 @@
         "additionalProperties": false,
         "description": "What the backend keeps for an account. Name and email live with the identity provider.",
         "properties": {
+          "owner": {
+            "title": "Owner",
+            "type": "boolean"
+          },
           "picture": {
             "anyOf": [
               {
@@ -30,7 +34,8 @@
           }
         },
         "required": [
-          "picture"
+          "picture",
+          "owner"
         ],
         "title": "AccountOut",
         "type": "object"
@@ -86,6 +91,37 @@
           "seconds"
         ],
         "title": "ActivityOut",
+        "type": "object"
+      },
+      "AllowanceOut": {
+        "additionalProperties": false,
+        "description": "The learner's voice minutes this week, in seconds (spec \u00a76.19).",
+        "properties": {
+          "remainingSeconds": {
+            "title": "Remainingseconds",
+            "type": "integer"
+          },
+          "resetsAt": {
+            "format": "date-time",
+            "title": "Resetsat",
+            "type": "string"
+          },
+          "usedSeconds": {
+            "title": "Usedseconds",
+            "type": "integer"
+          },
+          "weeklySeconds": {
+            "title": "Weeklyseconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "weeklySeconds",
+          "usedSeconds",
+          "remainingSeconds",
+          "resetsAt"
+        ],
+        "title": "AllowanceOut",
         "type": "object"
       },
       "CallPurpose": {
@@ -487,6 +523,78 @@
         "title": "ConversationsOut",
         "type": "object"
       },
+      "CostsOut": {
+        "additionalProperties": false,
+        "description": "A month's estimated spending, for the owner (spec \u00a76.19). Estimates from usage counts and\nthe configured prices, not the providers' invoices.",
+        "properties": {
+          "ceilingUsd": {
+            "title": "Ceilingusd",
+            "type": "number"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DaySpendOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/ShareOut"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "learners": {
+            "items": {
+              "$ref": "#/components/schemas/LearnerSpendOut"
+            },
+            "title": "Learners",
+            "type": "array"
+          },
+          "level": {
+            "$ref": "#/components/schemas/Level"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ShareOut"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "targetUsd": {
+            "title": "Targetusd",
+            "type": "number"
+          },
+          "totalUsd": {
+            "title": "Totalusd",
+            "type": "number"
+          },
+          "unpriced": {
+            "title": "Unpriced",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month",
+          "level",
+          "targetUsd",
+          "ceilingUsd",
+          "totalUsd",
+          "unpriced",
+          "days",
+          "features",
+          "providers",
+          "learners"
+        ],
+        "title": "CostsOut",
+        "type": "object"
+      },
       "DayOut": {
         "additionalProperties": false,
         "properties": {
@@ -505,6 +613,26 @@
           "seconds"
         ],
         "title": "DayOut",
+        "type": "object"
+      },
+      "DaySpendOut": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "usd": {
+            "title": "Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "day",
+          "usd"
+        ],
+        "title": "DaySpendOut",
         "type": "object"
       },
       "DeckOut": {
@@ -978,6 +1106,57 @@
         ],
         "title": "LanguageOut",
         "type": "object"
+      },
+      "LearnerSpendOut": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "requests": {
+            "title": "Requests",
+            "type": "integer"
+          },
+          "usd": {
+            "title": "Usd",
+            "type": "number"
+          },
+          "userId": {
+            "format": "uuid",
+            "title": "Userid",
+            "type": "string"
+          },
+          "voiceSeconds": {
+            "title": "Voiceseconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "userId",
+          "name",
+          "usd",
+          "requests",
+          "voiceSeconds"
+        ],
+        "title": "LearnerSpendOut",
+        "type": "object"
+      },
+      "Level": {
+        "enum": [
+          "normal",
+          "economy",
+          "paused"
+        ],
+        "title": "Level",
+        "type": "string"
       },
       "LookModel": {
         "additionalProperties": false,
@@ -2616,6 +2795,30 @@
           "stats"
         ],
         "title": "SessionReportOut",
+        "type": "object"
+      },
+      "ShareOut": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "requests": {
+            "title": "Requests",
+            "type": "integer"
+          },
+          "usd": {
+            "title": "Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "usd",
+          "requests"
+        ],
+        "title": "ShareOut",
         "type": "object"
       },
       "Source": {
@@ -4374,6 +4577,74 @@
         "summary": "Confirm Partners"
       }
     },
+    "/v1/owner/costs": {
+      "get": {
+        "description": "A month's estimated spending (this month unless `month` names its first day).",
+        "operationId": "getCosts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Costs"
+      }
+    },
     "/v1/personas": {
       "get": {
         "operationId": "getPersonas",
@@ -5354,6 +5625,34 @@
           }
         },
         "summary": "Ask Tutor"
+      }
+    },
+    "/v1/voice/allowance": {
+      "get": {
+        "operationId": "getVoiceAllowance",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Voice Allowance"
       }
     },
     "/v1/voice/calls": {

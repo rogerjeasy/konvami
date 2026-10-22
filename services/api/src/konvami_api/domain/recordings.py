@@ -15,6 +15,7 @@ from typing import Protocol
 from uuid import UUID
 
 from konvami_api.domain.conversations import ConversationError, ConversationService
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import AUDIO_RATE, KeepAudio, TurnAudio
 from konvami_api.domain.profile import RECORDINGS_KEPT, Change, Origin, ProfileService, Source
 from konvami_api.domain.speech import Transcriber, TranscriptionError, TranscriptionTask
@@ -135,6 +136,7 @@ class RecordingService:
                 audio=self._files.read(turn.audio.key),
                 language=language,
                 prompt=_verbatim_prompt(target),
+                charge=Charge(user_id, Feature.VERBATIM),
             )
             try:
                 text = self._transcriber.transcribe(task).strip()

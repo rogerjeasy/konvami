@@ -22,9 +22,11 @@ import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
 import { conversationDoneRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices, useScenarios } from '@/practice/services';
+import { useMinutesBack } from '@/profile/services';
 import { Goals } from './goals';
 import { setPartnerCaptions, usePreferences } from '@/preferences';
 import { HELP_KINDS, type HelpKind } from '@/voice/help';
+import { withLine } from '@/voice/problems';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
 
 /** Failures with their own explanation; anything else reads as the general message. */
@@ -33,7 +35,8 @@ const PROBLEM_KEY = {
   no_microphone: 'conversation.problems.no_microphone',
   unsupported: 'conversation.problems.unsupported',
   consent_required: 'conversation.problems.consent_required',
-  call_limit: 'conversation.problems.call_limit',
+  minutes_used_up: 'conversation.problems.minutes_used_up',
+  voice_paused: 'conversation.problems.voice_paused',
   voice_unavailable: 'conversation.problems.voice_unavailable',
   network: 'errors.network',
 } as const satisfies Partial<Record<CallProblem, string>>;
@@ -43,7 +46,8 @@ const problemKey = (problem: CallProblem) =>
 
 /** Failures that another try right away cannot get past: the way back leads, not "Try again". */
 const FINAL: readonly CallProblem[] = [
-  'call_limit',
+  'minutes_used_up',
+  'voice_paused',
   'unsupported',
   'consent_required',
   'no_microphone',
@@ -142,6 +146,7 @@ function Call({
   const { partnerCaptions } = usePreferences();
   const [helping, setHelping] = useState(false);
   const canHelp = call.status === 'live' && !conversation.finished;
+  const minutesBack = useMinutesBack(call.problem === 'minutes_used_up');
 
   /** Ends the call and shows what it added up to; a call that never connected just closes. */
   const leave = useCallback(() => {
@@ -171,7 +176,7 @@ function Call({
       persona={partner}
       hint={t('conversation.hint', { name: partner.name })}
       finishedLabel={t('conversation.finished')}
-      problem={call.problem && !lost ? t(problemKey(call.problem)) : null}
+      problem={call.problem && !lost ? withLine(t(problemKey(call.problem)), minutesBack) : null}
       progress={
         rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : undefined
       }

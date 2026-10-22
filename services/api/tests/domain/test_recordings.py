@@ -8,6 +8,7 @@ from uuid import UUID
 
 import pytest
 
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import KeepAudio, Turn, TurnAudio
 from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.speech import TranscriptionError
@@ -75,6 +76,7 @@ def test_each_learner_turn_is_transcribed_again_from_its_audio(world: World) -> 
     ]
     [task] = world.transcriber.tasks
     assert task.model == "gpt-transcribe"
+    assert task.charge == Charge(USER, Feature.VERBATIM)
     assert task.language == "de"
     assert task.audio == world.files.files[turns(world, call_id)[1].audio.key][0]  # type: ignore[union-attr]
     assert "mistake" in task.prompt

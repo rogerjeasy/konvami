@@ -15,6 +15,8 @@ import { firstOpenStep, openTopics, SETUP_TOPICS } from '@/onboarding/essentials
 import { STEP_ROUTES } from '@/onboarding/routing';
 import { useOnboarding, useOnboardingStore } from '@/onboarding/services';
 import { SETUP } from '@/screens/create-account/sample-content';
+import { useMinutesBack } from '@/profile/services';
+import { withLine } from '@/voice/problems';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
 
 /** Failures with their own explanation; anything else reads as the general message. */
@@ -23,7 +25,8 @@ const PROBLEM_KEY = {
   no_microphone: 'onboarding.talk.problems.no_microphone',
   unsupported: 'onboarding.talk.problems.unsupported',
   consent_required: 'onboarding.talk.problems.consent_required',
-  call_limit: 'onboarding.talk.problems.call_limit',
+  minutes_used_up: 'onboarding.talk.problems.minutes_used_up',
+  voice_paused: 'onboarding.talk.problems.voice_paused',
   voice_unavailable: 'onboarding.talk.problems.voice_unavailable',
   lost: 'onboarding.talk.problems.lost',
   network: 'errors.network',
@@ -41,6 +44,7 @@ function Call({ onRetry }: { onRetry: () => void }) {
   const { conversation } = call;
   const name = SETUP.guide.name;
   const [leaving, setLeaving] = useState(false);
+  const minutesBack = useMinutesBack(call.problem === 'minutes_used_up');
 
   // What was answered before the call ticks the checklist until the server reports during it.
   useEffect(() => {
@@ -83,7 +87,7 @@ function Call({ onRetry }: { onRetry: () => void }) {
       persona={SETUP.guide}
       hint={t('onboarding.talk.hint', { name })}
       finishedLabel={t('onboarding.talk.finished')}
-      problem={call.problem ? t(problemKey(call.problem)) : null}
+      problem={call.problem ? withLine(t(problemKey(call.problem)), minutesBack) : null}
       header={
         <View className="min-h-tap flex-row items-center justify-between gap-3 pb-2">
           <HeaderButton

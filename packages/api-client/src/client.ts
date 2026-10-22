@@ -95,6 +95,9 @@ export type TutorQuestion = Schemas['TutorQuestionOut'];
 export type TutorAnswer = Schemas['TutorAnswerOut'];
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
+export type VoiceAllowance = Schemas['AllowanceOut'];
+export type Costs = Schemas['CostsOut'];
+export type CostLevel = Costs['level'];
 /** A turn's recording: a short-lived address to play it from, and how long it lasts. */
 export type TurnAudio = Schemas['TurnAudioOut'];
 /** What to change about one memory; `day: null` takes an event's day away. */
@@ -253,6 +256,13 @@ export interface ApiClient {
   getRecordings(): Promise<Recordings>;
   /** Keeps recordings or stops; stopping deletes every recording kept so far. */
   configureRecordings(kept: boolean): Promise<Recordings>;
+  /** The learner's voice minutes this week (in seconds) and when they come back. */
+  getVoiceAllowance(): Promise<VoiceAllowance>;
+  /**
+   * A month's estimated spending, for the owner only (fails with `not_owner`). `month` is the
+   * first day of the month (`2026-09-01`); this month when left out.
+   */
+  getCosts(month?: string): Promise<Costs>;
 }
 
 // The dev database pauses when idle and needs about 15 seconds to wake. The server answers 503
@@ -389,6 +399,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('POST', '/v1/tutor/corrections', { conversationId, index }),
     getRecordings: () => request('GET', '/v1/recordings'),
     configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
+    getVoiceAllowance: () => request('GET', '/v1/voice/allowance'),
+    getCosts: (month) => request('GET', withQuery('/v1/owner/costs', { month })),
     changeMemory: (id, change) =>
       request('PATCH', `/v1/memories/${encodeURIComponent(id)}`, change),
     removeMemory: (id) => request('DELETE', `/v1/memories/${encodeURIComponent(id)}`),

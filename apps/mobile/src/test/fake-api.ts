@@ -5,6 +5,7 @@ import {
   type Card,
   type Catalog,
   type Conversation,
+  type Costs,
   type ConversationReport,
   type Home,
   type HomePartner,
@@ -100,6 +101,51 @@ const ESSENTIAL_FIELDS = [
 
 /** The fake server's clock: a Friday, at noon in UTC. Its week runs from Monday 5 October. */
 export const FAKE_NOW = '2026-10-09T12:00:00Z';
+/** When the week of `FAKE_NOW` ends and voice minutes come back: Monday, in UTC. */
+export const FAKE_WEEK_ENDS = '2026-10-12T00:00:00Z';
+/** Each learner's voice minutes per week, in seconds (as configured on the server). */
+export const FAKE_WEEKLY_SECONDS = 3600;
+/** As on the server (services/api: domain/voice.py MIN_CALL_SECONDS). */
+const MIN_CALL_SECONDS = 60;
+
+/** A month of spending as the owner sees it: past the target, two learners, a few features. */
+export const FAKE_COSTS: Costs = {
+  month: '2026-10-01',
+  level: 'economy',
+  targetUsd: 150,
+  ceilingUsd: 250,
+  totalUsd: 162.4,
+  unpriced: 0,
+  days: [
+    { day: '2026-10-07', usd: 41.2 },
+    { day: '2026-10-08', usd: 88.5 },
+    { day: '2026-10-09', usd: 32.7 },
+  ],
+  features: [
+    { key: 'voice_practice', usd: 120.1, requests: 180 },
+    { key: 'report', usd: 22.3, requests: 170 },
+    { key: 'report_check', usd: 9.8, requests: 160 },
+    { key: 'tutor', usd: 6.2, requests: 75 },
+    { key: 'memory', usd: 4, requests: 170 },
+  ],
+  providers: [{ key: 'openai', usd: 162.4, requests: 755 }],
+  learners: [
+    {
+      userId: '11111111-1111-4111-8111-111111111111',
+      name: 'Amara',
+      usd: 98.6,
+      requests: 410,
+      voiceSeconds: 21_600,
+    },
+    {
+      userId: '22222222-2222-4222-8222-222222222222',
+      name: null,
+      usd: 63.8,
+      requests: 345,
+      voiceSeconds: 14_400,
+    },
+  ],
+};
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 /** As on the server (services/api: domain/conversations.py and domain/home.py). */
@@ -473,6 +519,12 @@ export interface FakeApi extends ApiClient {
   readonly uploads: readonly string[];
   /** Gives the learner a photo, as if one had been uploaded earlier. */
   havePicture(): void;
+  /** Uses `minutes` of the learner's voice minutes this week, as calls would have. */
+  usedMinutes(minutes: number): void;
+  /** Makes the signed-in account the owner's, who may see the costs. */
+  beOwner(): void;
+  /** What the owner sees for a month (`FAKE_COSTS` for October 2026 unless set). */
+  spent(costs: Costs): void;
 }
 
 /** The recording of turn `index` of a conversation recorded with `talked(…, { recorded })`. */
@@ -521,6 +573,9 @@ export function createFakeApi(): FakeApi {
   let recordingsKept = true;
   let avoidTopics: string[] = [];
   let picture: string | null = null;
+  let usedSeconds = 0;
+  let owner = false;
+  const months = new Map<string, Costs>([[FAKE_COSTS.month, FAKE_COSTS]]);
   const uploads: string[] = [];
   let deleted = false;
   let drafts = 0;
@@ -838,7 +893,7 @@ export function createFakeApi(): FakeApi {
     };
   }
 
-  const account = () => ({ picture: picture ? { url: picture } : null });
+  const account = () => ({ picture: picture ? { url: picture } : null, owner });
 
   const memoryBook = (): Memories => ({
     enabled: memoryEnabled,
@@ -868,6 +923,15 @@ export function createFakeApi(): FakeApi {
     uploads,
     havePicture() {
       picture = `${FILES}/users/amara/picture/earlier.jpg`;
+    },
+    usedMinutes(minutes) {
+      usedSeconds += minutes * 60;
+    },
+    beOwner() {
+      owner = true;
+    },
+    spent(costs) {
+      months.set(costs.month, costs);
     },
     failNext: (method, code, field) =>
       void failures.set(method, new ApiError(code, code === 'network' ? 0 : 422, field ?? null)),
@@ -1015,11 +1079,11 @@ export function createFakeApi(): FakeApi {
       if (purpose === 'practice' && !personas?.some(({ id }) => id === personaId)) {
         throw new ApiError('not_found', 404);
       }
-      return {
-        callId: 'rtc_fake',
-        sdp: 'v=0 answer',
-        maxSeconds: purpose === 'practice' ? 600 : 480,
-      };
+      const left = FAKE_WEEKLY_SECONDS - usedSeconds;
+      if (left < MIN_CALL_SECONDS) throw new ApiError('minutes_used_up', 429);
+      const maxSeconds = Math.min(purpose === 'practice' ? 600 : 480, left);
+      usedSeconds += maxSeconds;
+      return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds };
     },
     async getHome(timeZone) {
       await record('getHome', timeZone);
@@ -1326,6 +1390,31 @@ export function createFakeApi(): FakeApi {
     async getAccount() {
       await record('getAccount');
       return account();
+    },
+    async getVoiceAllowance() {
+      await record('getVoiceAllowance');
+      return {
+        weeklySeconds: FAKE_WEEKLY_SECONDS,
+        usedSeconds,
+        remainingSeconds: Math.max(0, FAKE_WEEKLY_SECONDS - usedSeconds),
+        resetsAt: FAKE_WEEK_ENDS,
+      };
+    },
+    async getCosts(month = FAKE_COSTS.month) {
+      await record('getCosts', month);
+      if (!owner) throw new ApiError('not_owner', 403);
+      return (
+        months.get(month) ?? {
+          ...FAKE_COSTS,
+          month,
+          level: 'normal',
+          totalUsd: 0,
+          days: [],
+          features: [],
+          providers: [],
+          learners: [],
+        }
+      );
     },
     async startPictureUpload() {
       await record('startPictureUpload');

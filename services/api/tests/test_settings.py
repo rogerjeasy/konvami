@@ -1,9 +1,11 @@
 import json
+from uuid import UUID
 
 import pytest
 
+from konvami_api.domain.costs import Budget
 from konvami_api.domain.voice import CallPurpose
-from konvami_api.settings import text_models, voice_settings
+from konvami_api.settings import cost_settings, text_models, voice_settings
 
 CONFIGURED = json.dumps(
     {
@@ -15,7 +17,8 @@ CONFIGURED = json.dumps(
         "max_seconds": {"onboarding": 480, "placement": 720, "practice": 600},
         "voice": "marin",
         "transcription_model": "gpt-transcribe",
-        "daily_call_limit": 10,
+        "weekly_minutes": 60,
+        "economy_models": {"onboarding": "gpt-realtime-2.1-mini"},
     }
 )
 
@@ -30,11 +33,12 @@ def test_voice_settings_are_read_from_the_json_terraform_sets() -> None:
     }
     assert settings.max_seconds[CallPurpose.PLACEMENT] == 720
     assert settings.max_seconds[CallPurpose.PRACTICE] == 600
-    assert (settings.voice, settings.transcription_model, settings.daily_call_limit) == (
+    assert (settings.voice, settings.transcription_model, settings.weekly_seconds) == (
         "marin",
         "gpt-transcribe",
-        10,
+        3600,
     )
+    assert settings.economy_models == {CallPurpose.ONBOARDING: "gpt-realtime-2.1-mini"}
 
 
 @pytest.mark.parametrize("missing", [None, ""])
@@ -128,3 +132,35 @@ def test_the_tutor_model_is_read_with_the_text_models() -> None:
         "gpt-6.1-sol"
     )
     assert text_models('{"assessment": "a", "personas": "p"}').tutor == ""
+
+
+def test_cost_settings_are_read_from_the_json_terraform_sets() -> None:
+    settings = cost_settings(
+        json.dumps(
+            {
+                "prices": {"gpt-6.1-sol": {"input_tokens": 2, "output_tokens": 10.5}},
+                "target_usd": 150,
+                "ceiling_usd": 250,
+                "owners": ["33333333-3333-4333-8333-333333333333"],
+            }
+        )
+    )
+
+    assert settings.prices == {"gpt-6.1-sol": {"input_tokens": 2.0, "output_tokens": 10.5}}
+    assert settings.budget == Budget(target_usd=150, ceiling_usd=250)
+    assert settings.owners == frozenset({UUID("33333333-3333-4333-8333-333333333333")})
+
+
+@pytest.mark.parametrize("missing", [None, ""])
+def test_without_cost_settings_nothing_is_priced_and_nothing_is_spent(missing: str | None) -> None:
+    settings = cost_settings(missing)
+
+    assert settings.prices == {}
+    assert settings.owners == frozenset()
+    # No ceiling to reach: an environment without the setting is not stopped by it.
+    assert settings.budget.ceiling_usd == float("inf")
+
+
+def test_a_broken_cost_setting_is_named_at_start_up() -> None:
+    with pytest.raises(RuntimeError, match="KONVAMI_COSTS"):
+        cost_settings('{"prices": {}, "target_usd": 150, "ceiling_usd": 100, "owners": []}')

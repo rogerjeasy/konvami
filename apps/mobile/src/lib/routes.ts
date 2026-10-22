@@ -88,6 +88,8 @@ export const ROUTES = {
   accountEmail: '/account/security/email',
   /** 6.9 Delete account. */
   accountDelete: '/account/delete',
+  /** 6.12 Costs: what Konvami spends, for the owner's account only (spec §6.19). */
+  accountCosts: '/account/costs',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;

@@ -5,6 +5,8 @@
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from konvami_api.domain.costs import Charge
+
 
 @dataclass(frozen=True)
 class TextTask:
@@ -21,6 +23,8 @@ class TextTask:
     # How long to wait for the answer, when someone is waiting for it. None: a background job,
     # which gets the provider's own, longer limit.
     max_seconds: float | None = None
+    # Who the request is for and why, for metering; None: not metered.
+    charge: Charge | None = None
 
 
 class TextModelError(Exception):

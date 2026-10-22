@@ -311,7 +311,7 @@ def test_a_recorded_call_is_followed_and_its_end_is_stored() -> None:
             max_seconds={CallPurpose.ONBOARDING: 480},
             voice="marin",
             transcription_model="gpt-transcribe",
-            daily_call_limit=5,
+            weekly_seconds=3600,
         ),
         scripts={CallPurpose.ONBOARDING: HostScript(CATALOG, profiles)},
         accounts=FakeAccountDirectory({user: Account("Amara", "fr", voice_consent=True)}),

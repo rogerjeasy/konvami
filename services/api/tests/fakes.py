@@ -15,6 +15,14 @@ from konvami_api.domain.conversations import (
     DayActivity,
     PartnerHistory,
 )
+from konvami_api.domain.costs import (
+    ChargeRecord,
+    DaySpend,
+    LearnerSpend,
+    Level,
+    Share,
+    Spending,
+)
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
 from konvami_api.domain.onboarding import OnboardingState
@@ -92,6 +100,8 @@ class InMemoryVoiceSessionRepository:
         self.sessions: dict[str, VoiceSession] = {}
         self.finished: dict[str, FinishedCall] = {}
         self.goals: dict[str, tuple[str, ...]] = {}
+        # The voice seconds used per learner and week.
+        self.weeks: dict[tuple[UUID, date], int] = {}
 
     def started(self, session: VoiceSession) -> None:
         self.sessions[session.call_id] = session
@@ -99,16 +109,26 @@ class InMemoryVoiceSessionRepository:
     def get(self, call_id: str) -> VoiceSession | None:
         return self.sessions.get(call_id)
 
-    def count_since(self, user_id: UUID, since: datetime) -> int:
-        return sum(
-            1
-            for session in self.sessions.values()
-            if session.user_id == user_id and session.started_at >= since
-        )
+    def reserve_seconds(self, user_id: UUID, week: date, weekly: int, least: int, most: int) -> int:
+        left = weekly - self.weeks.get((user_id, week), 0)
+        if left < least:
+            return 0
+        granted = min(most, left)
+        self.weeks[(user_id, week)] = self.weeks.get((user_id, week), 0) + granted
+        return granted
 
-    def finish(self, call_id: str, result: FinishedCall) -> None:
-        if call_id in self.sessions:
-            self.finished[call_id] = result
+    def release_seconds(self, user_id: UUID, week: date, seconds: int) -> None:
+        if (user_id, week) in self.weeks:
+            self.weeks[(user_id, week)] = max(0, self.weeks[(user_id, week)] - seconds)
+
+    def seconds_used(self, user_id: UUID, week: date) -> int:
+        return self.weeks.get((user_id, week), 0)
+
+    def finish(self, call_id: str, result: FinishedCall) -> bool:
+        if call_id not in self.sessions or call_id in self.finished:
+            return False
+        self.finished[call_id] = result
+        return True
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
         if call_id in self.sessions:
@@ -226,6 +246,8 @@ class InMemoryFileStore:
 
 class FakeVoiceProvider:
     """Answers call creation like the provider does and records what it was asked."""
+
+    name = "openai"
 
     def __init__(self) -> None:
         self.created: list[tuple[str, dict[str, Any], str]] = []
@@ -711,3 +733,97 @@ class InMemoryMemoryRepository:
             return False
         del self.memories[memory_id]
         return True
+
+
+class InMemoryChargeRepository:
+    def __init__(self) -> None:
+        self.records: list[ChargeRecord] = []
+        self.deleted: set[UUID] = set()
+        # True: every call fails, as a database that cannot be reached.
+        self.broken = False
+
+    def add(self, record: ChargeRecord) -> None:
+        if self.broken:
+            raise RuntimeError("the database did not answer")
+        user_id = None if record.user_id in self.deleted else record.user_id
+        self.records.append(replace(record, user_id=user_id, at=record.at.astimezone(UTC)))
+
+    def _within(self, since: datetime, until: datetime) -> list[ChargeRecord]:
+        if self.broken:
+            raise RuntimeError("the database did not answer")
+        return [record for record in self.records if since <= record.at < until]
+
+    def total(self, since: datetime, until: datetime) -> float:
+        return sum(record.usd for record in self._within(since, until))
+
+    def spending(self, since: datetime, until: datetime, top: int) -> Spending:
+        records = self._within(since, until)
+
+        def shares(key: Any) -> tuple[Share, ...]:
+            grouped: dict[str, list[ChargeRecord]] = {}
+            for record in records:
+                grouped.setdefault(key(record), []).append(record)
+            found = [
+                Share(name, sum(r.usd for r in group), len(group))
+                for name, group in grouped.items()
+            ]
+            return tuple(sorted(found, key=lambda share: (-share.usd, share.key)))
+
+        days: dict[date, float] = {}
+        learners: dict[UUID | None, list[ChargeRecord]] = {}
+        for record in records:
+            day = record.at.date()
+            days[day] = days.get(day, 0.0) + record.usd
+            learners.setdefault(record.user_id, []).append(record)
+        spenders = [
+            LearnerSpend(
+                user_id,
+                sum(r.usd for r in group),
+                len(group),
+                int(sum(r.units.get("call_seconds", 0) for r in group)),
+            )
+            for user_id, group in learners.items()
+            if user_id is not None
+        ]
+        spenders.sort(key=lambda learner: (-learner.usd, str(learner.user_id)))
+        return Spending(
+            total_usd=sum(record.usd for record in records),
+            unpriced=sum(1 for record in records if not record.priced),
+            days=tuple(DaySpend(day, usd) for day, usd in sorted(days.items())),
+            features=shares(lambda record: record.feature.value),
+            providers=shares(lambda record: record.provider),
+            learners=tuple(spenders[:top]),
+        )
+
+    def forget_learner(self, user_id: UUID) -> None:
+        """What account deletion does: the spending stays, without the learner."""
+        self.deleted.add(user_id)
+        self.records = [
+            replace(record, user_id=None) if record.user_id == user_id else record
+            for record in self.records
+        ]
+
+
+class InMemoryAlertLog:
+    def __init__(self) -> None:
+        self.sent: set[tuple[date, Level]] = set()
+
+    def first(self, month: date, level: Level) -> bool:
+        if (month, level) in self.sent:
+            return False
+        self.sent.add((month, level))
+        return True
+
+    def forget(self, month: date, level: Level) -> None:
+        self.sent.discard((month, level))
+
+
+class RecordingNotifier:
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, str]] = []
+        self.broken = False
+
+    def notify(self, subject: str, message: str) -> None:
+        if self.broken:
+            raise RuntimeError("the email service did not answer")
+        self.sent.append((subject, message))

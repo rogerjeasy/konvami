@@ -6,6 +6,14 @@ import pytest
 
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.costs import (
+    Budget,
+    ChargeRecord,
+    Feature,
+    Meter,
+    SpendGuard,
+    week_start,
+)
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.live_call import KeepAudio, Send, TurnAudio
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, PlacementStatus
@@ -13,20 +21,25 @@ from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.placement import MIN_TASKS, PlacementScript, PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.voice import (
+    MIN_CALL_SECONDS,
     CallPurpose,
     VoiceCallService,
     VoiceError,
     VoiceSettings,
+    voice_units,
 )
 from tests.fakes import (
     FakeAccountDirectory,
     FakeVoiceProvider,
     FixedClock,
+    InMemoryAlertLog,
+    InMemoryChargeRepository,
     InMemoryOnboardingRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
+    RecordingNotifier,
     ScriptedTextModel,
 )
 from tests.world import World
@@ -43,8 +56,20 @@ SETTINGS = VoiceSettings(
     max_seconds={CallPurpose.ONBOARDING: 480, CallPurpose.PLACEMENT: 720},
     voice="marin",
     transcription_model="gpt-transcribe",
-    daily_call_limit=3,
+    weekly_seconds=3600,
+    # Cheaper still: the guide already speaks with the efficient model here.
+    economy_models={CallPurpose.ONBOARDING: "gpt-realtime-2.1-nano"},
 )
+PRICES = {
+    "gpt-realtime-2.1-mini": {
+        "input_text_tokens": 0.6,
+        "input_audio_tokens": 10.0,
+        "cached_input_text_tokens": 0.06,
+        "cached_input_audio_tokens": 0.3,
+        "output_text_tokens": 2.4,
+        "output_audio_tokens": 20.0,
+    }
+}
 
 
 class Setup:
@@ -72,6 +97,16 @@ class Setup:
             model="gpt-6.1-sol",
             clock=self.clock,
         )
+        self.charges = InMemoryChargeRepository()
+        self.notifier = RecordingNotifier()
+        self.guard = SpendGuard(
+            budget=Budget(target_usd=150, ceiling_usd=250),
+            charges=self.charges,
+            alerts=InMemoryAlertLog(),
+            notifier=self.notifier,
+            clock=self.clock,
+        )
+        self.meter = Meter(prices=PRICES, charges=self.charges, guard=self.guard, clock=self.clock)
         self.service = VoiceCallService(
             settings=SETTINGS,
             scripts={
@@ -83,6 +118,18 @@ class Setup:
             sessions=self.sessions,
             starter=self.starter,
             clock=self.clock,
+            guard=self.guard,
+            meter=self.meter,
+        )
+
+    def used(self, seconds: int, at: datetime = NOON - timedelta(hours=1)) -> None:
+        """Calls of `seconds` in all that ended before `at`'s week was over."""
+        week = week_start(at).date()
+        self.sessions.reserve_seconds(USER, week, seconds, 0, seconds)
+
+    def spent(self, usd: float) -> None:
+        self.charges.add(
+            ChargeRecord(USER, Feature.REPORT, "openai", "gpt-6.1-sol", {}, usd, True, NOON)
         )
 
 
@@ -155,24 +202,174 @@ def test_no_call_without_consent_to_the_voice_provider(setup: Setup) -> None:
     assert setup.provider.created == []
 
 
-def test_calls_are_limited_per_learner_per_day(setup: Setup) -> None:
-    for _ in range(3):
+# --- Voice minutes and the spending guard -----------------------------------------------------
+
+
+def test_a_learner_has_the_weeks_minutes_until_monday(setup: Setup) -> None:
+    setup.used(600, at=datetime(2026, 10, 4, 23, 0, tzinfo=UTC))
+    setup.used(900)
+
+    allowance = setup.service.allowance(USER)
+
+    assert (allowance.weekly_seconds, allowance.used_seconds) == (3600, 900)
+    assert allowance.resets_at == datetime(2026, 10, 12, tzinfo=UTC)
+
+
+def test_a_call_gets_no_more_time_than_the_learner_has_left(setup: Setup) -> None:
+    setup.used(3300)
+
+    started = setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    assert started.max_seconds == 300
+    session = setup.sessions.get(started.call_id)
+    assert session is not None
+    assert session.max_seconds == 300
+    assert setup.service.allowance(USER).remaining_seconds == 0
+
+
+def test_a_call_running_counts_with_all_its_time(setup: Setup) -> None:
+    setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    assert setup.service.allowance(USER).used_seconds == 480
+
+
+def test_a_call_that_cannot_start_gives_its_time_back(setup: Setup) -> None:
+    setup.provider.fail = True
+    with pytest.raises(VoiceError):
         setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    setup.provider.fail = False
+    setup.starter.fail = True
+    with pytest.raises(VoiceError):
+        setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    assert setup.service.allowance(USER).used_seconds == 0
+
+
+def test_an_ended_call_counts_what_it_lasted(setup: Setup) -> None:
+    call_id = setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+    live = setup.service.live_call(call_id)
+    assert live is not None
+    setup.clock.now = NOON + timedelta(minutes=3)
+
+    setup.service.finished(call_id, live)
+
+    assert setup.service.allowance(USER).used_seconds == 180
+
+
+def test_a_call_finished_twice_is_concluded_once(setup: Setup) -> None:
+    call_id = setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+    live = setup.service.live_call(call_id)
+    assert live is not None
+    setup.clock.now = NOON + timedelta(minutes=3)
+
+    setup.service.finished(call_id, live)
+    setup.service.finished(call_id, live)
+
+    assert setup.service.allowance(USER).used_seconds == 180
+    assert len(setup.charges.records) == 1
+
+
+def test_no_call_starts_when_the_weeks_minutes_are_used_up(setup: Setup) -> None:
+    # Less than a minute left is not a conversation.
+    setup.used(3600 - MIN_CALL_SECONDS + 1)
 
     with pytest.raises(VoiceError) as error:
         setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
 
-    assert error.value.code == "call_limit"
-    assert len(setup.provider.created) == 3
+    assert error.value.code == "minutes_used_up"
+    assert setup.provider.created == []
 
 
-def test_the_limit_frees_up_a_day_later(setup: Setup) -> None:
-    for _ in range(3):
+def test_the_minutes_come_back_on_monday(setup: Setup) -> None:
+    setup.used(3600)
+
+    setup.clock.now = datetime(2026, 10, 12, 0, 0, tzinfo=UTC)
+
+    assert setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).max_seconds == 480
+
+
+def test_past_the_target_calls_use_the_cheaper_voice_model(setup: Setup) -> None:
+    setup.spent(151)
+
+    setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    assert setup.provider.created[0][1]["model"] == "gpt-realtime-2.1-nano"
+    session = setup.sessions.get("rtc_1")
+    assert session is not None
+    assert session.model == "gpt-realtime-2.1-nano"
+    assert len(setup.notifier.sent) == 1
+
+
+def test_at_the_ceiling_no_voice_call_starts(setup: Setup) -> None:
+    setup.spent(250)
+
+    with pytest.raises(VoiceError) as error:
         setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
 
-    setup.clock.now = NOON + timedelta(hours=24, seconds=1)
+    assert error.value.code == "voice_paused"
+    assert setup.provider.created == []
 
-    assert setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).call_id == "rtc_4"
+
+def test_a_finished_call_is_metered_with_its_tokens_and_length(setup: Setup) -> None:
+    call_id = setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+    live = setup.service.live_call(call_id)
+    assert live is not None
+    live.usage.update(
+        {
+            "input_text_tokens": 1_000,
+            "input_audio_tokens": 3_000,
+            "cached_input_tokens": 1_500,
+            "cached_input_text_tokens": 500,
+            "cached_input_audio_tokens": 1_000,
+            "output_text_tokens": 200,
+            "output_audio_tokens": 4_000,
+        }
+    )
+    setup.clock.now = NOON + timedelta(minutes=4, seconds=10)
+
+    setup.service.finished(call_id, live)
+
+    [charge] = setup.charges.records
+    assert (charge.user_id, charge.feature, charge.provider, charge.model) == (
+        USER,
+        Feature.VOICE_ONBOARDING,
+        "openai",
+        "gpt-realtime-2.1-mini",
+    )
+    assert charge.units == {
+        "input_text_tokens": 500,
+        "input_audio_tokens": 2_000,
+        "cached_input_text_tokens": 500,
+        "cached_input_audio_tokens": 1_000,
+        "output_text_tokens": 200,
+        "output_audio_tokens": 4_000,
+        "call_seconds": 250,
+    }
+    assert charge.usd == pytest.approx(
+        (500 * 0.6 + 2_000 * 10 + 500 * 0.06 + 1_000 * 0.3 + 200 * 2.4 + 4_000 * 20) / 1e6
+    )
+
+
+def test_cached_tokens_without_their_split_are_taken_from_text_first() -> None:
+    units = voice_units(
+        {"input_text_tokens": 100, "input_audio_tokens": 500, "cached_input_tokens": 300}, 60
+    )
+
+    assert units["input_text_tokens"] == 0
+    assert units["cached_input_text_tokens"] == 100
+    assert units["input_audio_tokens"] == 300
+    assert units["cached_input_audio_tokens"] == 200
+
+
+def test_the_server_ends_a_call_at_the_time_it_was_granted(setup: Setup) -> None:
+    setup.used(3300)
+    call_id = setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+
+    live = setup.service.live_call(call_id)
+
+    assert live is not None
+    assert live.max_seconds == 300
 
 
 def test_a_provider_failure_is_reported_and_nothing_is_recorded(setup: Setup) -> None:
@@ -198,7 +395,7 @@ def test_a_call_whose_server_side_cannot_start_is_hung_up(setup: Setup) -> None:
 
 def test_a_purpose_without_a_configured_model_is_not_available(setup: Setup) -> None:
     service = VoiceCallService(
-        settings=VoiceSettings({}, {}, voice="", transcription_model="", daily_call_limit=3),
+        settings=VoiceSettings({}, {}, voice="", transcription_model="", weekly_seconds=3600),
         scripts={CallPurpose.ONBOARDING: HostScript(CATALOG, setup.profiles)},
         accounts=setup.accounts,
         provider=setup.provider,

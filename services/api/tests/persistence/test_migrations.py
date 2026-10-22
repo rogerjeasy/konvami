@@ -6,12 +6,16 @@ import pytest
 
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.persistence.migrations import (
+    MIGRATIONS_DIR,
     MigrationError,
     migrate,
     migrate_when_awake,
     split_statements,
 )
 from konvami_api.persistence.sql import Param, SqlClient
+
+USER = "11111111-1111-4111-8111-111111111111"
+OTHER_USER = "22222222-2222-4222-8222-222222222222"
 
 
 def tables(db: SqlClient) -> set[str]:
@@ -41,6 +45,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0013_recordings",
         "0014_tutor",
         "0015_role_play",
+        "0016_costs",
     ]
     assert {
         "app_user",
@@ -56,6 +61,8 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "card_review",
         "memory",
         "memory_extraction",
+        "usage_charge",
+        "spend_alert",
     } <= tables(empty_db)
 
 
@@ -170,3 +177,32 @@ def test_a_migration_with_a_function_can_be_applied(empty_db: SqlClient, tmp_pat
     empty_db.execute("INSERT INTO a (id) VALUES (1)")
 
     assert empty_db.execute("SELECT id FROM a") == [{"id": 2}]
+
+
+def test_the_week_of_the_costs_migration_starts_with_what_its_calls_used(
+    empty_db: SqlClient, tmp_path: Path
+) -> None:
+    for file in sorted(MIGRATIONS_DIR.glob("*.sql")):
+        if file.stem < "0016":
+            (tmp_path / file.name).write_text(file.read_text())
+    migrate(empty_db, tmp_path)
+    monday = "date_trunc('week', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
+    empty_db.execute(
+        "INSERT INTO app_user (id) VALUES (CAST(:a AS uuid)), (CAST(:b AS uuid))",
+        {"a": USER, "b": OTHER_USER},
+    )
+    empty_db.execute(
+        "INSERT INTO voice_session (call_id, user_id, purpose, model, started_at, ended_at)"
+        f" VALUES ('ended', CAST(:a AS uuid), 'practice', 'm', {monday} + interval '1 minute',"
+        f"         {monday} + interval '6 minutes'),"
+        f"        ('running', CAST(:a AS uuid), 'practice', 'm', {monday} + interval '2 minutes',"
+        "         NULL),"
+        f"        ('last_week', CAST(:b AS uuid), 'practice', 'm', {monday} - interval '1 hour',"
+        f"         {monday} - interval '50 minutes')",
+        {"a": USER, "b": OTHER_USER},
+    )
+
+    migrate(empty_db, MIGRATIONS_DIR)
+
+    rows = empty_db.execute("SELECT CAST(user_id AS text) AS user_id, seconds FROM voice_week")
+    assert rows == [{"user_id": USER, "seconds": 300 + 780}]

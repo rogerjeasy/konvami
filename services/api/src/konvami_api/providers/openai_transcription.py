@@ -1,20 +1,39 @@
 """The transcription model: OpenAI's audio transcription endpoint (the verbatim pass, spec §9.4)."""
 
+import io
+import wave
 from collections.abc import Callable
 
 import httpx
 
+from konvami_api.domain.costs import UsageMeter
 from konvami_api.domain.speech import TranscriptionError, TranscriptionTask
 
 URL = "https://api.openai.com/v1/audio/transcriptions"
+PROVIDER = "openai"
 # A turn is seconds of speech; the worker writing a report waits for each in turn.
 TIMEOUT_SECONDS = 30.0
 
 
+def _seconds(audio: bytes) -> float:
+    """How long a WAV file plays; 0 for one that cannot be read."""
+    try:
+        with wave.open(io.BytesIO(audio), "rb") as file:
+            return file.getnframes() / file.getframerate()
+    except (wave.Error, EOFError, ZeroDivisionError):
+        return 0.0
+
+
 class OpenAiTranscription:
-    def __init__(self, api_key: Callable[[], str], http: httpx.Client | None = None) -> None:
+    def __init__(
+        self,
+        api_key: Callable[[], str],
+        http: httpx.Client | None = None,
+        meter: UsageMeter | None = None,
+    ) -> None:
         self._api_key = api_key
         self._http = http or httpx.Client()
+        self._meter = meter
 
     def transcribe(self, task: TranscriptionTask) -> str:
         fields = {
@@ -36,6 +55,10 @@ class OpenAiTranscription:
             raise TranscriptionError(type(error).__name__) from None
         if not response.is_success:
             raise TranscriptionError(f"transcription model answered {response.status_code}")
+        # Transcription is billed by the minute of audio.
+        if self._meter is not None:
+            units = {"audio_seconds": _seconds(task.audio)}
+            self._meter.record(task.charge, PROVIDER, task.model, units)
         try:
             answer = response.json()
         except ValueError:

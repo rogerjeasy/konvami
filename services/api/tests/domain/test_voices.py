@@ -1,5 +1,6 @@
 import pytest
 
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.speech import SpeechError
 from konvami_api.domain.voices import SampleError, VoiceSampleService
 from tests.world import OTHER_USER, USER, World
@@ -18,6 +19,8 @@ def test_a_voice_is_spoken_once_and_then_kept() -> None:
     assert len(world.speech.tasks) == 1
     task = world.speech.tasks[0]
     assert (task.model, task.voice) == ("gpt-4o-mini-tts", "coral")
+    # The learner who first asked for it pays for the one sample all learners share.
+    assert task.charge == Charge(USER, Feature.VOICE_SAMPLE)
     # The sample is in the language being learned: it is how the partner will sound.
     assert task.text.startswith("Hallo!")
 

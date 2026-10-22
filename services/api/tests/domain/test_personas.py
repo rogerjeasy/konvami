@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.personas import PersonaError, PersonaService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
@@ -120,6 +121,7 @@ def test_the_writer_is_told_about_the_learner_and_what_it_may_choose_from() -> N
 
     task = setup.text.tasks[0]
     assert task.model == "gpt-6-luna"
+    assert task.charge == Charge(USER, Feature.PARTNERS)
     assert "French" in task.instructions
     # Where a partner is from is shown to the learner, so it is written in their language too.
     assert "`origin`: the city and country, written in French" in task.instructions

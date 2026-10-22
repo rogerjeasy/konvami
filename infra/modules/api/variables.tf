@@ -50,20 +50,54 @@ variable "voice" {
   description = <<-EOT
     Live voice calls (spec §9, §17.3). models: the voice model per call purpose; a purpose
     without a model cannot be started. max_seconds: the longest a call of that purpose lasts
-    (the call worker's limit is 15 minutes). daily_call_limit: calls per learner per 24 hours.
+    (the call worker's limit is 15 minutes). weekly_minutes: each learner's voice minutes per
+    week, for calls of every purpose (spec §6.19); a call never starts with more time than is
+    left. economy_models: the cheaper model per purpose, used once the month's estimated spend
+    passes costs.target_usd; a purpose without one keeps its model.
   EOT
   type = object({
     models              = map(string)
     max_seconds         = map(number)
     voice               = string
     transcription_model = string
-    daily_call_limit    = number
+    weekly_minutes      = number
+    economy_models      = optional(map(string), {})
   })
 
   validation {
     condition     = alltrue([for seconds in values(var.voice.max_seconds) : seconds <= 780])
     error_message = "A call must end within 780 seconds: the call worker runs for at most 15 minutes, and a placement test is assessed in it after the call (up to 90 seconds)."
   }
+}
+
+variable "costs" {
+  description = <<-EOT
+    Cost control (spec §6.19, decision D5). prices: per model, US dollars per million of each
+    unit it is billed by; the API estimates every paid request from them, so a price change needs
+    no code change. Units: realtime models input_text_tokens, input_audio_tokens,
+    cached_input_text_tokens, cached_input_audio_tokens, output_text_tokens,
+    output_audio_tokens; text models input_tokens, cached_input_tokens, output_tokens; speech
+    characters; transcription audio_seconds. A model without prices is counted as unpriced.
+    target_usd: past it, new calls use voice.economy_models. ceiling_usd: at it, new voice calls
+    stop. owners: user pool subjects (sub) who may open the costs page in the app.
+  EOT
+  type = object({
+    prices      = map(map(number))
+    target_usd  = number
+    ceiling_usd = number
+    owners      = list(string)
+  })
+
+  validation {
+    condition     = var.costs.target_usd > 0 && var.costs.ceiling_usd >= var.costs.target_usd
+    error_message = "target_usd must be positive and ceiling_usd at least target_usd."
+  }
+}
+
+variable "alert_topic_arn" {
+  description = "The SNS topic the spending alerts are emailed through (modules/budget); empty sends none."
+  type        = string
+  default     = ""
 }
 
 variable "text_models" {

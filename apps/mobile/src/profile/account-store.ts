@@ -2,14 +2,17 @@ import type { ApiClient } from '@konvami/api-client';
 import type { PickedPicture, PictureSender } from './pictures';
 
 /**
- * What the backend keeps for the account besides the profile: the learner's photo. Name and
- * email live with the session (`useSession`). The photo's address is short-lived, so it is
- * read anew each time the app starts.
+ * What the backend keeps for the account besides the profile: the learner's photo, and whether
+ * the account is the owner's (who may see the costs). Name and email live with the session
+ * (`useSession`). The photo's address is short-lived, so it is read anew each time the app
+ * starts.
  */
 export interface AccountState {
   /** `failed` only means the photo is unknown: the screens then show the learner's initial. */
   phase: 'idle' | 'loading' | 'ready' | 'failed';
   pictureUrl: string | null;
+  /** The owner's account, which may open the costs page (false until known). */
+  owner: boolean;
 }
 
 export interface AccountStore {
@@ -27,7 +30,7 @@ export interface AccountStore {
   reset(): void;
 }
 
-const IDLE: AccountState = { phase: 'idle', pictureUrl: null };
+const IDLE: AccountState = { phase: 'idle', pictureUrl: null, owner: false };
 
 export function createAccountStore(
   api: Pick<ApiClient, 'getAccount' | 'startPictureUpload' | 'confirmPicture' | 'removePicture'>,
@@ -44,9 +47,9 @@ export function createAccountStore(
     listeners.forEach((listener) => listener());
   }
 
-  function show(account: { picture: { url: string } | null }, from: number) {
+  function show(account: { picture: { url: string } | null; owner: boolean }, from: number) {
     if (from !== generation) return;
-    setState({ phase: 'ready', pictureUrl: account.picture?.url ?? null });
+    setState({ phase: 'ready', pictureUrl: account.picture?.url ?? null, owner: account.owner });
   }
 
   return {
@@ -61,12 +64,12 @@ export function createAccountStore(
       if (loading) return loading;
       if (state.phase === 'ready') return Promise.resolve();
       const from = generation;
-      setState({ phase: 'loading', pictureUrl: null });
+      setState({ phase: 'loading', pictureUrl: null, owner: false });
       const request = api
         .getAccount()
         .then((account) => show(account, from))
         .catch(() => {
-          if (from === generation) setState({ phase: 'failed', pictureUrl: null });
+          if (from === generation) setState({ phase: 'failed', pictureUrl: null, owner: false });
         })
         .finally(() => {
           if (loading === request) loading = null;

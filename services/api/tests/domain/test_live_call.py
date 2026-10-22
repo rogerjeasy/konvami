@@ -237,6 +237,8 @@ def test_usage_adds_up_over_the_call(call: LiveCall) -> None:
         "input_text_tokens": 238,
         "input_audio_tokens": 26,
         "cached_input_tokens": 128,
+        "cached_input_text_tokens": 128,
+        "cached_input_audio_tokens": 0,
         "output_text_tokens": 60,
         "output_audio_tokens": 182,
     }

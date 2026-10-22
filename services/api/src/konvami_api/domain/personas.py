@@ -20,6 +20,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from konvami_api.domain.catalog import ExplanationUsage, StartingLevel
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.persona_parts import (
     Backdrop,
@@ -554,6 +555,7 @@ class PersonaService:
             answer_name="starter_personas",
             answer_schema=_ANSWER_SCHEMA,
             max_seconds=WRITER_MAX_SECONDS,
+            charge=Charge(user_id, Feature.PARTNERS),
         )
         try:
             written = _WrittenSet.model_validate(self._text_model.answer(task)).personas
@@ -685,6 +687,7 @@ class PersonaService:
             answer_name="persona_draft",
             answer_schema=_DRAFT_SCHEMA,
             max_seconds=WRITER_MAX_SECONDS,
+            charge=Charge(user_id, Feature.PARTNERS),
         )
         try:
             fields = PersonaFields.model_validate(self._text_model.answer(task))

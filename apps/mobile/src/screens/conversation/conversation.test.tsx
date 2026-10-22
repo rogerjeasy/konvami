@@ -245,7 +245,14 @@ describe('5.3 Conversation', () => {
   });
 
   it.each([
-    ['call_limit', 'You’ve reached today’s limit for conversations. Come back tomorrow.'],
+    [
+      'minutes_used_up',
+      'You’ve used this week’s voice minutes. They come back on Monday, October 12.',
+    ],
+    [
+      'voice_paused',
+      'Voice conversations are paused for now. Your cards, reports and the tutor still work.',
+    ],
     ['mic_denied', /^Konvami can’t use the microphone/],
     ['unsupported', 'Voice needs the full Konvami app. It isn’t available in this preview.'],
     ['network', 'Can’t reach Konvami. Check your connection and try again.'],
@@ -259,17 +266,20 @@ describe('5.3 Conversation', () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it.each(['call_limit', 'unsupported', 'consent_required', 'no_microphone'] as const)(
-    'does not offer another try when trying again cannot help: %s',
-    async (code) => {
-      const voice = createFakeVoiceEngine();
-      voice.failNextStart(code);
-      await open({ voice });
+  it.each([
+    'minutes_used_up',
+    'voice_paused',
+    'unsupported',
+    'consent_required',
+    'no_microphone',
+  ] as const)('does not offer another try when trying again cannot help: %s', async (code) => {
+    const voice = createFakeVoiceEngine();
+    voice.failNextStart(code);
+    await open({ voice });
 
-      expect(await screen.findByRole('button', { name: 'Back to Today' })).toBeTruthy();
-      expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
-    },
-  );
+    expect(await screen.findByRole('button', { name: 'Back to Today' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  });
 
   it('starts a fresh call when the learner tries again', async () => {
     const voice = createFakeVoiceEngine();
@@ -285,9 +295,9 @@ describe('5.3 Conversation', () => {
 
   it('leads back to Today from a call that could not start', async () => {
     const voice = createFakeVoiceEngine();
-    voice.failNextStart('call_limit');
+    voice.failNextStart('minutes_used_up');
     await open({ voice });
-    await screen.findByText(/today’s limit/);
+    await screen.findByText(/this week’s voice minutes/);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Back to Today' }));
 

@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
 from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.profile import Profile, ProfileService
 from konvami_api.domain.reports import DEFAULT_LEVEL, Mistake, ReportService
 from konvami_api.domain.text import TextModel, TextModelError, TextTask, answer_list, answer_object
@@ -283,6 +284,7 @@ class TutorService:
             answer_name="tutor_answer",
             answer_schema=_schema(1 if spoken else MAX_EXAMPLES),
             max_seconds=CALL_SECONDS if spoken else TEXT_SECONDS,
+            charge=Charge(user_id, Feature.TUTOR),
         )
         try:
             found = _Answer.model_validate(self._text_model.answer(task))

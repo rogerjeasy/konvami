@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.catalog import CEFR_LEVELS, STARTING_LEVELS, CefrLevel, StartingLevel
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import (
     OnboardingError,
@@ -331,7 +332,9 @@ class PlacementService:
             return
         self._onboarding.set_placement(user_id, PlacementStatus.ASSESSING)
         target, explanation, self_assessed = self._learning(user_id)
-        result = self._assess(target, explanation, self_assessed, tools.notes, impression, turns)
+        result = self._assess(
+            user_id, target, explanation, self_assessed, tools.notes, impression, turns
+        )
 
         self._results.save(user_id, target, result)
         self._profiles.apply(
@@ -348,6 +351,7 @@ class PlacementService:
 
     def _assess(
         self,
+        user_id: UUID,
         target: str,
         explanation: str,
         self_assessed: str,
@@ -370,6 +374,7 @@ class PlacementService:
             content=json.dumps(content, ensure_ascii=False),
             answer_name="placement_assessment",
             answer_schema=_ASSESSMENT_SCHEMA,
+            charge=Charge(user_id, Feature.PLACEMENT_ASSESSMENT),
         )
         try:
             assessment = _Assessment.model_validate(self._text_model.answer(task))

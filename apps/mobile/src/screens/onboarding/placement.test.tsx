@@ -196,9 +196,10 @@ describe('4.5 Placement test', () => {
     ],
     ['unsupported', 'Voice needs the full Konvami app. In this preview, skip the test for now.'],
     [
-      'call_limit',
-      'You’ve reached today’s limit for voice tests. Skip it for now and try tomorrow.',
+      'minutes_used_up',
+      'You’ve used this week’s voice minutes. Skip the test for now. They come back on Monday, October 12.',
     ],
+    ['voice_paused', 'Voice is paused for now. Skip the test for now.'],
     ['network', NETWORK],
   ] as const)(
     'explains a test that cannot start (%s) and can be skipped',

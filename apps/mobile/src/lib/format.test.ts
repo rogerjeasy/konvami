@@ -5,6 +5,8 @@ import {
   formatDayLine,
   formatDayOfYear,
   formatDuration,
+  formatMonth,
+  formatUsd,
   formatPercent,
   formatShortDate,
   monthNames,
@@ -171,5 +173,19 @@ describe('weekdayNames', () => {
       'Sunday',
     ]);
     expect(weekdayNames('de')[2]).toBe('Mittwoch');
+  });
+});
+
+describe('formatUsd', () => {
+  it('writes dollars with cents, as the language writes money', () => {
+    expect(formatUsd('en', 162.4)).toBe('$162.40');
+    expect(formatUsd('de', 1234.5)).toMatch(/^1\.234,50\s\$$/);
+  });
+});
+
+describe('formatMonth', () => {
+  it('names a month and its year from its first day', () => {
+    expect(formatMonth('en', '2026-10-01')).toBe('October 2026');
+    expect(formatMonth('de', '2026-03-01')).toBe('März 2026');
   });
 });

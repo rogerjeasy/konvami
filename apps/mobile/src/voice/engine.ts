@@ -42,7 +42,8 @@ export interface VoiceEngine {
 /** Failures of the call-creating request that mean the same on the voice screen. */
 const API_CODES: Record<string, VoiceErrorCode> = {
   consent_required: 'consent_required',
-  call_limit: 'call_limit',
+  minutes_used_up: 'minutes_used_up',
+  voice_paused: 'voice_paused',
   voice_unavailable: 'voice_unavailable',
   not_configured: 'voice_unavailable',
   waking_up: 'voice_unavailable',

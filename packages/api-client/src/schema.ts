@@ -333,6 +333,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/owner/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Costs
+         * @description A month's estimated spending (this month unless `month` names its first day).
+         */
+        get: operations["getCosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/personas": {
         parameters: {
             query?: never;
@@ -591,6 +611,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/voice/allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Voice Allowance */
+        get: operations["getVoiceAllowance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/voice/calls": {
         parameters: {
             query?: never;
@@ -643,6 +680,8 @@ export interface components {
          * @description What the backend keeps for an account. Name and email live with the identity provider.
          */
         AccountOut: {
+            /** Owner */
+            owner: boolean;
             picture: components["schemas"]["PictureOut"] | null;
         };
         /** ActivityOut */
@@ -666,6 +705,23 @@ export interface components {
             week: components["schemas"]["DayOut"][];
             /** Weekseconds */
             weekSeconds: number;
+        };
+        /**
+         * AllowanceOut
+         * @description The learner's voice minutes this week, in seconds (spec §6.19).
+         */
+        AllowanceOut: {
+            /** Remainingseconds */
+            remainingSeconds: number;
+            /**
+             * Resetsat
+             * Format: date-time
+             */
+            resetsAt: string;
+            /** Usedseconds */
+            usedSeconds: number;
+            /** Weeklyseconds */
+            weeklySeconds: number;
         };
         /**
          * CallPurpose
@@ -792,6 +848,35 @@ export interface components {
             /** Next */
             next: string | null;
         };
+        /**
+         * CostsOut
+         * @description A month's estimated spending, for the owner (spec §6.19). Estimates from usage counts and
+         *     the configured prices, not the providers' invoices.
+         */
+        CostsOut: {
+            /** Ceilingusd */
+            ceilingUsd: number;
+            /** Days */
+            days: components["schemas"]["DaySpendOut"][];
+            /** Features */
+            features: components["schemas"]["ShareOut"][];
+            /** Learners */
+            learners: components["schemas"]["LearnerSpendOut"][];
+            level: components["schemas"]["Level"];
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            /** Providers */
+            providers: components["schemas"]["ShareOut"][];
+            /** Targetusd */
+            targetUsd: number;
+            /** Totalusd */
+            totalUsd: number;
+            /** Unpriced */
+            unpriced: number;
+        };
         /** DayOut */
         DayOut: {
             /**
@@ -801,6 +886,16 @@ export interface components {
             day: string;
             /** Seconds */
             seconds: number;
+        };
+        /** DaySpendOut */
+        DaySpendOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Usd */
+            usd: number;
         };
         /** DeckOut */
         DeckOut: {
@@ -931,6 +1026,27 @@ export interface components {
             /** Scenarios */
             scenarios: components["schemas"]["ScenarioOut"][];
         };
+        /** LearnerSpendOut */
+        LearnerSpendOut: {
+            /** Name */
+            name: string | null;
+            /** Requests */
+            requests: number;
+            /** Usd */
+            usd: number;
+            /**
+             * Userid
+             * Format: uuid
+             */
+            userId: string;
+            /** Voiceseconds */
+            voiceSeconds: number;
+        };
+        /**
+         * Level
+         * @enum {string}
+         */
+        Level: "normal" | "economy" | "paused";
         /**
          * LookModel
          * @description A portrait's parts and colors. The app draws exactly these names.
@@ -1490,6 +1606,15 @@ export interface components {
             wins: string[];
             /** Words */
             words: components["schemas"]["ReportWordOut"][];
+        };
+        /** ShareOut */
+        ShareOut: {
+            /** Key */
+            key: string;
+            /** Requests */
+            requests: number;
+            /** Usd */
+            usd: number;
         };
         /**
          * Source
@@ -2724,6 +2849,55 @@ export interface operations {
             };
         };
     };
+    getCosts: {
+        parameters: {
+            query?: {
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getPersonas: {
         parameters: {
             query?: never;
@@ -3594,6 +3768,35 @@ export interface operations {
             };
             /** @description Service Unavailable */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getVoiceAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

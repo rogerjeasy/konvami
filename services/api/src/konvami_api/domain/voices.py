@@ -7,6 +7,7 @@ model, and kept: every later preview, by any learner, reads the stored file (pro
 import hashlib
 from uuid import UUID
 
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.speech import SpeechError, SpeechModel, SpeechTask
@@ -50,7 +51,10 @@ class VoiceSampleService:
         key = f"voices/{language}/{voice}-{fingerprint}.mp3"
         if self._files.stat(key) is None:
             try:
-                audio = self._speech.speak(SpeechTask(self._model, voice, pack.voice_sample))
+                task = SpeechTask(
+                    self._model, voice, pack.voice_sample, Charge(user_id, Feature.VOICE_SAMPLE)
+                )
+                audio = self._speech.speak(task)
             except SpeechError as error:
                 raise SampleError("voice_unavailable") from error
             self._files.save(key, audio, SAMPLE_TYPE)

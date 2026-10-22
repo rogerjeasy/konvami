@@ -13,6 +13,7 @@ from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
+from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.memories import MemoryService
@@ -34,7 +35,9 @@ from tests.fakes import (
     FakeVoiceProvider,
     FixedClock,
     InMemoryAccountRepository,
+    InMemoryAlertLog,
     InMemoryCardRepository,
+    InMemoryChargeRepository,
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
@@ -48,12 +51,16 @@ from tests.fakes import (
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
+    RecordingNotifier,
     RecordingReportStarter,
     ScriptedTextModel,
 )
 
 USER = "11111111-1111-4111-8111-111111111111"
 OTHER_USER = "22222222-2222-4222-8222-222222222222"
+# The account that may see the costs.
+OWNER = "33333333-3333-4333-8333-333333333333"
+BUDGET = Budget(target_usd=150, ceiling_usd=250)
 
 
 @dataclass
@@ -150,8 +157,13 @@ VOICE = VoiceSettings(
     },
     voice="marin",
     transcription_model="gpt-transcribe",
-    daily_call_limit=2,
+    weekly_seconds=900,
 )
+
+
+@pytest.fixture
+def charges() -> InMemoryChargeRepository:
+    return InMemoryChargeRepository()
 
 
 @pytest.fixture
@@ -221,6 +233,7 @@ def services(
     account_records: InMemoryAccountRepository,
     speech: FakeSpeechModel,
     report_starter: RecordingReportStarter,
+    charges: InMemoryChargeRepository,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -318,6 +331,13 @@ def services(
         starter=RecordingCallStarter(),
         clock=clock,
         recordings=recordings,
+        guard=SpendGuard(
+            budget=BUDGET,
+            charges=charges,
+            alerts=InMemoryAlertLog(),
+            notifier=RecordingNotifier(),
+            clock=clock,
+        ),
     )
     home = HomeService(
         profiles=profiles,
@@ -365,6 +385,13 @@ def services(
         tutor=tutor,
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
+        ),
+        costs=CostService(
+            owners=frozenset({UUID(OWNER)}),
+            budget=BUDGET,
+            charges=charges,
+            accounts=directory,
+            clock=clock,
         ),
     )
 

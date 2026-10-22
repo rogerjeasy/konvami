@@ -6,12 +6,16 @@ and `Transcriber`.
 from dataclasses import dataclass
 from typing import Protocol
 
+from konvami_api.domain.costs import Charge
+
 
 @dataclass(frozen=True)
 class SpeechTask:
     model: str
     voice: str
     text: str
+    # Who the request is for and why, for metering; None: not metered.
+    charge: Charge | None = None
 
 
 class SpeechError(Exception):
@@ -32,6 +36,7 @@ class TranscriptionTask:
     language: str
     # What the transcription is for and how to write it.
     prompt: str
+    charge: Charge | None = None
 
 
 class TranscriptionError(Exception):

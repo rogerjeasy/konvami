@@ -1,3 +1,6 @@
+import io
+import wave
+
 import httpx
 import pytest
 
@@ -72,3 +75,38 @@ def test_an_answer_without_text_is_reported(answer: object) -> None:
 
     with pytest.raises(TranscriptionError):
         model(respond).transcribe(TASK)
+
+
+def wav(seconds: float, rate: int = 24_000) -> bytes:
+    """Silence as the call worker keeps it: 16-bit mono PCM."""
+    out = io.BytesIO()
+    with wave.open(out, "wb") as file:
+        file.setnchannels(1)
+        file.setsampwidth(2)
+        file.setframerate(rate)
+        file.writeframes(b"\x00\x00" * int(seconds * rate))
+    return out.getvalue()
+
+
+def test_a_transcription_is_metered_by_the_seconds_of_audio() -> None:
+    recorded: list[tuple[object, str, str, dict[str, float]]] = []
+
+    class Meter:
+        def record(self, charge: object, provider: str, model: str, units: object) -> None:
+            recorded.append((charge, provider, model, dict(units)))  # type: ignore[call-overload]
+
+    respond = lambda _: httpx.Response(200, json={"text": "Hallo"})  # noqa: E731
+    transcriber = OpenAiTranscription(
+        lambda: KEY,
+        httpx.Client(transport=httpx.MockTransport(respond)),
+        meter=Meter(),
+    )
+
+    transcriber.transcribe(TranscriptionTask("gpt-transcribe", wav(2.5), "de", "Keep it."))
+    transcriber.transcribe(TASK)
+
+    assert recorded == [
+        (None, "openai", "gpt-transcribe", {"audio_seconds": 2.5}),
+        # A file that cannot be read as WAV counts as no audio.
+        (None, "openai", "gpt-transcribe", {"audio_seconds": 0.0}),
+    ]

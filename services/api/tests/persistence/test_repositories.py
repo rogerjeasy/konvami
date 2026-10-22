@@ -313,15 +313,79 @@ def test_a_started_call_can_be_found_by_its_id(sessions: Sessions) -> None:
     assert sessions.repository.get("rtc_other") is None
 
 
-def test_calls_are_counted_per_learner_from_a_point_in_time(sessions: Sessions) -> None:
-    sessions.repository.started(session("rtc_1", at=NOON - timedelta(hours=30)))
-    sessions.repository.started(session("rtc_2", at=NOON - timedelta(hours=2)))
-    sessions.repository.started(session("rtc_3", at=NOON))
-    sessions.repository.started(session("rtc_4", user=OTHER_USER, at=NOON))
+def test_a_session_keeps_the_time_it_was_granted(sessions: Sessions) -> None:
+    granted = replace(session("rtc_1"), max_seconds=600)
+    sessions.repository.started(granted)
 
-    assert sessions.repository.count_since(USER, NOON - timedelta(hours=24)) == 2
-    assert sessions.repository.count_since(USER, NOON) == 1
-    assert sessions.repository.count_since(OTHER_USER, NOON - timedelta(hours=24)) == 1
+    assert sessions.repository.get("rtc_1") == granted
+
+
+WEEK = date(2026, 10, 5)
+
+
+def test_a_call_is_ended_once(sessions: Sessions) -> None:
+    sessions.repository.started(session("rtc_1"))
+    first = FinishedCall(
+        NOON + timedelta(minutes=4), "finished", USAGE, (Turn("learner", "Hallo"),)
+    )
+    again = FinishedCall(NOON + timedelta(minutes=9), "closed", {}, (Turn("learner", "Tschüss"),))
+
+    assert sessions.repository.finish("rtc_1", first) is True
+    assert sessions.repository.finish("rtc_1", again) is False
+    assert sessions.repository.finish("rtc_unknown", first) is False
+    assert sessions.result("rtc_1") == ("finished", USAGE, [("learner", "Hallo")])
+
+
+def test_voice_seconds_are_granted_from_what_is_left_of_the_week(sessions: Sessions) -> None:
+    calls = sessions.repository
+
+    assert calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600) == 600
+    assert calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600) == 400
+    # Less than `least` left: nothing is granted, and nothing changes.
+    assert calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600) == 0
+    assert calls.seconds_used(USER, WEEK) == 1000
+    # Each learner and each week on its own.
+    assert calls.seconds_used(OTHER_USER, WEEK) == 0
+    assert calls.reserve_seconds(USER, WEEK + timedelta(days=7), 1000, 60, 600) == 600
+
+
+def test_a_week_with_too_little_time_grants_nothing(sessions: Sessions) -> None:
+    assert sessions.repository.reserve_seconds(USER, WEEK, weekly=30, least=60, most=600) == 0
+    assert sessions.repository.seconds_used(USER, WEEK) == 0
+
+
+def test_seconds_a_call_did_not_use_are_given_back(sessions: Sessions) -> None:
+    calls = sessions.repository
+    calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600)
+
+    calls.release_seconds(USER, WEEK, 350)
+    assert calls.seconds_used(USER, WEEK) == 250
+    calls.release_seconds(USER, WEEK, 900)
+    assert calls.seconds_used(USER, WEEK) == 0
+    # A week never granted stays empty.
+    calls.release_seconds(OTHER_USER, WEEK, 100)
+    assert calls.seconds_used(OTHER_USER, WEEK) == 0
+
+
+def test_calls_started_together_are_never_granted_the_same_seconds(
+    db: SqlClient, postgres_uri: str
+) -> None:
+    """Granting and counting are one statement: eight calls of up to 600 seconds started at the
+    same moment share out the 3000 seconds left, never more."""
+    schema = db.execute("SELECT current_schema() AS name")[0]["name"]
+    barrier = threading.Barrier(8)
+
+    def start() -> int:
+        with psycopg.connect(postgres_uri, autocommit=True) as connection:
+            connection.execute(f'SET search_path TO "{schema}"')
+            barrier.wait()
+            calls = SqlVoiceSessionRepository(LocalSqlClient(connection))
+            return calls.reserve_seconds(USER, WEEK, weekly=3000, least=60, most=600)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        granted = [future.result() for future in [pool.submit(start) for _ in range(8)]]
+
+    assert sorted(granted) == [0, 0, 0, 600, 600, 600, 600, 600]
 
 
 def test_a_finished_call_keeps_its_outcome_usage_and_what_was_said(sessions: Sessions) -> None:

@@ -1,5 +1,6 @@
 """The HTTP API. Handlers translate between HTTP and the domain services and decide nothing."""
 
+import datetime as dt
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Annotated, Any
@@ -13,10 +14,12 @@ from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
 from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
+    AllowanceOut,
     CardIn,
     CardOut,
     CatalogOut,
     ConversationsOut,
+    CostsOut,
     DeckOut,
     DeckSummaryOut,
     HomeOut,
@@ -53,11 +56,12 @@ from konvami_api.api.schemas import (
     VoiceCallOut,
     VoiceSampleOut,
 )
-from konvami_api.domain.accounts import AccountService
+from konvami_api.domain.accounts import AccountService, AccountView
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardService
 from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
+from konvami_api.domain.costs import CostService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
 from konvami_api.domain.onboarding import OnboardingService
@@ -93,6 +97,7 @@ class Services:
     recordings: RecordingService
     tutor: TutorService
     voices: VoiceSampleService
+    costs: CostService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -237,6 +242,15 @@ def _router(services: Services) -> APIRouter:
             user, offer.purpose, offer.sdp, offer.persona_id, offer.local_date, offer.scenario
         )
         return VoiceCallOut.of(started)
+
+    @router.get("/voice/allowance", operation_id="getVoiceAllowance")
+    def get_voice_allowance(user: CurrentUser) -> AllowanceOut:
+        return AllowanceOut.of(services.voice.allowance(user))
+
+    @router.get("/owner/costs", operation_id="getCosts", responses=FORBIDDEN)
+    def get_costs(user: CurrentUser, month: dt.date | None = None) -> CostsOut:
+        """A month's estimated spending (this month unless `month` names its first day)."""
+        return CostsOut.of(services.costs.report(user, month))
 
     @router.get("/home", operation_id="getHome", responses=CONFLICT)
     def get_home(
@@ -402,9 +416,12 @@ def _router(services: Services) -> APIRouter:
         services.memories.remove(user, memory_id)
         return memories_of(user, services.memories.view(user))
 
+    def account_of(user: UUID, view: AccountView) -> AccountOut:
+        return AccountOut.of(view, owner=services.costs.is_owner(user))
+
     @router.get("/account", operation_id="getAccount")
     def get_account(user: CurrentUser) -> AccountOut:
-        return AccountOut.of(services.accounts.view(user))
+        return account_of(user, services.accounts.view(user))
 
     @router.post("/account/picture/upload", operation_id="startPictureUpload")
     def start_picture_upload(user: CurrentUser) -> PictureUploadOut:
@@ -412,11 +429,11 @@ def _router(services: Services) -> APIRouter:
 
     @router.post("/account/picture", operation_id="confirmPicture", responses=REFUSED | NOT_FOUND)
     def confirm_picture(user: CurrentUser, confirm: PictureConfirm) -> AccountOut:
-        return AccountOut.of(services.accounts.confirm_picture(user, confirm.upload_id))
+        return account_of(user, services.accounts.confirm_picture(user, confirm.upload_id))
 
     @router.delete("/account/picture", operation_id="removePicture")
     def remove_picture(user: CurrentUser) -> AccountOut:
-        return AccountOut.of(services.accounts.remove_picture(user))
+        return account_of(user, services.accounts.remove_picture(user))
 
     return router
 

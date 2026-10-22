@@ -64,3 +64,22 @@ def test_an_answer_without_audio_is_reported() -> None:
 
     with pytest.raises(SpeechError):
         model(respond).speak(TASK)
+
+
+def test_a_spoken_text_is_metered_by_its_characters() -> None:
+    recorded: list[tuple[object, str, str, dict[str, float]]] = []
+
+    class Meter:
+        def record(self, charge: object, provider: str, model: str, units: object) -> None:
+            recorded.append((charge, provider, model, dict(units)))  # type: ignore[call-overload]
+
+    respond = lambda _: httpx.Response(200, content=MP3)  # noqa: E731
+    speech = OpenAiSpeech(
+        lambda: KEY,
+        httpx.Client(transport=httpx.MockTransport(respond)),
+        meter=Meter(),
+    )
+
+    speech.speak(TASK)
+
+    assert recorded == [(None, "openai", "gpt-4o-mini-tts", {"characters": 28})]

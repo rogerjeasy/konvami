@@ -1,6 +1,15 @@
 import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
-import type { ApiClient, PersonaDraft, PersonaVoice, Recordings } from '@konvami/api-client';
+import type {
+  ApiClient,
+  Costs,
+  PersonaDraft,
+  PersonaVoice,
+  Recordings,
+  VoiceAllowance,
+} from '@konvami/api-client';
+import { useTranslation } from 'react-i18next';
 import { useSession } from '@/auth';
+import { formatDayLine } from '@/lib/format';
 import type { ClipPlayer } from '@/lib/clip-player';
 import {
   createResourceStore,
@@ -29,6 +38,13 @@ export interface ProfileServices {
    * `ApiError`, and then what is shown stays as it was.
    */
   keepRecordings: (kept: boolean) => Promise<Recordings>;
+  /** The learner's voice minutes this week (spec §6.19). */
+  allowance: ResourceStore<VoiceAllowance>;
+  /**
+   * A month's estimated spending, for the owner only (`month` is its first day, this month when
+   * left out). Rejects with an `ApiError` (`not_owner` for anyone else).
+   */
+  costs: (month?: string) => Promise<Costs>;
   pictures: PictureDevice;
   samples: ClipPlayer;
   /**
@@ -60,6 +76,7 @@ export function createProfileServices(
 ): ProfileServices {
   let studioStart: PersonaDraft | null = null;
   const recordings = createResourceStore(() => api.getRecordings(), Date.now);
+  const allowance = createResourceStore(() => api.getVoiceAllowance(), Date.now);
   return {
     account: createAccountStore(api, device.pictures.send),
     partners: createPartnersStore(api, device.onPartnersChanged),
@@ -70,6 +87,8 @@ export function createProfileServices(
         () => api.configureRecordings(kept),
         (_, answer) => answer,
       ),
+    allowance,
+    costs: (month) => api.getCosts(month),
     pictures: device.pictures,
     samples: device.samples,
     studioStart: {
@@ -107,6 +126,7 @@ export function ProfileProvider({
     services.partners.reset();
     services.memory.reset();
     services.recordings.reset();
+    services.allowance.reset();
   }, [status, services]);
   return <ProfileContext.Provider value={services}>{children}</ProfileContext.Provider>;
 }
@@ -139,4 +159,28 @@ export function useMemories(): MemoryState {
 export function useRecordings(): ResourceState<Recordings> {
   const { recordings } = useProfileServices();
   return useSyncExternalStore(recordings.subscribe, recordings.getState, recordings.getState);
+}
+
+/** The learner's voice minutes this week; re-renders when they change. */
+export function useAllowance(): ResourceState<VoiceAllowance> {
+  const { allowance } = useProfileServices();
+  return useSyncExternalStore(allowance.subscribe, allowance.getState, allowance.getState);
+}
+
+/**
+ * When the learner's voice minutes come back, as a sentence ("They come back on Monday
+ * 12 October."), once `wanted`: the minutes are read again then (on the Profile, or after a
+ * call was refused for them). Null until they are known.
+ */
+export function useMinutesBack(wanted: boolean): string | null {
+  const { t, i18n } = useTranslation();
+  const { allowance } = useProfileServices();
+  const state = useAllowance();
+  useEffect(() => {
+    if (wanted) void allowance.refresh();
+  }, [wanted, allowance]);
+  if (!wanted || state.phase !== 'ready') return null;
+  return t('call.minutesBack', {
+    day: formatDayLine(i18n.language, new Date(state.data.resetsAt)),
+  });
 }
