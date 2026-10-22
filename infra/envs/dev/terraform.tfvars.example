@@ -4,6 +4,9 @@ budget_alert_emails = ["you@example.com"]
 
 # budget = { target_usd = 150, ceiling_usd = 250 }
 
+# Who may open the costs page in the app: the account's user pool subject (sub).
+# cost_owners = ["00000000-0000-4000-8000-000000000000"]
+
 # github_deploy = {
 #   repository     = "<owner>/konvami"
 #   subject_prefix = "repo:<owner>@<owner-id>/konvami@<repo-id>"

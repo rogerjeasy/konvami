@@ -35,7 +35,7 @@ variable "budget" {
 }
 
 variable "budget_alert_emails" {
-  description = "Who receives budget alerts. Set in terraform.tfvars (gitignored); empty creates no budget."
+  description = "Who receives budget alerts: AWS's own and the API's spending alerts. Set in terraform.tfvars (gitignored); empty creates no budget and sends no alert."
   type        = list(string)
   default     = []
 }
@@ -87,13 +87,17 @@ variable "voice" {
     (2026-10-10) the efficient model followed its role and kept the learner talking, but spoke
     about 60% more than the flagship and, as a teacher, got one grammar explanation wrong; the
     flagship kept to two short sentences and made no such mistake.
+    Each learner has 60 voice minutes a week during testing (decided 2026-10-22). Once the
+    month's estimated spend passes the budget's target, the setup and the placement test also
+    run on the efficient model (economy_models), trading the quality above for cost.
   EOT
   type = object({
     models              = map(string)
     max_seconds         = map(number)
     voice               = string
     transcription_model = string
-    daily_call_limit    = number
+    weekly_minutes      = number
+    economy_models      = optional(map(string), {})
   })
   default = {
     models = {
@@ -104,7 +108,11 @@ variable "voice" {
     max_seconds         = { onboarding = 480, placement = 720, practice = 600 }
     voice               = "marin"
     transcription_model = "gpt-transcribe"
-    daily_call_limit    = 10
+    weekly_minutes      = 60
+    economy_models = {
+      onboarding = "gpt-realtime-2.1-mini"
+      placement  = "gpt-realtime-2.1-mini"
+    }
   }
 }
 
@@ -150,4 +158,50 @@ variable "text_models" {
     verbatim   = "gpt-transcribe"
     tutor      = "gpt-6.1-sol"
   }
+}
+
+variable "prices" {
+  description = <<-EOT
+    What each model costs, in US dollars per million units (see modules/api, var.costs). From
+    OpenAI's pricing page on 2026-10-22. Speech is billed per audio token, which the API cannot
+    see: 17 per million characters is about $0.015 per spoken minute (900 characters).
+    Transcription is $0.0045 a minute, 75 per million seconds.
+  EOT
+  type        = map(map(number))
+  default = {
+    "gpt-realtime-2.1" = {
+      input_text_tokens         = 4.00
+      input_audio_tokens        = 32.00
+      cached_input_text_tokens  = 0.40
+      cached_input_audio_tokens = 0.40
+      output_text_tokens        = 24.00
+      output_audio_tokens       = 64.00
+    }
+    "gpt-realtime-2.1-mini" = {
+      input_text_tokens         = 0.60
+      input_audio_tokens        = 10.00
+      cached_input_text_tokens  = 0.06
+      cached_input_audio_tokens = 0.30
+      output_text_tokens        = 2.40
+      output_audio_tokens       = 20.00
+    }
+    "gpt-6.1-sol" = {
+      input_tokens        = 2.00
+      cached_input_tokens = 0.10
+      output_tokens       = 10.00
+    }
+    "gpt-6-luna" = {
+      input_tokens        = 0.10
+      cached_input_tokens = 0.01
+      output_tokens       = 0.50
+    }
+    "gpt-transcribe"  = { audio_seconds = 75 }
+    "gpt-4o-mini-tts" = { characters = 17 }
+  }
+}
+
+variable "cost_owners" {
+  description = "User pool subjects (sub) of the accounts that may open the costs page in the app. Set in terraform.tfvars."
+  type        = list(string)
+  default     = []
 }

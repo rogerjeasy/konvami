@@ -34,6 +34,8 @@ locals {
     KONVAMI_MEDIA_BUCKET      = var.media_bucket.name
     KONVAMI_VOICE             = jsonencode(var.voice)
     KONVAMI_TEXT_MODELS       = jsonencode(var.text_models)
+    KONVAMI_COSTS             = jsonencode(var.costs)
+    KONVAMI_ALERT_TOPIC_ARN   = var.alert_topic_arn
   }
 }
 
@@ -115,6 +117,16 @@ data "aws_iam_policy_document" "api" {
     sid       = "ListMediaFiles"
     actions   = ["s3:ListBucket"]
     resources = [var.media_bucket.arn]
+  }
+
+  # The spending alerts (spec §6.19), when there is a topic for them.
+  dynamic "statement" {
+    for_each = var.alert_topic_arn == "" ? [] : [var.alert_topic_arn]
+    content {
+      sid       = "EmailSpendingAlerts"
+      actions   = ["sns:Publish"]
+      resources = [statement.value]
+    }
   }
 
   statement {

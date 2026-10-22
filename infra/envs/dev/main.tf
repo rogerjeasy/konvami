@@ -79,7 +79,14 @@ module "api" {
     name = module.media.bucket
     arn  = module.media.arn
   }
-  voice                = var.voice
-  text_models          = var.text_models
+  voice       = var.voice
+  text_models = var.text_models
+  costs = {
+    prices      = var.prices
+    target_usd  = var.budget.target_usd
+    ceiling_usd = var.budget.ceiling_usd
+    owners      = var.cost_owners
+  }
+  alert_topic_arn      = try(module.budget[0].alert_topic_arn, "")
   cors_allowed_origins = var.web_preview_origins
 }
