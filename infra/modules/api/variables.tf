@@ -77,7 +77,8 @@ variable "text_models" {
     learner's partners should know next time (spec §6.11; one request per conversation, by the
     same worker, after the report); verbatim is a transcription model that writes each recorded
     learner turn down a second time, keeping their mistakes, before the report is written (spec
-    §9.4). An empty name turns the job off: it then uses its fallback (the examiner's own
+    §9.4); tutor answers the learner's questions about the language, as text, about a report's
+    correction, and for a partner during a call (spec §6.8). An empty name turns the job off: it then uses its fallback (the examiner's own
     impression, the language pack's built-in partners, the live transcript) or, for drafts,
     samples and reports, says it is unavailable; without a memory model nothing is remembered.
   EOT
@@ -88,6 +89,7 @@ variable "text_models" {
     report     = optional(string, "")
     memory     = optional(string, "")
     verbatim   = optional(string, "")
+    tutor      = optional(string, "")
   })
 }
 

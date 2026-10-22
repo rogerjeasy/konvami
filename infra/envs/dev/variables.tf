@@ -128,6 +128,9 @@ variable "text_models" {
     It is the same model as the live transcription, given the language and that instruction;
     which model keeps learner German most faithfully is still to be measured (spec §18 phase 0,
     spike d).
+    tutor answers the learner's questions (spec §6.8). It is the stronger model, as for the
+    report: a wrong rule costs the learner's trust (spec §16.1). A learner may ask 40 questions
+    a day; each is one short request.
   EOT
   type = object({
     assessment = string
@@ -136,6 +139,7 @@ variable "text_models" {
     report     = optional(string, "gpt-6.1-sol")
     memory     = optional(string, "gpt-6-luna")
     verbatim   = optional(string, "gpt-transcribe")
+    tutor      = optional(string, "gpt-6.1-sol")
   })
   default = {
     assessment = "gpt-6.1-sol"
@@ -144,5 +148,6 @@ variable "text_models" {
     report     = "gpt-6.1-sol"
     memory     = "gpt-6-luna"
     verbatim   = "gpt-transcribe"
+    tutor      = "gpt-6.1-sol"
   }
 }
