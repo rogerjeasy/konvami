@@ -428,12 +428,17 @@ class PlacementScript:
         self._placement = placement
 
     def prepare(
-        self, user_id: UUID, account: Account, today: dt.date, persona_id: UUID | None
+        self,
+        user_id: UUID,
+        account: Account,
+        today: dt.date,
+        persona_id: UUID | None,
+        scenario: str | None = None,
     ) -> Briefing:
         self._placement.check(user_id)
         return Briefing(self._placement.instructions(user_id, first_name=account.first_name))
 
-    def tools(self, user_id: UUID) -> PlacementTools:
+    def tools(self, user_id: UUID, scenario: str | None = None) -> PlacementTools:
         return PlacementTools()
 
     def started(self, user_id: UUID) -> None:

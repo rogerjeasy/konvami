@@ -9,6 +9,7 @@ from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.practice import HELP_NOTE
 from konvami_api.domain.profile import Change, Origin, Source
+from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.voice import FinishedCall
 from tests.world import NOON, OTHER_USER, USER, World
 
@@ -750,3 +751,73 @@ def test_help_is_given_in_the_learners_explanation_language() -> None:
     # The learner of the test world has explanations in French.
     help_part = text[text.index(HELP_NOTE) :]
     assert "French" in help_part
+
+
+# --- Role-play (spec §6.3) ------------------------------------------------------------------
+
+
+def role_play(world: World, scenario: str = "bakery") -> str:
+    lena, _ = world.onboard()
+    account = world.accounts.get(USER)
+    return world.practice.prepare(USER, account, TODAY, lena.id, scenario).instructions
+
+
+def test_in_a_role_play_the_partner_plays_the_character_and_knows_the_goals() -> None:
+    text = role_play(World())
+
+    assert "role-play" in text
+    assert "behind the counter of a small bakery" in text
+    assert "buy bread and something sweet" in text
+    for goal in ("order", "price", "pay"):
+        assert f"- {goal}: " in text
+    assert "mark_goal" in text
+
+
+def test_a_free_conversation_is_no_role_play() -> None:
+    assert "mark_goal" not in instructions(World())
+
+
+def test_a_role_play_the_language_pack_does_not_have_is_refused() -> None:
+    world = World()
+    lena, _ = world.onboard()
+
+    with pytest.raises(ScenarioError) as error:
+        world.practice.prepare(USER, world.accounts.get(USER), TODAY, lena.id, "moon_landing")
+
+    assert error.value.code == "not_found"
+
+
+def test_in_a_role_play_the_partner_marks_the_goals_the_learner_reached() -> None:
+    world = World()
+    world.onboard()
+    tools = world.practice.tools(USER, "bakery")
+    mark = next(t for t in tools.definitions() if t["name"] == "mark_goal")
+    assert mark["parameters"]["properties"]["goal"]["enum"] == ["order", "price", "pay"]
+
+    first = tools.run("mark_goal", {"goal": "order"})
+    again = tools.run("mark_goal", {"goal": "order"})
+    unknown = tools.run("mark_goal", {"goal": "dance"})
+
+    assert first.output == {"task": "order", "reached": 1, "goals": 3}
+    assert again.output == {"task": "order", "reached": 1, "goals": 3}
+    assert unknown.output == {"reached": 1, "goals": 3, "reason": "unknown_goal"}
+    assert not first.finished
+
+
+def test_a_free_conversation_has_no_goals_to_mark() -> None:
+    names = [t["name"] for t in World().practice.tools(USER).definitions()]
+
+    assert "mark_goal" not in names
+
+
+def test_the_goals_reached_are_kept_with_the_conversation() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.talk(lena, at=NOON, learner_says=("Zwei Brötchen, bitte.",))
+    tools = world.practice.tools(USER, "bakery")
+    tools.run("mark_goal", {"goal": "price"})
+    tools.run("mark_goal", {"goal": "order"})
+
+    world.practice.concluded(USER, call_id, tools, world.sessions.finished[call_id])
+
+    assert world.sessions.goals[call_id] == ("order", "price")

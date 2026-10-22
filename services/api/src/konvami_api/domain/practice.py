@@ -30,9 +30,16 @@ from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import Focus, ReportService, what_to_practise
+from konvami_api.domain.scenarios import (
+    MARK_GOAL,
+    Goal,
+    Scenario,
+    ScenarioError,
+    role_play_instructions,
+)
 from konvami_api.domain.tools import ToolResult, ToolSet
 from konvami_api.domain.tutor import TutorService
-from konvami_api.domain.voice import Briefing, FinishedCall
+from konvami_api.domain.voice import Briefing, FinishedCall, VoiceSessionRepository
 
 END = "end_conversation"
 ASK_TUTOR = "ask_tutor"
@@ -72,11 +79,19 @@ class Learner:
 
 
 class PracticeTools:
-    """A partner's tools, for one learner's call."""
+    """A partner's tools, for one learner's call. In a role-play, they also keep the goals the
+    learner reached."""
 
-    def __init__(self, tutor: TutorService, user_id: UUID) -> None:
+    def __init__(self, tutor: TutorService, user_id: UUID, goals: tuple[Goal, ...] = ()) -> None:
         self._tutor = tutor
         self._user_id = user_id
+        self._goals = goals
+        self._reached: set[str] = set()
+
+    @property
+    def reached(self) -> tuple[str, ...]:
+        """The goals reached, in the scenario's order."""
+        return tuple(goal.id for goal in self._goals if goal.id in self._reached)
 
     def definitions(self) -> list[dict[str, Any]]:
         return [
@@ -117,11 +132,41 @@ class PracticeTools:
                     "additionalProperties": False,
                 },
             },
+            *self._goal_tool(),
         ]
+
+    def _goal_tool(self) -> list[dict[str, Any]]:
+        if not self._goals:
+            return []
+        return [
+            {
+                "type": "function",
+                "name": MARK_GOAL,
+                "description": "Call when the learner has reached one of the role-play's goals.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "goal": {"type": "string", "enum": [goal.id for goal in self._goals]}
+                    },
+                    "required": ["goal"],
+                    "additionalProperties": False,
+                },
+            }
+        ]
+
+    def _mark(self, goal: object) -> ToolResult:
+        counts = {"reached": len(self._reached), "goals": len(self._goals)}
+        if goal not in {g.id for g in self._goals}:
+            return ToolResult({**counts, "reason": "unknown_goal"})
+        self._reached.add(str(goal))
+        # `task` is how the app follows progress through a call (as in the placement test).
+        return ToolResult({"task": goal, "reached": len(self._reached), "goals": len(self._goals)})
 
     def run(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         if name == END:
             return ToolResult({"done": True}, finished=True)
+        if name == MARK_GOAL and self._goals:
+            return self._mark(arguments.get("goal"))
         if name == ASK_TUTOR:
             question, about = arguments.get("question"), arguments.get("about")
             if not isinstance(question, str) or not question.strip():
@@ -444,8 +489,10 @@ _FOCUS_SOURCE = {
 }
 
 
-def practice_instructions(persona: Persona, learner: Learner, today: dt.date) -> str:
-    """What a partner is told at the start of a practice conversation."""
+def practice_instructions(
+    persona: Persona, learner: Learner, today: dt.date, scenario: Scenario | None = None
+) -> str:
+    """What a partner is told at the start of a practice conversation, or a role-play."""
     target, explanation = learner.target, learner.explanation
     teaching = teaching_of(persona)
     level = teaching.level or learner.level
@@ -510,7 +557,7 @@ You are an AI and say so if asked; you never claim to be human. Today is
 # Your role
 {_ROLE[persona.role].format(exam=exam)}
 {_corrections(persona.role, teaching)}
-
+{role_play_instructions(scenario) if scenario else ""}
 # The learner
 {chr(10).join(line for line in about if line)}
 {remembered}
@@ -579,8 +626,10 @@ class PracticeScript:
         memories: MemoryService,
         recordings: RecordingService,
         tutor: TutorService,
+        sessions: VoiceSessionRepository,
     ) -> None:
         self._tutor = tutor
+        self._sessions = sessions
         self._reports = reports
         self._memories = memories
         self._recordings = recordings
@@ -591,16 +640,22 @@ class PracticeScript:
         self._conversations = conversations
 
     def prepare(
-        self, user_id: UUID, account: Account, today: dt.date, persona_id: UUID | None
+        self,
+        user_id: UUID,
+        account: Account,
+        today: dt.date,
+        persona_id: UUID | None,
+        scenario: str | None = None,
     ) -> Briefing:
         if self._onboarding.status(user_id).stage is not Stage.DONE:
             raise OnboardingError("wrong_stage")
         persona = next((p for p in self._personas.partners(user_id) if p.id == persona_id), None)
         if persona is None:
             raise PersonaError("not_found")
+        role_play = self._scenario(user_id, scenario)
         learner = self._learner(user_id, account, persona, today)
         return Briefing(
-            practice_instructions(persona, learner, today),
+            practice_instructions(persona, learner, today, role_play),
             voice=persona.voice,
             speed=teaching_of(persona).speed,
         )
@@ -645,8 +700,25 @@ class PracticeScript:
         when = f" on {exam['date']}" if exam.get("date") else ""
         return f"the {name} exam{when}" if name else f"an exam{when}"
 
-    def tools(self, user_id: UUID) -> PracticeTools:
-        return PracticeTools(self._tutor, user_id)
+    def _scenario(self, user_id: UUID, scenario: str | None) -> Scenario | None:
+        """The role-play asked for, from the pack of the language learned. Raises
+        `ScenarioError` for one the pack does not have."""
+        if scenario is None:
+            return None
+        language = self._profiles.get(user_id).target_language or ""
+        pack = self._profiles.catalog.available_pack(language)
+        found = pack.scenario(scenario) if pack else None
+        if found is None:
+            raise ScenarioError("not_found")
+        return found
+
+    def tools(self, user_id: UUID, scenario: str | None = None) -> PracticeTools:
+        try:
+            role_play = self._scenario(user_id, scenario)
+        except ScenarioError:
+            # Checked when the call started; a pack changed since leaves the call without goals.
+            role_play = None
+        return PracticeTools(self._tutor, user_id, role_play.goals if role_play else ())
 
     def started(self, user_id: UUID) -> None:
         return None
@@ -655,6 +727,8 @@ class PracticeScript:
         # Whether the conversation may be read for memories is recorded before a worker is
         # started for it. Should that fail, the conversation stays unread, and the report is
         # started all the same (spec §12.2: one step failing does not block another).
+        if isinstance(tools, PracticeTools) and tools.reached:
+            self._sessions.goals_reached(call_id, tools.reached)
         try:
             self._memories.after_call(user_id, call_id)
         finally:

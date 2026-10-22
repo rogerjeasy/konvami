@@ -129,12 +129,18 @@ class CallScript(Protocol):
     """What one kind of call says, can do and leaves behind (the setup, the placement test)."""
 
     def prepare(
-        self, user_id: UUID, account: Account, today: dt.date, persona_id: UUID | None
+        self,
+        user_id: UUID,
+        account: Account,
+        today: dt.date,
+        persona_id: UUID | None,
+        scenario: str | None = None,
     ) -> Briefing:
         """The persona's instructions for this learner. `persona_id` is the partner the app
-        asked for, if any. Raises if the call may not start now; changes nothing."""
+        asked for, if any, and `scenario` the role-play. Raises if the call may not start now;
+        changes nothing."""
 
-    def tools(self, user_id: UUID) -> ToolSet:
+    def tools(self, user_id: UUID, scenario: str | None = None) -> ToolSet:
         """Fresh tools for one call."""
 
     def started(self, user_id: UUID) -> None:
@@ -210,8 +216,10 @@ class VoiceCallService:
         sdp_offer: str,
         persona_id: UUID | None = None,
         local_date: dt.date | None = None,
+        scenario: str | None = None,
     ) -> CallStarted:
-        """`local_date` is today on the learner's calendar, as their device has it."""
+        """`local_date` is today on the learner's calendar, as their device has it; `scenario`
+        makes a practice call a role-play."""
         model = self._settings.models.get(purpose)
         max_seconds = self._settings.max_seconds.get(purpose)
         script = self._scripts.get(purpose)
@@ -228,7 +236,7 @@ class VoiceCallService:
         if self._sessions.count_since(user_id, now - DAY) >= self._settings.daily_call_limit:
             raise VoiceError("call_limit")
 
-        briefing = script.prepare(user_id, account, _today(now, local_date), persona_id)
+        briefing = script.prepare(user_id, account, _today(now, local_date), persona_id, scenario)
         output: dict[str, Any] = {"voice": briefing.voice or self._settings.voice}
         if briefing.speed is not None:
             output["speed"] = briefing.speed
@@ -236,7 +244,7 @@ class VoiceCallService:
             "type": "realtime",
             "model": model,
             "instructions": briefing.instructions,
-            "tools": script.tools(user_id).definitions(),
+            "tools": script.tools(user_id, scenario).definitions(),
             "tool_choice": "auto",
             "audio": {
                 "input": {
@@ -254,7 +262,7 @@ class VoiceCallService:
             raise VoiceError("voice_unavailable") from error
 
         self._sessions.started(
-            VoiceSession(created.call_id, user_id, purpose, model, now, persona_id)
+            VoiceSession(created.call_id, user_id, purpose, model, now, persona_id, scenario)
         )
         try:
             self._starter.start(created.call_id, user_id, purpose)
@@ -271,7 +279,7 @@ class VoiceCallService:
         if session is None:
             return None
         return LiveCall(
-            self._scripts[session.purpose].tools(session.user_id),
+            self._scripts[session.purpose].tools(session.user_id, session.scenario),
             max_seconds=self._settings.max_seconds[session.purpose],
             wrap_up_seconds=WRAP_UP_SECONDS,
             goodbye_grace_seconds=GOODBYE_GRACE_SECONDS,
