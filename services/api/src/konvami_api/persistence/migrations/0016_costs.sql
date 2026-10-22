@@ -37,3 +37,18 @@ CREATE TABLE IF NOT EXISTS voice_week (
     last_grant integer NOT NULL,
     PRIMARY KEY (user_id, week)
 );
+
+-- The week this migration runs in starts with what its calls used so far (weeks begin on
+-- Monday in UTC, as date_trunc's do): what an ended call lasted, and for one still running the
+-- time it may still take, as at most the longest call of before (780 seconds). Calls from
+-- before this migration give nothing back when they end.
+INSERT INTO voice_week (user_id, week, seconds, last_grant)
+SELECT user_id, CAST(date_trunc('week', now() AT TIME ZONE 'UTC') AS date),
+       CAST(sum(CASE WHEN ended_at IS NOT NULL
+                     THEN floor(extract(epoch FROM ended_at - started_at))
+                     ELSE 780 END) AS integer),
+       0
+FROM voice_session
+WHERE started_at >= date_trunc('week', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+GROUP BY user_id
+ON CONFLICT (user_id, week) DO NOTHING;

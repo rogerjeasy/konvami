@@ -210,7 +210,9 @@ class VoiceSessionRepository(Protocol):
 
     def seconds_used(self, user_id: UUID, week: dt.date) -> int: ...
 
-    def finish(self, call_id: str, result: FinishedCall) -> None: ...
+    def finish(self, call_id: str, result: FinishedCall) -> bool:
+        """Ends the call with its result, once. True only when this ended it: False for an
+        unknown call or one that had already ended (whose first result stays)."""
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
         """The role-play goals the learner reached in a call."""
@@ -411,7 +413,9 @@ class VoiceCallService:
             usage=dict(call.usage),
             turns=tuple(call.turns),
         )
-        self._sessions.finish(call_id, result)
+        # A call is concluded once: its unused time is given back, and it is metered, once.
+        if not self._sessions.finish(call_id, result):
+            return
         seconds = max(0, int((result.ended_at - session.started_at).total_seconds()))
         if session.max_seconds is not None and seconds < session.max_seconds:
             week = week_start(session.started_at).date()

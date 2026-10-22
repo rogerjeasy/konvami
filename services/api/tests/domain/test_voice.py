@@ -257,6 +257,19 @@ def test_an_ended_call_counts_what_it_lasted(setup: Setup) -> None:
     assert setup.service.allowance(USER).used_seconds == 180
 
 
+def test_a_call_finished_twice_is_concluded_once(setup: Setup) -> None:
+    call_id = setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+    live = setup.service.live_call(call_id)
+    assert live is not None
+    setup.clock.now = NOON + timedelta(minutes=3)
+
+    setup.service.finished(call_id, live)
+    setup.service.finished(call_id, live)
+
+    assert setup.service.allowance(USER).used_seconds == 180
+    assert len(setup.charges.records) == 1
+
+
 def test_no_call_starts_when_the_weeks_minutes_are_used_up(setup: Setup) -> None:
     # Less than a minute left is not a conversation.
     setup.used(3600 - MIN_CALL_SECONDS + 1)

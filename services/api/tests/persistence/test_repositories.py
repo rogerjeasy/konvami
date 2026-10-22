@@ -323,6 +323,19 @@ def test_a_session_keeps_the_time_it_was_granted(sessions: Sessions) -> None:
 WEEK = date(2026, 10, 5)
 
 
+def test_a_call_is_ended_once(sessions: Sessions) -> None:
+    sessions.repository.started(session("rtc_1"))
+    first = FinishedCall(
+        NOON + timedelta(minutes=4), "finished", USAGE, (Turn("learner", "Hallo"),)
+    )
+    again = FinishedCall(NOON + timedelta(minutes=9), "closed", {}, (Turn("learner", "Tschüss"),))
+
+    assert sessions.repository.finish("rtc_1", first) is True
+    assert sessions.repository.finish("rtc_1", again) is False
+    assert sessions.repository.finish("rtc_unknown", first) is False
+    assert sessions.result("rtc_1") == ("finished", USAGE, [("learner", "Hallo")])
+
+
 def test_voice_seconds_are_granted_from_what_is_left_of_the_week(sessions: Sessions) -> None:
     calls = sessions.repository
 

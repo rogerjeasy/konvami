@@ -124,9 +124,11 @@ class InMemoryVoiceSessionRepository:
     def seconds_used(self, user_id: UUID, week: date) -> int:
         return self.weeks.get((user_id, week), 0)
 
-    def finish(self, call_id: str, result: FinishedCall) -> None:
-        if call_id in self.sessions:
-            self.finished[call_id] = result
+    def finish(self, call_id: str, result: FinishedCall) -> bool:
+        if call_id not in self.sessions or call_id in self.finished:
+            return False
+        self.finished[call_id] = result
+        return True
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
         if call_id in self.sessions:

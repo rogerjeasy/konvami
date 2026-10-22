@@ -269,23 +269,27 @@ _SECONDS_USED = """
     WHERE user_id = CAST(:user_id AS uuid) AND week = CAST(:week AS date)
 """
 
-# Ends the call and stores its turns together. An unknown call updates no row, so no turn is
-# inserted either; finishing twice keeps the first transcript.
+# Ends the call and stores its turns together, once: an unknown call, or one already ended,
+# updates no row, so no turn is inserted either and the first transcript stays. Says whether
+# this ended the call.
 _FINISH_SESSION = """
     WITH done AS (
         UPDATE voice_session
         SET ended_at = CAST(:ended_at AS timestamptz),
             outcome = :outcome,
             usage = CAST(:usage AS jsonb)
-        WHERE call_id = :call_id
+        WHERE call_id = :call_id AND ended_at IS NULL
         RETURNING call_id
+    ),
+    said AS (
+        INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms)
+        SELECT done.call_id, turn.position, turn.item ->> 'speaker', turn.item ->> 'text',
+               turn.item ->> 'audio_key', CAST(turn.item ->> 'audio_ms' AS integer)
+        FROM done,
+             jsonb_array_elements(CAST(:turns AS jsonb)) WITH ORDINALITY AS turn (item, position)
+        ON CONFLICT (call_id, position) DO NOTHING
     )
-    INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms)
-    SELECT done.call_id, turn.position, turn.item ->> 'speaker', turn.item ->> 'text',
-           turn.item ->> 'audio_key', CAST(turn.item ->> 'audio_ms' AS integer)
-    FROM done,
-         jsonb_array_elements(CAST(:turns AS jsonb)) WITH ORDINALITY AS turn (item, position)
-    ON CONFLICT (call_id, position) DO NOTHING
+    SELECT CAST(count(*) AS integer) AS ended FROM done
 """
 
 _SAVE_PLACEMENT = f"""
@@ -858,7 +862,7 @@ class SqlVoiceSessionRepository:
         )
         return int(rows[0]["seconds"]) if rows else 0
 
-    def finish(self, call_id: str, result: FinishedCall) -> None:
+    def finish(self, call_id: str, result: FinishedCall) -> bool:
         turns = [
             {
                 "speaker": turn.speaker,
@@ -868,7 +872,7 @@ class SqlVoiceSessionRepository:
             }
             for turn in result.turns
         ]
-        self._client.execute(
+        rows = self._client.execute(
             _FINISH_SESSION,
             {
                 "call_id": call_id,
@@ -878,6 +882,7 @@ class SqlVoiceSessionRepository:
                 "turns": json.dumps(turns),
             },
         )
+        return bool(rows[0]["ended"])
 
 
 class SqlRecordingRepository:
