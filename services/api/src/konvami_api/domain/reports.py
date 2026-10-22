@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
 from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.text import (
@@ -691,12 +692,13 @@ class ReportService:
             "transcript": [_line(number, turn) for number, turn in enumerate(turns)],
         }
         try:
-            analysis = self._analyse(pack, target, explanation, content)
+            analysis = self._analyse(session.user_id, pack, target, explanation, content)
         except (TextModelError, ValidationError):
             self._repository.written(call_id, "failed", None)
             return
         said = _Said(turns)
         mistakes, rewrites = self._review(
+            session.user_id,
             target,
             explanation,
             turns,
@@ -717,7 +719,12 @@ class ReportService:
         self._repository.written(call_id, "ready", report)
 
     def _analyse(
-        self, pack: LanguagePack | None, target: str, explanation: str, content: dict[str, Any]
+        self,
+        user_id: UUID,
+        pack: LanguagePack | None,
+        target: str,
+        explanation: str,
+        content: dict[str, Any],
     ) -> _Analysis:
         task = TextTask(
             model=self._model,
@@ -725,11 +732,13 @@ class ReportService:
             content=json.dumps(content, ensure_ascii=False),
             answer_name="session_report",
             answer_schema=_analysis_schema(pack.error_categories if pack else ()),
+            charge=Charge(user_id, Feature.REPORT),
         )
         return _Analysis.model_validate(self._text_model.answer(task))
 
     def _review(
         self,
+        user_id: UUID,
         target: str,
         explanation: str,
         turns: Sequence[Turn],
@@ -767,6 +776,7 @@ class ReportService:
             content=json.dumps(content, ensure_ascii=False),
             answer_name="correction_review",
             answer_schema=_REVIEW_SCHEMA,
+            charge=Charge(user_id, Feature.REPORT_CHECK),
         )
         try:
             review = _Review.model_validate(self._text_model.answer(task))

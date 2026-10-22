@@ -15,6 +15,14 @@ from konvami_api.domain.conversations import (
     DayActivity,
     PartnerHistory,
 )
+from konvami_api.domain.costs import (
+    ChargeRecord,
+    DaySpend,
+    LearnerSpend,
+    Level,
+    Share,
+    Spending,
+)
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
 from konvami_api.domain.onboarding import OnboardingState
@@ -99,9 +107,15 @@ class InMemoryVoiceSessionRepository:
     def get(self, call_id: str) -> VoiceSession | None:
         return self.sessions.get(call_id)
 
-    def count_since(self, user_id: UUID, since: datetime) -> int:
+    def seconds_since(self, user_id: UUID, since: datetime) -> int:
+        def seconds(session: VoiceSession) -> int:
+            done = self.finished.get(session.call_id)
+            if done is not None:
+                return int((done.ended_at - session.started_at).total_seconds())
+            return session.max_seconds or 0
+
         return sum(
-            1
+            seconds(session)
             for session in self.sessions.values()
             if session.user_id == user_id and session.started_at >= since
         )
@@ -226,6 +240,8 @@ class InMemoryFileStore:
 
 class FakeVoiceProvider:
     """Answers call creation like the provider does and records what it was asked."""
+
+    name = "openai"
 
     def __init__(self) -> None:
         self.created: list[tuple[str, dict[str, Any], str]] = []
@@ -711,3 +727,97 @@ class InMemoryMemoryRepository:
             return False
         del self.memories[memory_id]
         return True
+
+
+class InMemoryChargeRepository:
+    def __init__(self) -> None:
+        self.records: list[ChargeRecord] = []
+        self.deleted: set[UUID] = set()
+        # True: every call fails, as a database that cannot be reached.
+        self.broken = False
+
+    def add(self, record: ChargeRecord) -> None:
+        if self.broken:
+            raise RuntimeError("the database did not answer")
+        user_id = None if record.user_id in self.deleted else record.user_id
+        self.records.append(replace(record, user_id=user_id, at=record.at.astimezone(UTC)))
+
+    def _within(self, since: datetime, until: datetime) -> list[ChargeRecord]:
+        if self.broken:
+            raise RuntimeError("the database did not answer")
+        return [record for record in self.records if since <= record.at < until]
+
+    def total(self, since: datetime, until: datetime) -> float:
+        return sum(record.usd for record in self._within(since, until))
+
+    def spending(self, since: datetime, until: datetime, top: int) -> Spending:
+        records = self._within(since, until)
+
+        def shares(key: Any) -> tuple[Share, ...]:
+            grouped: dict[str, list[ChargeRecord]] = {}
+            for record in records:
+                grouped.setdefault(key(record), []).append(record)
+            found = [
+                Share(name, sum(r.usd for r in group), len(group))
+                for name, group in grouped.items()
+            ]
+            return tuple(sorted(found, key=lambda share: (-share.usd, share.key)))
+
+        days: dict[date, float] = {}
+        learners: dict[UUID | None, list[ChargeRecord]] = {}
+        for record in records:
+            day = record.at.date()
+            days[day] = days.get(day, 0.0) + record.usd
+            learners.setdefault(record.user_id, []).append(record)
+        spenders = [
+            LearnerSpend(
+                user_id,
+                sum(r.usd for r in group),
+                len(group),
+                int(sum(r.units.get("call_seconds", 0) for r in group)),
+            )
+            for user_id, group in learners.items()
+            if user_id is not None
+        ]
+        spenders.sort(key=lambda learner: (-learner.usd, str(learner.user_id)))
+        return Spending(
+            total_usd=sum(record.usd for record in records),
+            unpriced=sum(1 for record in records if not record.priced),
+            days=tuple(DaySpend(day, usd) for day, usd in sorted(days.items())),
+            features=shares(lambda record: record.feature.value),
+            providers=shares(lambda record: record.provider),
+            learners=tuple(spenders[:top]),
+        )
+
+    def forget_learner(self, user_id: UUID) -> None:
+        """What account deletion does: the spending stays, without the learner."""
+        self.deleted.add(user_id)
+        self.records = [
+            replace(record, user_id=None) if record.user_id == user_id else record
+            for record in self.records
+        ]
+
+
+class InMemoryAlertLog:
+    def __init__(self) -> None:
+        self.sent: set[tuple[date, Level]] = set()
+
+    def first(self, month: date, level: Level) -> bool:
+        if (month, level) in self.sent:
+            return False
+        self.sent.add((month, level))
+        return True
+
+    def forget(self, month: date, level: Level) -> None:
+        self.sent.discard((month, level))
+
+
+class RecordingNotifier:
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, str]] = []
+        self.broken = False
+
+    def notify(self, subject: str, message: str) -> None:
+        if self.broken:
+            raise RuntimeError("the email service did not answer")
+        self.sent.append((subject, message))

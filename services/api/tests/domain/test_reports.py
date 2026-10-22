@@ -6,6 +6,7 @@ import pytest
 
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.conversations import ConversationError
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.reports import (
     MAX_MISTAKES,
@@ -240,6 +241,15 @@ def test_every_correction_is_checked_a_second_time_against_what_the_learner_said
             "original": "Ich habe ein Museum besucht",
             "natural": "Ich war im Museum",
         }
+    ]
+
+
+def test_the_report_and_its_second_check_are_charged_to_the_learner() -> None:
+    world = written(ANALYSIS, CONFIRMED)
+
+    assert [task.charge for task in world.text.tasks[-2:]] == [
+        Charge(USER, Feature.REPORT),
+        Charge(USER, Feature.REPORT_CHECK),
     ]
 
 

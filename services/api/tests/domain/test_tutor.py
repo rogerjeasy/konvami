@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from konvami_api.domain.accounts import Account
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.reports import Mistake
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.tutor import (
@@ -60,6 +61,12 @@ def test_a_question_is_answered_and_kept(world: World) -> None:
         unsure=False,
     )
     assert world.tutor.history(USER) == [kept]
+
+
+def test_a_question_is_charged_to_the_learner(world: World) -> None:
+    asked(world)
+
+    assert world.text.tasks[-1].charge == Charge(USER, Feature.TUTOR)
 
 
 def test_the_tutor_rests_on_the_grammar_notes_and_knows_the_learner(world: World) -> None:

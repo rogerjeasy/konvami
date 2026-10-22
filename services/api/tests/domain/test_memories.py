@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import (
     FOLLOW_UP_DAYS,
@@ -92,6 +93,12 @@ def remembered(*memories: dict[str, Any], turns: tuple[Turn, ...] = TURNS) -> Wo
     world.text.answers.append({"memories": list(memories)})
     world.memories.write(call_id)
     return world
+
+
+def test_reading_a_conversation_for_memories_is_charged_to_the_learner() -> None:
+    world = remembered(ZURICH)
+
+    assert world.text.tasks[-1].charge == Charge(USER, Feature.MEMORY)
 
 
 def texts(world: World) -> set[str]:

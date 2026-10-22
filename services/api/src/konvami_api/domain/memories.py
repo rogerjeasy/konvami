@@ -20,6 +20,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from konvami_api.domain.conversations import ConversationService
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.profile import (
@@ -467,6 +468,7 @@ class MemoryService:
             content=json.dumps(content, ensure_ascii=False),
             answer_name="memories",
             answer_schema=_SCHEMA,
+            charge=Charge(user_id, Feature.MEMORY),
         )
         try:
             answer = _Answer.model_validate(self._text_model.answer(task))

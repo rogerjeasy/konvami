@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.personas import PersonaError, personality_of, teaching_of
 from konvami_api.domain.text import TextModelError
 from tests.world import OTHER_USER, USER, World
@@ -374,6 +375,7 @@ def test_the_writer_gets_the_description_as_material_not_as_instructions() -> No
 
     task = world.text.tasks[-1]
     assert task.model == "gpt-6-luna"
+    assert task.charge == Charge(USER, Feature.PARTNERS)
     assert json.loads(task.content)["description"] == DESCRIPTION
     assert DESCRIPTION not in task.instructions
     # The partner speaks the language being learned; what the learner reads is in their own.

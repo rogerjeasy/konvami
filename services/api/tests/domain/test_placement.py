@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.onboarding import (
     OnboardingError,
@@ -261,6 +262,7 @@ def test_the_assessor_gets_the_transcript_the_notes_and_the_explanation_language
 
     task = setup.text.tasks[0]
     assert task.model == "gpt-6.1-sol"
+    assert task.charge == Charge(USER, Feature.PLACEMENT_ASSESSMENT)
     assert "French" in task.instructions
     content = json.loads(task.content)
     assert content["self_assessed_level"] == "A2"

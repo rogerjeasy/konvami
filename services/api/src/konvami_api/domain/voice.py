@@ -9,12 +9,21 @@ the server follows the call through `LiveCall`.
 import datetime as dt
 import hashlib
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Protocol
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountDirectory, AccountNotFound
+from konvami_api.domain.costs import (
+    Allowance,
+    Charge,
+    Feature,
+    Level,
+    Meter,
+    SpendGuard,
+    week_start,
+)
 from konvami_api.domain.live_call import KeepAudio, LiveCall, Outcome, Turn, TurnAudio
 from konvami_api.domain.tools import ToolSet
 
@@ -22,7 +31,9 @@ from konvami_api.domain.tools import ToolSet
 WRAP_UP_SECONDS = 45
 # Seconds a goodbye may still play before the call is ended.
 GOODBYE_GRACE_SECONDS = 8
-DAY = dt.timedelta(hours=24)
+# The least time worth starting a call with: below it the learner's minutes count as used up.
+MIN_CALL_SECONDS = 60
+WEEK = dt.timedelta(days=7)
 
 
 class CallPurpose(StrEnum):
@@ -30,6 +41,13 @@ class CallPurpose(StrEnum):
     PLACEMENT = "placement"
     # A conversation with one of the learner's partners.
     PRACTICE = "practice"
+
+
+_FEATURES = {
+    CallPurpose.ONBOARDING: Feature.VOICE_ONBOARDING,
+    CallPurpose.PLACEMENT: Feature.VOICE_PLACEMENT,
+    CallPurpose.PRACTICE: Feature.VOICE_PRACTICE,
+}
 
 
 # When the learner's turn counts as finished, per purpose. Measured on spoken test sentences
@@ -56,7 +74,11 @@ class VoiceSettings:
     # The guide's voice. A partner speaks with their own (`Briefing.voice`).
     voice: str
     transcription_model: str
-    daily_call_limit: int
+    # Each learner's voice minutes per week (spec §6.19), as seconds, for calls of every purpose.
+    weekly_seconds: int
+    # The cheaper voice model per purpose, used once the month's spend passes the target. A
+    # purpose without one keeps its model.
+    economy_models: Mapping[CallPurpose, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -83,6 +105,9 @@ class VoiceSession:
     persona_id: UUID | None = None
     # The role-play of a practice call (a language pack's scenario id); None for free talk.
     scenario: str | None = None
+    # The longest the call may last, as granted when it started (the learner's minutes left
+    # could make it shorter than the purpose's own limit). None for calls from before then.
+    max_seconds: int | None = None
 
 
 @dataclass(frozen=True)
@@ -117,6 +142,9 @@ class VoiceError(Exception):
 
 
 class VoiceProvider(Protocol):
+    # Who is paid for the calls ("openai"), for metering.
+    name: str
+
     def create_call(
         self, sdp_offer: str, session: dict[str, Any], safety_identifier: str
     ) -> CreatedCall:
@@ -170,12 +198,39 @@ class VoiceSessionRepository(Protocol):
 
     def get(self, call_id: str) -> VoiceSession | None: ...
 
-    def count_since(self, user_id: UUID, since: dt.datetime) -> int: ...
+    def seconds_since(self, user_id: UUID, since: dt.datetime) -> int:
+        """The voice seconds of the learner's calls started since `since`: what an ended call
+        lasted, and all the time granted to one still running."""
 
     def finish(self, call_id: str, result: FinishedCall) -> None: ...
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
         """The role-play goals the learner reached in a call."""
+
+
+def voice_units(usage: Mapping[str, int], seconds: int) -> dict[str, int]:
+    """A call's usage as the units it is priced by, with its length (unpriced, for the owner's
+    view). Cached input tokens are billed instead of, not on top of, the uncached ones. Calls
+    from before the cached split was kept count their cached tokens as text first: the higher
+    estimate, as audio costs more."""
+    text = usage.get("input_text_tokens", 0)
+    audio = usage.get("input_audio_tokens", 0)
+    if "cached_input_text_tokens" in usage:
+        cached_text = usage["cached_input_text_tokens"]
+        cached_audio = usage.get("cached_input_audio_tokens", 0)
+    else:
+        cached = usage.get("cached_input_tokens", 0)
+        cached_text = min(cached, text)
+        cached_audio = cached - cached_text
+    return {
+        "input_text_tokens": max(0, text - cached_text),
+        "input_audio_tokens": max(0, audio - cached_audio),
+        "cached_input_text_tokens": cached_text,
+        "cached_input_audio_tokens": cached_audio,
+        "output_text_tokens": usage.get("output_text_tokens", 0),
+        "output_audio_tokens": usage.get("output_audio_tokens", 0),
+        "call_seconds": seconds,
+    }
 
 
 def _today(now: dt.datetime, local_date: dt.date | None) -> dt.date:
@@ -199,8 +254,14 @@ class VoiceCallService:
         starter: CallStarter,
         clock: Callable[[], dt.datetime],
         recordings: AudioStore | None = None,
+        guard: SpendGuard | None = None,
+        meter: Meter | None = None,
     ) -> None:
+        """Without a `guard` calls are never switched or stopped for spending; without a
+        `meter` they are not metered."""
         self._settings = settings
+        self._guard = guard
+        self._meter = meter
         self._recordings = recordings
         self._scripts = scripts
         self._accounts = accounts
@@ -233,8 +294,15 @@ class VoiceCallService:
         if not account.voice_consent:
             raise VoiceError("consent_required")
         now = self._clock()
-        if self._sessions.count_since(user_id, now - DAY) >= self._settings.daily_call_limit:
-            raise VoiceError("call_limit")
+        level = self._guard.level() if self._guard else Level.NORMAL
+        if level is Level.PAUSED:
+            raise VoiceError("voice_paused")
+        if level is Level.ECONOMY:
+            model = self._settings.economy_models.get(purpose, model)
+        left = self.allowance(user_id).remaining_seconds
+        if left < MIN_CALL_SECONDS:
+            raise VoiceError("minutes_used_up")
+        max_seconds = min(max_seconds, left)
 
         briefing = script.prepare(user_id, account, _today(now, local_date), persona_id, scenario)
         output: dict[str, Any] = {"voice": briefing.voice or self._settings.voice}
@@ -262,7 +330,9 @@ class VoiceCallService:
             raise VoiceError("voice_unavailable") from error
 
         self._sessions.started(
-            VoiceSession(created.call_id, user_id, purpose, model, now, persona_id, scenario)
+            VoiceSession(
+                created.call_id, user_id, purpose, model, now, persona_id, scenario, max_seconds
+            )
         )
         try:
             self._starter.start(created.call_id, user_id, purpose)
@@ -273,6 +343,15 @@ class VoiceCallService:
         script.started(user_id)
         return CallStarted(created.call_id, created.sdp_answer, max_seconds)
 
+    def allowance(self, user_id: UUID) -> Allowance:
+        """The learner's voice minutes this week."""
+        start = week_start(self._clock())
+        return Allowance(
+            weekly_seconds=self._settings.weekly_seconds,
+            used_seconds=self._sessions.seconds_since(user_id, start),
+            resets_at=start + WEEK,
+        )
+
     def live_call(self, call_id: str) -> LiveCall | None:
         """The server's side of a recorded call, with the tools of the learner it belongs to."""
         session = self._sessions.get(call_id)
@@ -280,7 +359,7 @@ class VoiceCallService:
             return None
         return LiveCall(
             self._scripts[session.purpose].tools(session.user_id, session.scenario),
-            max_seconds=self._settings.max_seconds[session.purpose],
+            max_seconds=session.max_seconds or self._settings.max_seconds[session.purpose],
             wrap_up_seconds=WRAP_UP_SECONDS,
             goodbye_grace_seconds=GOODBYE_GRACE_SECONDS,
             record=self._recordings is not None and session.purpose in _RECORDED,
@@ -308,4 +387,12 @@ class VoiceCallService:
             turns=tuple(call.turns),
         )
         self._sessions.finish(call_id, result)
+        if self._meter is not None:
+            seconds = max(0, int((result.ended_at - session.started_at).total_seconds()))
+            self._meter.record(
+                Charge(session.user_id, _FEATURES[session.purpose]),
+                self._provider.name,
+                session.model,
+                voice_units(result.usage, seconds),
+            )
         self._scripts[session.purpose].concluded(session.user_id, call_id, call.tools, result)
