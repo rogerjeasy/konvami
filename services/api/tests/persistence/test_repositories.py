@@ -320,27 +320,59 @@ def test_a_session_keeps_the_time_it_was_granted(sessions: Sessions) -> None:
     assert sessions.repository.get("rtc_1") == granted
 
 
-def test_voice_seconds_are_counted_per_learner_from_a_point_in_time(sessions: Sessions) -> None:
-    def call(call_id: str, at: datetime, user: UUID = USER, granted: int | None = 600) -> None:
-        sessions.repository.started(replace(session(call_id, user, at), max_seconds=granted))
+WEEK = date(2026, 10, 5)
 
-    def end(call_id: str, at: datetime) -> None:
-        sessions.repository.finish(call_id, FinishedCall(at, "closed", USAGE, ()))
 
-    week = NOON - timedelta(days=3)
-    call("rtc_before", week - timedelta(hours=1))
-    end("rtc_before", week + timedelta(minutes=5))
-    call("rtc_ended", NOON - timedelta(hours=2))
-    end("rtc_ended", NOON - timedelta(hours=2) + timedelta(seconds=245))
-    # A call still running counts with all the time it was granted.
-    call("rtc_running", NOON)
-    # One from before the time was kept counts with what it lasted, or nothing while running.
-    call("rtc_old_running", NOON, granted=None)
-    call("rtc_other", NOON, user=OTHER_USER)
+def test_voice_seconds_are_granted_from_what_is_left_of_the_week(sessions: Sessions) -> None:
+    calls = sessions.repository
 
-    assert sessions.repository.seconds_since(USER, week) == 245 + 600
-    assert sessions.repository.seconds_since(OTHER_USER, week) == 600
-    assert sessions.repository.seconds_since(USER, NOON + timedelta(seconds=1)) == 0
+    assert calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600) == 600
+    assert calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600) == 400
+    # Less than `least` left: nothing is granted, and nothing changes.
+    assert calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600) == 0
+    assert calls.seconds_used(USER, WEEK) == 1000
+    # Each learner and each week on its own.
+    assert calls.seconds_used(OTHER_USER, WEEK) == 0
+    assert calls.reserve_seconds(USER, WEEK + timedelta(days=7), 1000, 60, 600) == 600
+
+
+def test_a_week_with_too_little_time_grants_nothing(sessions: Sessions) -> None:
+    assert sessions.repository.reserve_seconds(USER, WEEK, weekly=30, least=60, most=600) == 0
+    assert sessions.repository.seconds_used(USER, WEEK) == 0
+
+
+def test_seconds_a_call_did_not_use_are_given_back(sessions: Sessions) -> None:
+    calls = sessions.repository
+    calls.reserve_seconds(USER, WEEK, weekly=1000, least=60, most=600)
+
+    calls.release_seconds(USER, WEEK, 350)
+    assert calls.seconds_used(USER, WEEK) == 250
+    calls.release_seconds(USER, WEEK, 900)
+    assert calls.seconds_used(USER, WEEK) == 0
+    # A week never granted stays empty.
+    calls.release_seconds(OTHER_USER, WEEK, 100)
+    assert calls.seconds_used(OTHER_USER, WEEK) == 0
+
+
+def test_calls_started_together_are_never_granted_the_same_seconds(
+    db: SqlClient, postgres_uri: str
+) -> None:
+    """Granting and counting are one statement: eight calls of up to 600 seconds started at the
+    same moment share out the 3000 seconds left, never more."""
+    schema = db.execute("SELECT current_schema() AS name")[0]["name"]
+    barrier = threading.Barrier(8)
+
+    def start() -> int:
+        with psycopg.connect(postgres_uri, autocommit=True) as connection:
+            connection.execute(f'SET search_path TO "{schema}"')
+            barrier.wait()
+            calls = SqlVoiceSessionRepository(LocalSqlClient(connection))
+            return calls.reserve_seconds(USER, WEEK, weekly=3000, least=60, most=600)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        granted = [future.result() for future in [pool.submit(start) for _ in range(8)]]
+
+    assert sorted(granted) == [0, 0, 0, 600, 600, 600, 600, 600]
 
 
 def test_a_finished_call_keeps_its_outcome_usage_and_what_was_said(sessions: Sessions) -> None:

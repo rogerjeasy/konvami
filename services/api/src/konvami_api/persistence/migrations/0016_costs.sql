@@ -24,6 +24,16 @@ CREATE TABLE IF NOT EXISTS spend_alert (
     PRIMARY KEY (month, level)
 );
 
--- The longest a call may last, as granted when it started: the learner's weekly voice minutes
--- count it in full until the call has ended.
+-- The longest a call may last, as granted when it started (at most the minutes left).
 ALTER TABLE voice_session ADD COLUMN IF NOT EXISTS max_seconds integer;
+
+-- Each learner's voice seconds per week (spec §6.19): the time granted to calls, less what
+-- ended calls did not use. Granting is one statement on this row, so calls started at the same
+-- moment cannot share out the same minutes. last_grant is what the latest grant gave.
+CREATE TABLE IF NOT EXISTS voice_week (
+    user_id uuid NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    week date NOT NULL,
+    seconds integer NOT NULL,
+    last_grant integer NOT NULL,
+    PRIMARY KEY (user_id, week)
+);

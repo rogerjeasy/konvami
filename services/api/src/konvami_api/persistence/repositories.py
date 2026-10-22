@@ -244,16 +244,29 @@ _GOALS_REACHED = """
     UPDATE voice_session SET goals_reached = CAST(:goals AS jsonb) WHERE call_id = :call_id
 """
 
-# An ended call counts what it lasted; one still running all the time it was granted.
-_VOICE_SECONDS = """
-    SELECT CAST(COALESCE(sum(
-        CASE WHEN ended_at IS NOT NULL
-             THEN floor(extract(epoch FROM ended_at - started_at))
-             ELSE COALESCE(max_seconds, 0)
-        END
-    ), 0) AS integer) AS seconds
-    FROM voice_session
-    WHERE user_id = CAST(:user_id AS uuid) AND started_at >= CAST(:since AS timestamptz)
+# Grants and counts in one statement: the learner's row for the week is locked while it is
+# raised, so calls started together are granted from what the other left (migration 0016).
+# In SET, `voice_week.seconds` is the value before this grant.
+_RESERVE_SECONDS = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO voice_week (user_id, week, seconds, last_grant)
+    VALUES (CAST(:user_id AS uuid), CAST(:week AS date), LEAST(:most, :weekly),
+            LEAST(:most, :weekly))
+    ON CONFLICT (user_id, week) DO UPDATE
+        SET seconds = voice_week.seconds + LEAST(:most, :weekly - voice_week.seconds),
+            last_grant = LEAST(:most, :weekly - voice_week.seconds)
+        WHERE :weekly - voice_week.seconds >= :least
+    RETURNING last_grant AS granted
+"""
+
+_RELEASE_SECONDS = """
+    UPDATE voice_week SET seconds = GREATEST(0, seconds - :seconds)
+    WHERE user_id = CAST(:user_id AS uuid) AND week = CAST(:week AS date)
+"""
+
+_SECONDS_USED = """
+    SELECT seconds FROM voice_week
+    WHERE user_id = CAST(:user_id AS uuid) AND week = CAST(:week AS date)
 """
 
 # Ends the call and stores its turns together. An unknown call updates no row, so no turn is
@@ -815,11 +828,35 @@ class SqlVoiceSessionRepository:
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
         self._client.execute(_GOALS_REACHED, {"call_id": call_id, "goals": json.dumps(goals)})
 
-    def seconds_since(self, user_id: UUID, since: dt.datetime) -> int:
+    def reserve_seconds(
+        self, user_id: UUID, week: dt.date, weekly: int, least: int, most: int
+    ) -> int:
+        # A first grant of the week inserts the row: it must leave at least `least` too.
+        if weekly < least:
+            return 0
         rows = self._client.execute(
-            _VOICE_SECONDS, {"user_id": str(user_id), "since": since.isoformat()}
+            _RESERVE_SECONDS,
+            {
+                "user_id": str(user_id),
+                "week": week.isoformat(),
+                "weekly": weekly,
+                "least": least,
+                "most": most,
+            },
         )
-        return int(rows[0]["seconds"])
+        return int(rows[0]["granted"]) if rows else 0
+
+    def release_seconds(self, user_id: UUID, week: dt.date, seconds: int) -> None:
+        self._client.execute(
+            _RELEASE_SECONDS,
+            {"user_id": str(user_id), "week": week.isoformat(), "seconds": seconds},
+        )
+
+    def seconds_used(self, user_id: UUID, week: dt.date) -> int:
+        rows = self._client.execute(
+            _SECONDS_USED, {"user_id": str(user_id), "week": week.isoformat()}
+        )
+        return int(rows[0]["seconds"]) if rows else 0
 
     def finish(self, call_id: str, result: FinishedCall) -> None:
         turns = [

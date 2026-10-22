@@ -6,7 +6,14 @@ import pytest
 
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.catalog import CATALOG
-from konvami_api.domain.costs import Budget, ChargeRecord, Feature, Meter, SpendGuard
+from konvami_api.domain.costs import (
+    Budget,
+    ChargeRecord,
+    Feature,
+    Meter,
+    SpendGuard,
+    week_start,
+)
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.live_call import KeepAudio, Send, TurnAudio
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, PlacementStatus
@@ -16,10 +23,8 @@ from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.voice import (
     MIN_CALL_SECONDS,
     CallPurpose,
-    FinishedCall,
     VoiceCallService,
     VoiceError,
-    VoiceSession,
     VoiceSettings,
     voice_units,
 )
@@ -118,13 +123,9 @@ class Setup:
         )
 
     def used(self, seconds: int, at: datetime = NOON - timedelta(hours=1)) -> None:
-        """A call of `seconds` that ended before now."""
-        call_id = f"rtc_past_{len(self.sessions.sessions)}"
-        self.sessions.started(
-            VoiceSession(call_id, USER, CallPurpose.ONBOARDING, "gpt-realtime-2.1-mini", at)
-        )
-        ended = at + timedelta(seconds=seconds)
-        self.sessions.finish(call_id, FinishedCall(ended, "closed", {}, ()))
+        """Calls of `seconds` in all that ended before `at`'s week was over."""
+        week = week_start(at).date()
+        self.sessions.reserve_seconds(USER, week, seconds, 0, seconds)
 
     def spent(self, usd: float) -> None:
         self.charges.add(
@@ -230,6 +231,30 @@ def test_a_call_running_counts_with_all_its_time(setup: Setup) -> None:
     setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
 
     assert setup.service.allowance(USER).used_seconds == 480
+
+
+def test_a_call_that_cannot_start_gives_its_time_back(setup: Setup) -> None:
+    setup.provider.fail = True
+    with pytest.raises(VoiceError):
+        setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    setup.provider.fail = False
+    setup.starter.fail = True
+    with pytest.raises(VoiceError):
+        setup.service.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    assert setup.service.allowance(USER).used_seconds == 0
+
+
+def test_an_ended_call_counts_what_it_lasted(setup: Setup) -> None:
+    call_id = setup.service.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+    live = setup.service.live_call(call_id)
+    assert live is not None
+    setup.clock.now = NOON + timedelta(minutes=3)
+
+    setup.service.finished(call_id, live)
+
+    assert setup.service.allowance(USER).used_seconds == 180
 
 
 def test_no_call_starts_when_the_weeks_minutes_are_used_up(setup: Setup) -> None:

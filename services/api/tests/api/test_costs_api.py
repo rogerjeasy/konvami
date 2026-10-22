@@ -1,10 +1,9 @@
 """Cost control over HTTP (spec §6.19): a learner's voice minutes, and the owner's view."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from konvami_api.domain.costs import ChargeRecord, Feature
-from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
 from tests.api.conftest import OTHER_USER, OWNER, USER, Call
 from tests.fakes import InMemoryChargeRepository, InMemoryVoiceSessionRepository
 
@@ -15,9 +14,7 @@ OFFER = {"purpose": "onboarding", "sdp": "v=0 offer"}
 def test_a_learner_sees_their_voice_minutes_this_week(
     call: Call, calls: InMemoryVoiceSessionRepository
 ) -> None:
-    at = NOON - timedelta(hours=2)
-    calls.started(VoiceSession("rtc_1", UUID(USER), CallPurpose.ONBOARDING, "gpt", at))
-    calls.finish("rtc_1", FinishedCall(at + timedelta(seconds=300), "closed", {}, ()))
+    calls.reserve_seconds(UUID(USER), date(2026, 10, 5), weekly=900, least=60, most=300)
 
     response = call("GET", "/v1/voice/allowance")
 

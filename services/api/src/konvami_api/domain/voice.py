@@ -9,7 +9,7 @@ the server follows the call through `LiveCall`.
 import datetime as dt
 import hashlib
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Any, Protocol
 from uuid import UUID
@@ -198,9 +198,17 @@ class VoiceSessionRepository(Protocol):
 
     def get(self, call_id: str) -> VoiceSession | None: ...
 
-    def seconds_since(self, user_id: UUID, since: dt.datetime) -> int:
-        """The voice seconds of the learner's calls started since `since`: what an ended call
-        lasted, and all the time granted to one still running."""
+    def reserve_seconds(
+        self, user_id: UUID, week: dt.date, weekly: int, least: int, most: int
+    ) -> int:
+        """Grants a call of the learner's `week` up to `most` seconds of what is left of
+        `weekly`, and counts them as used. Grants nothing, and changes nothing, when less than
+        `least` is left. One step: calls started together cannot be granted the same seconds."""
+
+    def release_seconds(self, user_id: UUID, week: dt.date, seconds: int) -> None:
+        """Gives back granted seconds a call did not use."""
+
+    def seconds_used(self, user_id: UUID, week: dt.date) -> int: ...
 
     def finish(self, call_id: str, result: FinishedCall) -> None: ...
 
@@ -299,10 +307,6 @@ class VoiceCallService:
             raise VoiceError("voice_paused")
         if level is Level.ECONOMY:
             model = self._settings.economy_models.get(purpose, model)
-        left = self.allowance(user_id).remaining_seconds
-        if left < MIN_CALL_SECONDS:
-            raise VoiceError("minutes_used_up")
-        max_seconds = min(max_seconds, left)
 
         briefing = script.prepare(user_id, account, _today(now, local_date), persona_id, scenario)
         output: dict[str, Any] = {"voice": briefing.voice or self._settings.voice}
@@ -322,33 +326,54 @@ class VoiceCallService:
                 "output": output,
             },
         }
+
+        week = week_start(now).date()
+        weekly = self._settings.weekly_seconds
+        granted = (
+            self._sessions.reserve_seconds(user_id, week, weekly, MIN_CALL_SECONDS, max_seconds)
+            if weekly >= MIN_CALL_SECONDS
+            else 0
+        )
+        if not granted:
+            raise VoiceError("minutes_used_up")
+        try:
+            created = self._create(
+                VoiceSession("", user_id, purpose, model, now, persona_id, scenario, granted),
+                sdp_offer,
+                session,
+            )
+        except BaseException:
+            # The call did not start: its time is the learner's again.
+            self._sessions.release_seconds(user_id, week, granted)
+            raise
+        script.started(user_id)
+        return CallStarted(created.call_id, created.sdp_answer, granted)
+
+    def _create(self, call: VoiceSession, sdp_offer: str, session: dict[str, Any]) -> CreatedCall:
+        """Creates the call at the provider, records it and starts its server side; a call
+        whose server side cannot start is hung up."""
         # The provider asks for a stable id per end user for abuse handling; it gets a hash.
-        safety_identifier = hashlib.sha256(str(user_id).encode()).hexdigest()
+        safety_identifier = hashlib.sha256(str(call.user_id).encode()).hexdigest()
         try:
             created = self._provider.create_call(sdp_offer, session, safety_identifier)
         except VoiceProviderError as error:
             raise VoiceError("voice_unavailable") from error
 
-        self._sessions.started(
-            VoiceSession(
-                created.call_id, user_id, purpose, model, now, persona_id, scenario, max_seconds
-            )
-        )
+        self._sessions.started(replace(call, call_id=created.call_id))
         try:
-            self._starter.start(created.call_id, user_id, purpose)
+            self._starter.start(created.call_id, call.user_id, call.purpose)
         except Exception as error:
             # Without its server side the persona's tools would do nothing: end the call.
             self._provider.hang_up(created.call_id)
             raise VoiceError("voice_unavailable") from error
-        script.started(user_id)
-        return CallStarted(created.call_id, created.sdp_answer, max_seconds)
+        return created
 
     def allowance(self, user_id: UUID) -> Allowance:
         """The learner's voice minutes this week."""
         start = week_start(self._clock())
         return Allowance(
             weekly_seconds=self._settings.weekly_seconds,
-            used_seconds=self._sessions.seconds_since(user_id, start),
+            used_seconds=self._sessions.seconds_used(user_id, start.date()),
             resets_at=start + WEEK,
         )
 
@@ -387,8 +412,11 @@ class VoiceCallService:
             turns=tuple(call.turns),
         )
         self._sessions.finish(call_id, result)
+        seconds = max(0, int((result.ended_at - session.started_at).total_seconds()))
+        if session.max_seconds is not None and seconds < session.max_seconds:
+            week = week_start(session.started_at).date()
+            self._sessions.release_seconds(session.user_id, week, session.max_seconds - seconds)
         if self._meter is not None:
-            seconds = max(0, int((result.ended_at - session.started_at).total_seconds()))
             self._meter.record(
                 Charge(session.user_id, _FEATURES[session.purpose]),
                 self._provider.name,

@@ -100,6 +100,8 @@ class InMemoryVoiceSessionRepository:
         self.sessions: dict[str, VoiceSession] = {}
         self.finished: dict[str, FinishedCall] = {}
         self.goals: dict[str, tuple[str, ...]] = {}
+        # The voice seconds used per learner and week.
+        self.weeks: dict[tuple[UUID, date], int] = {}
 
     def started(self, session: VoiceSession) -> None:
         self.sessions[session.call_id] = session
@@ -107,18 +109,20 @@ class InMemoryVoiceSessionRepository:
     def get(self, call_id: str) -> VoiceSession | None:
         return self.sessions.get(call_id)
 
-    def seconds_since(self, user_id: UUID, since: datetime) -> int:
-        def seconds(session: VoiceSession) -> int:
-            done = self.finished.get(session.call_id)
-            if done is not None:
-                return int((done.ended_at - session.started_at).total_seconds())
-            return session.max_seconds or 0
+    def reserve_seconds(self, user_id: UUID, week: date, weekly: int, least: int, most: int) -> int:
+        left = weekly - self.weeks.get((user_id, week), 0)
+        if left < least:
+            return 0
+        granted = min(most, left)
+        self.weeks[(user_id, week)] = self.weeks.get((user_id, week), 0) + granted
+        return granted
 
-        return sum(
-            seconds(session)
-            for session in self.sessions.values()
-            if session.user_id == user_id and session.started_at >= since
-        )
+    def release_seconds(self, user_id: UUID, week: date, seconds: int) -> None:
+        if (user_id, week) in self.weeks:
+            self.weeks[(user_id, week)] = max(0, self.weeks[(user_id, week)] - seconds)
+
+    def seconds_used(self, user_id: UUID, week: date) -> int:
+        return self.weeks.get((user_id, week), 0)
 
     def finish(self, call_id: str, result: FinishedCall) -> None:
         if call_id in self.sessions:
