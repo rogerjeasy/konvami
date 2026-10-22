@@ -28,6 +28,8 @@ const NO_CAMERA = 'Konvami does not use the camera.';
 const config: ExpoConfig = {
   name: IS_DEV_BUILD ? 'Konvami Dev' : 'Konvami',
   slug: 'konvami',
+  // The Expo account and EAS project that build and distribute the app (`eas build`).
+  owner: 'rogerjeasy',
   scheme: 'konvami',
   version: '0.1.0',
   orientation: 'default',
@@ -112,6 +114,9 @@ const config: ExpoConfig = {
   ],
   experiments: {
     typedRoutes: true,
+  },
+  extra: {
+    eas: { projectId: '5aec2d72-6925-41c1-b60f-c3e34529fe7d' },
   },
 };
 
