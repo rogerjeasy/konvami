@@ -66,6 +66,8 @@ export const ROUTES = {
   review: '/review',
   /** 5.12 Ask the tutor (a question about a report's correction is `explainRoute`). */
   tutor: '/tutor',
+  /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
+  rolePlays: '/role-plays',
   /** 6.1 Profile: who the learner is, and the way to everything about their account. */
   account: '/account',
   /** 6.2 Personal: name, photo, app language. */

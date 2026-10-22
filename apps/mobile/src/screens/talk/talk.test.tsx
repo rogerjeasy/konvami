@@ -45,6 +45,18 @@ describe('5.2 Talk', () => {
     expect(screen.getByText('Clear explanations and plenty of patience.')).toBeTruthy();
   });
 
+  it('leads to the role-plays', async () => {
+    await open();
+
+    const row = screen.getByRole('button', { name: 'Role-plays' });
+    expect(row.props.accessibilityHint).toBe(
+      'Rehearse a real situation: the bakery, the doctor, an interview…',
+    );
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/role-plays');
+  });
+
   it('includes the exam coach of a learner who is preparing an exam', async () => {
     await open(inApp({ exam: { type: 'goethe', target_level: 'B1', date: null } }));
 

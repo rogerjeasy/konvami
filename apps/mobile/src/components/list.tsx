@@ -4,6 +4,7 @@ import { size } from '@konvami/design-tokens';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme';
+import { Badge } from '@/components/badge';
 
 /** Rows that belong together, as one bordered card with a line between them. */
 export function ListGroup({ children }: { children: ReactNode }) {
@@ -28,6 +29,8 @@ export function ListRow({
   title,
   detail,
   value,
+  badge,
+  accessibilityLabel,
   tone = 'default',
   disabled = false,
   onPress,
@@ -38,6 +41,10 @@ export function ListRow({
   detail?: string;
   /** The current value, shown under the title in place of a detail. */
   value?: string;
+  /** A short mark beside the title ("A2"). */
+  badge?: string;
+  /** What a screen reader says for the row, when the title alone is not enough. */
+  accessibilityLabel?: string;
   /** `danger` for a row that leads to deleting something. */
   tone?: 'default' | 'danger';
   disabled?: boolean;
@@ -48,7 +55,7 @@ export function ListRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={accessibilityLabel ?? title}
       accessibilityHint={detail ?? value}
       accessibilityState={{ disabled }}
       disabled={disabled}
@@ -63,9 +70,12 @@ export function ListRow({
         <Icon name={icon} color={danger ? color.danger : color.primaryText} size={size.iconMd} />
       </View>
       <View className="flex-1 gap-0.5">
-        <Text variant="label" tone={danger ? 'danger' : 'fg'}>
-          {title}
-        </Text>
+        <View className="flex-row flex-wrap items-center gap-2">
+          <Text variant="label" tone={danger ? 'danger' : 'fg'} className="shrink">
+            {title}
+          </Text>
+          {badge ? <Badge label={badge} tone="chip" /> : null}
+        </View>
         {(value ?? detail) ? (
           <Text variant="small" tone="muted">
             {value ?? detail}

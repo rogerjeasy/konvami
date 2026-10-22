@@ -21,6 +21,7 @@ import { relativeDayPhrase } from '@/lib/relative-day';
 import { callRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
+import { ListGroup, ListRow } from '@/components/list';
 
 // The width of a card when two share a row: half, less half of the gap between them.
 const TWO_UP = '49%';
@@ -86,6 +87,16 @@ export function TalkScreen() {
     >
       <Reveal>
         <TabHeader title={t('talk.title')} body={t('talk.body')} />
+      </Reveal>
+      <Reveal delay={staggerDelay(1)}>
+        <ListGroup>
+          <ListRow
+            icon="users"
+            title={t('rolePlays.row')}
+            detail={t('rolePlays.rowHint')}
+            onPress={() => router.push(ROUTES.rolePlays)}
+          />
+        </ListGroup>
       </Reveal>
       {home.phase === 'ready' ? (
         // Two to a row on wide windows; an odd last card keeps its width instead of stretching.
