@@ -118,7 +118,7 @@ def test_the_catalog_lists_what_can_be_learned_and_chosen(call: Call) -> None:
     assert {"id": "dtz", "name": "Deutsch-Test für Zuwanderer", "levels": ["A2", "B1"]} in german[
         "exams"
     ]
-    assert {"code": "fr", "available": False, "exams": []} in body["languages"]
+    assert {"code": "fr", "available": False, "exams": [], "scenarios": []} in body["languages"]
     assert body["startingLevels"] == ["A0", "A1", "A2", "B1", "B2", "C1", "C2"]
     assert body["examLevels"] == ["A1", "A2", "B1", "B2", "C1", "C2"]
     assert "living_abroad" in body["goalReasons"]
@@ -604,6 +604,8 @@ def test_home_adds_up_practice_and_lists_the_latest_conversations(
             "endedAt": "2026-10-09T11:10:00Z",
             "seconds": 600,
             "learnerTurns": 1,
+            "scenario": None,
+            "goalsReached": [],
         },
         {
             "id": "rtc_a",
@@ -612,6 +614,8 @@ def test_home_adds_up_practice_and_lists_the_latest_conversations(
             "endedAt": "2026-10-08T12:04:00Z",
             "seconds": 240,
             "learnerTurns": 1,
+            "scenario": None,
+            "goalsReached": [],
         },
     ]
 
@@ -712,6 +716,8 @@ def test_a_transcript_is_read_with_its_conversation(
             "endedAt": "2026-10-09T11:05:00Z",
             "seconds": 300,
             "learnerTurns": 1,
+            "scenario": None,
+            "goalsReached": [],
         },
         "turns": [
             {"speaker": "persona", "text": "Hallo! Wie geht's?", "verbatim": None, "audio": None},

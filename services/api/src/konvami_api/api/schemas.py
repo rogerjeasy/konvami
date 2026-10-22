@@ -5,7 +5,7 @@ they are stored (`target_language`).
 import dataclasses
 import datetime as dt
 from collections.abc import Callable, Mapping
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
@@ -135,10 +135,19 @@ class ExamOut(ApiModel):
     levels: list[CefrLevel]
 
 
+class ScenarioOut(ApiModel):
+    # The app names a role-play and its goals in its own strings, by these ids.
+    id: str
+    level: CefrLevel
+    goals: list[str]
+
+
 class LanguageOut(ApiModel):
     code: str
     available: bool
     exams: list[ExamOut]
+    # The role-plays the language offers, easiest first (spec §6.3).
+    scenarios: list[ScenarioOut]
 
 
 class NamedLanguageOut(ApiModel):
@@ -164,6 +173,14 @@ class CatalogOut(ApiModel):
                     exams=[
                         ExamOut(id=exam.id, name=exam.name, levels=list(exam.levels))
                         for exam in pack.exams
+                    ],
+                    scenarios=[
+                        ScenarioOut(
+                            id=scenario.id,
+                            level=cast(CefrLevel, scenario.level),
+                            goals=[goal.id for goal in scenario.goals],
+                        )
+                        for scenario in pack.scenarios
                     ],
                 )
                 for pack in catalog.packs
@@ -231,6 +248,8 @@ class PlacementDecision(ApiModel):
 
 # A WebRTC offer for one audio track and a data channel is a few kilobytes.
 MAX_SDP_LENGTH = 20_000
+# The longest scenario id accepted; the pack's ids are short words.
+MAX_SCENARIO_ID = 40
 
 
 class VoiceCallIn(ApiModel):
@@ -242,6 +261,8 @@ class VoiceCallIn(ApiModel):
     # Today on the learner's calendar, so a persona names the right weekday. Left out, or not
     # a date any time zone has right now, the date in UTC is used.
     local_date: dt.date | None = None
+    # A practice call that rehearses a role-play (a scenario id from the catalog).
+    scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
 
 
 class VoiceCallOut(ApiModel):
@@ -458,6 +479,9 @@ class ConversationOut(ApiModel):
     seconds: int
     # How often the learner spoke. A conversation counts as practice from the first time.
     learner_turns: int
+    # The role-play it rehearsed, and the goals reached in it; null and [] for free talk.
+    scenario: str | None
+    goals_reached: list[str]
 
     @classmethod
     def of(cls, conversation: Conversation) -> "ConversationOut":
@@ -469,6 +493,8 @@ class ConversationOut(ApiModel):
             ended_at=conversation.ended_at,
             seconds=conversation.seconds,
             learner_turns=conversation.learner_turns,
+            scenario=conversation.scenario,
+            goals_reached=list(conversation.goals_reached),
         )
 
 
