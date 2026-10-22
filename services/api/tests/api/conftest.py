@@ -24,6 +24,7 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
+from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
@@ -44,6 +45,7 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
     RecordingReportStarter,
@@ -279,6 +281,19 @@ def services(
         transcriber=FakeTranscriber(files),
         model="gpt-transcribe",
     )
+    # Question ids in the order they are handed out: ...0001, ...0002, and so on.
+    question_ids = (UUID(f"dddddddd-dddd-4ddd-8ddd-{n:012d}") for n in range(1, 10_000))
+    tutor = TutorService(
+        profiles=profiles,
+        accounts=directory,
+        conversations=conversations,
+        reports=reports,
+        repository=InMemoryTutorRepository(),
+        text_model=text_model,
+        model="gpt-6.1-sol",
+        clock=clock,
+        new_id=lambda: next(question_ids),
+    )
     voice = VoiceCallService(
         settings=VOICE,
         scripts={
@@ -293,6 +308,7 @@ def services(
                 reports=reports,
                 memories=memories,
                 recordings=recordings,
+                tutor=tutor,
             ),
         },
         accounts=directory,
@@ -345,6 +361,7 @@ def services(
         progress=progress,
         accounts=accounts,
         recordings=recordings,
+        tutor=tutor,
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
         ),

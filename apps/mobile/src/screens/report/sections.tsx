@@ -17,15 +17,19 @@ import { useTheme, type ColorToken } from '@/theme';
 import type { CardSaver } from './use-card-saver';
 
 /**
- * The learner's mistakes, each as what they said, how it is right and why. One the second check
- * could not confirm is marked as a hint. Without any, the report says so in one line.
+ * The learner's mistakes, each as what they said, how it is right and why, with the way to ask
+ * the Tutor about it. One the second check could not confirm is marked as a hint. Without any,
+ * the report says so in one line.
  */
 export function Polish({
   mistakes,
   saver,
+  onExplain,
 }: {
   mistakes: readonly ReportMistake[];
   saver: CardSaver;
+  /** Asks the Tutor about mistake `index` (spec §6.5 "Explain my mistake"). */
+  onExplain: (index: number) => void;
 }) {
   const { t } = useTranslation();
   if (mistakes.length === 0) {
@@ -54,15 +58,18 @@ export function Polish({
               better={after}
               explanation={mistake.explanation}
               note={mistake.certain ? undefined : t('report.polish.unsureNote')}
-              // Only what the second check confirmed is worth learning by heart.
               action={
-                mistake.certain ? (
-                  <SaveCorrection
-                    saved={saver.isSaved('correction', i)}
-                    saving={saver.isSaving('correction', i)}
-                    onSave={() => void saver.save('correction', i)}
-                  />
-                ) : undefined
+                <View className="flex-row flex-wrap items-center gap-x-2">
+                  {/* Only what the second check confirmed is worth learning by heart. */}
+                  {mistake.certain ? (
+                    <SaveCorrection
+                      saved={saver.isSaved('correction', i)}
+                      saving={saver.isSaving('correction', i)}
+                      onSave={() => void saver.save('correction', i)}
+                    />
+                  ) : null}
+                  <TextButton label={t('report.polish.explain')} onPress={() => onExplain(i)} />
+                </View>
               }
               accessibilityLabel={t('report.cardLabel', {
                 before: mistake.original,

@@ -6,7 +6,7 @@ import type { Card as Flashcard } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
-import { ListGroup } from '@/components/list';
+import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
@@ -64,6 +64,18 @@ export function LearnScreen() {
     <TabScreen onRefresh={deck.phase === 'ready' ? () => void store.refresh() : undefined}>
       <Reveal>
         <TabHeader title={t('learn.title')} body={total > 0 ? t('learn.body') : undefined} />
+      </Reveal>
+      <Reveal delay={staggerDelay(1)}>
+        <View className="w-full max-w-content self-center">
+          <ListGroup>
+            <ListRow
+              icon="message"
+              title={t('learn.tutorRow')}
+              detail={t('learn.tutorHint')}
+              onPress={() => router.push(ROUTES.tutor)}
+            />
+          </ListGroup>
+        </View>
       </Reveal>
       {deck.phase !== 'ready' ? (
         <LoadState

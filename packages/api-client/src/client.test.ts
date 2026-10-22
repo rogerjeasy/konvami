@@ -426,6 +426,39 @@ describe('api client', () => {
     expect(calls[5]?.body).toEqual({ rating: 'good' });
   });
 
+  it('asks the tutor, about a correction too, and reads the questions asked', async () => {
+    const question = {
+      id: 'q1',
+      askedAt: '2026-10-09T12:00:00Z',
+      question: 'Why dem?',
+      answer: {
+        explanation: 'Dative after mit.',
+        examples: [],
+        topic: 'case_dative',
+        unsure: false,
+      },
+      source: 'text',
+    };
+    const { fetch, calls } = fakeFetch(
+      json(200, question),
+      json(200, { ...question, source: 'report' }),
+      json(200, { questions: [question] }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.askTutor('Why dem?')).toEqual(question);
+    expect((await api.explainCorrection('rtc/1', 2)).source).toBe('report');
+    expect((await api.getTutorQuestions()).questions).toEqual([question]);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/tutor/questions',
+      'POST https://api.example.test/v1/tutor/corrections',
+      'GET https://api.example.test/v1/tutor/questions',
+    ]);
+    expect(calls[0]?.body).toEqual({ question: 'Why dem?' });
+    expect(calls[1]?.body).toEqual({ conversationId: 'rtc/1', index: 2 });
+  });
+
   it('reads and sets whether recordings are kept', async () => {
     const { fetch, calls } = fakeFetch(json(200, { kept: true }), json(200, { kept: false }));
     const { api } = client(fetch);

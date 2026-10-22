@@ -7,7 +7,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { ApiClient, Card, CardSource, Progress, Transcript } from '@konvami/api-client';
+import type {
+  ApiClient,
+  Card,
+  CardSource,
+  Progress,
+  Transcript,
+  TutorQuestion,
+} from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
 import type { ClipPlayer } from '@/lib/clip-player';
@@ -49,6 +56,15 @@ export interface PracticeServices {
   saveCard: (source: CardSource) => Promise<Card>;
   /** One sitting of reviewing the cards that are due. */
   reviewCards: () => ReviewSession;
+  /** The questions asked to the Tutor, newest first (5.12). */
+  tutor: ResourceStore<{ questions: TutorQuestion[] }>;
+  /**
+   * Asks the Tutor, about a typed question or about correction `index` of a report, and puts
+   * the answer first. Rejects with an `ApiError` (`tutor_limit`, `unavailable`, …).
+   */
+  askTutor: (
+    asked: { question: string } | { conversationId: string; index: number },
+  ) => Promise<TutorQuestion>;
   clock: DeviceClock;
   /** Plays a conversation's recordings (and, in Persona Studio, a voice's sample). */
   clips: ClipPlayer;
@@ -68,12 +84,16 @@ export function createPracticeServices(
     | 'getDueCards'
     | 'reviewCard'
     | 'removeCard'
+    | 'getTutorQuestions'
+    | 'askTutor'
+    | 'explainCorrection'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
 ): PracticeServices {
   const home = createHomeStore(api, clock);
   const deck = createDeckStore(api);
+  const tutor = createResourceStore(() => api.getTutorQuestions(), clock.now);
   return {
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
@@ -88,6 +108,15 @@ export function createPracticeServices(
       return card;
     },
     reviewCards: () => createReviewSession(api),
+    tutor,
+    askTutor: (asked) =>
+      tutor.mutate(
+        () =>
+          'question' in asked
+            ? api.askTutor(asked.question)
+            : api.explainCorrection(asked.conversationId, asked.index),
+        (shown, answer) => ({ questions: [answer, ...shown.questions] }),
+      ),
     clock,
     clips,
   };
@@ -113,6 +142,7 @@ export function PracticeProvider({
     services.library.reset();
     services.deck.reset();
     services.progress.reset();
+    services.tutor.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
 }
@@ -213,4 +243,10 @@ export function useReport(id: string): {
   }, [follower]);
   const view = useSyncExternalStore(follower.subscribe, follower.getState, follower.getState);
   return { view, request: () => void follower.request(), reload: follower.start };
+}
+
+/** The questions asked to the Tutor; re-renders when they change. */
+export function useTutor(): ResourceState<{ questions: TutorQuestion[] }> {
+  const { tutor } = usePracticeServices();
+  return useSyncExternalStore(tutor.subscribe, tutor.getState, tutor.getState);
 }

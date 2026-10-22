@@ -58,6 +58,16 @@ describe('5.7 Learn', () => {
     expect(router.navigate).toHaveBeenCalledWith('/talk');
   });
 
+  it('leads to the tutor, with or without cards', async () => {
+    await open(inApp());
+
+    const row = screen.getByRole('button', { name: 'Ask the tutor' });
+    expect(row.props.accessibilityHint).toBe('Grammar, words, how to say something');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/tutor');
+  });
+
   it('says how many cards are due and starts the review', async () => {
     await open(await learning());
 
