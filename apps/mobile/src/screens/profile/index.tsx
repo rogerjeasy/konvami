@@ -24,7 +24,10 @@ import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
-import { useAccount } from '@/profile/services';
+import { Meter } from '@/components/meter';
+import { TextButton } from '@/components/text-button';
+import { useAccount, useAllowance, useMinutesBack, useProfileServices } from '@/profile/services';
+import { withLine } from '@/voice/problems';
 import { useTheme } from '@/theme';
 
 // The share of a wide window the learner's card takes; the lists get the rest.
@@ -114,6 +117,59 @@ function Identity({ home }: { home: Home | null }) {
   );
 }
 
+// Below this many seconds a call cannot start (services/api: domain/voice.py MIN_CALL_SECONDS).
+const MIN_CALL_SECONDS = 60;
+
+/**
+ * The learner's voice minutes this week (spec §6.19): how many are left, as a bar that empties,
+ * and when they come back.
+ */
+function VoiceMinutes() {
+  const { t } = useTranslation();
+  const { allowance } = useProfileServices();
+  const state = useAllowance();
+  const back = useMinutesBack(true);
+
+  if (state.phase === 'failed') {
+    return (
+      <View className="gap-1">
+        <Text variant="small" tone="muted">
+          {t('profile.minutes.loadFailed')}
+        </Text>
+        <TextButton
+          tone="primary"
+          label={t('common.retry')}
+          onPress={() => void allowance.reload()}
+        />
+      </View>
+    );
+  }
+  if (state.phase !== 'ready') return null;
+  const { weeklySeconds, remainingSeconds } = state.data;
+  const weekly = Math.round(weeklySeconds / 60);
+  const left = Math.floor(remainingSeconds / 60);
+  const usedUp = remainingSeconds < MIN_CALL_SECONDS;
+  return (
+    <Card className="gap-3 p-4">
+      <View className="flex-row flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <Text variant="heading">{t('profile.minutes.left', { count: left })}</Text>
+        <Text variant="small" tone="muted">
+          {t('profile.minutes.ofWeekly', { weekly })}
+        </Text>
+      </View>
+      <Meter
+        share={weeklySeconds > 0 ? remainingSeconds / weeklySeconds : 0}
+        label={t('profile.minutes.spoken', { left, weekly })}
+      />
+      {back ? (
+        <Text variant="small" tone="muted">
+          {usedUp ? withLine(t('profile.minutes.usedUp'), back) : back}
+        </Text>
+      ) : null}
+    </Card>
+  );
+}
+
 /**
  * 6.1 Profile (spec §14.1): who is signed in, and the way to everything about them: their
  * name and photo, what they are learning, their partners and what those know about them,
@@ -125,6 +181,8 @@ export function ProfileScreen() {
   const { session } = useAuthServices();
   const { status } = useSession();
   const { home: store } = usePracticeServices();
+  const { allowance } = useProfileServices();
+  const { owner } = useAccount();
   const home = useHome();
   const { split } = useScreenLayout();
   const [leaving, setLeaving] = useState(false);
@@ -138,7 +196,9 @@ export function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       void store.revisit();
-    }, [store]),
+      // A call may have used minutes since.
+      void allowance.revisit();
+    }, [store, allowance]),
   );
 
   // While signing out, the screen stays as it is until Welcome replaces it.
@@ -150,6 +210,11 @@ export function ProfileScreen() {
   const lists = (
     <View className="gap-6">
       <Reveal delay={staggerDelay(1)}>
+        <Section title={t('profile.groups.voice')}>
+          <VoiceMinutes />
+        </Section>
+      </Reveal>
+      <Reveal delay={staggerDelay(2)}>
         <Section title={t('profile.groups.you')}>
           <ListGroup>
             <ListRow
@@ -167,7 +232,7 @@ export function ProfileScreen() {
           </ListGroup>
         </Section>
       </Reveal>
-      <Reveal delay={staggerDelay(2)}>
+      <Reveal delay={staggerDelay(3)}>
         <Section title={t('profile.groups.partners')}>
           <ListGroup>
             <ListRow
@@ -193,7 +258,7 @@ export function ProfileScreen() {
           </ListGroup>
         </Section>
       </Reveal>
-      <Reveal delay={staggerDelay(3)}>
+      <Reveal delay={staggerDelay(4)}>
         <Section title={t('profile.groups.privacy')}>
           <ListGroup>
             <ListRow
@@ -211,7 +276,21 @@ export function ProfileScreen() {
           </ListGroup>
         </Section>
       </Reveal>
-      <Reveal delay={staggerDelay(4)}>
+      {owner ? (
+        <Reveal delay={staggerDelay(5)}>
+          <Section title={t('profile.groups.owner')}>
+            <ListGroup>
+              <ListRow
+                icon="barChart"
+                title={t('profile.rows.costs')}
+                detail={t('profile.rows.costsHint')}
+                onPress={go(ROUTES.accountCosts)}
+              />
+            </ListGroup>
+          </Section>
+        </Reveal>
+      ) : null}
+      <Reveal delay={staggerDelay(6)}>
         <View className="gap-3">
           <Button
             variant="secondary"

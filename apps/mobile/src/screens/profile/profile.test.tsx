@@ -99,6 +99,46 @@ describe('6.1 Profile', () => {
     expect(router.push).toHaveBeenCalledWith(route);
   });
 
+  it('shows the voice minutes left this week and when they come back', async () => {
+    const api = inApp();
+    api.usedMinutes(15);
+
+    await open(api);
+
+    expect(await screen.findByText('45 minutes left')).toBeTruthy();
+    expect(screen.getByText('of 60 this week')).toBeTruthy();
+    expect(screen.getByLabelText('45 of 60 voice minutes left this week')).toBeTruthy();
+    expect(screen.getByText('They come back on Monday, October 12.')).toBeTruthy();
+  });
+
+  it('says so when the week’s minutes are used up', async () => {
+    const api = inApp();
+    api.usedMinutes(60);
+
+    await open(api);
+
+    expect(await screen.findByText('0 minutes left')).toBeTruthy();
+    expect(
+      screen.getByText('This week’s minutes are used up. They come back on Monday, October 12.'),
+    ).toBeTruthy();
+  });
+
+  it('shows the way to the costs to the owner only', async () => {
+    await open();
+    await screen.findByText(/minutes left/);
+    expect(screen.queryByRole('button', { name: 'Costs' })).toBeNull();
+  });
+
+  it('leads the owner to the costs', async () => {
+    const api = inApp();
+    api.beOwner();
+    await open(api);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Costs' }));
+
+    expect(router.push).toHaveBeenCalledWith('/account/costs');
+  });
+
   it('still shows the account and its rows when the practice could not be loaded', async () => {
     const api = inApp();
     api.failNext('getHome', 'network');
