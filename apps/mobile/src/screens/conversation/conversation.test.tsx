@@ -11,6 +11,7 @@ import {
 import { renderScreen } from '@/test/render';
 import { ConversationDoneScreen } from './done';
 import { LiveConversationScreen } from './live';
+import { getPreferences, setPartnerCaptions } from '@/preferences';
 
 jest.mock('expo-router', () => ({
   router: {
@@ -33,8 +34,9 @@ beforeEach(() => {
   (SecureStore as unknown as { __reset: () => void }).__reset();
 });
 
-afterEach(() => {
+afterEach(async () => {
   jest.useRealTimers();
+  await setPartnerCaptions(true);
 });
 
 const LENA = FAKE_PERSONAS[0]!;
@@ -140,6 +142,47 @@ describe('5.3 Conversation', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Unmute microphone' }));
     expect(voice.muted).toBe(false);
+  });
+
+  it('asks the partner for help from the help sheet', async () => {
+    const { voice } = await live();
+    await play(voice, SESSION_CREATED, personaSaid('Was hast du am Wochenende gemacht?'));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Help' }));
+    expect(await screen.findByRole('header', { name: 'Need a hand?' })).toBeTruthy();
+    for (const kind of ['I’m stuck', 'Slower', 'Repeat', 'Translate', 'Explain']) {
+      expect(screen.getByRole('button', { name: kind })).toBeTruthy();
+    }
+    await fireEvent.press(screen.getByRole('button', { name: 'Slower' }));
+
+    expect(voice.helped).toEqual(['slower']);
+    await waitFor(() => expect(screen.queryByRole('header', { name: 'Need a hand?' })).toBeNull());
+    expect(screen.getByText('Lena is thinking')).toBeTruthy();
+  });
+
+  it('offers no help before the call is live', async () => {
+    const voice = createFakeVoiceEngine();
+    voice.holdStart();
+    await open({ voice });
+    await screen.findByText('Connecting…');
+
+    expect(screen.getByRole('button', { name: 'Help' })).toBeDisabled();
+  });
+
+  it('hides what the partner says for listening practice, and shows it again', async () => {
+    const { voice } = await live();
+    await play(voice, SESSION_CREATED, personaSaid('Was hast du am Wochenende gemacht?'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Help' }));
+
+    await fireEvent.press(await screen.findByRole('switch', { name: 'Show what Lena says' }));
+
+    expect(screen.queryByText('Was hast du am Wochenende gemacht?')).toBeNull();
+    expect(screen.getByText('Lena’s words are hidden. Listen closely.')).toBeTruthy();
+    expect(getPreferences().partnerCaptions).toBe(false);
+
+    await fireEvent.press(screen.getByRole('switch', { name: 'Show what Lena says' }));
+
+    expect(screen.getByText('Was hast du am Wochenende gemacht?')).toBeTruthy();
   });
 
   it('ends the call when the learner ends it and shows what it added up to', async () => {

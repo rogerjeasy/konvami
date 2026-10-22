@@ -1,7 +1,13 @@
 import { AppState, type AppStateStatus } from 'react-native';
 import { getLocales, type Locale } from 'expo-localization';
 import i18n from '@/i18n';
-import { followPhoneLanguage, getPreferences, loadPreferences, setLanguage } from '.';
+import {
+  followPhoneLanguage,
+  getPreferences,
+  loadPreferences,
+  setLanguage,
+  setPartnerCaptions,
+} from '.';
 
 const phone = (...tags: [string, ...string[]]) =>
   jest
@@ -64,5 +70,21 @@ describe('app language', () => {
     onChange('active');
     expect(i18n.language).toBe('fr');
     stop();
+  });
+});
+
+describe('the partner’s captions', () => {
+  afterEach(async () => {
+    await setPartnerCaptions(true);
+  });
+
+  it('shows them until the learner hides them, and remembers that across launches', async () => {
+    await loadPreferences();
+    expect(getPreferences().partnerCaptions).toBe(true);
+
+    await setPartnerCaptions(false);
+    await loadPreferences();
+
+    expect(getPreferences().partnerCaptions).toBe(false);
   });
 });

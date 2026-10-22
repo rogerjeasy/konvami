@@ -1,6 +1,7 @@
 import { ApiError, type VoiceCall } from '@konvami/api-client';
 import { VoiceError, type VoiceErrorCode } from './errors';
 import type { AudioLevels, RtcSession } from './rtc-session';
+import { helpNote, type HelpKind } from './help';
 
 export { VoiceError, type VoiceErrorCode } from './errors';
 export type { AudioLevels } from './rtc-session';
@@ -24,6 +25,12 @@ export interface VoiceEngine {
    * answers it like a spoken one, and listeners get it as `{ type: 'learner.typed', id, text }`.
    */
   say(text: string): void;
+  /**
+   * Asks the partner for help (a tapped "Slower"): a note that is not a line of the learner, so
+   * it is neither shown nor kept. A reply still playing stops first. Listeners get
+   * `{ type: 'learner.help', kind }`.
+   */
+  help(kind: HelpKind): void;
   /**
    * The call's events (see `conversationReducer`), plus `{ type: 'connection.lost' }` when the
    * connection drops. Returns the function that stops listening.
@@ -100,6 +107,18 @@ export function createVoiceEngine({
       session.send({ type: 'response.create' });
       typedLines += 1;
       emit({ type: 'learner.typed', id: `typed_${typedLines}`, text });
+    },
+
+    help(kind) {
+      if (!session) return;
+      // Fails harmlessly when nothing is playing: the provider answers with an error event.
+      session.send({ type: 'response.cancel' });
+      session.send({ type: 'output_audio_buffer.clear' });
+      const content = [{ type: 'input_text', text: helpNote(kind) }];
+      const item = { type: 'message', role: 'system', content };
+      if (!session.send({ type: 'conversation.item.create', item })) return;
+      session.send({ type: 'response.create' });
+      emit({ type: 'learner.help', kind });
     },
 
     subscribe(listener) {

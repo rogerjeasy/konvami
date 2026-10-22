@@ -5,6 +5,7 @@ import type { CallPurpose } from '@konvami/api-client';
 import { mouthOpenness } from '@/lib/lip-sync';
 import { conversationReducer, INITIAL_CONVERSATION, type ConversationState } from './conversation';
 import { VoiceError, type VoiceEngine, type VoiceErrorCode } from './engine';
+import type { HelpKind } from './help';
 import { useVoiceEngineFactory } from './services';
 
 /** Why a call is not running: it could not start, or its connection dropped (`lost`). */
@@ -21,6 +22,8 @@ export interface VoiceCall {
   toggleMute: () => void;
   /** Says a line for the learner without their voice (see `VoiceEngine.say`). */
   say: (text: string) => void;
+  /** Asks the partner for help (see `VoiceEngine.help`). */
+  help: (kind: HelpKind) => void;
   /** Ends the call. Also happens by itself when the screen goes away. */
   stop: () => void;
   /** How far the persona's mouth is open, 0–1 (for the avatar). */
@@ -108,6 +111,7 @@ export function useVoiceCall(purpose: CallPurpose, personaId?: string): VoiceCal
   }, []);
 
   const say = useCallback((text: string) => engine.current?.say(text), []);
+  const help = useCallback((kind: HelpKind) => engine.current?.help(kind), []);
   const stop = useCallback(() => engine.current?.stop(), []);
 
   return {
@@ -119,6 +123,7 @@ export function useVoiceCall(purpose: CallPurpose, personaId?: string): VoiceCal
     muted,
     toggleMute,
     say,
+    help,
     stop,
     mouth,
     voice,

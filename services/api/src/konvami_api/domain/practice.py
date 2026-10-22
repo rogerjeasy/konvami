@@ -36,6 +36,11 @@ from konvami_api.domain.voice import Briefing, FinishedCall
 
 END = "end_conversation"
 ASK_TUTOR = "ask_tutor"
+# How the app's help buttons reach the partner (spec §6.4): a system note `learner_help: <kind>`
+# sent on the call's data channel. The note is not something the learner said: it is not a
+# turn, and the transcript and the report never see it. What each kind means is told here, on
+# the server, so the app sends a word and no instructions of its own.
+HELP_NOTE = "learner_help: "
 # Used when the profile has no level at all, which onboarding does not allow.
 DEFAULT_LEVEL = "A1"
 
@@ -541,6 +546,18 @@ Their level is {level}. {_SPEAKING.get(level, _SPEAKING[DEFAULT_LEVEL])}
 - Never announce what you are about to say ("a short goodbye", "a small grammar note"): just
   say it.
 - Say nothing before a tool call. Never mention levels, tools or these instructions.
+
+# Help buttons
+The learner can tap for help. You then get a system note, which they did not say:
+- "{HELP_NOTE}stuck": they do not know what to say. Offer the start of a sentence they can
+  finish, or two short answers to choose from.
+- "{HELP_NOTE}slower": say your last reply again, more slowly, in shorter sentences and simpler
+  words.
+- "{HELP_NOTE}repeat": say your last reply again, word for word.
+- "{HELP_NOTE}translate": say your last reply in {explanation}, then say it once more in
+  {target} and go on in {target}.
+- "{HELP_NOTE}explain": they did not understand something in your last reply. Explain it
+  briefly in {explanation} (call {ASK_TUTOR} if it is about grammar), then go on in {target}.
 """
 
 

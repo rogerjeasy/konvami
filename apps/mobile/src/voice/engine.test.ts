@@ -159,6 +159,37 @@ describe('a running call', () => {
     expect(events).toEqual([]);
   });
 
+  it('asks the partner for help with a note that is not a line of the learner', async () => {
+    const { engine, session, events } = await running();
+
+    engine.help('slower');
+
+    expect(jest.mocked(session.send).mock.calls.map(([event]) => event)).toEqual([
+      // A reply still playing stops first: the help is about it.
+      { type: 'response.cancel' },
+      { type: 'output_audio_buffer.clear' },
+      {
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'system',
+          content: [{ type: 'input_text', text: 'learner_help: slower' }],
+        },
+      },
+      { type: 'response.create' },
+    ]);
+    expect(events).toEqual([{ type: 'learner.help', kind: 'slower' }]);
+  });
+
+  it('asks for no help it could not send', async () => {
+    const { engine, session, events } = await running();
+    jest.mocked(session.send).mockReturnValue(false);
+
+    engine.help('repeat');
+
+    expect(events).toEqual([]);
+  });
+
   it('mutes, reads levels and stops through the session', async () => {
     const { engine, session } = await running();
 
