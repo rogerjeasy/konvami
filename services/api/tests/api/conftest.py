@@ -309,6 +309,7 @@ def services(
                 memories=memories,
                 recordings=recordings,
                 tutor=tutor,
+                sessions=calls,
             ),
         },
         accounts=directory,

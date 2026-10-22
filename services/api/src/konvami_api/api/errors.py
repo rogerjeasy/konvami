@@ -19,6 +19,7 @@ from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.reports import ReportError
+from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.voice import VoiceError
 from konvami_api.domain.voices import SampleError
@@ -114,6 +115,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(CardError)
     async def _card_error(_: Request, error: CardError) -> JSONResponse:
         return _response(_CARD_STATUS.get(error.code, 422), error.code)
+
+    @app.exception_handler(ScenarioError)
+    async def _scenario_error(_: Request, error: ScenarioError) -> JSONResponse:
+        return _response(404, error.code)
 
     @app.exception_handler(MemoriesError)
     async def _memory_error(_: Request, error: MemoriesError) -> JSONResponse:

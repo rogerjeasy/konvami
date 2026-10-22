@@ -4,9 +4,14 @@ import type { VoiceEngine } from './engine';
 
 /**
  * Makes the engine for one live call. `personaId` is the partner of a practice call; the guide's
- * calls have none. The app provides the real factory; tests provide a fake.
+ * calls have none. `scenario` makes a practice call a role-play. The app provides the real
+ * factory; tests provide a fake.
  */
-export type VoiceEngineFactory = (purpose: CallPurpose, personaId?: string) => VoiceEngine;
+export type VoiceEngineFactory = (
+  purpose: CallPurpose,
+  personaId?: string,
+  scenario?: string,
+) => VoiceEngine;
 
 const VoiceContext = createContext<VoiceEngineFactory | null>(null);
 

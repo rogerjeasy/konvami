@@ -234,7 +234,7 @@ def _router(services: Services) -> APIRouter:
     @router.post("/voice/calls", operation_id="startVoiceCall", responses=CALL_REFUSED)
     def start_voice_call(user: CurrentUser, offer: VoiceCallIn) -> VoiceCallOut:
         started = services.voice.start(
-            user, offer.purpose, offer.sdp, offer.persona_id, offer.local_date
+            user, offer.purpose, offer.sdp, offer.persona_id, offer.local_date, offer.scenario
         )
         return VoiceCallOut.of(started)
 

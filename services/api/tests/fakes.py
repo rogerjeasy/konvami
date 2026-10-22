@@ -91,6 +91,7 @@ class InMemoryVoiceSessionRepository:
     def __init__(self) -> None:
         self.sessions: dict[str, VoiceSession] = {}
         self.finished: dict[str, FinishedCall] = {}
+        self.goals: dict[str, tuple[str, ...]] = {}
 
     def started(self, session: VoiceSession) -> None:
         self.sessions[session.call_id] = session
@@ -108,6 +109,10 @@ class InMemoryVoiceSessionRepository:
     def finish(self, call_id: str, result: FinishedCall) -> None:
         if call_id in self.sessions:
             self.finished[call_id] = result
+
+    def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
+        if call_id in self.sessions:
+            self.goals[call_id] = goals
 
 
 class FakeAccountDirectory:
@@ -332,6 +337,8 @@ class InMemoryConversationRepository:
                     learner_turns=sum(1 for turn in finished.turns if turn.speaker == "learner")
                     if finished
                     else 0,
+                    scenario=session.scenario,
+                    goals_reached=self._calls.goals.get(session.call_id, ()),
                 )
             )
         return sorted(conversations, key=lambda c: c.started_at, reverse=True)

@@ -10,6 +10,8 @@ import {
 import type {
   ApiClient,
   Card,
+  Catalog,
+  Scenario,
   CardSource,
   Progress,
   Transcript,
@@ -56,6 +58,8 @@ export interface PracticeServices {
   saveCard: (source: CardSource) => Promise<Card>;
   /** One sitting of reviewing the cards that are due. */
   reviewCards: () => ReviewSession;
+  /** What can be learned and practised: here, the role-plays of each language (5.13). */
+  catalog: ResourceStore<Catalog>;
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
   /**
@@ -85,6 +89,7 @@ export function createPracticeServices(
     | 'reviewCard'
     | 'removeCard'
     | 'getTutorQuestions'
+    | 'getCatalog'
     | 'askTutor'
     | 'explainCorrection'
   >,
@@ -94,6 +99,7 @@ export function createPracticeServices(
   const home = createHomeStore(api, clock);
   const deck = createDeckStore(api);
   const tutor = createResourceStore(() => api.getTutorQuestions(), clock.now);
+  const catalog = createResourceStore(() => api.getCatalog(), clock.now);
   return {
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
@@ -108,6 +114,7 @@ export function createPracticeServices(
       return card;
     },
     reviewCards: () => createReviewSession(api),
+    catalog,
     tutor,
     askTutor: (asked) =>
       tutor.mutate(
@@ -249,4 +256,45 @@ export function useReport(id: string): {
 export function useTutor(): ResourceState<{ questions: TutorQuestion[] }> {
   const { tutor } = usePracticeServices();
   return useSyncExternalStore(tutor.subscribe, tutor.getState, tutor.getState);
+}
+
+export interface ScenarioReading {
+  phase: 'loading' | 'ready' | 'failed';
+  /** Null until ready. */
+  scenarios: Scenario[] | null;
+  /** Reads both again after a failure. */
+  retry: () => void;
+}
+
+/**
+ * The role-plays of the language the learner is learning (from Today's data and the catalog),
+ * easiest first; null until both are read. Reads them when first asked.
+ */
+export function useScenarios(): ScenarioReading {
+  const { catalog: store, home: homeStore } = usePracticeServices();
+  const catalog = useSyncExternalStore(store.subscribe, store.getState, store.getState);
+  const home = useHome();
+  useEffect(() => {
+    void store.load();
+    void homeStore.load();
+  }, [store, homeStore]);
+  const language = home.phase === 'ready' ? home.data.language : null;
+  const scenarios =
+    catalog.phase === 'ready' && language
+      ? (catalog.data.languages.find((l) => l.code === language)?.scenarios ?? [])
+      : null;
+  const phase =
+    catalog.phase === 'failed' || home.phase === 'failed'
+      ? 'failed'
+      : scenarios
+        ? 'ready'
+        : 'loading';
+  return {
+    phase,
+    scenarios,
+    retry: () => {
+      void store.reload();
+      void homeStore.reload();
+    },
+  };
 }

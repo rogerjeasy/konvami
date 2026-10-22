@@ -21,7 +21,8 @@ import { formatDuration } from '@/lib/format';
 import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
 import { conversationDoneRoute, ROUTES } from '@/lib/routes';
-import { useHome, usePracticeServices } from '@/practice/services';
+import { useHome, usePracticeServices, useScenarios } from '@/practice/services';
+import { Goals } from './goals';
 import { setPartnerCaptions, usePreferences } from '@/preferences';
 import { HELP_KINDS, type HelpKind } from '@/voice/help';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
@@ -123,9 +124,20 @@ function HelpSheet({
 }
 
 /** One live call with a partner. Mounted anew for every attempt (see `LiveConversationScreen`). */
-function Call({ partner, onRetry }: { partner: Persona; onRetry: () => void }) {
+function Call({
+  partner,
+  scenario,
+  onRetry,
+}: {
+  partner: Persona;
+  /** The role-play, for one; its goals show once the catalog is read. */
+  scenario?: string;
+  onRetry: () => void;
+}) {
   const { t } = useTranslation();
-  const call = useVoiceCall('practice', partner.id);
+  const call = useVoiceCall('practice', partner.id, scenario);
+  const { scenarios } = useScenarios();
+  const rolePlay = scenario ? scenarios?.find(({ id }) => id === scenario) : undefined;
   const { conversation, callId, stop } = call;
   const { partnerCaptions } = usePreferences();
   const [helping, setHelping] = useState(false);
@@ -160,6 +172,9 @@ function Call({ partner, onRetry }: { partner: Persona; onRetry: () => void }) {
       hint={t('conversation.hint', { name: partner.name })}
       finishedLabel={t('conversation.finished')}
       problem={call.problem && !lost ? t(problemKey(call.problem)) : null}
+      progress={
+        rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : undefined
+      }
       hiddenPersonaText={
         partnerCaptions ? null : t('conversation.help.hidden', { name: partner.name })
       }
@@ -225,7 +240,10 @@ function Call({ partner, onRetry }: { partner: Persona; onRetry: () => void }) {
 export function LiveConversationScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { personaId } = useLocalSearchParams<{ personaId: string }>();
+  const { personaId, scenario } = useLocalSearchParams<{
+    personaId: string;
+    scenario?: string;
+  }>();
   const { home: store } = usePracticeServices();
   const home = useHome();
   // Each attempt is a fresh call: a new key mounts `Call`, and its state, anew.
@@ -266,5 +284,12 @@ export function LiveConversationScreen() {
       </StepLayout>
     );
   }
-  return <Call key={attempt} partner={partner} onRetry={() => setAttempt((count) => count + 1)} />;
+  return (
+    <Call
+      key={attempt}
+      partner={partner}
+      scenario={scenario}
+      onRetry={() => setAttempt((count) => count + 1)}
+    />
+  );
 }

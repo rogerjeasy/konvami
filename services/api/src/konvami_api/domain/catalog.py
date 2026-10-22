@@ -9,6 +9,7 @@ from typing import Literal, get_args
 
 from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
 from konvami_api.domain.persona_parts import PersonaTemplate
+from konvami_api.domain.scenarios import GERMAN_SCENARIOS, Scenario
 
 CefrLevel = Literal["A1", "A2", "B1", "B2", "C1", "C2"]
 # "A0" is a learner starting from zero, below the first CEFR level.
@@ -52,12 +53,17 @@ class LanguagePack:
     error_categories: tuple[str, ...] = ()
     # The rule behind each kind of mistake, in the same order: what the Tutor rests on.
     grammar: tuple[GrammarNote, ...] = ()
+    # The role-plays it offers (spec §6.3), easiest first.
+    scenarios: tuple[Scenario, ...] = ()
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
 
     def note(self, topic: str) -> GrammarNote | None:
         return next((note for note in self.grammar if note.topic == topic), None)
+
+    def scenario(self, scenario_id: str) -> Scenario | None:
+        return next((s for s in self.scenarios if s.id == scenario_id), None)
 
 
 @dataclass(frozen=True)
@@ -110,6 +116,7 @@ GERMAN = LanguagePack(
         "lexical_choice",
     ),
     grammar=GERMAN_NOTES,
+    scenarios=GERMAN_SCENARIOS,
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),
         ExamFormat("telc", "telc Deutsch", CEFR_LEVELS),

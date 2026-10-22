@@ -218,16 +218,21 @@ _LIST_QUESTIONS = f"""
 
 _START_SESSION = f"""
     WITH {_ENSURE_USER}
-    INSERT INTO voice_session (call_id, user_id, purpose, model, started_at, persona_id)
+    INSERT INTO voice_session (call_id, user_id, purpose, model, started_at, persona_id, scenario)
     VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
-            CAST(:persona_id AS uuid))
+            CAST(:persona_id AS uuid), :scenario)
 """
 
 _LOAD_SESSION = f"""
     SELECT call_id, CAST(user_id AS text) AS user_id, purpose, model,
-           {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id
+           {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id,
+           scenario
     FROM voice_session
     WHERE call_id = :call_id
+"""
+
+_GOALS_REACHED = """
+    UPDATE voice_session SET goals_reached = CAST(:goals AS jsonb) WHERE call_id = :call_id
 """
 
 _COUNT_SESSIONS = """
@@ -292,7 +297,8 @@ _CONVERSATION = f"""
            (
                SELECT CAST(count(*) AS integer) FROM voice_turn t
                WHERE t.call_id = s.call_id AND t.speaker = 'learner'
-           ) AS learner_turns
+           ) AS learner_turns,
+           s.scenario, CAST(s.goals_reached AS text) AS goals_reached
     FROM voice_session s
 """
 
@@ -770,6 +776,7 @@ class SqlVoiceSessionRepository:
                 "model": session.model,
                 "started_at": session.started_at.isoformat(),
                 "persona_id": str(session.persona_id) if session.persona_id else None,
+                "scenario": session.scenario,
             },
         )
 
@@ -785,7 +792,11 @@ class SqlVoiceSessionRepository:
             model=row["model"],
             started_at=from_epoch_micros(row["started_at"]),
             persona_id=UUID(row["persona_id"]) if row["persona_id"] else None,
+            scenario=row["scenario"],
         )
+
+    def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
+        self._client.execute(_GOALS_REACHED, {"call_id": call_id, "goals": json.dumps(goals)})
 
     def count_since(self, user_id: UUID, since: dt.datetime) -> int:
         rows = self._client.execute(
@@ -1005,6 +1016,8 @@ def _conversation(row: dict[str, Any]) -> Conversation:
         ended_at=_moment(row["ended_at"]),
         seconds=row["seconds"] or 0,
         learner_turns=row["learner_turns"],
+        scenario=row["scenario"],
+        goals_reached=tuple(json.loads(row["goals_reached"])) if row["goals_reached"] else (),
     )
 
 

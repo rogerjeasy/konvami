@@ -47,10 +47,21 @@ export const FAKE_CATALOG: Catalog = {
         { id: 'testdaf', name: 'TestDaF', levels: ['B2', 'C1'] },
         { id: 'osd', name: 'ÖSD', levels: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] },
       ],
+      // As the German pack has them (services/api: domain/scenarios.py).
+      scenarios: [
+        { id: 'bakery', level: 'A1', goals: ['order', 'price', 'pay'] },
+        { id: 'doctor', level: 'A2', goals: ['symptoms', 'since_when', 'advice'] },
+        { id: 'pharmacy', level: 'A2', goals: ['need', 'dose', 'pay'] },
+        { id: 'train_ticket', level: 'A2', goals: ['destination', 'ticket', 'platform'] },
+        { id: 'registration', level: 'B1', goals: ['purpose', 'documents', 'next_step'] },
+        { id: 'flat_viewing', level: 'B1', goals: ['rent', 'about_me', 'move_in'] },
+        { id: 'job_interview', level: 'B1', goals: ['introduce', 'strength', 'question'] },
+        { id: 'complaint', level: 'B1', goals: ['problem', 'solution', 'agree'] },
+      ],
     },
-    { code: 'en', available: false, exams: [] },
-    { code: 'fr', available: false, exams: [] },
-    { code: 'it', available: false, exams: [] },
+    { code: 'en', available: false, exams: [], scenarios: [] },
+    { code: 'fr', available: false, exams: [], scenarios: [] },
+    { code: 'it', available: false, exams: [], scenarios: [] },
   ],
   explanationLanguages: [
     { code: 'en', name: 'English' },
@@ -421,6 +432,9 @@ export interface FakeApi extends ApiClient {
       ended?: boolean;
       recorded?: boolean;
       verbatim?: (string | null)[];
+      /** A role-play: its scenario id, and the goals reached in it. */
+      scenario?: string | null;
+      goalsReached?: string[];
     },
   ): Conversation;
   /**
@@ -906,6 +920,8 @@ export function createFakeApi(): FakeApi {
         ended = true,
         recorded = false,
         verbatim,
+        scenario = null,
+        goalsReached = [],
       } = {},
     ) {
       const started = now - daysAgo * DAY_MS - hoursAgo * 60 * MINUTE_MS;
@@ -916,6 +932,8 @@ export function createFakeApi(): FakeApi {
         endedAt: ended ? new Date(started + minutes * MINUTE_MS).toISOString() : null,
         seconds: ended ? minutes * 60 : 0,
         learnerTurns: ended ? learnerSays.length : 0,
+        scenario,
+        goalsReached,
       };
       practice.push({
         conversation,

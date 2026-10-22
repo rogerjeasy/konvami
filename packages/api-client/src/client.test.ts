@@ -329,6 +329,23 @@ describe('api client', () => {
     });
   });
 
+  it('starts a role-play with the chosen partner', async () => {
+    const answer = { callId: 'rtc_3', sdp: 'v=0 answer', maxSeconds: 600 };
+    const { fetch, calls } = fakeFetch(json(200, answer));
+
+    await client(fetch).api.startVoiceCall('practice', 'v=0 offer', {
+      personaId: 'persona-1',
+      scenario: 'bakery',
+    });
+
+    expect(calls[0]?.body).toEqual({
+      purpose: 'practice',
+      sdp: 'v=0 offer',
+      personaId: 'persona-1',
+      scenario: 'bakery',
+    });
+  });
+
   it('reads home for the device’s time zone', async () => {
     const home = { language: 'de', partners: [], recent: [] };
     const { fetch, calls } = fakeFetch(json(200, home), json(200, home));

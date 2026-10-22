@@ -66,6 +66,8 @@ export const ROUTES = {
   review: '/review',
   /** 5.12 Ask the tutor (a question about a report's correction is `explainRoute`). */
   tutor: '/tutor',
+  /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
+  rolePlays: '/role-plays',
   /** 6.1 Profile: who the learner is, and the way to everything about their account. */
   account: '/account',
   /** 6.2 Personal: name, photo, app language. */
@@ -94,9 +96,12 @@ export const ROUTES = {
 export const partnerRoute = (id: string) =>
   ({ pathname: '/onboarding/partners/[id]', params: { id } }) as const satisfies Href;
 
-/** 5.3 A live conversation with one of the learner's partners. */
-export const callRoute = (personaId: string) =>
-  ({ pathname: '/call/[personaId]', params: { personaId } }) as const satisfies Href;
+/** 5.3 A live conversation with one of the learner's partners; with `scenario`, a role-play. */
+export const callRoute = (personaId: string, scenario?: string) =>
+  ({
+    pathname: '/call/[personaId]',
+    params: scenario ? { personaId, scenario } : { personaId },
+  }) as const satisfies Href;
 
 /** 5.6 One past conversation, to read again. */
 export const conversationRoute = (id: string) =>

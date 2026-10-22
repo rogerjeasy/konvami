@@ -204,6 +204,7 @@ def build_backend(
                 memories=memories,
                 recordings=recordings,
                 tutor=tutor,
+                sessions=sessions,
             ),
         },
         accounts=directory,

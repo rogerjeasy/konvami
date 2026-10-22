@@ -38,9 +38,13 @@ const LEVEL_INTERVAL_MS = 100;
 /**
  * One live voice call for the life of the component that uses it: it starts on mount and ends
  * on unmount. To try again after a failure, mount the component anew (a new `key`). A practice
- * call names the partner to talk to (`personaId`).
+ * call names the partner to talk to (`personaId`) and, for a role-play, its `scenario`.
  */
-export function useVoiceCall(purpose: CallPurpose, personaId?: string): VoiceCall {
+export function useVoiceCall(
+  purpose: CallPurpose,
+  personaId?: string,
+  scenario?: string,
+): VoiceCall {
   const createEngine = useVoiceEngineFactory();
   const [status, setStatus] = useState<VoiceCall['status']>('starting');
   const [problem, setProblem] = useState<CallProblem | null>(null);
@@ -52,7 +56,7 @@ export function useVoiceCall(purpose: CallPurpose, personaId?: string): VoiceCal
   const voice = useSharedValue(0);
 
   useEffect(() => {
-    const call = createEngine(purpose, personaId);
+    const call = createEngine(purpose, personaId, scenario);
     engine.current = call;
     let current = true;
     const fail = (reason: CallProblem) => {
@@ -82,7 +86,7 @@ export function useVoiceCall(purpose: CallPurpose, personaId?: string): VoiceCal
       unsubscribe();
       call.stop();
     };
-  }, [createEngine, purpose, personaId]);
+  }, [createEngine, purpose, personaId, scenario]);
 
   // The lips and the listening ring follow the voice levels while the call is live.
   const speaking = conversation.phase === 'speaking';

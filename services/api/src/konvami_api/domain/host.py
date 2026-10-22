@@ -394,13 +394,18 @@ class HostScript:
         self._profiles = profiles
 
     def prepare(
-        self, user_id: UUID, account: Account, today: dt.date, persona_id: UUID | None
+        self,
+        user_id: UUID,
+        account: Account,
+        today: dt.date,
+        persona_id: UUID | None,
+        scenario: str | None = None,
     ) -> Briefing:
         return Briefing(
             host_instructions(account, self._catalog, self._profiles.get(user_id), today)
         )
 
-    def tools(self, user_id: UUID) -> HostTools:
+    def tools(self, user_id: UUID, scenario: str | None = None) -> HostTools:
         return HostTools(user_id, self._catalog, self._profiles)
 
     def started(self, user_id: UUID) -> None:

@@ -768,11 +768,15 @@ export interface components {
         ConversationOut: {
             /** Endedat */
             endedAt: string | null;
+            /** Goalsreached */
+            goalsReached: string[];
             /** Id */
             id: string;
             /** Learnerturns */
             learnerTurns: number;
             partner: components["schemas"]["PersonaOut"] | null;
+            /** Scenario */
+            scenario: string | null;
             /** Seconds */
             seconds: number;
             /**
@@ -924,6 +928,8 @@ export interface components {
             code: string;
             /** Exams */
             exams: components["schemas"]["ExamOut"][];
+            /** Scenarios */
+            scenarios: components["schemas"]["ScenarioOut"][];
         };
         /**
          * LookModel
@@ -1455,6 +1461,18 @@ export interface components {
              */
             rating: "again" | "hard" | "good" | "easy";
         };
+        /** ScenarioOut */
+        ScenarioOut: {
+            /** Goals */
+            goals: string[];
+            /** Id */
+            id: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+        };
         /** SessionReportOut */
         SessionReportOut: {
             /** Language */
@@ -1611,6 +1629,8 @@ export interface components {
             /** Personaid */
             personaId?: string | null;
             purpose: components["schemas"]["CallPurpose"];
+            /** Scenario */
+            scenario?: string | null;
             /** Sdp */
             sdp: string;
         };

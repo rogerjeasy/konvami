@@ -22,6 +22,8 @@ export interface FakeVoiceEngine extends VoiceEngine {
   readonly openedFor: CallPurpose[];
   /** The partner each of those calls was with; undefined for the guide's calls. */
   readonly openedWith: (string | undefined)[];
+  /** The role-play each of those calls rehearsed; undefined for free talk. */
+  readonly openedScenarios: (string | undefined)[];
 }
 
 /** The id and the time limit every call of the fake engine reports. */
@@ -50,6 +52,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
     helped,
     openedFor: [],
     openedWith: [],
+    openedScenarios: [],
     emit,
     failNextStart: (code) => void (failure = code),
     holdStart() {

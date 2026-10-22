@@ -31,6 +31,10 @@ class Conversation:
     # How long it lasted; 0 until it has ended.
     seconds: int
     learner_turns: int
+    # The role-play it was (a scenario id), and the goals reached in it; None and () for free
+    # conversation.
+    scenario: str | None = None
+    goals_reached: tuple[str, ...] = ()
     # Filled in by `ConversationService`; a repository leaves it out.
     partner: Persona | None = None
 

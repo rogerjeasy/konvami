@@ -398,6 +398,13 @@
             ],
             "title": "Endedat"
           },
+          "goalsReached": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Goalsreached",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -416,6 +423,17 @@
               }
             ]
           },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
           "seconds": {
             "title": "Seconds",
             "type": "integer"
@@ -432,7 +450,9 @@
           "startedAt",
           "endedAt",
           "seconds",
-          "learnerTurns"
+          "learnerTurns",
+          "scenario",
+          "goalsReached"
         ],
         "title": "ConversationOut",
         "type": "object"
@@ -941,12 +961,20 @@
             },
             "title": "Exams",
             "type": "array"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioOut"
+            },
+            "title": "Scenarios",
+            "type": "array"
           }
         },
         "required": [
           "code",
           "available",
-          "exams"
+          "exams",
+          "scenarios"
         ],
         "title": "LanguageOut",
         "type": "object"
@@ -2492,6 +2520,41 @@
         "title": "ReviewIn",
         "type": "object"
       },
+      "ScenarioOut": {
+        "additionalProperties": false,
+        "properties": {
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Level",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "level",
+          "goals"
+        ],
+        "title": "ScenarioOut",
+        "type": "object"
+      },
       "SessionReportOut": {
         "additionalProperties": false,
         "properties": {
@@ -2978,6 +3041,18 @@
           },
           "purpose": {
             "$ref": "#/components/schemas/CallPurpose"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
           },
           "sdp": {
             "maxLength": 20000,

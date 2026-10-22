@@ -682,6 +682,11 @@ export const de: Translation = {
     manage: 'Meine Partner bearbeiten',
   },
   conversation: {
+    goals: {
+      chipDone: '{{goal}}: erreicht',
+      chipOpen: '{{goal}}: noch offen',
+      reached: 'Ziele erreicht: {{count}} von {{total}}',
+    },
     help: {
       open: 'Hilfe',
       title: 'Brauchst du Hilfe?',
@@ -949,6 +954,94 @@ export const de: Translation = {
     consent:
       'Der Tutor braucht deine Zustimmung, Fragen an unseren KI-Anbieter zu senden (Profil › Datenschutz und KI).',
     notFound: 'Diese Korrektur kann nicht mehr erklärt werden.',
+  },
+  rolePlays: {
+    row: 'Rollenspiele',
+    rowHint: 'Übe eine echte Situation: Bäckerei, Arztpraxis, Vorstellungsgespräch …',
+    title: 'Rollenspiele',
+    body: 'Übe eine echte Situation mit einem deiner Partner. Sie spielen die andere Person, du erreichst die Ziele.',
+    loading: 'Rollenspiele werden geladen',
+    loadFailed: 'Die Rollenspiele konnten nicht geladen werden.',
+    level: 'Ab {{level}}',
+    goals: 'Deine Ziele',
+    who: 'Wer spielt mit?',
+    start: 'Rollenspiel starten',
+    scenarioLabel: '{{title}}, ab Niveau {{level}}',
+  },
+  scenarios: {
+    bakery: {
+      title: 'In der Bäckerei',
+      situation: 'Kauf Brot und etwas Süßes fürs Frühstück.',
+      goals: {
+        order: 'Zwei Dinge bestellen',
+        price: 'Nach dem Preis fragen',
+        pay: 'Bezahlen und dich verabschieden',
+      },
+    },
+    doctor: {
+      title: 'In der Arztpraxis',
+      situation: 'Dir geht es seit ein paar Tagen nicht gut. Erzähl in der Praxis, was los ist.',
+      goals: {
+        symptoms: 'Sagen, was los ist',
+        since_when: 'Sagen, seit wann',
+        advice: 'Den Rat verstehen',
+      },
+    },
+    pharmacy: {
+      title: 'In der Apotheke',
+      situation: 'Du hast eine Erkältung und brauchst etwas dagegen.',
+      goals: {
+        need: 'Sagen, was du brauchst',
+        dose: 'Fragen, wie man es nimmt',
+        pay: 'Bezahlen und dich verabschieden',
+      },
+    },
+    train_ticket: {
+      title: 'Am Bahnhof',
+      situation: 'Kauf eine Fahrkarte in eine andere Stadt für morgen früh.',
+      goals: {
+        destination: 'Sagen, wohin und wann',
+        ticket: 'Eine Fahrkarte wählen',
+        platform: 'Nach dem Zug fragen',
+      },
+    },
+    registration: {
+      title: 'Wohnsitz anmelden',
+      situation: 'Du bist umgezogen und musst dich beim Bürgeramt anmelden.',
+      goals: {
+        purpose: 'Sagen, warum du da bist',
+        documents: 'Über deine Unterlagen sprechen',
+        next_step: 'Erfahren, wie es weitergeht',
+      },
+    },
+    flat_viewing: {
+      title: 'Wohnungsbesichtigung',
+      situation: 'Du möchtest diese Wohnung mieten. Erfahre mehr und mach einen guten Eindruck.',
+      goals: {
+        rent: 'Nach der Miete fragen',
+        about_me: 'Dich vorstellen',
+        move_in: 'Fragen, wann du einziehen kannst',
+      },
+    },
+    job_interview: {
+      title: 'Vorstellungsgespräch',
+      situation: 'Erzähl von dir und von der Stelle, die du möchtest.',
+      goals: {
+        introduce: 'Dich vorstellen',
+        strength: 'Eine Stärke nennen',
+        question: 'Eine Frage stellen',
+      },
+    },
+    complaint: {
+      title: 'Reklamation',
+      situation:
+        'Die Kopfhörer, die du letzte Woche gekauft hast, sind kaputt. Hol dir dein Geld zurück oder ein neues Paar.',
+      goals: {
+        problem: 'Das Problem erklären',
+        solution: 'Sagen, was du möchtest',
+        agree: 'Eine Lösung vereinbaren',
+      },
+    },
   },
   review: {
     close: 'Wiederholen beenden',
