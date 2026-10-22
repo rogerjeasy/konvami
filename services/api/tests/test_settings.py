@@ -111,3 +111,13 @@ def test_settings_written_before_there_was_memory_still_work() -> None:
 
     # Without a memory model nothing is written down after a conversation; everything else works.
     assert models.memory == ""
+
+
+def test_the_verbatim_model_is_read_with_the_text_models() -> None:
+    models = text_models('{"assessment": "a", "personas": "p", "verbatim": "gpt-transcribe"}')
+
+    assert models.verbatim == "gpt-transcribe"
+
+
+def test_settings_written_before_there_were_recordings_have_no_verbatim_pass() -> None:
+    assert text_models('{"assessment": "a", "personas": "p"}').verbatim == ""

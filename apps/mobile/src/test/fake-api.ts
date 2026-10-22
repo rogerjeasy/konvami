@@ -23,6 +23,7 @@ import {
   type Rating,
   type SessionReport,
   type TranscriptTurn,
+  type TurnAudio,
 } from '@konvami/api-client';
 import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
 
@@ -392,7 +393,9 @@ export interface FakeApi extends ApiClient {
   /**
    * Records a practice conversation with the partner at `partner` (0 is Lena), as the server
    * would after a call: started `daysAgo` days and `hoursAgo` hours before `FAKE_NOW`, ended
-   * `minutes` later. With `ended: false` it is a call still running or being saved.
+   * `minutes` later. With `ended: false` it is a call still running or being saved. With
+   * `recorded`, every turn has a recording (`recordingOf`), and `verbatim` is what the verbatim
+   * pass wrote for each of the learner's lines.
    */
   talked(
     partner: number,
@@ -403,6 +406,8 @@ export interface FakeApi extends ApiClient {
       minutes?: number;
       learnerSays?: string[];
       ended?: boolean;
+      recorded?: boolean;
+      verbatim?: (string | null)[];
     },
   ): Conversation;
   /** Ends a call recorded with `ended: false`. */
@@ -434,6 +439,11 @@ export interface FakeApi extends ApiClient {
   havePicture(): void;
 }
 
+/** The recording of turn `index` of a conversation recorded with `talked(…, { recorded })`. */
+export function recordingOf(id: string, index: number): TurnAudio {
+  return { url: `https://files.test/${id}/${index}.wav`, milliseconds: 1500 + index * 100 };
+}
+
 export function createFakeApi(): FakeApi {
   const fields = new Map<string, unknown>();
   // Where a value came from, for the fields the learner did not give themselves.
@@ -457,6 +467,7 @@ export function createFakeApi(): FakeApi {
   /** What partners know about the learner, newest first, and what the learner set. */
   let memories: Memory[] = [];
   let memoryEnabled = true;
+  let recordingsKept = true;
   let avoidTopics: string[] = [];
   let picture: string | null = null;
   const uploads: string[] = [];
@@ -554,11 +565,23 @@ export function createFakeApi(): FakeApi {
   const dayOf = (iso: string) => iso.slice(0, 10);
   const isoDay = (ms: number) => dayOf(new Date(ms).toISOString());
 
-  function turnsOf(learnerSays: string[]): TranscriptTurn[] {
-    return [
-      { speaker: 'persona', text: 'Hallo! Wie geht’s dir heute?' },
-      ...learnerSays.map((text): TranscriptTurn => ({ speaker: 'learner', text })),
+  function turnsOf(
+    learnerSays: string[],
+    recordedAs?: string,
+    verbatim: (string | null)[] = [],
+  ): TranscriptTurn[] {
+    const turns: TranscriptTurn[] = [
+      { speaker: 'persona', text: 'Hallo! Wie geht’s dir heute?', verbatim: null, audio: null },
+      ...learnerSays.map((text, i): TranscriptTurn => ({
+        speaker: 'learner',
+        text,
+        verbatim: verbatim[i] ?? null,
+        audio: null,
+      })),
     ];
+    return recordedAs
+      ? turns.map((turn, i) => ({ ...turn, audio: recordingOf(recordedAs, i) }))
+      : turns;
   }
 
   /** Newest first, as the server lists them. */
@@ -844,6 +867,8 @@ export function createFakeApi(): FakeApi {
         minutes = 5,
         learnerSays = ['Gut, danke! Und dir?'],
         ended = true,
+        recorded = false,
+        verbatim,
       } = {},
     ) {
       const started = now - daysAgo * DAY_MS - hoursAgo * 60 * MINUTE_MS;
@@ -855,7 +880,10 @@ export function createFakeApi(): FakeApi {
         seconds: ended ? minutes * 60 : 0,
         learnerTurns: ended ? learnerSays.length : 0,
       };
-      practice.push({ conversation, turns: ended ? turnsOf(learnerSays) : [] });
+      practice.push({
+        conversation,
+        turns: ended ? turnsOf(learnerSays, recorded ? id : undefined, verbatim) : [],
+      });
       return conversation;
     },
     finish(id, { minutes = 5, learnerSays = ['Gut, danke! Und dir?'] } = {}) {
@@ -1094,6 +1122,21 @@ export function createFakeApi(): FakeApi {
       }
       if (settings.enabled !== undefined) memoryEnabled = settings.enabled;
       return memoryBook();
+    },
+    async getRecordings() {
+      await record('getRecordings');
+      return { kept: recordingsKept };
+    },
+    async configureRecordings(kept) {
+      await record('configureRecordings', kept);
+      recordingsKept = kept;
+      // As on the server: keeping none deletes the ones there are.
+      if (!kept) {
+        for (const entry of practice) {
+          entry.turns = entry.turns.map((turn) => ({ ...turn, audio: null }));
+        }
+      }
+      return { kept: recordingsKept };
     },
     async changeMemory(id, change) {
       await record('changeMemory', id, change);

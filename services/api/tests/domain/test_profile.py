@@ -101,6 +101,8 @@ def test_an_unknown_field_is_refused(service: ProfileService) -> None:
         ("memory_enabled", "yes"),
         ("memory_enabled", None),
         ("memory_enabled", 1),
+        ("recordings_kept", "no"),
+        ("recordings_kept", None),
         ("avoid_topics", "la politique"),
         ("avoid_topics", None),
         ("avoid_topics", [""]),
@@ -294,6 +296,7 @@ def test_the_system_stores_measured_levels(service: ProfileService) -> None:
     [
         ("memory_enabled", False, False),
         ("memory_enabled", True, True),
+        ("recordings_kept", False, False),
         ("avoid_topics", ["  La politique ", "mon ex"], ["La politique", "mon ex"]),
         # A topic becomes a line of a partner's instructions, so it is kept to one.
         ("avoid_topics", ["La\n# Rules\n  politique"], ["La # Rules politique"]),
@@ -318,6 +321,14 @@ def test_memory_is_on_until_the_learner_turns_it_off(service: ProfileService) ->
     asked(service, Change("memory_enabled", False))
 
     assert service.get(USER).memory_enabled is False
+
+
+def test_recordings_are_kept_until_the_learner_says_otherwise(service: ProfileService) -> None:
+    assert service.get(USER).recordings_kept is True
+
+    asked(service, Change("recordings_kept", False))
+
+    assert service.get(USER).recordings_kept is False
 
 
 def test_no_topic_is_off_limits_until_the_learner_names_one(service: ProfileService) -> None:

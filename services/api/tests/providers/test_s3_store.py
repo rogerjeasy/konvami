@@ -82,6 +82,17 @@ def test_only_the_start_of_a_file_is_fetched_to_look_at_it(stub: Stubber) -> Non
     assert store(stub).read_start(KEY, 3) == body
 
 
+def test_a_whole_file_is_read(stub: Stubber) -> None:
+    body = b"RIFF....WAVE"
+    stub.add_response(
+        "get_object",
+        {"Body": StreamingBody(io.BytesIO(body), len(body))},
+        {"Bucket": BUCKET, "Key": KEY},
+    )
+
+    assert store(stub).read(KEY) == body
+
+
 def test_a_file_is_saved_with_its_type(stub: Stubber) -> None:
     stub.add_response(
         "put_object",

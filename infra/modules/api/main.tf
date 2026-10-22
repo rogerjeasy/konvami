@@ -100,8 +100,9 @@ data "aws_iam_policy_document" "api" {
     resources = [var.auth.user_pool_arn]
   }
 
-  # Photos and voice samples. The functions sign the upload forms and addresses the app uses,
-  # so what they may do here is also the most the app can ever do.
+  # Photos, voice samples and recordings (the call worker stores each turn's audio). The
+  # functions sign the upload forms and addresses the app uses, so what they may do here is also
+  # the most the app can ever do.
   statement {
     sid       = "UseMediaFiles"
     actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]

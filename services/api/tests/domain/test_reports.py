@@ -814,3 +814,90 @@ def test_what_to_practise_comes_from_the_last_report_and_until_then_from_the_pla
     assert what_to_practise(steps, areas) == Focus(steps, "report")
     assert what_to_practise((), areas) == Focus(areas, "placement")
     assert what_to_practise((), ()) == Focus((), None)
+
+
+# --- The verbatim text (spec §9.4) -------------------------------------------------------------
+
+# The live transcription tidied the learner's first answer; the verbatim pass kept it as said.
+VERBATIM_TURNS = (
+    TURNS[0],
+    Turn(
+        "learner",
+        "Gut. Ich bin nach Berlin gefahren mit dem Bus.",
+        verbatim="Gut. Ich habe nach Berlin gefahren mit der Bus.",
+    ),
+    *TURNS[2:4],
+    TURNS[4],
+    Turn("learner", "Ja. Tschüss!", verbatim="ja tschüss"),
+)
+
+
+def test_the_analyst_reads_what_the_learner_said_and_what_the_live_pass_heard() -> None:
+    world = written(ANALYSIS, CONFIRMED, turns=VERBATIM_TURNS)
+
+    transcript = json.loads(world.text.tasks[-2].content)["transcript"]
+
+    assert transcript[1] == {
+        "turn": 1,
+        "speaker": "learner",
+        "text": "Gut. Ich habe nach Berlin gefahren mit der Bus.",
+        "live": "Gut. Ich bin nach Berlin gefahren mit dem Bus.",
+    }
+    # The same words: nothing to compare.
+    assert transcript[5] == {"turn": 5, "speaker": "learner", "text": "ja tschüss"}
+
+
+def test_the_analyst_is_told_what_the_two_texts_are() -> None:
+    world = written(ANALYSIS, CONFIRMED, turns=VERBATIM_TURNS)
+
+    instructions = world.text.tasks[-2].instructions
+
+    assert "`live`" in instructions
+    assert "recording" in instructions
+
+
+def test_a_mistake_only_the_verbatim_text_kept_is_reported() -> None:
+    world = written(ANALYSIS, CONFIRMED, turns=VERBATIM_TURNS)
+
+    report = report_of(world)
+
+    assert [m.original for m in report.mistakes] == [
+        "Ich habe nach Berlin gefahren",
+        "mit der Bus",
+        "weil es war sehr interessant",
+    ]
+    review = json.loads(world.text.tasks[-1].content)
+    assert review["mistakes"][0]["learner_said"] == (
+        "Gut. Ich habe nach Berlin gefahren mit der Bus."
+    )
+
+
+def test_a_quote_from_the_live_text_is_accepted_too() -> None:
+    analysis = {
+        **ANALYSIS,
+        "mistakes": [],
+        "rewrites": [
+            {
+                "turn": 1,
+                "original": "Ich bin nach Berlin gefahren",
+                "natural": "Ich war in Berlin",
+                "note": "Plus court.",
+            }
+        ],
+    }
+
+    report = report_of(
+        written(
+            analysis,
+            {"mistakes": [], "rewrites": [{"id": 0, "verdict": "keep"}]},
+            turns=VERBATIM_TURNS,
+        )
+    )
+
+    assert [rewrite.original for rewrite in report.rewrites] == ["Ich bin nach Berlin gefahren"]
+
+
+def test_a_conversation_is_measured_by_what_the_learner_said() -> None:
+    stats = measure((Turn("learner", "Ich bin gefahren.", verbatim="Ich ich habe gefahren."),))
+
+    assert stats.learner_words == 4

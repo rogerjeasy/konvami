@@ -55,6 +55,9 @@ class TextModels:
     # Reads a conversation for what is worth remembering about the learner (spec §6.11). A
     # small model (spec §17.3 lever 5): what it writes down the learner can see and put right.
     memory: str = ""
+    # Writes a recorded learner turn down a second time, keeping their mistakes (spec §9.4).
+    # A transcription model, set the same way. Empty: no verbatim pass.
+    verbatim: str = ""
 
 
 class _TextModels(BaseModel):
@@ -62,10 +65,11 @@ class _TextModels(BaseModel):
 
     assessment: str
     personas: str
-    # Left out by settings written before voice samples, reports, or memory existed.
+    # Left out by settings written before voice samples, reports, memory or recordings existed.
     speech: str = ""
     report: str = ""
     memory: str = ""
+    verbatim: str = ""
 
 
 def text_models(raw: str | None) -> TextModels:
@@ -82,4 +86,5 @@ def text_models(raw: str | None) -> TextModels:
         speech=models.speech,
         report=models.report,
         memory=models.memory,
+        verbatim=models.verbatim,
     )

@@ -220,20 +220,22 @@ def test_a_partner_can_be_drafted_and_a_voice_sampled_with_the_configured_models
 
 def test_the_worker_writes_a_report_when_that_is_what_it_is_started_for(stub: Stubber) -> None:
     """The same function follows calls and writes reports. Asked for a report, it looks the
-    call up in the database (here: no such call) and never reaches for the voice provider."""
+    call up in the database (here: no such call), for the verbatim pass and then for the
+    report, and never reaches for the voice provider."""
     backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
-    stub.add_response(
-        "execute_statement",
-        {"formattedRecords": "[]"},
-        {
-            "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
-            "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
-            "database": "konvami",
-            "sql": ANY,
-            "parameters": [{"name": "call_id", "value": {"stringValue": "rtc_ghost"}}],
-            "formatRecordsAs": "JSON",
-        },
-    )
+    for _ in range(2):
+        stub.add_response(
+            "execute_statement",
+            {"formattedRecords": "[]"},
+            {
+                "resourceArn": ENVIRONMENT["KONVAMI_DB_CLUSTER_ARN"],
+                "secretArn": ENVIRONMENT["KONVAMI_DB_SECRET_ARN"],
+                "database": "konvami",
+                "sql": ANY,
+                "parameters": [{"name": "call_id", "value": {"stringValue": "rtc_ghost"}}],
+                "formatRecordsAs": "JSON",
+            },
+        )
 
     main.run_worker(backend, {"report": "rtc_ghost"})
 
@@ -305,10 +307,11 @@ CALL_LOOKUP = {
 
 
 def test_after_the_report_the_worker_writes_down_what_the_conversation_told(stub: Stubber) -> None:
-    """Both jobs look the call up in the database (here: no such call), one after the other."""
+    """Every job looks the call up in the database (here: no such call), one after the other:
+    the verbatim pass, the report, the memories."""
     backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
-    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
-    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
+    for _ in range(3):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
 
     main.run_worker(backend, {"report": "rtc_ghost"})
 
@@ -318,7 +321,20 @@ def test_after_the_report_the_worker_writes_down_what_the_conversation_told(stub
 def test_a_report_that_cannot_be_written_does_not_cost_the_memories(stub: Stubber) -> None:
     """Spec §12.2: a failure in one step does not block the others."""
     backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
     stub.add_client_error("execute_statement", service_error_code="InternalServerErrorException")
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
+
+    with pytest.raises(ClientError):
+        main.run_worker(backend, {"report": "rtc_ghost"})
+
+    stub.assert_no_pending_responses()
+
+
+def test_a_verbatim_pass_that_fails_does_not_cost_the_report(stub: Stubber) -> None:
+    backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
+    stub.add_client_error("execute_statement", service_error_code="InternalServerErrorException")
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
     stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
 
     with pytest.raises(ClientError):

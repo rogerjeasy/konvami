@@ -426,6 +426,20 @@ describe('api client', () => {
     expect(calls[5]?.body).toEqual({ rating: 'good' });
   });
 
+  it('reads and sets whether recordings are kept', async () => {
+    const { fetch, calls } = fakeFetch(json(200, { kept: true }), json(200, { kept: false }));
+    const { api } = client(fetch);
+
+    expect(await api.getRecordings()).toEqual({ kept: true });
+    expect(await api.configureRecordings(false)).toEqual({ kept: false });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/recordings',
+      'PATCH https://api.example.test/v1/recordings',
+    ]);
+    expect(calls[1]?.body).toEqual({ kept: false });
+  });
+
   it('reads, sets, changes and forgets what partners know', async () => {
     const memory = { id: 'mem/1', kind: 'event', text: 'Has a job interview.', day: '2026-10-16' };
     const book = { enabled: true, avoidTopics: [], memories: [memory] };

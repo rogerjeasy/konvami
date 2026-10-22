@@ -15,7 +15,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountDirectory, AccountNotFound
-from konvami_api.domain.live_call import LiveCall, Outcome, Turn
+from konvami_api.domain.live_call import KeepAudio, LiveCall, Outcome, Turn, TurnAudio
 from konvami_api.domain.tools import ToolSet
 
 # Seconds before the limit at which the persona is told to wrap up.
@@ -147,6 +147,16 @@ class CallStarter(Protocol):
         """Starts the server's side of a call (the worker that joins it)."""
 
 
+class AudioStore(Protocol):
+    """Where the audio of a recorded call's turns is kept (`RecordingService`)."""
+
+    def keep(self, user_id: UUID, call_id: str, audio: KeepAudio) -> TurnAudio: ...
+
+
+# Which calls are recorded (spec §6.6): the conversations the learner finds in the library.
+_RECORDED = frozenset({CallPurpose.PRACTICE})
+
+
 class VoiceSessionRepository(Protocol):
     def started(self, session: VoiceSession) -> None: ...
 
@@ -177,8 +187,10 @@ class VoiceCallService:
         sessions: VoiceSessionRepository,
         starter: CallStarter,
         clock: Callable[[], dt.datetime],
+        recordings: AudioStore | None = None,
     ) -> None:
         self._settings = settings
+        self._recordings = recordings
         self._scripts = scripts
         self._accounts = accounts
         self._provider = provider
@@ -258,7 +270,17 @@ class VoiceCallService:
             max_seconds=self._settings.max_seconds[session.purpose],
             wrap_up_seconds=WRAP_UP_SECONDS,
             goodbye_grace_seconds=GOODBYE_GRACE_SECONDS,
+            record=self._recordings is not None and session.purpose in _RECORDED,
         )
+
+    def audio_keeper(self, call_id: str) -> Callable[[KeepAudio], TurnAudio] | None:
+        """Stores the audio of one turn of a recorded call; None for a call that is not."""
+        session = self._sessions.get(call_id)
+        recordings = self._recordings
+        if session is None or recordings is None or session.purpose not in _RECORDED:
+            return None
+        user_id = session.user_id
+        return lambda audio: recordings.keep(user_id, call_id, audio)
 
     def finished(self, call_id: str, call: LiveCall) -> None:
         """Stores how a call ended, what was said and what it used, then lets the call's script

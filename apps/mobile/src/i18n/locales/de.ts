@@ -749,6 +749,10 @@ export const de: Translation = {
       line: '{{speaker}}: {{text}}',
       report: 'Bericht zum Gespräch',
       reportHint: 'Korrekturen, neue Wörter und was du als Nächstes üben kannst',
+      playPartner: 'Anhören, was {{name}} gesagt hat',
+      playFormer: 'Anhören, was dein früherer Partner gesagt hat',
+      playYou: 'Anhören, was du gesagt hast',
+      stopPlaying: 'Wiedergabe stoppen',
     },
   },
   report: {
@@ -1129,6 +1133,17 @@ export const de: Translation = {
       note: 'Deine Partner sind immer KI und geben sich nie als Menschen aus. Eine Änderung gilt ab deinem nächsten Gespräch.',
       delete: 'Konto löschen',
       deleteHint: 'Entfernt dein Konto und alles darin',
+      recordings: {
+        label: 'Aufnahmen meiner Gespräche behalten',
+        on: 'Du kannst deine Gespräche noch einmal anhören. Nur du kannst sie abspielen.',
+        off: 'Gespräche bleiben als Text. Deine Stimme wird für den Bericht genutzt und dann gelöscht.',
+        loadFailed: 'Deine Wahl zu den Aufnahmen konnte nicht geladen werden.',
+        confirmTitle: 'Deine Aufnahmen löschen?',
+        confirmBody:
+          'Alle bisher behaltenen Aufnahmen werden endgültig gelöscht. Mitschriften und Berichte bleiben.',
+        confirm: 'Aufnahmen löschen',
+        cancel: 'Behalten',
+      },
     },
     security: {
       title: 'Sicherheit',
@@ -1174,7 +1189,7 @@ export const de: Translation = {
         account: 'Dein Konto und deine Anmeldung',
         profile: 'Dein Profil, dein Niveau und deine Ziele',
         partners: 'Deine Partner',
-        conversations: 'Alle Gespräche und Mitschriften',
+        conversations: 'Alle Gespräche, Mitschriften und Aufnahmen',
         photo: 'Dein Foto',
       },
       password: 'Dein Passwort',

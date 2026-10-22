@@ -1,11 +1,16 @@
 import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
-import type { ApiClient, PersonaDraft, PersonaVoice } from '@konvami/api-client';
+import type { ApiClient, PersonaDraft, PersonaVoice, Recordings } from '@konvami/api-client';
 import { useSession } from '@/auth';
+import type { ClipPlayer } from '@/lib/clip-player';
+import {
+  createResourceStore,
+  type ResourceState,
+  type ResourceStore,
+} from '@/practice/resource-store';
 import { createAccountStore, type AccountState, type AccountStore } from './account-store';
 import { createMemoryStore, type MemoryState, type MemoryStore } from './memory-store';
 import { createPartnersStore, type PartnersState, type PartnersStore } from './partners-store';
 import type { PictureDevice } from './pictures';
-import type { SamplePlayer } from './sample-player';
 
 /**
  * Everything the Profile screens (section 6) need beyond the session and the learner's
@@ -17,8 +22,15 @@ export interface ProfileServices {
   partners: PartnersStore;
   /** What the learner's partners know about them from earlier conversations. */
   memory: MemoryStore;
+  /** Whether the audio of conversations is kept (6.7). */
+  recordings: ResourceStore<Recordings>;
+  /**
+   * Keeps recordings or stops; stopping deletes every recording kept so far. Rejects with an
+   * `ApiError`, and then what is shown stays as it was.
+   */
+  keepRecordings: (kept: boolean) => Promise<Recordings>;
   pictures: PictureDevice;
-  samples: SamplePlayer;
+  samples: ClipPlayer;
   /**
    * What Persona Studio starts a new partner from: set by the screen that offers the ways to
    * begin (a description, a template), read by the studio when it opens. In memory only.
@@ -41,16 +53,23 @@ export function createProfileServices(
   api: ApiClient,
   device: {
     pictures: PictureDevice;
-    samples: SamplePlayer;
+    samples: ClipPlayer;
     /** Called after partners changed, so Today and Talk read theirs again. */
     onPartnersChanged: () => void;
   },
 ): ProfileServices {
   let studioStart: PersonaDraft | null = null;
+  const recordings = createResourceStore(() => api.getRecordings(), Date.now);
   return {
     account: createAccountStore(api, device.pictures.send),
     partners: createPartnersStore(api, device.onPartnersChanged),
     memory: createMemoryStore(api, Date.now),
+    recordings,
+    keepRecordings: (kept) =>
+      recordings.mutate(
+        () => api.configureRecordings(kept),
+        (_, answer) => answer,
+      ),
     pictures: device.pictures,
     samples: device.samples,
     studioStart: {
@@ -87,6 +106,7 @@ export function ProfileProvider({
     services.account.reset();
     services.partners.reset();
     services.memory.reset();
+    services.recordings.reset();
   }, [status, services]);
   return <ProfileContext.Provider value={services}>{children}</ProfileContext.Provider>;
 }
@@ -113,4 +133,10 @@ export function usePartnerList(): PartnersState {
 export function useMemories(): MemoryState {
   const { memory } = useProfileServices();
   return useSyncExternalStore(memory.subscribe, memory.getState, memory.getState);
+}
+
+/** Whether the audio of conversations is kept; re-renders when it changes. */
+export function useRecordings(): ResourceState<Recordings> {
+  const { recordings } = useProfileServices();
+  return useSyncExternalStore(recordings.subscribe, recordings.getState, recordings.getState);
 }

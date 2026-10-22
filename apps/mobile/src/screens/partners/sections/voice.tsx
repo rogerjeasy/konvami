@@ -1,20 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { size } from '@konvami/design-tokens';
 import type { PersonaVoice } from '@konvami/api-client';
 import { ChoiceChip } from '@/components/choice-chip';
 import { ChoiceGroup } from '@/components/choice-group';
-import { Icon } from '@/components/icon';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { OptionCard } from '@/components/option-card';
+import { PlayButton, type PlayState } from '@/components/play-button';
 import { Text } from '@/components/text';
 import { stepFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { SPEEDS, VOICES } from '@/profile/persona-draft';
 import { useProfileServices } from '@/profile/services';
-import { useTheme } from '@/theme';
 import type { SectionProps } from './shared';
 
 /** A voice's name as shown: the provider's own name for it, capitalised. Never translated. */
@@ -27,38 +25,12 @@ function SampleButton({
   onPress,
 }: {
   voice: PersonaVoice;
-  state: 'idle' | 'loading' | 'playing';
+  state: PlayState;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
-  const { color } = useTheme();
-  const name = voiceName(voice);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t(
-        state === 'playing' ? 'partners.studio.voice.stop' : 'partners.studio.voice.play',
-        { voice: name },
-      )}
-      accessibilityState={{ busy: state === 'loading' }}
-      disabled={state === 'loading'}
-      onPress={onPress}
-      style={{ width: size.headerButton, height: size.headerButton }}
-      className={`items-center justify-center rounded-pill border active:opacity-pressed ${
-        state === 'playing' ? 'border-primary bg-primary-soft' : 'border-border bg-chip'
-      }`}
-    >
-      {state === 'loading' ? (
-        <ActivityIndicator color={color.primary} />
-      ) : (
-        <Icon
-          name={state === 'playing' ? 'stop' : 'play'}
-          color={state === 'playing' ? color.primaryText : color.fg}
-          size={size.iconMd}
-        />
-      )}
-    </Pressable>
-  );
+  const key = state === 'playing' ? 'partners.studio.voice.stop' : 'partners.studio.voice.play';
+  return <PlayButton label={t(key, { voice: voiceName(voice) })} state={state} onPress={onPress} />;
 }
 
 /**

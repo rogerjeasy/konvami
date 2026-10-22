@@ -1,6 +1,7 @@
 """In-memory stand-ins for the persistence layer, checked against the same contract tests as SQL."""
 
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import Any
 from uuid import UUID
@@ -21,7 +22,7 @@ from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
 from konvami_api.domain.reports import Report, ReportTotals, Status, StoredReport, WeekMistakes
-from konvami_api.domain.speech import SpeechTask
+from konvami_api.domain.speech import SpeechTask, TranscriptionTask
 from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
 from konvami_api.domain.voice import (
@@ -401,6 +402,53 @@ class FakeSpeechModel:
             raise self.fail
         self.tasks.append(task)
         return f"mp3:{task.voice}".encode()
+
+
+class FakeTranscriber:
+    """Answers with the text set for an audio file's key (by the bytes stored under it), and
+    records what it was asked."""
+
+    def __init__(self, files: "InMemoryFileStore") -> None:
+        self._files = files
+        self.answers: dict[str, str] = {}
+        self.tasks: list[TranscriptionTask] = []
+        self.fail: Exception | None = None
+
+    def transcribe(self, task: TranscriptionTask) -> str:
+        if self.fail:
+            raise self.fail
+        self.tasks.append(task)
+        key = next(key for key, (body, _) in self._files.files.items() if body == task.audio)
+        return self.answers.get(key, "")
+
+
+class InMemoryRecordingRepository:
+    """Changes the turns kept by an `InMemoryVoiceSessionRepository`, as SQL changes the rows."""
+
+    def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
+        self._calls = calls
+
+    def _change(self, call_id: str, change: Any) -> None:
+        finished = self._calls.finished.get(call_id)
+        if finished:
+            turns = tuple(change(turn) for turn in finished.turns)
+            self._calls.finished[call_id] = replace(finished, turns=turns)
+
+    def set_verbatim(self, call_id: str, key: str, text: str) -> None:
+        self._change(
+            call_id,
+            lambda turn: (
+                replace(turn, verbatim=text) if turn.audio and turn.audio.key == key else turn
+            ),
+        )
+
+    def forget(self, call_id: str) -> None:
+        self._change(call_id, lambda turn: replace(turn, audio=None))
+
+    def forget_all(self, user_id: UUID) -> None:
+        for session in self._calls.sessions.values():
+            if session.user_id == user_id:
+                self.forget(session.call_id)
 
 
 class InMemoryReportRepository:

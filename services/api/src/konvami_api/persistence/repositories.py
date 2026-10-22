@@ -19,7 +19,7 @@ from konvami_api.domain.conversations import (
     PartnerHistory,
 )
 from konvami_api.domain.fsrs import Memory, Rating
-from konvami_api.domain.live_call import Turn
+from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
@@ -221,8 +221,9 @@ _FINISH_SESSION = """
         WHERE call_id = :call_id
         RETURNING call_id
     )
-    INSERT INTO voice_turn (call_id, position, speaker, text)
-    SELECT done.call_id, turn.position, turn.item ->> 'speaker', turn.item ->> 'text'
+    INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms)
+    SELECT done.call_id, turn.position, turn.item ->> 'speaker', turn.item ->> 'text',
+           turn.item ->> 'audio_key', CAST(turn.item ->> 'audio_ms' AS integer)
     FROM done,
          jsonb_array_elements(CAST(:turns AS jsonb)) WITH ORDINALITY AS turn (item, position)
     ON CONFLICT (call_id, position) DO NOTHING
@@ -283,7 +284,24 @@ _LOAD_CONVERSATION = f"""
 """
 
 _LIST_TURNS = """
-    SELECT speaker, text FROM voice_turn WHERE call_id = :call_id ORDER BY position
+    SELECT speaker, text, audio_key, audio_ms, verbatim
+    FROM voice_turn WHERE call_id = :call_id ORDER BY position
+"""
+
+_SET_VERBATIM = """
+    UPDATE voice_turn SET verbatim = :text WHERE call_id = :call_id AND audio_key = :key
+"""
+
+_FORGET_RECORDINGS = """
+    UPDATE voice_turn SET audio_key = NULL, audio_ms = NULL
+    WHERE call_id = :call_id AND audio_key IS NOT NULL
+"""
+
+_FORGET_ALL_RECORDINGS = """
+    UPDATE voice_turn t SET audio_key = NULL, audio_ms = NULL
+    FROM voice_session s
+    WHERE t.call_id = s.call_id AND s.user_id = CAST(:user_id AS uuid)
+      AND t.audio_key IS NOT NULL
 """
 
 _PARTNER_HISTORY = f"""
@@ -750,7 +768,15 @@ class SqlVoiceSessionRepository:
         return int(rows[0]["calls"])
 
     def finish(self, call_id: str, result: FinishedCall) -> None:
-        turns = [{"speaker": turn.speaker, "text": turn.text} for turn in result.turns]
+        turns = [
+            {
+                "speaker": turn.speaker,
+                "text": turn.text,
+                "audio_key": turn.audio.key if turn.audio else None,
+                "audio_ms": turn.audio.milliseconds if turn.audio else None,
+            }
+            for turn in result.turns
+        ]
         self._client.execute(
             _FINISH_SESSION,
             {
@@ -761,6 +787,20 @@ class SqlVoiceSessionRepository:
                 "turns": json.dumps(turns),
             },
         )
+
+
+class SqlRecordingRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def set_verbatim(self, call_id: str, key: str, text: str) -> None:
+        self._client.execute(_SET_VERBATIM, {"call_id": call_id, "key": key, "text": text})
+
+    def forget(self, call_id: str) -> None:
+        self._client.execute(_FORGET_RECORDINGS, {"call_id": call_id})
+
+    def forget_all(self, user_id: UUID) -> None:
+        self._client.execute(_FORGET_ALL_RECORDINGS, {"user_id": str(user_id)})
 
 
 class SqlPlacementRepository:
@@ -907,7 +947,15 @@ class SqlConversationRepository:
 
     def turns(self, call_id: str) -> list[Turn]:
         rows = self._client.execute(_LIST_TURNS, {"call_id": call_id})
-        return [Turn(row["speaker"], row["text"]) for row in rows]
+        return [
+            Turn(
+                row["speaker"],
+                row["text"],
+                audio=TurnAudio(row["audio_key"], row["audio_ms"]) if row["audio_key"] else None,
+                verbatim=row["verbatim"],
+            )
+            for row in rows
+        ]
 
     def longest(self, user_id: UUID) -> int:
         rows = self._client.execute(_LONGEST_CONVERSATION, {"user_id": str(user_id)})

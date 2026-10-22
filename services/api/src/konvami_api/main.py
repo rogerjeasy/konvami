@@ -27,6 +27,7 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
@@ -42,6 +43,7 @@ from konvami_api.persistence.repositories import (
     SqlPersonaRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
+    SqlRecordingRepository,
     SqlReportRepository,
     SqlVoiceSessionRepository,
 )
@@ -57,6 +59,7 @@ from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
 from konvami_api.providers.openai_realtime import OpenAiRealtime
 from konvami_api.providers.openai_speech import OpenAiSpeech
 from konvami_api.providers.openai_text import OpenAiText
+from konvami_api.providers.openai_transcription import OpenAiTranscription
 from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
 from konvami_api.settings import TEXT_MODELS_VARIABLE, VOICE_VARIABLE, text_models, voice_settings
 from konvami_api.worker import follow_call
@@ -164,6 +167,16 @@ def build_backend(
         model=models.memory,
         clock=_now,
     )
+    files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
+    recordings = RecordingService(
+        profiles=profiles,
+        conversations=conversations,
+        sessions=sessions,
+        repository=SqlRecordingRepository(sql),
+        files=files,
+        transcriber=OpenAiTranscription(openai_key),
+        model=models.verbatim,
+    )
     voice = VoiceCallService(
         settings=voice_settings(environment.get(VOICE_VARIABLE)),
         scripts={
@@ -177,6 +190,7 @@ def build_backend(
                 conversations=conversations,
                 reports=reports,
                 memories=memories,
+                recordings=recordings,
             ),
         },
         accounts=directory,
@@ -184,6 +198,7 @@ def build_backend(
         sessions=sessions,
         starter=LambdaCallStarter(clients.functions, worker),
         clock=_now,
+        recordings=recordings,
     )
     home = HomeService(
         profiles=profiles,
@@ -204,7 +219,6 @@ def build_backend(
         cards=cards,
         clock=_now,
     )
-    files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
     accounts = AccountService(
         records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
     )
@@ -222,6 +236,7 @@ def build_backend(
         home=home,
         progress=progress,
         accounts=accounts,
+        recordings=recordings,
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=OpenAiSpeech(openai_key), model=models.speech
         ),
@@ -272,14 +287,20 @@ def migrate_handler(event: dict[str, Any], context: Any) -> dict[str, list[str]]
 
 def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     """The worker's two jobs, both too long for an API request: following a live call to its
-    end (`call_id`), and what follows a conversation (`report`): writing its report, then
-    writing down what it told about the learner."""
+    end (`call_id`), and what follows a conversation (`report`): writing its learner turns down
+    a second time from their recordings, writing its report, then writing down what it told
+    about the learner."""
     if "report" in event:
+        call_id = event["report"]
+        services = backend.services
+        # A failure in one step does not block the others (spec §12.2).
         try:
-            backend.services.reports.write(event["report"])
+            services.recordings.transcribe(call_id)
         finally:
-            # A failure in one step does not block the other (spec §12.2).
-            backend.services.memories.write(event["report"])
+            try:
+                services.reports.write(call_id)
+            finally:
+                services.memories.write(call_id)
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
 

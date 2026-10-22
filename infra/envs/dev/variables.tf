@@ -123,6 +123,11 @@ variable "text_models" {
     (spec §6.11). It is the small model (spec §17.3 lever 5): the learner sees every memory and
     can put it right, and what a partner said about their own life cannot be stored as a fact
     about the learner whatever the model answers.
+    verbatim writes each recorded learner turn down a second time after the conversation, told
+    to keep their mistakes (spec §9.4), a fraction of a cent per minute of the learner's speech.
+    It is the same model as the live transcription, given the language and that instruction;
+    which model keeps learner German most faithfully is still to be measured (spec §18 phase 0,
+    spike d).
   EOT
   type = object({
     assessment = string
@@ -130,6 +135,7 @@ variable "text_models" {
     speech     = optional(string, "gpt-4o-mini-tts")
     report     = optional(string, "gpt-6.1-sol")
     memory     = optional(string, "gpt-6-luna")
+    verbatim   = optional(string, "gpt-transcribe")
   })
   default = {
     assessment = "gpt-6.1-sol"
@@ -137,5 +143,6 @@ variable "text_models" {
     speech     = "gpt-4o-mini-tts"
     report     = "gpt-6.1-sol"
     memory     = "gpt-6-luna"
+    verbatim   = "gpt-transcribe"
   }
 }

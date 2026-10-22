@@ -28,6 +28,7 @@ from konvami_api.domain.personas import (
 )
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import Focus, ReportService, what_to_practise
 from konvami_api.domain.tools import ToolResult, ToolSet
 from konvami_api.domain.voice import Briefing, FinishedCall
@@ -518,9 +519,11 @@ class PracticeScript:
         conversations: ConversationService,
         reports: ReportService,
         memories: MemoryService,
+        recordings: RecordingService,
     ) -> None:
         self._reports = reports
         self._memories = memories
+        self._recordings = recordings
         self._profiles = profiles
         self._onboarding = onboarding
         self._personas = personas
@@ -595,4 +598,7 @@ class PracticeScript:
         try:
             self._memories.after_call(user_id, call_id)
         finally:
-            self._reports.after_call(user_id, call_id)
+            try:
+                self._recordings.after_call(user_id, call_id)
+            finally:
+                self._reports.after_call(user_id, call_id)

@@ -7,6 +7,7 @@ import pytest
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.host import HostScript
+from konvami_api.domain.live_call import KeepAudio, Send, TurnAudio
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, PlacementStatus
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.placement import MIN_TASKS, PlacementScript, PlacementService
@@ -469,6 +470,59 @@ def test_the_guides_calls_get_no_report() -> None:
     world.voice.finished(call_id, live)
 
     assert world.report_starter.started == []
+
+
+LEARNER_SAID = {
+    "type": "conversation.item.input_audio_transcription.completed",
+    "item_id": "item_2",
+    "transcript": "Hallo Lena!",
+}
+
+
+def test_a_practice_call_is_recorded_turn_by_turn() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id).call_id
+    live = world.voice.live_call(call_id)
+    keep = world.voice.audio_keeper(call_id)
+    assert live is not None
+    assert keep is not None
+
+    [retrieve] = live.handle(LEARNER_SAID, 5)
+    audio = keep(KeepAudio("item_2", "learner", b"\x01\x00" * 2_400))
+
+    assert isinstance(retrieve, Send)
+    assert retrieve.event["item_id"] == "item_2"
+    assert audio == TurnAudio(f"users/{USER}/recordings/{call_id}/item_2.wav", 100)
+    assert world.files.keys() == [audio.key]
+
+
+def test_the_guides_calls_are_not_recorded() -> None:
+    world = World()
+    call_id = world.voice.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+    live = world.voice.live_call(call_id)
+    assert live is not None
+
+    assert live.handle(LEARNER_SAID, 5) == []
+    assert world.voice.audio_keeper(call_id) is None
+
+
+def test_a_practice_call_in_which_the_learner_said_nothing_keeps_no_audio() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id).call_id
+    live = world.voice.live_call(call_id)
+    keep = world.voice.audio_keeper(call_id)
+    assert live is not None
+    assert keep is not None
+    live.handle({**LEARNER_SAID, "type": "response.output_audio_transcript.done"}, 2)
+    live.audio_kept("item_2", keep(KeepAudio("item_2", "persona", b"\x01\x00")))
+    live.closed()
+
+    world.voice.finished(call_id, live)
+
+    assert world.files.keys() == []
+    assert world.sessions.finished[call_id].turns[0].audio is None
 
 
 def test_the_guides_calls_have_no_partner() -> None:

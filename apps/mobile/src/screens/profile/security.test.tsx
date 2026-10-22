@@ -250,6 +250,75 @@ describe('6.7 Privacy and AI', () => {
     expect(screen.getByRole('switch', { name: 'ElevenLabs' })).not.toBeChecked();
   });
 
+  const KEEP = 'Keep recordings of my conversations';
+
+  it('keeps recordings until the learner says otherwise', async () => {
+    await open(<PrivacyScreen />, 'Privacy and AI');
+
+    expect(await screen.findByRole('switch', { name: KEEP })).toBeChecked();
+  });
+
+  it('asks before it stops keeping recordings, because that deletes them', async () => {
+    const { api } = await open(<PrivacyScreen />, 'Privacy and AI');
+    await fireEvent.press(await screen.findByRole('switch', { name: KEEP }));
+
+    expect(await screen.findByRole('header', { name: 'Delete your recordings?' })).toBeTruthy();
+    expect(api.calls.some(([method]) => method === 'configureRecordings')).toBe(false);
+    await fireEvent.press(screen.getByRole('button', { name: 'Delete recordings' }));
+
+    await waitFor(() => expect(screen.getByRole('switch', { name: KEEP })).not.toBeChecked());
+    expect(api.calls).toContainEqual(['configureRecordings', false]);
+    expect((await api.getRecordings()).kept).toBe(false);
+  });
+
+  it('keeps the recordings when the learner thinks again', async () => {
+    const { api } = await open(<PrivacyScreen />, 'Privacy and AI');
+    await fireEvent.press(await screen.findByRole('switch', { name: KEEP }));
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Keep them' }));
+
+    expect(screen.getByRole('switch', { name: KEEP })).toBeChecked();
+    expect(api.calls.some(([method]) => method === 'configureRecordings')).toBe(false);
+  });
+
+  it('keeps recordings again without asking', async () => {
+    const { api } = await open(<PrivacyScreen />, 'Privacy and AI');
+    await fireEvent.press(await screen.findByRole('switch', { name: KEEP }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Delete recordings' }));
+    await waitFor(() => expect(screen.getByRole('switch', { name: KEEP })).not.toBeChecked());
+
+    await fireEvent.press(screen.getByRole('switch', { name: KEEP }));
+
+    await waitFor(() => expect(screen.getByRole('switch', { name: KEEP })).toBeChecked());
+    expect(api.calls).toContainEqual(['configureRecordings', true]);
+  });
+
+  it('says so when the choice could not be stored', async () => {
+    const { api } = await open(<PrivacyScreen />, 'Privacy and AI');
+    await fireEvent.press(await screen.findByRole('switch', { name: KEEP }));
+    api.failNext('configureRecordings', 'network');
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Delete recordings' }));
+
+    expect(await screen.findByText(/Can’t reach Konvami/)).toBeTruthy();
+    expect(screen.getByRole('switch', { name: KEEP })).toBeChecked();
+  });
+
+  it('says so when the choice could not be read, and reads it again', async () => {
+    const auth = await createTestAuth();
+    const api = createFakeApi();
+    api.enterApp();
+    api.failNext('getRecordings', 'network');
+    await renderScreen(<PrivacyScreen />, { auth, api, signedIn: true });
+
+    expect(
+      await screen.findByText('Your choice about recordings couldn’t be loaded.'),
+    ).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByRole('switch', { name: KEEP })).toBeChecked();
+  });
+
   it('leads to deleting the account', async () => {
     await open(<PrivacyScreen />, 'Privacy and AI');
 
@@ -272,7 +341,7 @@ describe('6.9 Delete account', () => {
       'Your account and sign-in',
       'Your profile, level and goals',
       'Your partners',
-      'Every conversation and transcript',
+      'Every conversation, transcript and recording',
       'Your photo',
     ]) {
       expect(screen.getByText(item)).toBeTruthy();

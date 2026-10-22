@@ -35,6 +35,10 @@ class FileStore(Protocol):
     def read_start(self, key: str, count: int) -> bytes:
         """The first `count` bytes of a file."""
 
+    def read(self, key: str) -> bytes:
+        """A whole file. Only for files the backend made itself (a recording): their size is
+        known."""
+
     def save(self, key: str, body: bytes, content_type: str) -> None: ...
 
     def move(self, source: str, destination: str) -> None: ...

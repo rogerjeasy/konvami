@@ -171,7 +171,7 @@ describe('6.6 Persona Studio: a new partner', () => {
     expect(await screen.findByRole('button', { name: 'Stop Cedar' })).toBeTruthy();
     expect(device.playing).toBe('https://files.test/voices/de/cedar.mp3');
 
-    await act(async () => device.finishSample());
+    await act(async () => device.finishClip());
 
     expect(await screen.findByRole('button', { name: 'Play Cedar' })).toBeTruthy();
   });

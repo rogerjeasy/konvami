@@ -32,7 +32,7 @@ export async function createTestAuth(): Promise<AuthServices & { provider: FakeA
  * flow drafts and the onboarding store. Pass `auth` to prepare accounts or inspect calls, `draft`
  * (sign-up) or `access` (sign-in and password reset) to start mid-flow, `api` to prepare or
  * inspect what the backend holds, `voice` to play a live call, `device` to decide what the photo
- * picker answers and to hear what is played, `now` to set the device's clock (it stands at the
+ * picker answers and to hear what is played (samples and recordings), `now` to set the device's clock (it stands at the
  * fake server's time otherwise), `studioStart` to open Persona Studio on a draft, and `signedIn`
  * to start as a signed-in learner (Amara). The result also carries the profile services, for
  * tests that look at what one screen left for the next.
@@ -71,12 +71,17 @@ export async function renderScreen(
   const backend = api ?? createFakeApi();
   const onboarding = createOnboardingStore(backend);
   const moment = now ?? new Date(FAKE_NOW);
-  const practice = createPracticeServices(backend, {
-    timeZone: () => 'Europe/Zurich',
-    now: typeof moment === 'function' ? moment : () => moment.getTime(),
-  });
-  const engine = voice ?? createFakeVoiceEngine();
   const profileDevice = device ?? createFakeProfileDevice();
+  const practice = createPracticeServices(
+    backend,
+    {
+      timeZone: () => 'Europe/Zurich',
+      now: typeof moment === 'function' ? moment : () => moment.getTime(),
+    },
+    // As in the app: one audio player for samples and recordings.
+    profileDevice.samples,
+  );
+  const engine = voice ?? createFakeVoiceEngine();
   const profile = createProfileServices(backend, {
     pictures: profileDevice.pictures,
     samples: profileDevice.samples,

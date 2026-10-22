@@ -1,4 +1,5 @@
-# Konvami's private files (profile design P2–P4, P9): learners' photos and the voices' samples.
+# Konvami's private files (profile design P2–P4, P9): learners' photos, the voices' samples and
+# the recordings of practice conversations (spec §6.6, under users/<id>/recordings/).
 #
 # - Nothing in the bucket is public. The API hands the app a short-lived signed upload form or
 #   a short-lived signed address; the app never has credentials of its own.

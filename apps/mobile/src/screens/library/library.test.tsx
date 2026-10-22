@@ -1,8 +1,9 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { PAGE_SIZE } from '@/practice/library-store';
-import { createFakeApi, type FakeApi } from '@/test/fake-api';
+import { createFakeApi, recordingOf, type FakeApi } from '@/test/fake-api';
+import { createFakeProfileDevice, type FakeProfileDevice } from '@/test/fake-profile-device';
 import { renderScreen } from '@/test/render';
 import { LibraryScreen } from '.';
 import { TranscriptScreen } from './transcript';
@@ -129,11 +130,81 @@ describe('5.5 Library', () => {
 });
 
 describe('5.6 Transcript', () => {
-  async function open(api: FakeApi, id: string) {
+  async function open(api: FakeApi, id: string, device?: FakeProfileDevice) {
     jest.mocked(useLocalSearchParams).mockReturnValue({ id });
-    await renderScreen(<TranscriptScreen />, { api, signedIn: true });
+    const view = await renderScreen(<TranscriptScreen />, { api, signedIn: true, device });
     await waitFor(() => expect(screen.queryByText('Opening the conversation')).toBeNull());
+    return view;
   }
+
+  it('shows what the learner said as the verbatim pass wrote it down', async () => {
+    const api = inApp();
+    api.talked(0, {
+      id: 'rtc_1',
+      learnerSays: ['Ich bin nach Berlin gefahren.', 'Ja.'],
+      verbatim: ['Ich habe nach Berlin gefahren.', null],
+    });
+    await open(api, 'rtc_1');
+
+    const lines = screen.getAllByLabelText(/^(Lena|You): /);
+    expect(lines.map((line) => line.props.accessibilityLabel)).toEqual([
+      'Lena: Hallo! Wie geht’s dir heute?',
+      'You: Ich habe nach Berlin gefahren.',
+      'You: Ja.',
+    ]);
+  });
+
+  it('plays a recorded turn, then the ones after it', async () => {
+    const api = inApp();
+    const device = createFakeProfileDevice();
+    api.talked(0, { id: 'rtc_1', recorded: true, learnerSays: ['Gut, danke!', 'Und dir?'] });
+    await open(api, 'rtc_1', device);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Play what Lena said' }));
+
+    expect(device.playing).toBe(recordingOf('rtc_1', 0).url);
+    expect(screen.getByRole('button', { name: 'Stop playing' })).toBeTruthy();
+    await act(() => device.finishClip());
+    expect(device.playing).toBe(recordingOf('rtc_1', 1).url);
+    await act(() => device.finishClip());
+    expect(device.playing).toBe(recordingOf('rtc_1', 2).url);
+    await act(() => device.finishClip());
+    expect(device.playing).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Stop playing' })).toBeNull();
+  });
+
+  it('stops playing when asked', async () => {
+    const api = inApp();
+    const device = createFakeProfileDevice();
+    api.talked(0, { id: 'rtc_1', recorded: true });
+    await open(api, 'rtc_1', device);
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Play what you said' })[0]!);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Stop playing' }));
+
+    expect(device.playing).toBeNull();
+    expect(device.played).toEqual([recordingOf('rtc_1', 1).url]);
+  });
+
+  it('stops playing when the learner leaves the screen', async () => {
+    const api = inApp();
+    const device = createFakeProfileDevice();
+    api.talked(0, { id: 'rtc_1', recorded: true });
+    const view = await open(api, 'rtc_1', device);
+    await fireEvent.press(screen.getByRole('button', { name: 'Play what Lena said' }));
+
+    await view.unmount();
+
+    expect(device.playing).toBeNull();
+  });
+
+  it('offers nothing to play for a conversation without recordings', async () => {
+    const api = inApp();
+    api.talked(0, { id: 'rtc_1' });
+    await open(api, 'rtc_1');
+
+    expect(screen.queryByRole('button', { name: /^Play / })).toBeNull();
+  });
 
   it('shows who the conversation was with and what each side said, in order', async () => {
     const api = inApp();

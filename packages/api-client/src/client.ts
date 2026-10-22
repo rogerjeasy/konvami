@@ -86,6 +86,10 @@ export type MemoryKind = Memory['kind'];
 export type Memories = Schemas['MemoriesOut'];
 /** The settings to change; the ones left out stay. */
 export type MemorySettings = { enabled?: boolean; avoidTopics?: string[] };
+/** Whether the audio of the learner's conversations is kept for them to hear again. */
+export type Recordings = Schemas['RecordingsOut'];
+/** A turn's recording: a short-lived address to play it from, and how long it lasts. */
+export type TurnAudio = Schemas['TurnAudioOut'];
 /** What to change about one memory; `day: null` takes an event's day away. */
 export type MemoryChange = { text?: string; day?: string | null };
 
@@ -229,6 +233,10 @@ export interface ApiClient {
   changeMemory(id: string, change: MemoryChange): Promise<Memory>;
   /** Forgets a memory for good; answers with what is left. */
   removeMemory(id: string): Promise<Memories>;
+  /** Whether recordings are kept. */
+  getRecordings(): Promise<Recordings>;
+  /** Keeps recordings or stops; stopping deletes every recording kept so far. */
+  configureRecordings(kept: boolean): Promise<Recordings>;
 }
 
 // The dev database pauses when idle and needs about 15 seconds to wake. The server answers 503
@@ -359,6 +367,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     removeCard: (id) => request('DELETE', `/v1/cards/${encodeURIComponent(id)}`),
     getMemories: () => request('GET', '/v1/memories'),
     configureMemories: (settings) => request('PATCH', '/v1/memories', settings),
+    getRecordings: () => request('GET', '/v1/recordings'),
+    configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
     changeMemory: (id, change) =>
       request('PATCH', `/v1/memories/${encodeURIComponent(id)}`, change),
     removeMemory: (id) => request('DELETE', `/v1/memories/${encodeURIComponent(id)}`),

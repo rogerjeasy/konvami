@@ -749,6 +749,10 @@ export const it: Translation = {
       line: '{{speaker}}: {{text}}',
       report: 'Resoconto della conversazione',
       reportHint: 'Correzioni, parole nuove e cosa esercitare la prossima volta',
+      playPartner: 'Ascolta cosa ha detto {{name}}',
+      playFormer: 'Ascolta cosa ha detto il tuo partner di prima',
+      playYou: 'Ascolta cosa hai detto',
+      stopPlaying: 'Interrompi la riproduzione',
     },
   },
   report: {
@@ -1129,6 +1133,17 @@ export const it: Translation = {
       note: 'I tuoi partner sono sempre IA e non fingono mai di essere umani. Una modifica vale dalla tua prossima conversazione.',
       delete: 'Elimina account',
       deleteHint: 'Rimuove il tuo account e tutto il suo contenuto',
+      recordings: {
+        label: 'Conserva le registrazioni delle mie conversazioni',
+        on: 'Puoi riascoltare le tue conversazioni. Solo tu puoi ascoltarle.',
+        off: 'Le conversazioni restano come testo. La tua voce serve per il resoconto, poi viene eliminata.',
+        loadFailed: 'Non è stato possibile caricare la tua scelta sulle registrazioni.',
+        confirmTitle: 'Eliminare le tue registrazioni?',
+        confirmBody:
+          'Tutte le registrazioni conservate finora vengono eliminate per sempre. Trascrizioni e resoconti restano.',
+        confirm: 'Elimina le registrazioni',
+        cancel: 'Conservale',
+      },
     },
     security: {
       title: 'Sicurezza',
@@ -1173,7 +1188,7 @@ export const it: Translation = {
         account: 'Il tuo account e l’accesso',
         profile: 'Il tuo profilo, il livello e gli obiettivi',
         partners: 'I tuoi partner',
-        conversations: 'Tutte le conversazioni e le trascrizioni',
+        conversations: 'Tutte le conversazioni, trascrizioni e registrazioni',
         photo: 'La tua foto',
       },
       password: 'La tua password',

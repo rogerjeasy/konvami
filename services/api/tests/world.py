@@ -20,6 +20,7 @@ from konvami_api.domain.placement import PlacementResult, PlacementScript, Place
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import (
     MAX_REQUESTS,
     Mistake,
@@ -40,6 +41,7 @@ from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
     FakeAccountDirectory,
     FakeSpeechModel,
+    FakeTranscriber,
     FakeVoiceProvider,
     FixedClock,
     InMemoryAccountRepository,
@@ -52,6 +54,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
@@ -161,6 +164,18 @@ class World:
             clock=self.clock,
             new_id=lambda: next(memory_ids),
         )
+        self.files = InMemoryFileStore()
+        self.recording_store = InMemoryRecordingRepository(self.sessions)
+        self.transcriber = FakeTranscriber(self.files)
+        self.recordings = RecordingService(
+            profiles=self.profiles,
+            conversations=self.conversations,
+            sessions=self.sessions,
+            repository=self.recording_store,
+            files=self.files,
+            transcriber=self.transcriber,
+            model="gpt-transcribe",
+        )
         self.practice = PracticeScript(
             profiles=self.profiles,
             onboarding=self.onboarding,
@@ -169,6 +184,7 @@ class World:
             conversations=self.conversations,
             reports=self.reports,
             memories=self.memories,
+            recordings=self.recordings,
         )
         self.voice = VoiceCallService(
             settings=VOICE,
@@ -182,6 +198,7 @@ class World:
             sessions=self.sessions,
             starter=self.starter,
             clock=self.clock,
+            recordings=self.recordings,
         )
         self.home = HomeService(
             profiles=self.profiles,
@@ -202,7 +219,6 @@ class World:
             cards=self.cards,
             clock=self.clock,
         )
-        self.files = InMemoryFileStore()
         self.speech = FakeSpeechModel()
         self.voices = VoiceSampleService(
             profiles=self.profiles, files=self.files, speech=self.speech, model="gpt-4o-mini-tts"
