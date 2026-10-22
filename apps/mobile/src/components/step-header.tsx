@@ -5,24 +5,28 @@ import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { useTheme } from '@/theme';
 
-/** The round bordered button in a screen header (back, close). */
+/** The round bordered button in a screen header (back, close, a step through months). */
 export function HeaderButton({
   icon,
   label,
   onPress,
+  disabled = false,
 }: {
-  icon: 'chevronLeft' | 'close';
+  icon: 'chevronLeft' | 'chevronRight' | 'close';
   label: string;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   const { color } = useTheme();
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       style={{ width: size.headerButton, height: size.headerButton }}
-      className="items-center justify-center rounded-pill border border-border bg-bg active:opacity-pressed"
+      className={`items-center justify-center rounded-pill border border-border bg-bg active:opacity-pressed ${disabled ? 'opacity-disabled' : ''}`}
     >
       <Icon name={icon} color={color.fg} size={size.iconMd} strokeWidth={2.2} />
     </Pressable>

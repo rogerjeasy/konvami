@@ -114,3 +114,18 @@ export function formatClock(locale: string, iso: string): string {
     new Date(iso),
   );
 }
+
+/** An amount of US dollars with its cents ("$162.40", "162,40 $"): what the providers bill in. */
+export function formatUsd(locale: string, usd: number): string {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(usd);
+}
+
+/** A month and its year from its first day ("2026-10-01"): "October 2026", "Oktober 2026". */
+export function formatMonth(locale: string, isoDate: string): string {
+  // As `formatDate`: read and written as UTC, so the month never shifts with the device.
+  return new Intl.DateTimeFormat(locale, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${isoDate}T00:00:00Z`));
+}
