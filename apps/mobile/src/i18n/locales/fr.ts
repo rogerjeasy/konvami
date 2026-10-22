@@ -682,6 +682,11 @@ export const fr: Translation = {
     manage: 'Modifier mes partenaires',
   },
   conversation: {
+    goals: {
+      chipDone: '{{goal}} : atteint',
+      chipOpen: '{{goal}} : encore à faire',
+      reached: 'Objectifs atteints : {{count}} sur {{total}}',
+    },
     help: {
       open: 'Aide',
       title: 'Besoin d’un coup de main ?',
@@ -952,6 +957,94 @@ export const fr: Translation = {
     consent:
       'Le tuteur a besoin de ton accord pour envoyer des questions à notre fournisseur d’IA (Profil › Confidentialité et IA).',
     notFound: 'Cette correction ne peut plus être expliquée.',
+  },
+  rolePlays: {
+    row: 'Jeux de rôle',
+    rowHint: 'Entraîne-toi à une vraie situation : boulangerie, médecin, entretien…',
+    title: 'Jeux de rôle',
+    body: 'Entraîne-toi à une vraie situation avec l’un de tes partenaires. Ton partenaire joue l’autre personne, tu atteins les objectifs.',
+    loading: 'Chargement des jeux de rôle',
+    loadFailed: 'Les jeux de rôle n’ont pas pu être chargés.',
+    level: 'Dès {{level}}',
+    goals: 'Tes objectifs',
+    who: 'Qui joue avec toi ?',
+    start: 'Commencer le jeu de rôle',
+    scenarioLabel: '{{title}}, dès le niveau {{level}}',
+  },
+  scenarios: {
+    bakery: {
+      title: 'À la boulangerie',
+      situation: 'Achète du pain et quelque chose de sucré pour le petit-déjeuner.',
+      goals: {
+        order: 'Commander deux choses',
+        price: 'Demander le prix',
+        pay: 'Payer et dire au revoir',
+      },
+    },
+    doctor: {
+      title: 'Chez le médecin',
+      situation: 'Tu ne te sens pas bien depuis quelques jours. Explique ce qui ne va pas.',
+      goals: {
+        symptoms: 'Dire ce qui ne va pas',
+        since_when: 'Dire depuis quand',
+        advice: 'Comprendre le conseil',
+      },
+    },
+    pharmacy: {
+      title: 'À la pharmacie',
+      situation: 'Tu as un rhume et il te faut quelque chose contre.',
+      goals: {
+        need: 'Dire ce qu’il te faut',
+        dose: 'Demander comment le prendre',
+        pay: 'Payer et dire au revoir',
+      },
+    },
+    train_ticket: {
+      title: 'À la gare',
+      situation: 'Achète un billet pour une autre ville, pour demain matin.',
+      goals: {
+        destination: 'Dire où et quand',
+        ticket: 'Choisir un billet',
+        platform: 'Te renseigner sur le train',
+      },
+    },
+    registration: {
+      title: 'Déclarer ton adresse',
+      situation: 'Tu as déménagé et dois t’inscrire au Bürgeramt.',
+      goals: {
+        purpose: 'Dire pourquoi tu viens',
+        documents: 'Parler de tes papiers',
+        next_step: 'Savoir ce qui se passe ensuite',
+      },
+    },
+    flat_viewing: {
+      title: 'Visite d’un appartement',
+      situation: 'Tu aimerais louer cet appartement. Renseigne-toi et fais bonne impression.',
+      goals: {
+        rent: 'Demander le loyer',
+        about_me: 'Te présenter',
+        move_in: 'Demander quand tu pourrais emménager',
+      },
+    },
+    job_interview: {
+      title: 'Entretien d’embauche',
+      situation: 'Parle de toi et du poste que tu veux.',
+      goals: {
+        introduce: 'Te présenter',
+        strength: 'Citer un point fort',
+        question: 'Poser une question',
+      },
+    },
+    complaint: {
+      title: 'Faire une réclamation',
+      situation:
+        'Le casque acheté la semaine dernière est cassé. Récupère ton argent ou un nouveau casque.',
+      goals: {
+        problem: 'Expliquer le problème',
+        solution: 'Dire ce que tu veux',
+        agree: 'Vous mettre d’accord sur une solution',
+      },
+    },
   },
   review: {
     close: 'Arrêter la révision',

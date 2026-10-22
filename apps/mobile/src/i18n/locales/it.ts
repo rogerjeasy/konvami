@@ -681,6 +681,11 @@ export const it: Translation = {
     manage: 'Modifica i miei partner',
   },
   conversation: {
+    goals: {
+      chipDone: '{{goal}}: raggiunto',
+      chipOpen: '{{goal}}: ancora da fare',
+      reached: 'Obiettivi raggiunti: {{count}} su {{total}}',
+    },
     help: {
       open: 'Aiuto',
       title: 'Ti serve una mano?',
@@ -951,6 +956,94 @@ export const it: Translation = {
     consent:
       'Il tutor ha bisogno del tuo consenso per inviare domande al nostro fornitore di IA (Profilo › Privacy e IA).',
     notFound: 'Questa correzione non può più essere spiegata.',
+  },
+  rolePlays: {
+    row: 'Giochi di ruolo',
+    rowHint: 'Esercitati in una situazione reale: panetteria, medico, colloquio…',
+    title: 'Giochi di ruolo',
+    body: 'Esercitati in una situazione reale con uno dei tuoi partner. Il partner interpreta l’altra persona, tu raggiungi gli obiettivi.',
+    loading: 'Caricamento dei giochi di ruolo',
+    loadFailed: 'Non è stato possibile caricare i giochi di ruolo.',
+    level: 'Da {{level}}',
+    goals: 'I tuoi obiettivi',
+    who: 'Chi recita con te?',
+    start: 'Inizia il gioco di ruolo',
+    scenarioLabel: '{{title}}, dal livello {{level}}',
+  },
+  scenarios: {
+    bakery: {
+      title: 'In panetteria',
+      situation: 'Compra del pane e qualcosa di dolce per colazione.',
+      goals: {
+        order: 'Ordinare due cose',
+        price: 'Chiedere il prezzo',
+        pay: 'Pagare e salutare',
+      },
+    },
+    doctor: {
+      title: 'Dal medico',
+      situation: 'Da qualche giorno non ti senti bene. Spiega cosa non va.',
+      goals: {
+        symptoms: 'Dire cosa non va',
+        since_when: 'Dire da quando',
+        advice: 'Capire il consiglio',
+      },
+    },
+    pharmacy: {
+      title: 'In farmacia',
+      situation: 'Hai il raffreddore e ti serve qualcosa.',
+      goals: {
+        need: 'Dire cosa ti serve',
+        dose: 'Chiedere come prenderlo',
+        pay: 'Pagare e salutare',
+      },
+    },
+    train_ticket: {
+      title: 'In stazione',
+      situation: 'Compra un biglietto per un’altra città per domani mattina.',
+      goals: {
+        destination: 'Dire dove e quando',
+        ticket: 'Scegliere un biglietto',
+        platform: 'Chiedere del treno',
+      },
+    },
+    registration: {
+      title: 'Registrare la residenza',
+      situation: 'Hai cambiato casa e devi registrarti al Bürgeramt.',
+      goals: {
+        purpose: 'Spiegare il motivo della visita',
+        documents: 'Parlare dei documenti',
+        next_step: 'Capire cosa succede dopo',
+      },
+    },
+    flat_viewing: {
+      title: 'Visita a un appartamento',
+      situation: 'Vorresti affittare questo appartamento. Informati e fai una buona impressione.',
+      goals: {
+        rent: 'Chiedere dell’affitto',
+        about_me: 'Presentarti',
+        move_in: 'Chiedere quando potresti trasferirti',
+      },
+    },
+    job_interview: {
+      title: 'Colloquio di lavoro',
+      situation: 'Parla di te e del lavoro che vuoi.',
+      goals: {
+        introduce: 'Presentarti',
+        strength: 'Indicare un punto di forza',
+        question: 'Fare una domanda',
+      },
+    },
+    complaint: {
+      title: 'Fare un reclamo',
+      situation:
+        'Le cuffie comprate la settimana scorsa sono rotte. Fatti ridare i soldi o un paio nuovo.',
+      goals: {
+        problem: 'Spiegare il problema',
+        solution: 'Dire cosa vuoi',
+        agree: 'Accordarvi su una soluzione',
+      },
+    },
   },
   review: {
     close: 'Interrompi il ripasso',

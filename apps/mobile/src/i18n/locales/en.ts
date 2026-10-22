@@ -671,6 +671,11 @@ export const en = {
     manage: 'Edit my partners',
   },
   conversation: {
+    goals: {
+      chipDone: '{{goal}}: reached',
+      chipOpen: '{{goal}}: still to do',
+      reached: 'Goals reached: {{count}} of {{total}}',
+    },
     help: {
       open: 'Help',
       title: 'Need a hand?',
@@ -936,6 +941,94 @@ export const en = {
     consent:
       'The tutor needs your agreement to send questions to our AI provider (Profile › Privacy and AI).',
     notFound: 'This correction can’t be explained any more.',
+  },
+  rolePlays: {
+    row: 'Role-plays',
+    rowHint: 'Rehearse a real situation: the bakery, the doctor, an interview…',
+    title: 'Role-plays',
+    body: 'Rehearse a real situation with one of your partners. They play the other person; you reach the goals.',
+    loading: 'Loading the role-plays',
+    loadFailed: 'The role-plays couldn’t be loaded.',
+    level: 'From {{level}}',
+    goals: 'Your goals',
+    who: 'Who plays it?',
+    start: 'Start the role-play',
+    scenarioLabel: '{{title}}, from level {{level}}',
+  },
+  scenarios: {
+    bakery: {
+      title: 'At the bakery',
+      situation: 'Buy bread and something sweet for breakfast.',
+      goals: {
+        order: 'Order two things',
+        price: 'Ask the price',
+        pay: 'Pay and say goodbye',
+      },
+    },
+    doctor: {
+      title: 'At the doctor’s',
+      situation: 'You’ve felt unwell for a few days. Tell the doctor what’s wrong.',
+      goals: {
+        symptoms: 'Say what’s wrong',
+        since_when: 'Say since when',
+        advice: 'Understand the advice',
+      },
+    },
+    pharmacy: {
+      title: 'At the pharmacy',
+      situation: 'You have a cold and need something for it.',
+      goals: {
+        need: 'Say what you need',
+        dose: 'Ask how to take it',
+        pay: 'Pay and say goodbye',
+      },
+    },
+    train_ticket: {
+      title: 'At the station',
+      situation: 'Buy a ticket to another city for tomorrow morning.',
+      goals: {
+        destination: 'Say where and when',
+        ticket: 'Choose a ticket',
+        platform: 'Ask about the train',
+      },
+    },
+    registration: {
+      title: 'Registering your address',
+      situation: 'You’ve moved and need to register at the Bürgeramt.',
+      goals: {
+        purpose: 'Say why you came',
+        documents: 'Talk about your papers',
+        next_step: 'Find out what happens next',
+      },
+    },
+    flat_viewing: {
+      title: 'Viewing a flat',
+      situation: 'You’d like to rent this flat. Find out more and make a good impression.',
+      goals: {
+        rent: 'Ask about the rent',
+        about_me: 'Introduce yourself',
+        move_in: 'Ask when you could move in',
+      },
+    },
+    job_interview: {
+      title: 'Job interview',
+      situation: 'Tell the interviewer about yourself and the job you want.',
+      goals: {
+        introduce: 'Introduce yourself',
+        strength: 'Name a strength',
+        question: 'Ask a question',
+      },
+    },
+    complaint: {
+      title: 'Making a complaint',
+      situation:
+        'The headphones you bought last week are broken. Get your money back or a new pair.',
+      goals: {
+        problem: 'Explain the problem',
+        solution: 'Say what you want',
+        agree: 'Agree on a solution',
+      },
+    },
   },
   review: {
     close: 'Stop reviewing',
