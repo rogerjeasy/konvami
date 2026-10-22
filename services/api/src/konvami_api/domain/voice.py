@@ -81,6 +81,8 @@ class VoiceSession:
     started_at: dt.datetime
     # The partner of a practice call; None for the guide's calls.
     persona_id: UUID | None = None
+    # The role-play of a practice call (a language pack's scenario id); None for free talk.
+    scenario: str | None = None
 
 
 @dataclass(frozen=True)
@@ -165,6 +167,9 @@ class VoiceSessionRepository(Protocol):
     def count_since(self, user_id: UUID, since: dt.datetime) -> int: ...
 
     def finish(self, call_id: str, result: FinishedCall) -> None: ...
+
+    def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
+        """The role-play goals the learner reached in a call."""
 
 
 def _today(now: dt.datetime, local_date: dt.date | None) -> dt.date:

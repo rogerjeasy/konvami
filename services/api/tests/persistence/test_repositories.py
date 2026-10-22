@@ -2036,3 +2036,35 @@ def test_a_deleted_learner_has_no_memories_left(db: SqlClient) -> None:
     # Nothing can be written down for them again.
     with pytest.raises(psycopg.Error):
         keep(stored, remembered(2))
+
+
+# --- Role-play ---------------------------------------------------------------------------------
+
+
+def test_a_role_play_keeps_its_scenario_and_the_goals_reached(partners: Practice) -> None:
+    partners.calls.started(
+        VoiceSession(
+            "rtc_bakery", USER, CallPurpose.PRACTICE, "m", NOON, LENA.id, scenario="bakery"
+        )
+    )
+    turns = (Turn("persona", "Guten Morgen!"), Turn("learner", "Zwei Brötchen, bitte."))
+    partners.calls.finish("rtc_bakery", FinishedCall(NOON + HOUR, "closed", USAGE, turns))
+
+    partners.calls.goals_reached("rtc_bakery", ("order", "pay"))
+
+    stored = partners.calls.get("rtc_bakery")
+    assert stored is not None
+    assert stored.scenario == "bakery"
+    conversation = partners.conversations.get(USER, "rtc_bakery")
+    assert conversation is not None
+    assert (conversation.scenario, conversation.goals_reached) == ("bakery", ("order", "pay"))
+    assert partners.conversations.listed(USER, 5, None)[0].goals_reached == ("order", "pay")
+
+
+def test_a_free_conversation_has_no_scenario_and_no_goals(partners: Practice) -> None:
+    talked(partners, "rtc_1", at=NOON)
+
+    conversation = partners.conversations.get(USER, "rtc_1")
+
+    assert conversation is not None
+    assert (conversation.scenario, conversation.goals_reached) == (None, ())
