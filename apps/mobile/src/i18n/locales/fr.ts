@@ -143,15 +143,11 @@ export const fr: Translation = {
   aiConsent: {
     title: 'Comment Konvami utilise l’IA',
     body: 'Konvami fait appel à des fournisseurs d’IA de confiance pour écouter, répondre et donner des retours. Voici exactement ce que chacun reçoit.',
-    openaiPurpose: 'Conversations vocales en direct et corrections',
-    openaiReceives: 'Reçoit : voix · transcriptions · profil d’apprentissage',
-    elevenlabsPurpose: 'Voix de personas naturelles, de qualité supérieure',
-    elevenlabsReceives: 'Reçoit : les réponses de ton persona (texte)',
-    bedrockPurpose: 'Bilans de session et cartes mémoire',
-    bedrockReceives: 'Reçoit : transcriptions',
+    openaiPurpose: 'Conversations, corrections, bilans, notes et réponses du tuteur',
+    openaiReceives: 'Reçoit : voix · transcriptions · profil d’apprentissage · notes',
     requiredProvider: '{{name}}, requis',
     notice:
-      'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Modifie ces choix à tout moment dans Profil › Confidentialité et IA.',
+      'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Tu peux relire ceci à tout moment dans Profil › Confidentialité et IA.',
     agree: 'Accepter et continuer',
     readNotice: 'Lire la politique de confidentialité complète',
   },
@@ -1319,9 +1315,8 @@ export const fr: Translation = {
     },
     privacy: {
       title: 'Confidentialité et IA',
-      body: 'Konvami fait appel à des fournisseurs d’IA pour écouter, répondre et te donner un retour. Tu décides lesquels, parmi les facultatifs, peuvent être utilisés.',
-      saved: 'Tes choix sont enregistrés.',
-      note: 'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Un changement s’applique dès ta prochaine conversation.',
+      body: 'Konvami fait appel à un fournisseur d’IA pour écouter, répondre et te donner un retour. Voici ce qu’il reçoit.',
+      note: 'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Pour retirer ton accord, supprime ton compte.',
       delete: 'Supprimer le compte',
       deleteHint: 'Supprime ton compte et tout ce qu’il contient',
       recordings: {

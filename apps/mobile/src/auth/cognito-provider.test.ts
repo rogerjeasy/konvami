@@ -210,7 +210,7 @@ describe('the user', () => {
       UserAttributes: [
         {
           Name: 'custom:ai_consent',
-          Value: 'v1|2026-10-09T12:30:00.000Z|openai=1,elevenlabs=1,bedrock=0',
+          Value: 'v2|2026-10-09T12:30:00.000Z|openai=1,elevenlabs=1,bedrock=0',
         },
       ],
     });

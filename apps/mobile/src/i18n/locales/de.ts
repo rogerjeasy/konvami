@@ -143,15 +143,11 @@ export const de: Translation = {
   aiConsent: {
     title: 'So nutzt Konvami KI',
     body: 'Konvami nutzt vertrauenswürdige KI-Anbieter, um zuzuhören, zu antworten und Feedback zu geben. Hier siehst du genau, was jeder erhält.',
-    openaiPurpose: 'Live-Sprachgespräche und Korrekturen',
-    openaiReceives: 'Erhält: Stimme · Transkripte · Lernprofil',
-    elevenlabsPurpose: 'Hochwertige, natürliche Persona-Stimmen',
-    elevenlabsReceives: 'Erhält: die Antworten deiner Persona (Text)',
-    bedrockPurpose: 'Sitzungsberichte und Lernkarten',
-    bedrockReceives: 'Erhält: Transkripte',
+    openaiPurpose: 'Gespräche, Korrekturen, Berichte, Notizen und Antworten des Tutors',
+    openaiReceives: 'Erhält: Stimme · Transkripte · Lernprofil · Notizen',
     requiredProvider: '{{name}}, erforderlich',
     notice:
-      'Deine Partner sind immer KI und geben sich nie als Menschen aus. Du kannst diese Auswahl jederzeit unter Profil › Datenschutz und KI ändern.',
+      'Deine Partner sind immer KI und geben sich nie als Menschen aus. Du kannst das jederzeit unter Profil › Datenschutz und KI nachlesen.',
     agree: 'Zustimmen und weiter',
     readNotice: 'Vollständige Datenschutzhinweise lesen',
   },
@@ -1318,9 +1314,8 @@ export const de: Translation = {
     },
     privacy: {
       title: 'Datenschutz und KI',
-      body: 'Konvami nutzt KI-Anbieter, um zuzuhören, zu antworten und Feedback zu geben. Du entscheidest, welche der optionalen genutzt werden dürfen.',
-      saved: 'Deine Auswahl ist gespeichert.',
-      note: 'Deine Partner sind immer KI und geben sich nie als Menschen aus. Eine Änderung gilt ab deinem nächsten Gespräch.',
+      body: 'Konvami nutzt einen KI-Anbieter, um zuzuhören, zu antworten und Feedback zu geben. Hier siehst du, was er erhält.',
+      note: 'Deine Partner sind immer KI und geben sich nie als Menschen aus. Um deine Zustimmung zu widerrufen, lösche dein Konto.',
       delete: 'Konto löschen',
       deleteHint: 'Entfernt dein Konto und alles darin',
       recordings: {

@@ -24,6 +24,7 @@ canvas after that date is not in it.
 | --- | --- | --- |
 | 2.2, 3.1 | Apple and Google show a "coming soon" notice | They need the Apple Developer and Google OAuth credentials |
 | 2.3 | A "Confirm password" field is added | Requested on 2026-10-09 |
+| 2.5, 6.7 | Only OpenAI is named, required, with everything it does (conversations, corrections, reports, memories, Tutor answers); no ElevenLabs or Bedrock switches. The consent record is `v2` and stores both as not agreed | Neither is in use, and a switch that changes nothing misleads (decided 2026-10-23). They come back with a new consent version once they are integrated; consent is withdrawn by deleting the account |
 | 3.1 | "Email me a sign-in link instead" shows a "coming soon" notice; 3.4 is not built | Cognito can only send sign-in emails through Amazon SES (own sender, production access), which is not set up yet |
 | 3.2 | "n tries left before a 5-minute pause" is counted on the device | The service does not say how many tries are left; it keeps its own lockout as well |
 | 3.3 | No streak chip and no "persona is waiting" card | That data does not exist yet, and a made-up streak would mislead a real user |

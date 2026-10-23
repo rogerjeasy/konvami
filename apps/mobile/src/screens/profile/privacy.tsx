@@ -2,13 +2,6 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  authErrorCode,
-  generalErrorKey,
-  useAuthServices,
-  useSession,
-  type AiConsentChoices,
-} from '@/auth';
 import { AiProviderList } from '@/components/ai-provider-list';
 import { Card } from '@/components/card';
 import { ConfirmSheet } from '@/components/confirm-sheet';
@@ -24,9 +17,6 @@ import { ROUTES } from '@/lib/routes';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
 import { useProfileServices, useRecordings } from '@/profile/services';
 import { ProfilePage } from './page';
-
-// Someone who has not answered the consent screen yet has agreed to nothing optional.
-const NOTHING_OPTIONAL: AiConsentChoices = { elevenlabs: false, bedrock: false };
 
 /**
  * Whether the audio of conversations is kept (spec §6.6). Stopping deletes every recording kept
@@ -113,55 +103,19 @@ function RecordingsChoice() {
 }
 
 /**
- * 6.7 Privacy and AI (spec §6.19): which AI providers may receive the learner's data, changed
- * at any time and stored on the account at once, with its date; whether recordings are kept;
- * and the way to delete the account.
+ * 6.7 Privacy and AI (spec §6.19): which AI provider receives the learner's data and what it
+ * receives, with the full privacy notice; whether recordings are kept; and the way to delete the
+ * account, which is also how the AI consent is withdrawn.
  */
 export function PrivacyScreen() {
   const { t, i18n } = useTranslation();
-  const { session } = useAuthServices();
-  const { user } = useSession();
-  const stored = user?.aiConsent?.providers;
-  const [choices, setChoices] = useState<AiConsentChoices>(
-    stored ? { elevenlabs: stored.elevenlabs, bedrock: stored.bedrock } : NOTHING_OPTIONAL,
-  );
-  const [saving, setSaving] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  async function change(next: AiConsentChoices) {
-    const before = choices;
-    setChoices(next);
-    setResult(null);
-    setSaving(true);
-    try {
-      await session.saveAiConsent(next);
-      setResult({ ok: true, message: t('profile.privacy.saved') });
-    } catch (error) {
-      // The switch shows what the account holds, so it goes back.
-      setChoices(before);
-      setResult({ ok: false, message: t(generalErrorKey(authErrorCode(error))) });
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <ProfilePage title={t('profile.privacy.title')} body={t('profile.privacy.body')}>
       <Reveal delay={staggerDelay(1)}>
         <View className="gap-3">
-          <AiProviderList choices={choices} onChange={change} disabled={saving} />
-          {result ? (
-            <View accessibilityLiveRegion="polite">
-              <NoticeBox
-                icon={result.ok ? 'check' : 'alert'}
-                tone={result.ok ? 'primary' : 'danger'}
-              >
-                {result.message}
-              </NoticeBox>
-            </View>
-          ) : (
-            <NoticeBox icon="info">{t('profile.privacy.note')}</NoticeBox>
-          )}
+          <AiProviderList />
+          <NoticeBox icon="info">{t('profile.privacy.note')}</NoticeBox>
           <TextButton
             tone="primary"
             label={t('aiConsent.readNotice')}

@@ -6,11 +6,16 @@ import type { AiConsent, AiConsentChoices } from './types';
  */
 
 /** Version of the 2.5 consent text. Bump it when the providers or what they receive change. */
-export const AI_CONSENT_VERSION = 'v1';
+// v2 (2026-10-23): OpenAI alone, with everything it does; ElevenLabs and Bedrock are not asked.
+export const AI_CONSENT_VERSION = 'v2';
+
+/** The optional providers, none of which is in use: nobody is asked about them, so none is
+ * agreed to. The record keeps its fields so that it reads the same once they are. */
+export const NO_OPTIONAL_PROVIDERS: AiConsentChoices = { elevenlabs: false, bedrock: false };
 
 const flag = (on: boolean) => (on ? '1' : '0');
 
-/** `v1|2026-10-09T12:30:00.000Z|openai=1,elevenlabs=1,bedrock=0` */
+/** `v2|2026-10-09T12:30:00.000Z|openai=1,elevenlabs=0,bedrock=0` */
 export function encodeAiConsent(choices: AiConsentChoices, at: Date): string {
   const providers = `openai=1,elevenlabs=${flag(choices.elevenlabs)},bedrock=${flag(choices.bedrock)}`;
   return [AI_CONSENT_VERSION, at.toISOString(), providers].join('|');
