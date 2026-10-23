@@ -23,7 +23,7 @@ import { SIGN_UP_STEPS } from './steps';
  * and why, before any data is sent. The choices are stored on the account with their date.
  */
 export function AiConsentScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session } = useAuthServices();
   const { status } = useSession();
   // Optional providers start switched on, as on the approved design (spec open item O1).
@@ -73,7 +73,7 @@ export function AiConsentScreen() {
           <TextButton
             tone="primary"
             label={t('aiConsent.readNotice')}
-            onPress={() => openLegal('privacy')}
+            onPress={() => openLegal('privacy', i18n.language)}
           />
         </>
       }

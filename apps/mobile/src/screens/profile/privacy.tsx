@@ -118,7 +118,7 @@ function RecordingsChoice() {
  * and the way to delete the account.
  */
 export function PrivacyScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session } = useAuthServices();
   const { user } = useSession();
   const stored = user?.aiConsent?.providers;
@@ -165,7 +165,7 @@ export function PrivacyScreen() {
           <TextButton
             tone="primary"
             label={t('aiConsent.readNotice')}
-            onPress={() => openLegal('privacy')}
+            onPress={() => openLegal('privacy', i18n.language)}
           />
         </View>
       </Reveal>

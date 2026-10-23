@@ -32,7 +32,7 @@ const PROVIDER_NAME = { apple: 'Apple', google: 'Google' } as const;
  * instead of failing silently.
  */
 export function CreateAccountScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { color } = useTheme();
   const { draft } = useSignUpDraft();
   const [unavailable, setUnavailable] = useState<keyof typeof PROVIDER_NAME | null>(null);
@@ -61,8 +61,10 @@ export function CreateAccountScreen() {
             <Trans
               i18nKey="createAccount.legal"
               components={{
-                terms: <Link variant="caption" onPress={() => openLegal('terms')} />,
-                privacy: <Link variant="caption" onPress={() => openLegal('privacy')} />,
+                terms: <Link variant="caption" onPress={() => openLegal('terms', i18n.language)} />,
+                privacy: (
+                  <Link variant="caption" onPress={() => openLegal('privacy', i18n.language)} />
+                ),
               }}
             />
           </Text>
