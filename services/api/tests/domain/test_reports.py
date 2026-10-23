@@ -7,6 +7,7 @@ import pytest
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.levels import LevelFit
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.reports import (
     MAX_MISTAKES,
@@ -177,6 +178,53 @@ def test_a_report_says_what_the_conversation_showed() -> None:
     assert report.wins == ("Vous avez raconté votre week-end au passé.",)
     assert report.next_steps == ("Le Perfekt avec « sein » pour les verbes de mouvement.",)
     assert report.stats == measure(TURNS)
+
+
+def test_a_report_keeps_how_the_learner_did_against_their_level() -> None:
+    fit = {"grammar": "at", "vocabulary": "above", "speaking": "below"}
+    world = written({**ANALYSIS, "level_fit": fit}, CONFIRMED)
+
+    assert report_of(world).level_fit == LevelFit("at", "above", "below")
+
+
+def test_the_analyst_is_asked_to_compare_each_skill_with_the_level() -> None:
+    world = written(ANALYSIS, CONFIRMED)
+
+    task = world.text.tasks[-2]
+
+    assert task.answer_schema["required"][-1] == "level_fit"
+    fit = task.answer_schema["properties"]["level_fit"]
+    assert fit["required"] == ["grammar", "vocabulary", "speaking"]
+    assert fit["properties"]["speaking"]["enum"] == ["below", "at", "above", "unclear"]
+    assert "level_fit" in task.instructions
+
+
+def test_a_report_written_without_a_level_fit_has_none() -> None:
+    world = written(ANALYSIS, CONFIRMED)
+
+    assert report_of(world).level_fit is None
+
+
+def test_level_fits_are_the_newest_first_since_a_moment_in_one_language() -> None:
+    world = World()
+    world.onboard()
+    fits = [
+        LevelFit("above", "at", "at"),
+        LevelFit("below", "at", "at"),
+        LevelFit("at", "at", "at"),
+    ]
+    calls = []
+    for hours, fit in enumerate(fits):
+        call_id = world.talk(None, at=NOON + timedelta(hours=hours))
+        world.reported(call_id, level_fit=fit)
+        calls.append(call_id)
+    world.reported(world.talk(None, at=NOON + timedelta(hours=5)))
+    world.reported(world.talk(None, at=NOON + timedelta(hours=6)), target="fr", level_fit=fits[0])
+
+    found = world.reports.level_fits(USER, "de", since=NOON + timedelta(hours=1))
+
+    assert found == [fits[2], fits[1]]
+    assert world.reports.level_fits(OTHER_USER, "de", since=NOON) == []
 
 
 def test_the_analyst_reads_the_numbered_transcript_knowing_the_learner() -> None:

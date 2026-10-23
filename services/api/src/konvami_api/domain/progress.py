@@ -18,6 +18,7 @@ from konvami_api.domain.conversations import (
     summarise,
 )
 from konvami_api.domain.home import LevelView, level_view
+from konvami_api.domain.levels import LevelPoint, LevelService
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import ProfileService
@@ -75,6 +76,8 @@ class TalkShare:
 class ProgressView:
     language: str
     level: LevelView | None
+    # The level over time in the language, the oldest first (spec §6.9).
+    level_history: tuple[LevelPoint, ...]
     activity: Activity
     # The last `WEEKS_OF_ACTIVITY` weeks, the oldest first.
     weeks: tuple[WeekActivity, ...]
@@ -178,6 +181,7 @@ class ProgressService:
         conversations: ConversationService,
         reports: ReportService,
         cards: CardService,
+        levels: LevelService,
         clock: Callable[[], dt.datetime],
     ) -> None:
         self._profiles = profiles
@@ -186,6 +190,7 @@ class ProgressService:
         self._conversations = conversations
         self._reports = reports
         self._cards = cards
+        self._levels = levels
         self._clock = clock
 
     def view(self, user_id: UUID, timezone: str | None) -> ProgressView:
@@ -207,6 +212,7 @@ class ProgressService:
         return ProgressView(
             language=language,
             level=level_view(profile, language, result.levels if result else None),
+            level_history=self._levels.history(user_id, language),
             activity=activity,
             weeks=weekly(days, WEEKS_OF_ACTIVITY),
             longest_streak_days=streak,

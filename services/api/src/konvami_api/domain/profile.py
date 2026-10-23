@@ -141,6 +141,10 @@ class ProfileRepository(Protocol):
     def save(self, user_id: UUID, changes: Sequence[ChangeRecord]) -> None:
         """Stores the new values and their log entries together, or nothing."""
 
+    def changes(self, user_id: UUID, scope: str, field: str) -> list[ChangeRecord]:
+        """The logged changes of one field, the oldest first."""
+        ...
+
 
 # --- Field definitions ---------------------------------------------------------------------------
 
@@ -312,6 +316,10 @@ class ProfileService:
 
     def get(self, user_id: UUID) -> Profile:
         return self._repository.load(user_id)
+
+    def history(self, user_id: UUID, scope: str, field: str) -> list[ChangeRecord]:
+        """Every change of one field, by anyone, the oldest first."""
+        return self._repository.changes(user_id, scope, field)
 
     def apply(
         self, user_id: UUID, changes: Sequence[Change], *, source: Source, origin: Origin
