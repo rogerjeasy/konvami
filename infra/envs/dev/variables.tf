@@ -205,3 +205,9 @@ variable "cost_owners" {
   type        = list(string)
   default     = []
 }
+
+variable "publish_site" {
+  description = "Publish the website (apps/site, the privacy policy). Build it first: pnpm --filter @konvami/site build"
+  type        = bool
+  default     = false
+}
