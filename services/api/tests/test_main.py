@@ -221,10 +221,10 @@ def test_a_partner_can_be_drafted_and_a_voice_sampled_with_the_configured_models
 
 def test_the_worker_writes_a_report_when_that_is_what_it_is_started_for(stub: Stubber) -> None:
     """The same function follows calls and writes reports. Asked for a report, it looks the
-    call up in the database (here: no such call), for the verbatim pass and then for the
-    report, and never reaches for the voice provider."""
+    call up in the database (here: no such call), for the verbatim pass, the report and the
+    level, and never reaches for the voice provider."""
     backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
-    for _ in range(2):
+    for _ in range(3):
         stub.add_response(
             "execute_statement",
             {"formattedRecords": "[]"},
@@ -309,9 +309,9 @@ CALL_LOOKUP = {
 
 def test_after_the_report_the_worker_writes_down_what_the_conversation_told(stub: Stubber) -> None:
     """Every job looks the call up in the database (here: no such call), one after the other:
-    the verbatim pass, the report, the memories."""
+    the verbatim pass, the report, the level, the memories."""
     backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
-    for _ in range(3):
+    for _ in range(4):
         stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
 
     main.run_worker(backend, {"report": "rtc_ghost"})
@@ -324,7 +324,8 @@ def test_a_report_that_cannot_be_written_does_not_cost_the_memories(stub: Stubbe
     backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
     stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
     stub.add_client_error("execute_statement", service_error_code="InternalServerErrorException")
-    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
+    for _ in range(2):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
 
     with pytest.raises(ClientError):
         main.run_worker(backend, {"report": "rtc_ghost"})
@@ -335,8 +336,8 @@ def test_a_report_that_cannot_be_written_does_not_cost_the_memories(stub: Stubbe
 def test_a_verbatim_pass_that_fails_does_not_cost_the_report(stub: Stubber) -> None:
     backend = main.build_backend(WITH_MEMORY, clients(stub), sleep=lambda _: None)
     stub.add_client_error("execute_statement", service_error_code="InternalServerErrorException")
-    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
-    stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
+    for _ in range(3):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"}, CALL_LOOKUP)
 
     with pytest.raises(ClientError):
         main.run_worker(backend, {"report": "rtc_ghost"})

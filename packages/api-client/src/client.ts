@@ -58,6 +58,8 @@ export type Activity = Schemas['ActivityOut'];
 export type ActivityDay = Schemas['DayOut'];
 /** The Progress screen in one answer. */
 export type Progress = Schemas['ProgressOut'];
+/** One level on the way, from when it was set and by whom. */
+export type LevelPoint = Schemas['LevelPointOut'];
 export type ProgressWeek = Schemas['WeekOut'];
 export type MistakeKind = Schemas['MistakeKindOut'];
 export type Milestone = Schemas['MilestoneOut'];
@@ -69,6 +71,8 @@ export type TranscriptTurn = Schemas['TurnOut'];
 export type ConversationReport = Schemas['ReportOut'];
 export type ReportStatus = ConversationReport['status'];
 export type SessionReport = Schemas['SessionReportOut'];
+/** The level a conversation's evidence moved the learner to (spec §6.9). */
+export type LevelStep = Schemas['LevelStepOut'];
 export type ReportMistake = Schemas['ReportMistakeOut'];
 export type ReportRewrite = Schemas['ReportRewriteOut'];
 export type ReportWord = Schemas['ReportWordOut'];

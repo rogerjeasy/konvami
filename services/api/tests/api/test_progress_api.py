@@ -39,6 +39,9 @@ def test_a_new_learner_has_an_empty_chart_and_every_milestone_ahead(
     progress = response.body
     assert progress["language"] == "de"
     assert progress["level"] == {"level": "A2", "source": "asked", "skills": None}
+    assert progress["levelHistory"] == [
+        {"at": "2026-10-09T12:00:00Z", "level": "A2", "source": "asked"}
+    ]
     assert progress["activity"]["conversations"] == 0
     assert progress["longestStreakDays"] == 0
     assert [week["seconds"] for week in progress["weeks"]] == [0] * 8

@@ -34,6 +34,7 @@ from konvami_api.domain.conversations import (
 from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.home import HomeView, LevelView
+from konvami_api.domain.levels import LevelStep
 from konvami_api.domain.live_call import Speaker, TurnAudio
 from konvami_api.domain.memories import TEXT_MAX as MEMORY_TEXT_MAX
 from konvami_api.domain.memories import Kind as MemoryKind
@@ -832,6 +833,18 @@ class ReportStatsOut(ApiModel):
     longest_turn_words: int
 
 
+class LevelStepOut(ApiModel):
+    """The level the conversation's evidence moved the learner to (spec §6.9)."""
+
+    before: StartingLevel
+    after: StartingLevel
+    rose: bool
+
+    @classmethod
+    def of(cls, step: LevelStep) -> "LevelStepOut":
+        return cls.model_validate({"before": step.before, "after": step.after, "rose": step.rose})
+
+
 class SessionReportOut(ApiModel):
     # The language the explanations are written in.
     language: str
@@ -842,9 +855,11 @@ class SessionReportOut(ApiModel):
     wins: list[str]
     next_steps: list[str]
     stats: ReportStatsOut
+    # Set when this conversation moved the learner's level: the report announces it.
+    level_step: LevelStepOut | None
 
     @classmethod
-    def of(cls, report: Report, saved: Saved) -> "SessionReportOut":
+    def of(cls, report: Report, saved: Saved, step: LevelStep | None) -> "SessionReportOut":
         return cls(
             language=report.language,
             summary=report.summary,
@@ -863,6 +878,7 @@ class SessionReportOut(ApiModel):
             wins=list(report.wins),
             next_steps=list(report.next_steps),
             stats=ReportStatsOut.model_validate(report.stats, from_attributes=True),
+            level_step=LevelStepOut.of(step) if step else None,
         )
 
 
@@ -873,12 +889,14 @@ class ReportOut(ApiModel):
     report: SessionReportOut | None
 
     @classmethod
-    def of(cls, state: ReportState, saved: Saved | None) -> "ReportOut":
+    def of(
+        cls, state: ReportState, saved: Saved | None, step: LevelStep | None = None
+    ) -> "ReportOut":
         """`saved`: which of the report's words and mistakes are cards; with a report only."""
         report = state.report
         return cls(
             status=state.status,
-            report=SessionReportOut.of(report, saved) if report and saved else None,
+            report=SessionReportOut.of(report, saved, step) if report and saved else None,
         )
 
 
@@ -993,11 +1011,21 @@ class MilestoneOut(ApiModel):
     reached: bool
 
 
+class LevelPointOut(ApiModel):
+    # From when the learner practised at this level.
+    at: dt.datetime
+    level: StartingLevel
+    # "asked": set by the learner; "measured": by the placement test or the level engine.
+    source: Source
+
+
 class ProgressOut(ApiModel):
     """The Progress screen in one answer."""
 
     language: str
     level: HomeLevelOut | None
+    # The level over time, the oldest first.
+    level_history: list[LevelPointOut]
     activity: ActivityOut
     # The last eight weeks, the oldest first.
     weeks: list[WeekOut]
@@ -1015,6 +1043,12 @@ class ProgressOut(ApiModel):
         return cls(
             language=progress.language,
             level=HomeLevelOut.of(progress.level) if progress.level else None,
+            level_history=[
+                LevelPointOut.model_validate(
+                    {"at": point.at, "level": point.level, "source": point.source}
+                )
+                for point in progress.level_history
+            ],
             activity=ActivityOut.of(progress.activity),
             weeks=[
                 WeekOut(start=week.start, seconds=week.seconds, conversations=week.conversations)

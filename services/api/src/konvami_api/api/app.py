@@ -63,6 +63,7 @@ from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
 from konvami_api.domain.home import HomeService
+from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.persona_parts import Voice
@@ -89,6 +90,7 @@ class Services:
     personas: PersonaService
     conversations: ConversationService
     reports: ReportService
+    levels: LevelService
     cards: CardService
     memories: MemoryService
     home: HomeService
@@ -285,9 +287,11 @@ def _router(services: Services) -> APIRouter:
         transcript = services.conversations.transcript(user, conversation_id)
         return TranscriptOut.of(transcript, services.recordings.address)
 
-    def report_of(user: UUID, state: ReportState) -> ReportOut:
-        saved = services.cards.saved(user, state.report) if state.report else None
-        return ReportOut.of(state, saved)
+    def report_of(user: UUID, call_id: str, state: ReportState) -> ReportOut:
+        if state.report is None:
+            return ReportOut.of(state, None)
+        saved = services.cards.saved(user, state.report)
+        return ReportOut.of(state, saved, services.levels.step(user, call_id))
 
     @router.get(
         "/conversations/{conversation_id}/report",
@@ -295,7 +299,7 @@ def _router(services: Services) -> APIRouter:
         responses=NOT_FOUND,
     )
     def get_conversation_report(user: CurrentUser, conversation_id: str) -> ReportOut:
-        return report_of(user, services.reports.view(user, conversation_id))
+        return report_of(user, conversation_id, services.reports.view(user, conversation_id))
 
     @router.post(
         "/conversations/{conversation_id}/report",
@@ -305,7 +309,7 @@ def _router(services: Services) -> APIRouter:
     def request_conversation_report(user: CurrentUser, conversation_id: str) -> ReportOut:
         """Asks for a report that is not there: for an earlier conversation, or again after one
         failed. Answers at once; the report is written in the background."""
-        return report_of(user, services.reports.request(user, conversation_id))
+        return report_of(user, conversation_id, services.reports.request(user, conversation_id))
 
     @router.post("/cards", operation_id="saveCard", responses=NOT_FOUND | CONFLICT | REFUSED)
     def save_card(user: CurrentUser, item: CardIn) -> CardOut:

@@ -21,6 +21,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
+from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
@@ -42,6 +43,7 @@ from konvami_api.persistence.repositories import (
     SqlChargeRepository,
     SqlConversationRepository,
     SqlDraftLog,
+    SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
     SqlPersonaRepository,
@@ -185,6 +187,13 @@ def build_backend(
     cards = CardService(
         profiles=profiles, reports=reports, repository=SqlCardRepository(sql), clock=_now
     )
+    levels = LevelService(
+        profiles=profiles,
+        sessions=sessions,
+        evidence=reports,
+        repository=SqlLevelRepository(sql),
+        clock=_now,
+    )
     memories = MemoryService(
         profiles=profiles,
         conversations=conversations,
@@ -258,6 +267,7 @@ def build_backend(
         conversations=conversations,
         reports=reports,
         cards=cards,
+        levels=levels,
         clock=_now,
     )
     accounts = AccountService(
@@ -272,6 +282,7 @@ def build_backend(
         personas=personas,
         conversations=conversations,
         reports=reports,
+        levels=levels,
         cards=cards,
         memories=memories,
         home=home,
@@ -341,8 +352,8 @@ def migrate_handler(event: dict[str, Any], context: Any) -> dict[str, list[str]]
 def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     """The worker's two jobs, both too long for an API request: following a live call to its
     end (`call_id`), and what follows a conversation (`report`): writing its learner turns down
-    a second time from their recordings, writing its report, then writing down what it told
-    about the learner."""
+    a second time from their recordings, writing its report, moving the level if the reports
+    say so, then writing down what it told about the learner."""
     if "report" in event:
         call_id = event["report"]
         services = backend.services
@@ -353,7 +364,10 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
             try:
                 services.reports.write(call_id)
             finally:
-                services.memories.write(call_id)
+                try:
+                    services.levels.after_report(call_id)
+                finally:
+                    services.memories.write(call_id)
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
 
