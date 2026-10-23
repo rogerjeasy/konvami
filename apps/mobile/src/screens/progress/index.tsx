@@ -96,7 +96,9 @@ function Charts({ progress }: { progress: Progress }) {
   const reported = progress.talk !== null;
   const practice = [
     <PracticeCard key="practice" progress={progress} />,
-    progress.level ? <LevelCard key="level" level={progress.level} /> : null,
+    progress.level ? (
+      <LevelCard key="level" level={progress.level} history={progress.levelHistory} />
+    ) : null,
     progress.talk ? <TalkCard key="talk" talk={progress.talk} /> : null,
   ];
   const learning = [

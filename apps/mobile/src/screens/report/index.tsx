@@ -17,6 +17,7 @@ import { backOr } from '@/lib/navigation';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { callRoute, conversationRoute, explainRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices, useReport } from '@/practice/services';
+import { LevelStepNote } from './level-step';
 import { Keep, Natural, NextSteps, Polish, Wins, Words } from './sections';
 import { ReportStatus } from './status';
 import { TalkShare } from './talk-share';
@@ -56,6 +57,7 @@ function Heading({ conversation }: { conversation: Conversation | null }) {
 function Report({ id, report, partner }: { id: string; report: SessionReport; partner: string }) {
   const saver = useCardSaver(id, report);
   const parts = [
+    report.levelStep ? <LevelStepNote key="level" step={report.levelStep} /> : null,
     <Card key="summary" className="gap-4 p-4">
       <Text>{report.summary}</Text>
       <View className="h-px bg-border" />
@@ -79,16 +81,19 @@ function Report({ id, report, partner }: { id: string; report: SessionReport; pa
     <Wins key="wins" wins={report.wins} />,
     <NextSteps key="next" steps={report.nextSteps} />,
   ];
-  return parts.map((part, i) => (
-    <Reveal key={part.key} delay={staggerDelay(i + 1)}>
-      {part}
-    </Reveal>
-  ));
+  return parts
+    .filter((part) => part !== null)
+    .map((part, i) => (
+      <Reveal key={part.key} delay={staggerDelay(i + 1)}>
+        {part}
+      </Reveal>
+    ));
 }
 
 /**
- * 5.10 Session report: what a practice conversation showed (spec §6.5). A summary and the
- * learner's share of the talking, then the mistakes worth polishing, more natural wordings, the
+ * 5.10 Session report: what a practice conversation showed (spec §6.5). The new level, when
+ * the conversation settled one (spec §6.9), a summary and the learner's share of the talking,
+ * then the mistakes worth polishing, more natural wordings, the
  * words to keep, what went well and what to practise next. Words and confirmed corrections can
  * be saved as flashcards from here, one by one or all at once (spec §6.7). The server writes the report in the minute
  * after a conversation, so the screen also waits for it, and offers to have one written for a

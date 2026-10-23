@@ -20,6 +20,7 @@ import {
   type Profile,
   type ProfileChange,
   type ProfileSource,
+  type LevelPoint,
   type Progress,
   type Rating,
   type SessionReport,
@@ -239,6 +240,7 @@ export const FAKE_REPORT: SessionReport = {
   wins: ['You told a whole story in the past tense.'],
   nextSteps: ['The Perfekt with “sein” for verbs of movement', 'Verb at the end after “weil”'],
   stats: { learnerWords: 19, partnerWords: 14, learnerTurns: 2, longestTurnWords: 10 },
+  levelStep: null,
 };
 
 const BALANCED: Persona['personality'] = {
@@ -513,6 +515,9 @@ export interface FakeApi extends ApiClient {
    * down after their conversations (`FAKE_MEMORIES` unless others are given).
    */
   remembering(memories?: Memory[]): void;
+  /** The level over time, as the server's log of the learner's level would give it. Until this
+   * is called, the history is the level set during onboarding, if any. */
+  leveled(points: LevelPoint[]): void;
   /** Whether `deleteAccount` was called (and went through). */
   readonly deleted: boolean;
   /** The upload ids handed out so far, in order. */
@@ -554,6 +559,7 @@ export function createFakeApi(): FakeApi {
   const reports = new Map<string, ConversationReport>();
   /** What partners know about the learner, newest first, and what the learner set. */
   let memories: Memory[] = [];
+  let levelHistory: LevelPoint[] | null = null;
   let memoryEnabled = true;
   // Newest first, as the server lists them.
   let tutorQuestions: TutorQuestion[] = [];
@@ -807,6 +813,8 @@ export function createFakeApi(): FakeApi {
     return {
       language: target() ?? '',
       level,
+      levelHistory:
+        levelHistory ?? (level ? [{ at: FAKE_NOW, level: level.level, source: level.source }] : []),
       activity: done,
       weeks: weekStarts(8).map((start) => {
         const inWeek = counted().filter((c) => weekOf(c.startedAt) === start);
@@ -1034,6 +1042,9 @@ export function createFakeApi(): FakeApi {
     },
     remembering(known = FAKE_MEMORIES) {
       memories = [...known];
+    },
+    leveled(points) {
+      levelHistory = [...points];
     },
     reported(id, state = FAKE_REPORT) {
       reports.set(

@@ -764,6 +764,15 @@ export const en = {
     },
   },
   report: {
+    level: {
+      upTitle: 'You’ve moved up to {{level}}',
+      upBody:
+        'Your last conversations showed you’re ready. Your partners speak at {{level}} from your next call.',
+      downTitle: 'Your partners will speak a little more simply: {{level}}',
+      downBody:
+        'Your last conversations were harder going, so the next ones will be a little easier. You can set your level yourself at any time.',
+      change: 'Change my level',
+    },
     title: 'Your report',
     with: 'With {{name}}',
     loading: 'Opening your report',
@@ -1072,6 +1081,10 @@ export const en = {
     back: 'Back to Learn',
   },
   progress: {
+    levelHistory: {
+      title: 'Level over time',
+      row: '{{level}} since {{date}} · {{source}}',
+    },
     title: 'Progress',
     body: 'What your practice adds up to.',
     loading: 'Loading your progress',

@@ -777,6 +777,15 @@ export const it: Translation = {
     },
   },
   report: {
+    level: {
+      upTitle: 'Nuovo livello: {{level}}',
+      upBody:
+        'Le tue ultime conversazioni lo dimostrano: è il momento giusto. Dalla prossima conversazione i tuoi partner parlano al livello {{level}}.',
+      downTitle: 'I tuoi partner parleranno in modo un po’ più semplice: {{level}}',
+      downBody:
+        'Le ultime conversazioni sono state più faticose, quindi le prossime saranno un po’ più facili. Puoi impostare tu il tuo livello in qualsiasi momento.',
+      change: 'Cambia il mio livello',
+    },
     title: 'Il tuo resoconto',
     with: 'Con {{name}}',
     loading: 'Apro il tuo resoconto',
@@ -1087,6 +1096,10 @@ export const it: Translation = {
     back: 'Torna a Impara',
   },
   progress: {
+    levelHistory: {
+      title: 'Il tuo livello nel tempo',
+      row: '{{level}} · {{date}} · {{source}}',
+    },
     title: 'Progressi',
     body: 'Ciò che la tua pratica ha prodotto.',
     loading: 'Carico i tuoi progressi',

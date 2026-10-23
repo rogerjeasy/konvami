@@ -94,6 +94,25 @@ describe('5.8 Progress', () => {
     expect(screen.getByLabelText('Speaking: B1')).toBeTruthy();
   });
 
+  it('shows how the level moved over time, the newest first', async () => {
+    const api = practised();
+    api.leveled([
+      { at: '2026-09-20T10:00:00Z', level: 'A2', source: 'asked' },
+      { at: '2026-10-08T18:00:00Z', level: 'B1', source: 'measured' },
+    ]);
+    await open(api);
+
+    expect(screen.getByRole('header', { name: 'Level over time' })).toBeTruthy();
+    expect(screen.getByLabelText('B1 since October 8, 2026 · Measured')).toBeTruthy();
+    expect(screen.getByLabelText('A2 since September 20, 2026 · You told me')).toBeTruthy();
+  });
+
+  it('shows no history while the level has not moved', async () => {
+    await open(practised());
+
+    expect(screen.queryByText('Level over time')).toBeNull();
+  });
+
   it('shows the kinds of mistake the reports confirmed, with how often they came up', async () => {
     const api = practised();
     api.reported('rtc_today');
