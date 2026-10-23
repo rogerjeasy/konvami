@@ -25,6 +25,7 @@ from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
 from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.levels import FITS, Fit, LevelFit
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.text import (
@@ -125,6 +126,9 @@ class Report:
     wins: tuple[str, ...]
     next_steps: tuple[str, ...]
     stats: Stats
+    # How the learner did against the conversation's level, for the level engine (spec §6.9);
+    # never shown. None in a report from before it existed, or when the analyst gave none.
+    level_fit: LevelFit | None = None
 
 
 @dataclass(frozen=True)
@@ -220,6 +224,10 @@ class ReportRepository(Protocol):
         """The words in the reports of conversations in `language`: said since `since`, and the
         most the learner said in one conversation ever."""
 
+    def level_fits(self, user_id: UUID, language: str, since: dt.datetime) -> list[LevelFit]:
+        """The level fits of the ready reports of conversations in `language` that started at
+        `since` or later, the newest conversation first. Reports without one are left out."""
+
 
 class ReportStarter(Protocol):
     def start(self, call_id: str) -> None:
@@ -270,6 +278,12 @@ class _FoundWord(_Answer):
     example: str
 
 
+class _FoundFit(_Answer):
+    grammar: Fit
+    vocabulary: Fit
+    speaking: Fit
+
+
 class _Analysis(_Answer):
     summary: str
     mistakes: list[_FoundMistake]
@@ -277,6 +291,8 @@ class _Analysis(_Answer):
     words: list[_FoundWord]
     wins: list[str]
     next_steps: list[str]
+    # Required of the model by the schema; an answer without one still makes a report.
+    level_fit: _FoundFit | None = None
 
 
 MistakeVerdict = Literal["correct", "uncertain", "wrong"]
@@ -317,6 +333,7 @@ def _analysis_schema(categories: Sequence[str]) -> dict[str, Any]:
         {"turn": _INTEGER, "original": _STRING, "natural": _STRING, "note": _STRING}
     )
     word = answer_object({"word": _STRING, "meaning": _STRING, "example": _STRING})
+    fit = {"type": "string", "enum": list(FITS)}
     return answer_object(
         {
             "summary": _STRING,
@@ -325,6 +342,7 @@ def _analysis_schema(categories: Sequence[str]) -> dict[str, Any]:
             "words": answer_list(word, MAX_WORDS),
             "wins": answer_list(_STRING, MAX_WINS),
             "next_steps": answer_list(_STRING, MAX_NEXT_STEPS),
+            "level_fit": answer_object({"grammar": fit, "vocabulary": fit, "speaking": fit}),
         }
     )
 
@@ -404,7 +422,20 @@ shows (a structure used correctly, a long answer, a question they asked). No gen
 `next_steps`: one to {MAX_NEXT_STEPS} things to practise next time, the most useful first,
 following from the mistakes. Each is one short phrase that names the thing, with a brief example
 where that helps, in at most fifteen words. Not an exercise and not a full sentence of advice:
-the learner's conversation partner is given these and brings them up."""
+the learner's conversation partner is given these and brings them up.
+
+`level_fit`: for the app only, never shown to the learner. The partner spoke at the learner's
+level, so judge only the learner's own turns, and say for each skill how they compare with what
+a learner at that level can do:
+- `grammar`: the structures they used and how accurately.
+- `vocabulary`: how varied and precise their words were, and whether they had to search for or
+  ask for words.
+- `speaking`: how fully and readily they answered: the length of their turns, whether they kept
+  the conversation going and asked things themselves.
+Answer `above` when they handled the level with ease and reached for what the next level needs,
+`below` when they struggled with what the level expects, `at` otherwise, and `unclear` when the
+conversation shows too little of that skill. Most conversations are `at`; one good or bad
+moment does not move a skill."""
 
 
 def _reviewer_instructions(target: str, explanation: str) -> str:
@@ -664,6 +695,10 @@ class ReportService:
         language = self._profiles.get(user_id).target_language or ""
         return self._repository.totals(user_id, language, since)
 
+    def level_fits(self, user_id: UUID, language: str, since: dt.datetime) -> list[LevelFit]:
+        """The evidence of the level engine (`LevelEvidence`)."""
+        return self._repository.level_fits(user_id, language, since)
+
     def write(self, call_id: str) -> None:
         """Writes the report that was asked for. Runs apart from any request (`ReportStarter`),
         and does nothing for a call whose report is not waiting to be written."""
@@ -715,6 +750,7 @@ class ReportService:
             wins=_lines(analysis.wins, MAX_WINS),
             next_steps=_lines(analysis.next_steps, MAX_NEXT_STEPS),
             stats=stats,
+            level_fit=LevelFit(**analysis.level_fit.model_dump()) if analysis.level_fit else None,
         )
         self._repository.written(call_id, "ready", report)
 

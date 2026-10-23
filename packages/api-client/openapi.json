@@ -1158,6 +1158,82 @@
         "title": "Level",
         "type": "string"
       },
+      "LevelPointOut": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "at",
+          "level",
+          "source"
+        ],
+        "title": "LevelPointOut",
+        "type": "object"
+      },
+      "LevelStepOut": {
+        "additionalProperties": false,
+        "description": "The level the conversation's evidence moved the learner to (spec \u00a76.9).",
+        "properties": {
+          "after": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "After",
+            "type": "string"
+          },
+          "before": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Before",
+            "type": "string"
+          },
+          "rose": {
+            "title": "Rose",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "before",
+          "after",
+          "rose"
+        ],
+        "title": "LevelStepOut",
+        "type": "object"
+      },
       "LookModel": {
         "additionalProperties": false,
         "description": "A portrait's parts and colors. The app draws exactly these names.",
@@ -2374,6 +2450,13 @@
               }
             ]
           },
+          "levelHistory": {
+            "items": {
+              "$ref": "#/components/schemas/LevelPointOut"
+            },
+            "title": "Levelhistory",
+            "type": "array"
+          },
           "longestStreakDays": {
             "title": "Longeststreakdays",
             "type": "integer"
@@ -2409,6 +2492,7 @@
         "required": [
           "language",
           "level",
+          "levelHistory",
           "activity",
           "weeks",
           "longestStreakDays",
@@ -2741,6 +2825,16 @@
             "title": "Language",
             "type": "string"
           },
+          "levelStep": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LevelStepOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "mistakes": {
             "items": {
               "$ref": "#/components/schemas/ReportMistakeOut"
@@ -2792,7 +2886,8 @@
           "words",
           "wins",
           "nextSteps",
-          "stats"
+          "stats",
+          "levelStep"
         ],
         "title": "SessionReportOut",
         "type": "object"

@@ -143,15 +143,11 @@ export const de: Translation = {
   aiConsent: {
     title: 'So nutzt Konvami KI',
     body: 'Konvami nutzt vertrauenswürdige KI-Anbieter, um zuzuhören, zu antworten und Feedback zu geben. Hier siehst du genau, was jeder erhält.',
-    openaiPurpose: 'Live-Sprachgespräche und Korrekturen',
-    openaiReceives: 'Erhält: Stimme · Transkripte · Lernprofil',
-    elevenlabsPurpose: 'Hochwertige, natürliche Persona-Stimmen',
-    elevenlabsReceives: 'Erhält: die Antworten deiner Persona (Text)',
-    bedrockPurpose: 'Sitzungsberichte und Lernkarten',
-    bedrockReceives: 'Erhält: Transkripte',
+    openaiPurpose: 'Gespräche, Korrekturen, Berichte, Notizen und Antworten des Tutors',
+    openaiReceives: 'Erhält: Stimme · Transkripte · Lernprofil · Notizen',
     requiredProvider: '{{name}}, erforderlich',
     notice:
-      'Deine Partner sind immer KI und geben sich nie als Menschen aus. Du kannst diese Auswahl jederzeit unter Profil › Datenschutz und KI ändern.',
+      'Deine Partner sind immer KI und geben sich nie als Menschen aus. Du kannst das jederzeit unter Profil › Datenschutz und KI nachlesen.',
     agree: 'Zustimmen und weiter',
     readNotice: 'Vollständige Datenschutzhinweise lesen',
   },
@@ -783,6 +779,15 @@ export const de: Translation = {
     },
   },
   report: {
+    level: {
+      upTitle: 'Du bist auf {{level}} aufgestiegen',
+      upBody:
+        'Deine letzten Gespräche haben gezeigt, dass du so weit bist. Ab dem nächsten Gespräch sprechen deine Partner auf {{level}}.',
+      downTitle: 'Deine Partner sprechen jetzt etwas einfacher: {{level}}',
+      downBody:
+        'Deine letzten Gespräche waren mühsamer, darum werden die nächsten etwas leichter. Dein Niveau kannst du jederzeit selbst einstellen.',
+      change: 'Mein Niveau ändern',
+    },
     title: 'Dein Bericht',
     with: 'Mit {{name}}',
     loading: 'Dein Bericht wird geöffnet',
@@ -1091,6 +1096,10 @@ export const de: Translation = {
     back: 'Zurück zu Lernen',
   },
   progress: {
+    levelHistory: {
+      title: 'Dein Niveau im Verlauf',
+      row: '{{level}} seit {{date}} · {{source}}',
+    },
     title: 'Fortschritt',
     body: 'Was aus deinem Üben geworden ist.',
     loading: 'Dein Fortschritt wird geladen',
@@ -1318,9 +1327,8 @@ export const de: Translation = {
     },
     privacy: {
       title: 'Datenschutz und KI',
-      body: 'Konvami nutzt KI-Anbieter, um zuzuhören, zu antworten und Feedback zu geben. Du entscheidest, welche der optionalen genutzt werden dürfen.',
-      saved: 'Deine Auswahl ist gespeichert.',
-      note: 'Deine Partner sind immer KI und geben sich nie als Menschen aus. Eine Änderung gilt ab deinem nächsten Gespräch.',
+      body: 'Konvami nutzt einen KI-Anbieter, um zuzuhören, zu antworten und Feedback zu geben. Hier siehst du, was er erhält.',
+      note: 'Deine Partner sind immer KI und geben sich nie als Menschen aus. Um deine Zustimmung zu widerrufen, lösche dein Konto.',
       delete: 'Konto löschen',
       deleteHint: 'Entfernt dein Konto und alles darin',
       recordings: {

@@ -214,40 +214,18 @@ describe('6.8 Security: change email', () => {
 });
 
 describe('6.7 Privacy and AI', () => {
-  it('shows what the learner agreed to', async () => {
-    const auth = await createTestAuth();
-    auth.provider.addAccount(EMAIL, PASSWORD);
-    await auth.session.signIn(EMAIL, PASSWORD);
-    await auth.session.saveAiConsent({ elevenlabs: true, bedrock: false });
-    await renderScreen(<PrivacyScreen />, { auth });
+  it('names the one AI provider, what it receives, and how to withdraw', async () => {
+    await open(<PrivacyScreen />, 'Privacy and AI');
 
-    expect(await screen.findByRole('switch', { name: 'ElevenLabs' })).toBeChecked();
-    expect(screen.getByRole('switch', { name: 'AWS Bedrock' })).not.toBeChecked();
     // The conversation itself runs on OpenAI: it cannot be switched off.
     expect(screen.getByRole('switch', { name: 'OpenAI, required' })).toBeDisabled();
-  });
-
-  it('stores a changed choice on the account at once', async () => {
-    const { auth } = await open(<PrivacyScreen />, 'Privacy and AI');
-
-    await fireEvent.press(screen.getByRole('switch', { name: 'ElevenLabs' }));
-
-    expect(await screen.findByText('Your choices are saved.')).toBeTruthy();
-    expect(auth.session.getState().user?.aiConsent?.providers).toEqual({
-      openai: true,
-      elevenlabs: true,
-      bedrock: false,
-    });
-  });
-
-  it('puts the switch back when the choice could not be stored', async () => {
-    const { auth } = await open(<PrivacyScreen />, 'Privacy and AI');
-    auth.provider.failNext('saveAiConsent', 'network');
-
-    await fireEvent.press(screen.getByRole('switch', { name: 'ElevenLabs' }));
-
-    expect(await screen.findByText(/Can’t reach Konvami/)).toBeTruthy();
-    expect(screen.getByRole('switch', { name: 'ElevenLabs' })).not.toBeChecked();
+    expect(
+      screen.getByText('Receives: voice · transcripts · learning profile · memories'),
+    ).toBeTruthy();
+    // Providers that are not in use are not named.
+    expect(screen.queryByText('ElevenLabs')).toBeNull();
+    expect(screen.queryByText('AWS Bedrock')).toBeNull();
+    expect(screen.getByText(/To withdraw your agreement, delete your account/)).toBeTruthy();
   });
 
   const KEEP = 'Keep recordings of my conversations';

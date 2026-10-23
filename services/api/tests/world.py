@@ -13,6 +13,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
+from konvami_api.domain.levels import LevelFit, LevelService
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
@@ -53,6 +54,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
+    InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
@@ -186,6 +188,14 @@ class World:
             model="gpt-6.1-sol",
             clock=self.clock,
         )
+        self.level_store = InMemoryLevelRepository(self.sessions)
+        self.levels = LevelService(
+            profiles=self.profiles,
+            sessions=self.sessions,
+            evidence=self.reports,
+            repository=self.level_store,
+            clock=self.clock,
+        )
         self.card_store = InMemoryCardRepository()
         # Card ids in the order they are handed out: ...0001, ...0002, and so on.
         card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
@@ -287,6 +297,7 @@ class World:
             conversations=self.conversations,
             reports=self.reports,
             cards=self.cards,
+            levels=self.levels,
             clock=self.clock,
         )
         self.speech = FakeSpeechModel()
@@ -395,6 +406,7 @@ class World:
         words: tuple[Word, ...] = (),
         mistakes: tuple[Mistake, ...] = (),
         stats: Stats | None = None,
+        level_fit: LevelFit | None = None,
     ) -> None:
         """Stores a ready report for a conversation, as the worker would after writing it."""
         now = self.clock()
@@ -412,5 +424,6 @@ class World:
                 wins=(),
                 next_steps=next_steps,
                 stats=stats or Stats(20, 15, 3, 9),
+                level_fit=level_fit,
             ),
         )

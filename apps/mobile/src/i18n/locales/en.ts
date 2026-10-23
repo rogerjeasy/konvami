@@ -146,15 +146,11 @@ export const en = {
   aiConsent: {
     title: 'How Konvami uses AI',
     body: 'Konvami uses trusted AI providers to listen, reply and give feedback. Here’s exactly what each one receives.',
-    openaiPurpose: 'Live voice conversations and corrections',
-    openaiReceives: 'Receives: voice · transcripts · learning profile',
-    elevenlabsPurpose: 'Premium, natural persona voices',
-    elevenlabsReceives: 'Receives: your persona’s replies (text)',
-    bedrockPurpose: 'Session reports and flashcards',
-    bedrockReceives: 'Receives: transcripts',
+    openaiPurpose: 'Conversations, corrections, reports, memories and Tutor answers',
+    openaiReceives: 'Receives: voice · transcripts · learning profile · memories',
     requiredProvider: '{{name}}, required',
     notice:
-      'Your partners are always AI and never claim to be human. Change these choices anytime in Profile › Privacy and AI.',
+      'Your partners are always AI and never claim to be human. You can read this again anytime in Profile › Privacy and AI.',
     agree: 'Agree and continue',
     readNotice: 'Read the full privacy notice',
   },
@@ -768,6 +764,15 @@ export const en = {
     },
   },
   report: {
+    level: {
+      upTitle: 'You’ve moved up to {{level}}',
+      upBody:
+        'Your last conversations showed you’re ready. Your partners speak at {{level}} from your next call.',
+      downTitle: 'Your partners will speak a little more simply: {{level}}',
+      downBody:
+        'Your last conversations were harder going, so the next ones will be a little easier. You can set your level yourself at any time.',
+      change: 'Change my level',
+    },
     title: 'Your report',
     with: 'With {{name}}',
     loading: 'Opening your report',
@@ -1076,6 +1081,10 @@ export const en = {
     back: 'Back to Learn',
   },
   progress: {
+    levelHistory: {
+      title: 'Level over time',
+      row: '{{level}} since {{date}} · {{source}}',
+    },
     title: 'Progress',
     body: 'What your practice adds up to.',
     loading: 'Loading your progress',
@@ -1301,9 +1310,8 @@ export const en = {
     },
     privacy: {
       title: 'Privacy and AI',
-      body: 'Konvami uses AI providers to listen, reply and give feedback. You decide which of the optional ones may be used.',
-      saved: 'Your choices are saved.',
-      note: 'Your partners are always AI and never claim to be human. A change applies from your next conversation.',
+      body: 'Konvami uses an AI provider to listen, reply and give feedback. Here is what it receives.',
+      note: 'Your partners are always AI and never claim to be human. To withdraw your agreement, delete your account.',
       delete: 'Delete account',
       deleteHint: 'Removes your account and everything in it',
       recordings: {

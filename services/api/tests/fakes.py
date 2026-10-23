@@ -23,6 +23,7 @@ from konvami_api.domain.costs import (
     Share,
     Spending,
 )
+from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
 from konvami_api.domain.onboarding import OnboardingState
@@ -82,6 +83,13 @@ class InMemoryProfileRepository:
 
     def history(self, user_id: UUID) -> list[ChangeRecord]:
         return list(self._history.get(user_id, []))
+
+    def changes(self, user_id: UUID, scope: str, field: str) -> list[ChangeRecord]:
+        return [
+            replace(change, changed_at=change.changed_at.astimezone(UTC))
+            for change in self._history.get(user_id, [])
+            if (change.scope, change.field) == (scope, field)
+        ]
 
 
 class InMemoryOnboardingRepository:
@@ -501,6 +509,23 @@ class InMemoryTutorRepository:
         return newest[:limit]
 
 
+class InMemoryLevelRepository:
+    """Keeps level steps for the calls of an `InMemoryVoiceSessionRepository`."""
+
+    def __init__(self, calls: InMemoryVoiceSessionRepository) -> None:
+        self._calls = calls
+        self.steps: dict[str, LevelStep] = {}
+
+    def stepped(self, user_id: UUID, step: LevelStep) -> None:
+        self.steps[step.call_id] = replace(step, at=step.at.astimezone(UTC))
+
+    def step(self, user_id: UUID, call_id: str) -> LevelStep | None:
+        session = self._calls.sessions.get(call_id)
+        if session is None or session.user_id != user_id:
+            return None
+        return self.steps.get(call_id)
+
+
 class InMemoryReportRepository:
     """Keeps reports for the calls of an `InMemoryVoiceSessionRepository`."""
 
@@ -568,6 +593,14 @@ class InMemoryReportRepository:
                     key = (week, mistake.category)
                     counts[key] = counts.get(key, 0) + 1
         return [WeekMistakes(week, category, count) for (week, category), count in counts.items()]
+
+    def level_fits(self, user_id: UUID, language: str, since: datetime) -> list[LevelFit]:
+        found = [
+            (started_at, report.level_fit)
+            for started_at, report in self._ready(user_id)
+            if report.target == language and started_at >= since and report.level_fit
+        ]
+        return [fit for _, fit in sorted(found, key=lambda pair: pair[0], reverse=True)]
 
     def totals(self, user_id: UUID, language: str, since: datetime) -> ReportTotals:
         ready = [found for found in self._ready(user_id) if found[1].target == language]

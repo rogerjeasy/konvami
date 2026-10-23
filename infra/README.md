@@ -20,8 +20,8 @@ never shares them: separate tenants, separate data stores.
 
 ```
 infra/
-├─ envs/dev/        Konvami dev: wires the modules (budget, auth, database, secret, media, api)
-└─ modules/         reusable modules (budget, auth, database, secret, media, api, …)
+├─ envs/dev/        Konvami dev: wires the modules (budget, auth, database, secret, media, api, site)
+└─ modules/         reusable modules (budget, auth, database, secret, media, api, site, …)
 ```
 
 ## Signing in
@@ -94,6 +94,12 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
   bucket and delete a user from the pool (the last step of deleting an account). The web
   preview's origins are allowed to send and read files (CORS); native apps need none.
   `text_models.speech` names the model that speaks a voice's sample.
+- **Website (`modules/site`):** the privacy policy in the four UI languages (`apps/site`), in
+  the private bucket `kv-dev-site-<account id>` behind a CloudFront distribution on its own
+  `*.cloudfront.net` address. Off until `publish_site = true`; the plan stops if the site is not
+  built (`pnpm --filter @konvami/site build`, which needs the controller's details in
+  `apps/site/site.config.ts`). `terraform output -raw mobile_env` then gives the app
+  `EXPO_PUBLIC_PRIVACY_URL`, with `{lang}` in place of the language.
 - **Next, in build order (spec §10):** Sign in with Apple and Google on the user pool → S3 audio +
   CloudFront signed URLs → SQS / Step Functions for the rest of the post-session pipeline (the
   report is written by the call worker for now) → CloudWatch dashboards,

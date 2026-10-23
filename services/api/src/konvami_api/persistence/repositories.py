@@ -27,11 +27,12 @@ from konvami_api.domain.costs import (
     Spending,
 )
 from konvami_api.domain.fsrs import Memory, Rating
+from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
-from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile, Source
+from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile, Source
 from konvami_api.domain.reports import (
     Mistake,
     Report,
@@ -83,6 +84,14 @@ _LOAD_PROFILE = f"""
            {epoch_micros("updated_at")} AS updated_at
     FROM profile_field
     WHERE user_id = CAST(:user_id AS uuid)
+"""
+
+_FIELD_CHANGES = f"""
+    SELECT scope, field, CAST(old_value AS text) AS old_value, CAST(new_value AS text) AS new_value,
+           source, origin, {epoch_micros("changed_at")} AS changed_at
+    FROM profile_change
+    WHERE user_id = CAST(:user_id AS uuid) AND scope = :scope AND field = :field
+    ORDER BY id
 """
 
 # The changes arrive as one JSON array. All of them are logged in order; for a field changed
@@ -594,6 +603,29 @@ _REPORT_TOTALS = f"""
     WHERE {_READY_REPORTS}
 """
 
+_LEVEL_FITS = f"""
+    SELECT CAST(r.content -> 'level_fit' AS text) AS level_fit
+    FROM {_REPORT_CALLS}
+    WHERE {_READY_REPORTS} AND {_RECENT_REPORT}
+      AND jsonb_typeof(r.content -> 'level_fit') = 'object'
+    ORDER BY s.started_at DESC, s.call_id DESC
+"""
+
+_STEPPED = """
+    INSERT INTO level_step (call_id, language, before_level, after_level, stepped_at)
+    VALUES (:call_id, :language, :before, :after, CAST(:at AS timestamptz))
+    ON CONFLICT (call_id) DO UPDATE
+        SET language = EXCLUDED.language, before_level = EXCLUDED.before_level,
+            after_level = EXCLUDED.after_level, stepped_at = EXCLUDED.stepped_at
+"""
+
+_LEVEL_STEP = f"""
+    SELECT l.call_id, l.language, l.before_level, l.after_level,
+           {epoch_micros("l.stepped_at")} AS stepped_at
+    FROM level_step l JOIN voice_session s ON s.call_id = l.call_id
+    WHERE l.call_id = :call_id AND s.user_id = CAST(:user_id AS uuid)
+"""
+
 _RECENT_REVIEW = "v.reviewed_at >= CAST(:since AS timestamptz)"
 
 _CARD_TOTALS = f"""
@@ -763,6 +795,23 @@ class SqlProfileRepository:
         self._client.execute(
             _SAVE_PROFILE, {"user_id": str(user_id), "changes": json.dumps(payload)}
         )
+
+    def changes(self, user_id: UUID, scope: str, field: str) -> list[ChangeRecord]:
+        rows = self._client.execute(
+            _FIELD_CHANGES, {"user_id": str(user_id), "scope": scope, "field": field}
+        )
+        return [
+            ChangeRecord(
+                scope=row["scope"],
+                field=row["field"],
+                old_value=None if row["old_value"] is None else json.loads(row["old_value"]),
+                new_value=json.loads(row["new_value"]),
+                source=Source(row["source"]),
+                origin=Origin(row["origin"]),
+                changed_at=from_epoch_micros(row["changed_at"]),
+            )
+            for row in rows
+        ]
 
 
 class SqlOnboardingRepository:
@@ -1150,6 +1199,7 @@ def _report(document: dict[str, Any]) -> Report:
         wins=tuple(document["wins"]),
         next_steps=tuple(document["next_steps"]),
         stats=Stats(**document["stats"]),
+        level_fit=LevelFit(**document["level_fit"]) if document.get("level_fit") else None,
     )
 
 
@@ -1212,6 +1262,13 @@ class SqlReportRepository:
             for row in rows
         ]
 
+    def level_fits(self, user_id: UUID, language: str, since: dt.datetime) -> list[LevelFit]:
+        rows = self._client.execute(
+            _LEVEL_FITS,
+            {"user_id": str(user_id), "language": language, "since": since.isoformat()},
+        )
+        return [LevelFit(**json.loads(row["level_fit"])) for row in rows]
+
     def totals(self, user_id: UUID, language: str, since: dt.datetime) -> ReportTotals:
         rows = self._client.execute(
             _REPORT_TOTALS,
@@ -1219,6 +1276,36 @@ class SqlReportRepository:
         )
         row = rows[0]
         return ReportTotals(row["learner_words"], row["partner_words"], row["most_words"])
+
+
+class SqlLevelRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def stepped(self, user_id: UUID, step: LevelStep) -> None:
+        self._client.execute(
+            _STEPPED,
+            {
+                "call_id": step.call_id,
+                "language": step.language,
+                "before": step.before,
+                "after": step.after,
+                "at": step.at.isoformat(),
+            },
+        )
+
+    def step(self, user_id: UUID, call_id: str) -> LevelStep | None:
+        rows = self._client.execute(_LEVEL_STEP, {"call_id": call_id, "user_id": str(user_id)})
+        if not rows:
+            return None
+        row = rows[0]
+        return LevelStep(
+            call_id=row["call_id"],
+            language=row["language"],
+            before=row["before_level"],
+            after=row["after_level"],
+            at=from_epoch_micros(row["stepped_at"]),
+        )
 
 
 def _card(row: dict[str, Any]) -> Card:

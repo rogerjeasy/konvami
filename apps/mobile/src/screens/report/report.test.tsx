@@ -452,4 +452,38 @@ describe('5.10 Session report', () => {
 
     await waitFor(() => expect(screen.getByText('redirect:/welcome')).toBeTruthy());
   });
+
+  describe('when the conversation moved the level', () => {
+    it('celebrates a step up and says what changes', async () => {
+      await openReady(talked(), {
+        ...FAKE_REPORT,
+        levelStep: { before: 'A2', after: 'B1', rose: true },
+      });
+
+      expect(screen.getByRole('header', { name: 'You’ve moved up to B1' })).toBeTruthy();
+      expect(
+        screen.getByText(
+          'Your last conversations showed you’re ready. Your partners speak at B1 from your next call.',
+        ),
+      ).toBeTruthy();
+    });
+
+    it('says gently that the partners will speak more simply, and the level can be set back', async () => {
+      await openReady(talked(), {
+        ...FAKE_REPORT,
+        levelStep: { before: 'B1', after: 'A2', rose: false },
+      });
+
+      expect(screen.getByText('Your partners will speak a little more simply: A2')).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Change my level' }));
+
+      expect(router.push).toHaveBeenCalledWith('/account/learning');
+    });
+
+    it('says nothing about the level when it did not move', async () => {
+      await openReady();
+
+      expect(screen.queryByRole('button', { name: 'Change my level' })).toBeNull();
+    });
+  });
 });

@@ -18,6 +18,7 @@ from konvami_api.domain.accounts import AccountRepository
 from konvami_api.domain.cards import Card, CardRepository, CardTotals, card_key
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.fsrs import Memory, Rating
+from konvami_api.domain.levels import LevelFit, LevelRepository, LevelStep
 from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.memories import Memory as Remembered
 from konvami_api.domain.memories import MemoryRepository, memory_key
@@ -50,6 +51,7 @@ from konvami_api.persistence.repositories import (
     SqlCardRepository,
     SqlConversationRepository,
     SqlDraftLog,
+    SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
     SqlPersonaRepository,
@@ -66,6 +68,7 @@ from tests.fakes import (
     InMemoryCardRepository,
     InMemoryConversationRepository,
     InMemoryDraftLog,
+    InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
@@ -209,6 +212,27 @@ def test_times_are_read_back_in_utc_whatever_zone_they_were_saved_in(profiles: P
     stored = profiles.repository.load(USER).fields[("de", "course")].updated_at
     assert stored == datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
     assert stored.utcoffset() == timedelta(0)
+
+
+def test_a_fields_changes_are_read_back_oldest_first(profiles: Profiles) -> None:
+    profiles.repository.save(
+        USER,
+        [
+            change("self_assessed_level", "A2"),
+            change("course", None),
+            change("self_assessed_level", "B1", old="A2"),
+        ],
+    )
+
+    changes = profiles.repository.changes(USER, "de", "self_assessed_level")
+
+    assert [(c.old_value, c.new_value, c.source, c.origin) for c in changes] == [
+        (None, "A2", Source.ASKED, Origin.FORM),
+        ("A2", "B1", Source.ASKED, Origin.FORM),
+    ]
+    assert changes[0].changed_at == NOON
+    assert profiles.repository.changes(USER, "fr", "self_assessed_level") == []
+    assert profiles.repository.changes(OTHER_USER, "de", "self_assessed_level") == []
 
 
 def test_profiles_do_not_leak_between_users(profiles: Profiles) -> None:
@@ -1711,6 +1735,7 @@ def reported(
     unconfirmed: tuple[str, ...] = (),
     words: tuple[int, int] = (20, 15),
     target: str = "de",
+    level_fit: LevelFit | None = None,
 ) -> None:
     """A conversation at `at` whose ready report has a confirmed mistake of each of
     `categories`, an unconfirmed one of each of `unconfirmed`, and `words` said by the learner
@@ -1732,6 +1757,7 @@ def reported(
             target=target,
             mistakes=mistakes,
             stats=Stats(words[0], words[1], learner_turns=3, longest_turn_words=9),
+            level_fit=level_fit,
         ),
     )
 
@@ -1783,6 +1809,34 @@ def test_the_week_of_a_mistake_is_cut_in_the_learners_time_zone(
 
     assert by_week(zurich) == [(THIS_MONDAY, "case_dative", 1)]
     assert by_week(utc) == [(LAST_MONDAY, "case_dative", 1)]
+
+
+def test_a_reports_level_fit_is_read_back(reports: Reports) -> None:
+    ask(reports.reports, "rtc_1", NOON)
+    report = replace(REPORT, level_fit=LevelFit("above", "at", "unclear"))
+
+    reports.reports.written("rtc_1", "ready", report)
+
+    assert reports.reports.load("rtc_1") == StoredReport("ready", NOON, report)
+
+
+def test_level_fits_are_the_newest_conversations_first_since_a_moment(reports: Reports) -> None:
+    up, level, down = (
+        LevelFit("above", "above", "at"),
+        LevelFit("at", "at", "at"),
+        LevelFit("below", "below", "at"),
+    )
+    reported(reports, "rtc_a", NOON - 3 * DAY, level_fit=up)
+    reported(reports, "rtc_b", NOON - DAY, level_fit=down)
+    reported(reports, "rtc_c", NOON, level_fit=level)
+    reported(reports, "rtc_d", NOON - 2 * DAY)
+    reported(reports, "rtc_e", NOON, level_fit=up, target="fr")
+    reported(reports, "rtc_f", NOON, level_fit=up, user=OTHER_USER)
+    ask(reports.reports, "rtc_1", NOON)
+
+    assert reports.reports.level_fits(USER, "de", NOON - 2 * DAY) == [level, down]
+    assert reports.reports.level_fits(USER, "de", NOON - 5 * DAY) == [level, down, up]
+    assert reports.reports.level_fits(USER, "it", NOON - 5 * DAY) == []
 
 
 def test_words_are_added_up_since_a_moment_and_the_most_in_one_conversation_ever(
@@ -2132,3 +2186,46 @@ def test_a_free_conversation_has_no_scenario_and_no_goals(partners: Practice) ->
 
     assert conversation is not None
     assert (conversation.scenario, conversation.goals_reached) == (None, ())
+
+
+# --- Level steps ---------------------------------------------------------------------------------
+
+
+@dataclass
+class Levels:
+    calls: VoiceSessionRepository
+    steps: LevelRepository
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def levels(request: pytest.FixtureRequest) -> Levels:
+    """Level steps, with the learner's call `rtc_1` there to settle one."""
+    if request.param == "memory":
+        calls = InMemoryVoiceSessionRepository()
+        stored = Levels(calls, InMemoryLevelRepository(calls))
+    else:
+        db: SqlClient = request.getfixturevalue("db")
+        stored = Levels(SqlVoiceSessionRepository(db), SqlLevelRepository(db))
+    stored.calls.started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    return stored
+
+
+def test_a_step_is_read_back_with_the_conversation_that_settled_it(levels: Levels) -> None:
+    step = LevelStep("rtc_1", "de", "A2", "B1", NOON)
+
+    levels.steps.stepped(USER, step)
+
+    assert levels.steps.step(USER, "rtc_1") == step
+
+
+def test_a_conversation_without_a_step_has_none(levels: Levels) -> None:
+    assert levels.steps.step(USER, "rtc_1") is None
+    assert levels.steps.step(USER, "rtc_unknown") is None
+
+
+def test_another_learners_step_is_not_read(levels: Levels) -> None:
+    levels.steps.stepped(USER, LevelStep("rtc_1", "de", "A2", "B1", NOON))
+
+    assert levels.steps.step(OTHER_USER, "rtc_1") is None

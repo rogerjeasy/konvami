@@ -1,3 +1,4 @@
+import { AI_CONSENT_VERSION } from '@/auth/consent';
 import {
   AuthError,
   type AiConsent,
@@ -116,7 +117,7 @@ export function createFakeAuthProvider(): FakeAuthProvider {
     async saveAiConsent(accessToken, choices) {
       record('saveAiConsent', accessToken, choices);
       const consent: AiConsent = {
-        version: 'v1',
+        version: AI_CONSENT_VERSION,
         at: new Date().toISOString(),
         providers: { openai: true, ...choices },
       };

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from konvami_api.api.app import Services
 from konvami_api.domain.accounts import Account
+from konvami_api.domain.levels import LevelStep
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.reports import MAX_REQUESTS
 from konvami_api.domain.text import TextModelError
@@ -14,6 +15,7 @@ from tests.api.conftest import OTHER_USER, USER, Call
 from tests.api.test_api import NOON, onboarded
 from tests.fakes import (
     FakeAccountDirectory,
+    InMemoryLevelRepository,
     InMemoryVoiceSessionRepository,
     RecordingReportStarter,
     ScriptedTextModel,
@@ -185,8 +187,27 @@ def test_a_written_report_is_read_in_full(
                 "learnerTurns": 2,
                 "longestTurnWords": 10,
             },
+            "levelStep": None,
         },
     }
+
+
+def test_a_report_announces_the_step_its_conversation_settled(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+    level_store: InMemoryLevelRepository,
+) -> None:
+    talked(call, text_model, calls)
+    call("POST", "/v1/conversations/rtc_1/report")
+    text_model.answers += [ANALYSIS, REVIEW]
+    services.reports.write("rtc_1")
+    level_store.stepped(UUID(USER), LevelStep("rtc_1", "de", "A2", "B1", NOON))
+
+    report = call("GET", "/v1/conversations/rtc_1/report").body["report"]
+
+    assert report["levelStep"] == {"before": "A2", "after": "B1", "rose": True}
 
 
 def test_a_report_is_only_read_or_asked_for_by_the_learner_who_had_the_conversation(

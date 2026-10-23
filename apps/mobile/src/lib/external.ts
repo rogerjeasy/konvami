@@ -1,6 +1,7 @@
 import { Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { startActivityAsync } from 'expo-intent-launcher';
+import { legalUrl } from '@/lib/legal';
 import { ROUTES } from '@/lib/routes';
 
 /**
@@ -13,9 +14,10 @@ const LEGAL_URL = {
   privacy: process.env.EXPO_PUBLIC_PRIVACY_URL,
 } as const;
 
-/** Opens the Terms of Use or the Privacy Policy; the in-app placeholder until the pages exist. */
-export function openLegal(page: keyof typeof LEGAL_URL): void {
-  const url = LEGAL_URL[page]?.trim();
+/** Opens the Terms of Use or the Privacy Policy in the app language; the in-app placeholder
+ * until the pages exist. */
+export function openLegal(page: keyof typeof LEGAL_URL, language: string): void {
+  const url = legalUrl(LEGAL_URL[page], language);
   if (url) void Linking.openURL(url).catch(() => {});
   else router.push(ROUTES.comingNext);
 }

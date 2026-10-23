@@ -90,3 +90,13 @@ module "api" {
   alert_topic_arn      = try(module.budget[0].alert_topic_arn, "")
   cors_allowed_origins = var.web_preview_origins
 }
+
+# The public website: the privacy policy the app links to (apps/site). Off until the site can be
+# built, which needs the controller's details in apps/site/site.config.ts.
+module "site" {
+  source = "../../modules/site"
+  count  = var.publish_site ? 1 : 0
+
+  name        = local.name
+  content_dir = "${path.root}/../../../apps/site/dist"
+}

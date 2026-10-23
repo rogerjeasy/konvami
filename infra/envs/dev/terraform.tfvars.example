@@ -17,3 +17,7 @@ budget_alert_emails = ["you@example.com"]
 # never written to state. After changing it, also raise openai_api_key_version by one.
 openai_api_key = "sk-..."
 # openai_api_key_version = 1
+
+# Publish the website with the privacy policy, once apps/site/site.config.ts is filled in and the
+# site is built (pnpm --filter @konvami/site build).
+# publish_site = true

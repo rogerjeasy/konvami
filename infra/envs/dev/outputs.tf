@@ -23,6 +23,11 @@ output "migrations_applied" {
   value       = module.api.migrations_applied
 }
 
+locals {
+  # The app puts its UI language in place of {lang} (apps/mobile/src/lib/external.ts).
+  privacy_url = var.publish_site ? "${module.site[0].url}/{lang}/privacy.html" : ""
+}
+
 # Public values for the app, never secrets (EXPO_PUBLIC_* ships inside the app):
 #   terraform output -raw mobile_env > ../../../apps/mobile/.env
 output "mobile_env" {
@@ -33,6 +38,11 @@ output "mobile_env" {
     EXPO_PUBLIC_AUTH_REGION=${var.region}
     EXPO_PUBLIC_AUTH_CLIENT_ID=${module.auth.client_id}
     EXPO_PUBLIC_TERMS_URL=
-    EXPO_PUBLIC_PRIVACY_URL=
+    EXPO_PUBLIC_PRIVACY_URL=${local.privacy_url}
   EOT
+}
+
+output "site_url" {
+  description = "The website with the privacy policy (null until publish_site is on)."
+  value       = try(module.site[0].url, null)
 }

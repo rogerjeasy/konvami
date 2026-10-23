@@ -324,20 +324,24 @@ async function signedIn() {
 }
 
 describe('2.5 AI data consent', () => {
-  it('stores the choices on the account and moves on to the microphone', async () => {
+  it('names only the provider in use, stores the agreement and moves on to the microphone', async () => {
     const auth = await signedIn();
     await renderScreen(<AiConsentScreen />, { auth });
     expect(screen.getByRole('progressbar', { name: 'Step 4 of 4' })).toBeTruthy();
     expect(screen.getByRole('switch', { name: 'OpenAI, required' })).toBeDisabled();
+    expect(
+      screen.getByText('Conversations, corrections, reports, memories and Tutor answers'),
+    ).toBeTruthy();
+    expect(screen.queryByText('ElevenLabs')).toBeNull();
+    expect(screen.queryByText('AWS Bedrock')).toBeNull();
 
-    await fireEvent.press(screen.getByRole('switch', { name: 'AWS Bedrock' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Agree and continue' }));
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/microphone'));
-    expect(auth.session.getState().user?.aiConsent?.providers).toEqual({
-      openai: true,
-      elevenlabs: true,
-      bedrock: false,
+    // Nobody is asked about the providers not in use, so none is agreed to.
+    expect(auth.session.getState().user?.aiConsent).toMatchObject({
+      version: 'v2',
+      providers: { openai: true, elevenlabs: false, bedrock: false },
     });
   });
 

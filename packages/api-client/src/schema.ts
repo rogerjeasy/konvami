@@ -1047,6 +1047,38 @@ export interface components {
          * @enum {string}
          */
         Level: "normal" | "economy" | "paused";
+        /** LevelPointOut */
+        LevelPointOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            source: components["schemas"]["Source"];
+        };
+        /**
+         * LevelStepOut
+         * @description The level the conversation's evidence moved the learner to (spec §6.9).
+         */
+        LevelStepOut: {
+            /**
+             * After
+             * @enum {string}
+             */
+            after: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /**
+             * Before
+             * @enum {string}
+             */
+            before: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Rose */
+            rose: boolean;
+        };
         /**
          * LookModel
          * @description A portrait's parts and colors. The app draws exactly these names.
@@ -1471,6 +1503,8 @@ export interface components {
             /** Language */
             language: string;
             level: components["schemas"]["HomeLevelOut"] | null;
+            /** Levelhistory */
+            levelHistory: components["schemas"]["LevelPointOut"][];
             /** Longeststreakdays */
             longestStreakDays: number;
             /** Milestones */
@@ -1593,6 +1627,7 @@ export interface components {
         SessionReportOut: {
             /** Language */
             language: string;
+            levelStep: components["schemas"]["LevelStepOut"] | null;
             /** Mistakes */
             mistakes: components["schemas"]["ReportMistakeOut"][];
             /** Nextsteps */

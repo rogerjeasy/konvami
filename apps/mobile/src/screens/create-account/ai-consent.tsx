@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { authErrorCode, generalErrorKey, useAuthServices, useSession } from '@/auth';
+import { NO_OPTIONAL_PROVIDERS } from '@/auth/consent';
 import { AiProviderList } from '@/components/ai-provider-list';
 import { Button } from '@/components/button';
 import { Reveal } from '@/components/motion';
@@ -20,14 +21,13 @@ import { SIGN_UP_STEPS } from './steps';
 
 /**
  * 2.5 AI data consent (Apple guideline 5.1.2(i), GDPR): names each AI provider, what it receives
- * and why, before any data is sent. The choices are stored on the account with their date.
+ * and why, before any data is sent. The agreement is stored on the account with its date. The
+ * canvas also shows ElevenLabs and Bedrock as optional; they are left out until they are used.
  */
 export function AiConsentScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session } = useAuthServices();
   const { status } = useSession();
-  // Optional providers start switched on, as on the approved design (spec open item O1).
-  const [choices, setChoices] = useState({ elevenlabs: true, bedrock: true });
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -39,7 +39,7 @@ export function AiConsentScreen() {
     setProblem(null);
     setSaving(true);
     try {
-      await session.saveAiConsent(choices);
+      await session.saveAiConsent(NO_OPTIONAL_PROVIDERS);
       // The phone remembers the microphone answer: someone who already allowed it is not asked again.
       router.push((await microphoneAllowed()) ? ROUTES.allSet : ROUTES.microphone);
     } catch (error) {
@@ -73,7 +73,7 @@ export function AiConsentScreen() {
           <TextButton
             tone="primary"
             label={t('aiConsent.readNotice')}
-            onPress={() => openLegal('privacy')}
+            onPress={() => openLegal('privacy', i18n.language)}
           />
         </>
       }
@@ -90,7 +90,7 @@ export function AiConsentScreen() {
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
-        <AiProviderList choices={choices} onChange={setChoices} />
+        <AiProviderList />
       </Reveal>
 
       <Reveal delay={staggerDelay(2)}>

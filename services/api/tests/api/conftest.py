@@ -16,6 +16,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
+from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
@@ -41,6 +42,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDraftLog,
     InMemoryFileStore,
+    InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
@@ -216,6 +218,12 @@ def report_starter() -> RecordingReportStarter:
 
 
 @pytest.fixture
+def level_store(calls: InMemoryVoiceSessionRepository) -> InMemoryLevelRepository:
+    """The level engine's steps, for tests that need the level to have moved."""
+    return InMemoryLevelRepository(calls)
+
+
+@pytest.fixture
 def memory_store(calls: InMemoryVoiceSessionRepository) -> InMemoryMemoryRepository:
     """What is remembered, for tests that need something to have been written down."""
     return InMemoryMemoryRepository(calls)
@@ -234,6 +242,7 @@ def services(
     speech: FakeSpeechModel,
     report_starter: RecordingReportStarter,
     charges: InMemoryChargeRepository,
+    level_store: InMemoryLevelRepository,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -266,6 +275,9 @@ def services(
         text_model=text_model,
         model="gpt-6.1-sol",
         clock=clock,
+    )
+    levels = LevelService(
+        profiles=profiles, sessions=calls, evidence=reports, repository=level_store, clock=clock
     )
     # Card ids in the order they are handed out: ...0001, ...0002, and so on.
     card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
@@ -356,6 +368,7 @@ def services(
         conversations=conversations,
         reports=reports,
         cards=cards,
+        levels=levels,
         clock=clock,
     )
     # Upload ids in the order they are handed out: ...0001, ...0002, and so on.
@@ -376,6 +389,7 @@ def services(
         personas=personas,
         conversations=conversations,
         reports=reports,
+        levels=levels,
         cards=cards,
         memories=memories,
         home=home,
