@@ -1,0 +1,23 @@
+{
+  "name": "@konvami/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Konvami's public legal pages (privacy policy), built to static HTML from Markdown and the design tokens.",
+  "scripts": {
+    "build": "node src/build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/lexend": "^0.4.1",
+    "@konvami/design-tokens": "workspace:*",
+    "marked": "^18.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.2"
+  }
+}
