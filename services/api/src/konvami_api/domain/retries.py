@@ -103,8 +103,8 @@ class RetryService:
         seconds: float | None = None,
     ) -> Retried:
         """One attempt at correction `index` of a conversation's report; `seconds` is how long
-        the recording plays, as the app measured it (a hint for metering). Raises `ConversationError` for a conversation that is
-        not the learner's, and `RetryError`."""
+        the recording plays, as the app measured it (a hint for metering). Raises
+        `ConversationError` for a conversation that is not the learner's, and `RetryError`."""
         state = self._reports.view(user_id, call_id)
         mistakes = state.report.mistakes if state.report else ()
         if not 0 <= index < len(mistakes):
