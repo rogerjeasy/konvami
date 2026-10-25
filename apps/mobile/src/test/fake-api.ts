@@ -31,6 +31,8 @@ import {
   type TurnAudio,
   type TutorAnswer,
   type TutorQuestion,
+  type WeekPlan,
+  type WeekReview,
   type WordDetails,
 } from '@konvami/api-client';
 import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
@@ -112,6 +114,56 @@ export const FAKE_WEEK_ENDS = '2026-10-12T00:00:00Z';
 export const FAKE_WEEKLY_SECONDS = 3600;
 /** As on the server (services/api: domain/voice.py MIN_CALL_SECONDS). */
 const MIN_CALL_SECONDS = 60;
+
+/**
+ * This week's plan as the server's Learning Director would make it for a new learner of A2: one
+ * ten-minute conversation today, practising the first of the week's topics.
+ */
+export const FAKE_PLAN: WeekPlan = {
+  week: '2026-10-05',
+  minutes: 40,
+  days: 4,
+  capped: false,
+  sessions: { review: 0, rolePlay: 1, free: 3 },
+  topics: ['perfekt', 'dative', 'two_way_prepositions'],
+  cards: 0,
+  doneMinutes: 0,
+  doneDays: 0,
+  today: [{ kind: 'free', minutes: 10, topic: 'perfekt', scenario: null }],
+  todayCards: 0,
+  reason: 'on_track',
+  missed: [],
+};
+
+/** Last week's check-in as Progress gets it before anyone asked for its words. */
+export const FAKE_WEEK_REVIEW: WeekReview = {
+  status: 'none',
+  text: null,
+  numbers: {
+    week: '2026-09-28',
+    minutes: 34,
+    plannedMinutes: 40,
+    previousMinutes: 25,
+    days: 3,
+    plannedDays: 4,
+    conversations: 4,
+    rolePlays: 1,
+    reviews: 1,
+    cardsReviewed: 12,
+    topics: [
+      { topic: 'dative', before: 'practising', after: 'mostly_correct', moved: true },
+      { topic: 'perfekt', before: 'mostly_correct', after: 'mostly_correct', moved: false },
+    ],
+    mistakes: 3,
+    previousMistakes: 5,
+    levelBefore: 'A2',
+    levelAfter: 'A2',
+  },
+};
+
+/** What the partner's worker writes for `FAKE_WEEK_REVIEW`. */
+export const FAKE_WEEK_TEXT =
+  'You spoke for 34 minutes last week, nine more than the week before. The dative is coming along nicely. Does this week’s plan suit you? You can change your weekly goal in your profile.';
 
 /** A month of spending as the owner sees it: past the target, two learners, a few features. */
 export const FAKE_COSTS: Costs = {
@@ -624,6 +676,14 @@ export interface FakeApi extends ApiClient {
   usedMinutes(minutes: number): void;
   /** Makes the signed-in account the owner's, who may see the costs. */
   beOwner(): void;
+  /** Changes this week's plan from `FAKE_PLAN`, as the server would have re-planned it. */
+  planned(plan: Partial<WeekPlan>): void;
+  /**
+   * The learner practised last week: Progress gets its check-in (`FAKE_WEEK_REVIEW` with
+   * `review`'s changes). Asked for, its words are written by the time it is next read, unless
+   * `writes` says the worker fails or takes longer.
+   */
+  practisedLastWeek(review?: Partial<WeekReview>, writes?: 'ready' | 'pending' | 'failed'): void;
   /** What the owner sees for a month (`FAKE_COSTS` for October 2026 unless set). */
   spent(costs: Costs): void;
 }
@@ -682,6 +742,10 @@ export function createFakeApi(): FakeApi {
   let picture: string | null = null;
   let usedSeconds = 0;
   let owner = false;
+  const plan: WeekPlan = FAKE_PLAN;
+  let planChanges: Partial<WeekPlan> = {};
+  let lastWeek: WeekReview | null = null;
+  let weekWrites: 'ready' | 'pending' | 'failed' = 'ready';
   const months = new Map<string, Costs>([[FAKE_COSTS.month, FAKE_COSTS]]);
   const uploads: string[] = [];
   let deleted = false;
@@ -951,6 +1015,7 @@ export function createFakeApi(): FakeApi {
         mark('first_card', cards.length, 1),
         mark('fifty_reviews', reviewLog.length, 50),
       ],
+      lastWeek,
     };
   }
 
@@ -999,6 +1064,13 @@ export function createFakeApi(): FakeApi {
       suggestedPartnerId: counted()[0]?.partner?.id ?? personas?.[0]?.id ?? null,
       activity: activity(),
       recent: counted().slice(0, RECENT_CONVERSATIONS),
+      // What was done this week moves the plan on, as on the server.
+      plan: {
+        ...plan,
+        doneMinutes: Math.floor(activity().weekSeconds / 60),
+        doneDays: activity().week.filter((day) => day.seconds > 0).length,
+        ...planChanges,
+      },
     };
   }
 
@@ -1038,6 +1110,13 @@ export function createFakeApi(): FakeApi {
     },
     beOwner() {
       owner = true;
+    },
+    planned(changes) {
+      planChanges = { ...planChanges, ...changes };
+    },
+    practisedLastWeek(review = {}, writes = 'ready') {
+      lastWeek = { ...FAKE_WEEK_REVIEW, ...review };
+      weekWrites = writes;
     },
     spent(costs) {
       months.set(costs.month, costs);
@@ -1216,6 +1295,35 @@ export function createFakeApi(): FakeApi {
     async getProgress(timeZone) {
       await record('getProgress', timeZone);
       return progress();
+    },
+    async requestWeekReview(week, timeZone) {
+      await record('requestWeekReview', week, timeZone);
+      if (!lastWeek) throw new ApiError('nothing_to_report', 409);
+      if (lastWeek.numbers.week !== week) throw new ApiError('not_found', 404);
+      if (lastWeek.status === 'none' || lastWeek.status === 'failed') {
+        lastWeek = { ...lastWeek, status: 'pending' };
+      }
+      return lastWeek;
+    },
+    async getWeekReview(week, timeZone) {
+      await record('getWeekReview', week, timeZone);
+      if (!lastWeek || lastWeek.numbers.week !== week) throw new ApiError('not_found', 404);
+      const shown = lastWeek;
+      // The worker finishes between two reads.
+      if (lastWeek.status === 'pending' && weekWrites !== 'pending') {
+        lastWeek =
+          weekWrites === 'ready'
+            ? { ...lastWeek, status: 'ready', text: FAKE_WEEK_TEXT }
+            : { ...lastWeek, status: 'failed' };
+      }
+      return shown;
+    },
+    async getWeekReviewAudio(week) {
+      await record('getWeekReviewAudio', week);
+      if (lastWeek?.status !== 'ready' || lastWeek.numbers.week !== week) {
+        throw new ApiError('not_found', 404);
+      }
+      return { url: `https://files.test/weeks/${week}.mp3` };
     },
     async getConversations({ before, limit = PAGE_DEFAULT } = {}) {
       await record('getConversations', { before, limit });

@@ -13,6 +13,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
+from konvami_api.domain.director import DirectorService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
@@ -38,6 +39,7 @@ from konvami_api.domain.reports import (
     Word,
 )
 from konvami_api.domain.retries import RetryService
+from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.text import TextModelError
@@ -51,6 +53,7 @@ from konvami_api.domain.voice import (
 )
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.week_review import WeekReviewService
 from tests.fakes import (
     FakeAccountDirectory,
     FakeSpeechModel,
@@ -76,10 +79,12 @@ from tests.fakes import (
     InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
+    InMemoryWeekReviewRepository,
     RecordingCallStarter,
     RecordingDetailsStarter,
     RecordingNotifier,
     RecordingReportStarter,
+    RecordingWeekStarter,
     ScriptedTextModel,
     ScriptedTranscriber,
 )
@@ -255,7 +260,11 @@ class World:
             cards=self.cards,
         )
         self.planner = SessionPlanner(
-            profiles=self.profiles, reports=self.reports, cards=self.cards
+            profiles=self.profiles,
+            reports=self.reports,
+            cards=self.cards,
+            # The Director is built after the calls it reads the voice minutes from.
+            week_topic=lambda user_id, today: self.director.topic_for_call(user_id, today),
         )
         self.memory_store = InMemoryMemoryRepository(self.sessions)
         # Memory ids in the order they are handed out: ...0001, ...0002, and so on.
@@ -365,6 +374,16 @@ class World:
             levels=self.levels,
             clock=self.clock,
         )
+        self.director = DirectorService(
+            profiles=self.profiles,
+            onboarding=self.onboarding,
+            conversations=self.conversations,
+            cards=self.cards,
+            grammar=self.grammar,
+            allowance=self.voice.allowance,
+            call_seconds=VOICE.max_seconds[CallPurpose.PRACTICE],
+            clock=self.clock,
+        )
         self.speech = FakeSpeechModel()
         self.card_details = CardDetailsService(
             profiles=self.profiles,
@@ -372,9 +391,28 @@ class World:
             repository=self.card_store,
             text_model=self.text,
             model="gpt-6.1-sol",
-            speech=self.speech,
-            speech_model="gpt-4o-mini-tts",
+            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
             files=self.files,
+            clock=self.clock,
+        )
+        self.week_store = InMemoryWeekReviewRepository()
+        self.week_starter = RecordingWeekStarter()
+        self.week_reviews = WeekReviewService(
+            profiles=self.profiles,
+            accounts=self.accounts,
+            personas=self.personas,
+            conversations=self.conversations,
+            reports=self.reports,
+            cards=self.cards,
+            grammar=self.grammar,
+            levels=self.levels,
+            director=self.director,
+            allowance=self.voice.allowance,
+            repository=self.week_store,
+            starter=self.week_starter,
+            text_model=self.text,
+            model="gpt-6-luna",
+            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
             clock=self.clock,
         )
         self.voices = VoiceSampleService(
@@ -444,6 +482,7 @@ class World:
         turns: tuple[Turn, ...] | None = None,
         ended: bool = True,
         plan: SessionPlan | None = None,
+        scenario: str | None = None,
     ) -> str:
         """Records a practice conversation as the broker and the worker would: started at `at`,
         and (unless `ended` is False) finished `minutes` later. What was said is `turns`, or a
@@ -458,6 +497,7 @@ class World:
                 "gpt-realtime-2.1-mini",
                 at,
                 persona_id=persona.id if persona else None,
+                scenario=scenario,
                 plan=plan,
             )
         )

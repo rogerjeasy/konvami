@@ -18,6 +18,7 @@ from konvami_api.domain.accounts import AccountRepository
 from konvami_api.domain.cards import Card, CardRepository, CardTotals, WordDetails, card_key
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.fsrs import Memory, Rating
+from konvami_api.domain.grammar_map import Mastery
 from konvami_api.domain.levels import LevelFit, LevelRepository, LevelStep
 from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.memories import Memory as Remembered
@@ -51,6 +52,12 @@ from konvami_api.domain.voice import (
     VoiceSessionRepository,
 )
 from konvami_api.domain.voice_review import DailyAllowance
+from konvami_api.domain.week_review import (
+    StoredReview,
+    TopicMove,
+    WeekNumbers,
+    WeekReviewRepository,
+)
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
     SqlAnswerAllowance,
@@ -68,6 +75,7 @@ from konvami_api.persistence.repositories import (
     SqlRetryRepository,
     SqlTutorRepository,
     SqlVoiceSessionRepository,
+    SqlWeekReviewRepository,
 )
 from konvami_api.persistence.sql import SqlClient
 from tests.fakes import (
@@ -87,6 +95,7 @@ from tests.fakes import (
     InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
+    InMemoryWeekReviewRepository,
 )
 from tests.persistence.pg import LocalSqlClient
 
@@ -786,6 +795,8 @@ def talked(
     learner_says: tuple[str, ...] = ("Hallo!",),
     purpose: CallPurpose = CallPurpose.PRACTICE,
     ended: bool = True,
+    scenario: str | None = None,
+    plan: SessionPlan | None = None,
 ) -> None:
     """A call as the broker and the worker record it."""
     practice.calls.started(
@@ -796,6 +807,8 @@ def talked(
             "gpt-realtime-2.1-mini",
             at,
             persona_id=partner.id if partner else None,
+            scenario=scenario,
+            plan=plan,
         )
     )
     if ended:
@@ -838,6 +851,43 @@ def test_conversations_that_count_are_listed_newest_first(partners: Practice) ->
     assert listed[0].started_at == NOON - HOUR
     assert listed[0].ended_at == NOON - HOUR + timedelta(minutes=8.5)
     assert listed[0].partner is None
+
+
+def test_a_conversation_says_whether_it_was_a_review_conversation(partners: Practice) -> None:
+    talked(partners, "rtc_review", at=NOON, plan=SessionPlan(language="de", review=True))
+    talked(partners, "rtc_free", at=NOON - HOUR, plan=SessionPlan(language="de"))
+    talked(partners, "rtc_before_plans", at=NOON - 2 * HOUR)
+
+    listed = partners.conversations.listed(USER, 10, None)
+
+    assert [(c.id, c.review) for c in listed] == [
+        ("rtc_review", True),
+        ("rtc_free", False),
+        ("rtc_before_plans", False),
+    ]
+
+
+def test_a_weeks_conversations_follow_the_learners_calendar(partners: Practice) -> None:
+    # NOON is a Friday; in Zurich (UTC+2) the week began at 22:00 UTC on Sunday 4 October.
+    monday = date(2026, 10, 5)
+    talked(partners, "rtc_sunday_night", at=datetime(2026, 10, 4, 22, 30, tzinfo=UTC))
+    talked(partners, "rtc_friday", at=NOON, scenario="doctor")
+    talked(partners, "rtc_last_week", at=datetime(2026, 10, 4, 21, 0, tzinfo=UTC))
+    talked(partners, "rtc_next_week", at=datetime(2026, 10, 11, 22, 30, tzinfo=UTC))
+    talked(partners, "rtc_silent", at=NOON, learner_says=())
+    talked(partners, "rtc_theirs", at=NOON, partner=None, user=OTHER_USER)
+
+    week = partners.conversations.week(USER, "Europe/Zurich", monday)
+
+    assert [(c.id, c.scenario) for c in week] == [
+        ("rtc_friday", "doctor"),
+        ("rtc_sunday_night", None),
+    ]
+    # In UTC, Sunday night of the next week in Zurich is still this week.
+    assert [c.id for c in partners.conversations.week(USER, None, monday)] == [
+        "rtc_next_week",
+        "rtc_friday",
+    ]
 
 
 def test_the_list_can_be_cut_by_size_and_continued_before_a_time(partners: Practice) -> None:
@@ -2400,3 +2450,87 @@ def test_another_learners_step_is_not_read(levels: Levels) -> None:
     levels.steps.stepped(USER, LevelStep("rtc_1", "de", "A2", "B1", NOON))
 
     assert levels.steps.step(OTHER_USER, "rtc_1") is None
+
+
+# --- Weekly check-ins ----------------------------------------------------------------------------
+
+WEEK = date(2026, 10, 5)
+
+
+def week_numbers(minutes: int = 25, week: date = WEEK) -> WeekNumbers:
+    return WeekNumbers(
+        week=week,
+        minutes=minutes,
+        planned_minutes=40,
+        previous_minutes=10,
+        days=2,
+        planned_days=4,
+        conversations=2,
+        role_plays=1,
+        reviews=1,
+        cards_reviewed=7,
+        topics=(TopicMove("dative", Mastery.PRACTISING, Mastery.MOSTLY_CORRECT),),
+        mistakes=1,
+        previous_mistakes=2,
+        level_before="A2",
+        level_after="A2",
+    )
+
+
+def asked_review(minutes: int = 25, at: datetime = NOON) -> StoredReview:
+    return StoredReview("pending", week_numbers(minutes), None, at, "Lena", "marin")
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def week_reviews(request: pytest.FixtureRequest) -> WeekReviewRepository:
+    if request.param == "memory":
+        return InMemoryWeekReviewRepository()
+    return SqlWeekReviewRepository(request.getfixturevalue("db"))
+
+
+def ask_week(reviews: WeekReviewRepository, review: StoredReview, user: UUID = USER) -> bool:
+    return reviews.request(user, "de", review, stale_before=NOON - HOUR, max_requests=2)
+
+
+def test_a_week_review_keeps_its_numbers_and_who_speaks_it(
+    week_reviews: WeekReviewRepository,
+) -> None:
+    assert ask_week(week_reviews, asked_review())
+
+    stored = week_reviews.load(USER, "de", WEEK)
+
+    assert stored == asked_review()
+    assert week_reviews.load(USER, "it", WEEK) is None
+    assert week_reviews.load(OTHER_USER, "de", WEEK) is None
+
+
+def test_a_week_review_is_written_once(week_reviews: WeekReviewRepository) -> None:
+    ask_week(week_reviews, asked_review())
+
+    week_reviews.written(USER, "de", WEEK, "ready", "Gut gemacht!")
+
+    stored = week_reviews.load(USER, "de", WEEK)
+    assert stored is not None
+    assert (stored.status, stored.text) == ("ready", "Gut gemacht!")
+    assert not ask_week(week_reviews, asked_review(minutes=30))
+    assert week_reviews.load(USER, "de", WEEK) == stored
+
+
+def test_a_failed_or_lost_week_review_is_asked_for_again_up_to_a_limit(
+    week_reviews: WeekReviewRepository,
+) -> None:
+    ask_week(week_reviews, asked_review(at=NOON - 2 * HOUR))
+    # Still pending but long ago: its worker was lost.
+    assert ask_week(week_reviews, asked_review(minutes=30))
+    assert week_reviews.load(USER, "de", WEEK).numbers.minutes == 30  # type: ignore[union-attr]
+
+    week_reviews.written(USER, "de", WEEK, "failed", None)
+
+    assert not ask_week(week_reviews, asked_review(minutes=35))
+    assert week_reviews.load(USER, "de", WEEK).status == "failed"  # type: ignore[union-attr]
+
+
+def test_a_pending_week_review_is_not_asked_for_twice(week_reviews: WeekReviewRepository) -> None:
+    assert ask_week(week_reviews, asked_review())
+    assert not ask_week(week_reviews, asked_review())
+    assert ask_week(week_reviews, asked_review(), user=OTHER_USER)

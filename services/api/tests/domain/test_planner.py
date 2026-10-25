@@ -272,6 +272,34 @@ def test_a_topic_the_learner_chose_to_practise_comes_first() -> None:
     assert "Was würdest du" in focus[0].elicit
 
 
+def test_a_call_puts_the_weeks_next_topic_first_then_the_learners_mistakes() -> None:
+    world = World()
+    world.onboard()
+    report(world, mistake("plural_form", "zwei Kind", "zwei Kinder"), days_ago=7)
+    week_topic = world.director.topic_for_call(USER, NOON.date())
+
+    focus = world.planner.plan(USER, today=NOON.date()).focus
+
+    assert week_topic is not None
+    assert [point.topic for point in focus] == [week_topic, "plural"]
+
+
+def test_a_topic_the_learner_chose_comes_before_the_weeks() -> None:
+    world = World()
+    world.onboard()
+
+    focus = world.planner.plan(USER, practise="konjunktiv_2", today=NOON.date()).focus
+
+    assert focus[0].topic == "konjunktiv_2"
+
+
+def test_a_review_conversation_has_no_topic_of_the_week() -> None:
+    world = World()
+    world.onboard()
+
+    assert world.planner.plan(USER, practise=PRACTISE_WORDS, today=NOON.date()).focus == ()
+
+
 def test_a_topic_chosen_to_practise_brings_the_learners_own_mistakes_on_it() -> None:
     world = World()
     world.onboard()

@@ -51,6 +51,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0019_retries",
         "0020_card_details",
         "0021_voice_answers",
+        "0022_week_review",
     ]
     assert {
         "app_user",
@@ -69,6 +70,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "usage_charge",
         "spend_alert",
         "level_step",
+        "week_review",
     } <= tables(empty_db)
 
 

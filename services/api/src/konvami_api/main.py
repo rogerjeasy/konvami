@@ -22,6 +22,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
+from konvami_api.domain.director import DirectorService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
@@ -37,12 +38,14 @@ from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
+from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.week_review import WeekReviewService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.repositories import (
@@ -64,6 +67,7 @@ from konvami_api.persistence.repositories import (
     SqlRetryRepository,
     SqlTutorRepository,
     SqlVoiceSessionRepository,
+    SqlWeekReviewRepository,
 )
 from konvami_api.persistence.sql import SqlClient
 from konvami_api.providers.aws import (
@@ -71,6 +75,7 @@ from konvami_api.providers.aws import (
     LambdaClient,
     LambdaDetailsStarter,
     LambdaReportStarter,
+    LambdaWeekReviewStarter,
     SecretsClient,
     SnsClient,
     SnsNotifier,
@@ -245,8 +250,21 @@ def build_backend(
         model=models.tutor,
         clock=_now,
     )
+    grammar = GrammarMapService(profiles=profiles, reports=reports)
+    voice_config = voice_settings(environment.get(VOICE_VARIABLE))
+    director = DirectorService(
+        profiles=profiles,
+        onboarding=onboarding,
+        conversations=conversations,
+        cards=cards,
+        grammar=grammar,
+        # The calls are built below, with the planner that reads this week's topics from here.
+        allowance=lambda user_id: voice.allowance(user_id),
+        call_seconds=voice_config.max_seconds.get(CallPurpose.PRACTICE, 0),
+        clock=_now,
+    )
     voice = VoiceCallService(
-        settings=voice_settings(environment.get(VOICE_VARIABLE)),
+        settings=voice_config,
         scripts={
             CallPurpose.ONBOARDING: HostScript(CATALOG, profiles),
             CallPurpose.PLACEMENT: PlacementScript(placement),
@@ -261,7 +279,12 @@ def build_backend(
                 recordings=recordings,
                 tutor=tutor,
                 sessions=sessions,
-                planner=SessionPlanner(profiles=profiles, reports=reports, cards=cards),
+                planner=SessionPlanner(
+                    profiles=profiles,
+                    reports=reports,
+                    cards=cards,
+                    week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
+                ),
             ),
         },
         accounts=directory,
@@ -308,6 +331,7 @@ def build_backend(
         records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
     )
     speech = OpenAiSpeech(openai_key, meter=meter)
+    sounds = Sounds(speech=speech, model=models.speech, files=files)
     services = Services(
         catalog=CATALOG,
         profiles=profiles,
@@ -334,12 +358,30 @@ def build_backend(
             repository=card_store,
             text_model=text,
             model=models.cards,
-            speech=speech,
-            speech_model=models.speech,
+            sounds=sounds,
             files=files,
             clock=_now,
         ),
-        grammar=GrammarMapService(profiles=profiles, reports=reports),
+        grammar=grammar,
+        director=director,
+        week_reviews=WeekReviewService(
+            profiles=profiles,
+            accounts=directory,
+            personas=personas,
+            conversations=conversations,
+            reports=reports,
+            cards=cards,
+            grammar=grammar,
+            levels=levels,
+            director=director,
+            allowance=voice.allowance,
+            repository=SqlWeekReviewRepository(sql),
+            starter=LambdaWeekReviewStarter(clients.functions, worker),
+            text_model=text,
+            model=models.week or models.memory,
+            sounds=sounds,
+            clock=_now,
+        ),
         retries=RetryService(
             reports=reports,
             repository=SqlRetryRepository(sql),
@@ -415,7 +457,11 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     time from their recordings, counting the due words the learner used as reviewed, writing
     its report, moving the level if the reports say so, then writing down what it told about
     the learner; and filling in a learner's new word cards with
-    their forms (`card_details`)."""
+    their forms (`card_details`); and writing a learner's weekly check-in (`week_review`)."""
+    if "week_review" in event:
+        week = dt.date.fromisoformat(event["week"])
+        backend.services.week_reviews.write(UUID(event["week_review"]), week)
+        return
     if "card_details" in event:
         backend.services.card_details.fill_in(UUID(event["card_details"]))
         return

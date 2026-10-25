@@ -40,6 +40,10 @@ TARGET_LANGUAGE = "target_language"
 MEMORY_ENABLED = "memory_enabled"
 AVOID_TOPICS = "avoid_topics"
 RECORDINGS_KEPT = "recordings_kept"
+# Goals (spec §6.12), per language: a level by a date, and how much practice a week. The third
+# kind of goal, an exam on a date, is the `exam` the learner named in onboarding.
+LEVEL_GOAL = "level_goal"
+WEEKLY_HABIT = "weekly_habit"
 
 
 class Source(StrEnum):
@@ -200,6 +204,23 @@ class Course(_Value):
         return chapter or None
 
 
+class LevelGoal(_Value):
+    level: CefrLevel
+    # The day it is to be reached by; None: no date.
+    by: dt.date | None = None
+
+
+# A weekly habit runs from one short call a week to an hour a day, in the form's steps.
+HABIT_MINUTES_MIN = 10
+HABIT_MINUTES_MAX = 420
+HABIT_MINUTES_STEP = 5
+
+
+class WeeklyHabit(_Value):
+    days: int = Field(ge=1, le=7)
+    minutes: int = Field(ge=HABIT_MINUTES_MIN, le=HABIT_MINUTES_MAX, multiple_of=HABIT_MINUTES_STEP)
+
+
 @dataclass(frozen=True)
 class _Context:
     """What a field needs to check a value: the catalog, the language it is for, and today."""
@@ -211,6 +232,7 @@ class _Context:
 
 _LANGUAGE_CODE: TypeAdapter[str] = TypeAdapter(LanguageCode)
 _EXAM: TypeAdapter[Exam | None] = TypeAdapter(Exam | None)
+_LEVEL_GOAL: TypeAdapter[LevelGoal | None] = TypeAdapter(LevelGoal | None)
 _TOPICS: TypeAdapter[list[str]] = TypeAdapter(
     Annotated[
         list[
@@ -253,6 +275,15 @@ def _exam(value: Json, context: _Context) -> Json:
     return exam.model_dump(mode="json")
 
 
+def _level_goal(value: Json, context: _Context) -> Json:
+    goal: LevelGoal | None = _LEVEL_GOAL.validate_python(value)
+    if goal is None:
+        return None
+    if goal.by is not None and goal.by < context.today:
+        raise ValueError("the goal's date has passed")
+    return goal.model_dump(mode="json")
+
+
 def one_line(text: str) -> str:
     """A text on one line, its runs of spaces and line breaks made single spaces. What a
     learner writes can become a line of a partner's instructions, where a line break could
@@ -281,6 +312,8 @@ FIELDS: Mapping[str, FieldSpec] = {
     "explanation_usage": FieldSpec(True, _typed(TypeAdapter(ExplanationUsage))),
     "goals": FieldSpec(True, _typed(TypeAdapter(Goals))),
     "exam": FieldSpec(True, _exam),
+    LEVEL_GOAL: FieldSpec(True, _level_goal),
+    WEEKLY_HABIT: FieldSpec(True, _typed(TypeAdapter(WeeklyHabit | None))),
     "self_assessed_level": FieldSpec(True, _typed(TypeAdapter(StartingLevel))),
     "course": FieldSpec(True, _typed(TypeAdapter(Course | None))),
     # The level practice starts at: the self-assessment, or the measured level if the learner

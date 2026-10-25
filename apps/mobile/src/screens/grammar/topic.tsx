@@ -25,7 +25,7 @@ import { askTutorRoute, callRoute, conversationRoute, ROUTES } from '@/lib/route
 import { diffWords } from '@/lib/word-diff';
 import { useGrammarTopic, useSuggestedPartner } from '@/practice/services';
 import { useTheme } from '@/theme';
-import { useTopicLabels } from './labels';
+import { useTopicLabels } from '@/hooks/use-labels';
 
 /** Where the topic stands: its state, the numbers behind it and which way it is going. */
 function Standing({ page }: { page: GrammarTopicPage }) {

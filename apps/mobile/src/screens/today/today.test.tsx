@@ -26,7 +26,10 @@ beforeEach(() => {
 });
 
 const [LENA, JONAS] = FAKE_PERSONAS as [(typeof FAKE_PERSONAS)[0], (typeof FAKE_PERSONAS)[0]];
-const call = (id: string) => ({ pathname: '/call/[personaId]', params: { personaId: id } });
+const call = (id: string, params: Record<string, string> = {}) => ({
+  pathname: '/call/[personaId]',
+  params: { personaId: id, ...params },
+});
 
 function inApp(options?: Parameters<FakeApi['enterApp']>[0]): FakeApi {
   const api = createFakeApi();
@@ -62,9 +65,10 @@ describe('5.1 Today', () => {
     await open();
 
     expect(screen.getByText('Your first conversation is waiting.')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Talk with Lena' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Start with Lena' }));
 
-    expect(router.push).toHaveBeenCalledWith(call(LENA.id));
+    // The first conversation of the week's plan, on its first topic.
+    expect(router.push).toHaveBeenCalledWith(call(LENA.id, { practise: 'perfekt' }));
   });
 
   it('suggests the partner talked to last and says when', async () => {
@@ -74,9 +78,9 @@ describe('5.1 Today', () => {
     await open(api);
 
     expect(screen.getByText('You last talked yesterday.')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Talk with Jonas' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue with Jonas' }));
 
-    expect(router.push).toHaveBeenCalledWith(call(JONAS.id));
+    expect(router.push).toHaveBeenCalledWith(call(JONAS.id, { practise: 'perfekt' }));
   });
 
   it('leads to the other partners', async () => {
@@ -95,7 +99,7 @@ describe('5.1 Today', () => {
     expect(screen.getByLabelText('Monday: no practice')).toBeTruthy();
     expect(screen.getByLabelText('Sunday: still to come')).toBeTruthy();
     expect(screen.queryByText(/-day streak/)).toBeNull();
-    expect(screen.queryByText(/min this week/)).toBeNull();
+    expect(screen.getByText('0 of 40 min this week · 0 of 4 days')).toBeTruthy();
   });
 
   it('shows the streak, the minutes and the days practised', async () => {
@@ -106,7 +110,7 @@ describe('5.1 Today', () => {
 
     expect(screen.getByText('2-day streak')).toBeTruthy();
     // One line holds both numbers.
-    expect(screen.getByText('15 min this week · 10 min today')).toBeTruthy();
+    expect(screen.getByText('15 of 40 min this week · 2 of 4 days')).toBeTruthy();
     expect(screen.getByLabelText('Thursday: practised')).toBeTruthy();
     expect(screen.getByLabelText('Friday: practised')).toBeTruthy();
     expect(screen.getByLabelText('Wednesday: no practice')).toBeTruthy();
@@ -261,7 +265,7 @@ describe('5.1 Today', () => {
     expect(await screen.findByText('Your day couldn’t be loaded.')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
 
-    expect(await screen.findByRole('button', { name: 'Talk with Lena' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Start with Lena' })).toBeTruthy();
   });
 
   it('reads the day again when the learner comes back after a while', async () => {
@@ -277,7 +281,7 @@ describe('5.1 Today', () => {
     clock.now += STALE_AFTER_MS;
     await act(async () => onFocus());
 
-    await waitFor(() => expect(screen.getByText(/10 min today/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/10 of 40 min this week/)).toBeTruthy());
     expect(reads()).toBe(2);
   });
 
@@ -285,5 +289,78 @@ describe('5.1 Today', () => {
     await renderScreen(<TodayScreen />, { api: inApp() });
 
     expect(screen.getByText('redirect:/welcome')).toBeTruthy();
+  });
+
+  describe('the week’s plan (spec §6.12)', () => {
+    it('shows what today’s conversations work on, the cards and how long it all takes', async () => {
+      const api = inApp();
+      api.planned({
+        today: [
+          { kind: 'review', minutes: 5, topic: null, scenario: null },
+          { kind: 'role_play', minutes: 10, topic: 'dative', scenario: 'doctor' },
+        ],
+        todayCards: 6,
+      });
+      await open(api);
+
+      expect(screen.getByRole('header', { name: 'Today · 15 min · 6 cards' })).toBeTruthy();
+      expect(screen.getByText('5 min · Review conversation')).toBeTruthy();
+      expect(screen.getByText('Using the words that are due')).toBeTruthy();
+      expect(screen.getByText('10 min · Role-play: At the doctor’s')).toBeTruthy();
+      expect(screen.getByText('Focus: Dative')).toBeTruthy();
+    });
+
+    it.each([
+      [{ kind: 'review', minutes: 5, topic: null, scenario: null }, { practise: 'words' }],
+      [
+        { kind: 'role_play', minutes: 10, topic: 'dative', scenario: 'doctor' },
+        { scenario: 'doctor', practise: 'dative' },
+      ],
+    ] as const)('starts the next planned conversation in one tap', async (session, params) => {
+      const api = inApp();
+      api.planned({ today: [session] });
+      await open(api);
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Start with Lena' }));
+
+      expect(router.push).toHaveBeenCalledWith(call(LENA.id, params));
+    });
+
+    it('says why today has a little more after missed days', async () => {
+      const api = inApp();
+      api.planned({ reason: 'missed', missed: ['2026-10-06', '2026-10-07'] });
+      await open(api);
+
+      expect(
+        screen.getByText('You missed Tuesday and Wednesday, so today has a little more.'),
+      ).toBeTruthy();
+    });
+
+    it('offers a conversation all the same once today’s plan is done', async () => {
+      const api = inApp();
+      api.planned({ today: [], reason: 'today_done' });
+      await open(api);
+
+      expect(screen.getByText('That’s today’s plan done. See you tomorrow!')).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Talk with Lena' }));
+
+      expect(router.push).toHaveBeenCalledWith(call(LENA.id));
+    });
+
+    it('names the week’s topics, says when the voice minutes shaped it, and opens the goals', async () => {
+      const api = inApp();
+      api.planned({ capped: true, minutes: 60 });
+      await open(api);
+
+      expect(
+        screen.getByText(
+          'This week’s focus: Perfekt, Dative, and Prepositions with accusative or dative',
+        ),
+      ).toBeTruthy();
+      expect(screen.getByText('Planned to fit your 60 voice minutes.')).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Change my weekly goal' }));
+
+      expect(router.push).toHaveBeenCalledWith('/account/goals');
+    });
   });
 });

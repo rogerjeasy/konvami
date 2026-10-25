@@ -1,7 +1,14 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { createFakeApi, FAKE_REPORT, FAKE_REPORT_SAYS, type FakeApi } from '@/test/fake-api';
+import {
+  createFakeApi,
+  FAKE_REPORT,
+  FAKE_REPORT_SAYS,
+  FAKE_WEEK_TEXT,
+  type FakeApi,
+} from '@/test/fake-api';
+import { createFakeProfileDevice } from '@/test/fake-profile-device';
 import { renderScreen } from '@/test/render';
 import { ProgressScreen } from '.';
 
@@ -229,5 +236,56 @@ describe('5.8 Progress', () => {
     await open(inApp(), { signedIn: false });
 
     expect(screen.getByText('redirect:/welcome')).toBeTruthy();
+  });
+
+  describe('last week’s check-in (spec §6.12)', () => {
+    it('is left out when the learner did not practise last week', async () => {
+      await open(practised());
+
+      expect(screen.queryByRole('header', { name: 'Last week' })).toBeNull();
+    });
+
+    it('shows last week against its plan: minutes, days, cards, topics and mistakes', async () => {
+      const api = practised();
+      api.practisedLastWeek({ status: 'ready', text: FAKE_WEEK_TEXT });
+      await open(api);
+
+      expect(screen.getByRole('header', { name: 'Last week' })).toBeTruthy();
+      expect(screen.getByText(FAKE_WEEK_TEXT)).toBeTruthy();
+      expect(screen.getByLabelText('34 min talked, of 40 planned')).toBeTruthy();
+      expect(screen.getByLabelText('3 days, of 4 planned')).toBeTruthy();
+      expect(screen.getByLabelText('12 cards reviewed')).toBeTruthy();
+      expect(screen.getByText('25 min the week before')).toBeTruthy();
+      expect(screen.getByText('3 confirmed mistakes (5 the week before)')).toBeTruthy();
+      expect(screen.getByText('Dative: Practising → Mostly right')).toBeTruthy();
+      expect(screen.getByText('Perfekt: Mostly right')).toBeTruthy();
+    });
+
+    it('has its words written the first time it is opened, and says so meanwhile', async () => {
+      const api = practised();
+      api.practisedLastWeek({}, 'pending');
+      await open(api);
+
+      expect(
+        await screen.findByText('Your partner is writing a few words about your week…'),
+      ).toBeTruthy();
+      expect(api.calls.filter(([method]) => method === 'requestWeekReview')).toEqual([
+        ['requestWeekReview', '2026-09-28', 'Europe/Zurich'],
+      ]);
+    });
+
+    it('plays the words in the partner’s voice', async () => {
+      const device = createFakeProfileDevice();
+      const api = practised();
+      api.practisedLastWeek({ status: 'ready', text: FAKE_WEEK_TEXT });
+      await renderScreen(<ProgressScreen />, { api, signedIn: true, device });
+      await waitFor(() => expect(screen.queryByText('Loading your progress')).toBeNull());
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Listen to your check-in' }));
+
+      await waitFor(() =>
+        expect(device.played).toEqual(['https://files.test/weeks/2026-09-28.mp3']),
+      );
+    });
   });
 });

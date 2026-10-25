@@ -307,11 +307,12 @@ def test_the_next_conversation_is_planned_from_the_report(
         {"purpose": "practice", "sdp": "v=0 offer", "personaId": str(lena)},
     )
 
-    # Only the confirmed mistake is practised; the app gets the kinds and the words, nothing of
-    # what the partner is told.
+    # The week's topic whose turn it is comes first (the dative), then the report's confirmed
+    # mistake (that an unconfirmed one is not practised is the planner's own test). The app gets
+    # the kinds and the words, nothing of what the partner is told.
     assert response.body["plan"] == {
         "language": "de",
-        "focus": ["perfekt"],
+        "focus": ["dative", "perfekt"],
         "words": [],
         "review": False,
     }

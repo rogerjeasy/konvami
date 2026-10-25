@@ -11,7 +11,6 @@ as it is right), in the voice of the learner's first partner, and kept for every
 """
 
 import datetime as dt
-import hashlib
 import json
 from collections.abc import Callable, Sequence
 from typing import Any, get_args
@@ -30,7 +29,8 @@ from konvami_api.domain.cards import (
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import ProfileService
-from konvami_api.domain.speech import SpeechError, SpeechModel, SpeechTask
+from konvami_api.domain.sounds import Sounds
+from konvami_api.domain.speech import SpeechError
 from konvami_api.domain.storage import FileStore
 from konvami_api.domain.text import TextModel, TextModelError, TextTask, answer_list, answer_object
 
@@ -42,10 +42,6 @@ CLAIM_FOR = dt.timedelta(minutes=5)
 FORM_MAX = 80
 # The voice of a learner who has no partner (the guide's).
 DEFAULT_VOICE = "marin"
-SOUND_TYPE = "audio/mpeg"
-# How long the app may play a card's sound through one address.
-SOUND_ADDRESS_SECONDS = 15 * 60
-_FINGERPRINT_LENGTH = 16
 
 
 class _Answer(BaseModel):
@@ -142,8 +138,7 @@ class CardDetailsService:
         repository: CardRepository,
         text_model: TextModel,
         model: str,
-        speech: SpeechModel,
-        speech_model: str,
+        sounds: Sounds,
         files: FileStore,
         clock: Callable[[], dt.datetime],
     ) -> None:
@@ -151,10 +146,9 @@ class CardDetailsService:
         self._personas = personas
         self._repository = repository
         self._text_model = text_model
-        # Empty names: no forms, and no sound.
+        # An empty name: no forms.
         self._model = model
-        self._speech = speech
-        self._speech_model = speech_model
+        self._sounds = sounds
         self._files = files
         self._clock = clock
 
@@ -206,7 +200,7 @@ class CardDetailsService:
         card = self._repository.get(user_id, card_id)
         if card is None:
             raise CardError("not_found")
-        if not self._speech_model:
+        if not self._sounds.available:
             raise CardError("unavailable")
         # A word with its sentence; a correction as it is right.
         if card.kind == "word":
@@ -215,15 +209,12 @@ class CardDetailsService:
             text = card.back
         partners = self._personas.partners(user_id)
         voice = partners[0].voice if partners else DEFAULT_VOICE
-        # The name changes with what is said and how, so a new voice or text is spoken anew.
-        spoken = f"{self._speech_model}\n{voice}\n{text}".encode()
-        fingerprint = hashlib.sha256(spoken).hexdigest()[:_FINGERPRINT_LENGTH]
-        key = f"users/{user_id}/cards/{card.id}-{fingerprint}.mp3"
-        if self._files.stat(key) is None:
-            task = SpeechTask(self._speech_model, voice, text, Charge(user_id, Feature.CARD_AUDIO))
-            try:
-                sound = self._speech.speak(task)
-            except SpeechError as error:
-                raise CardError("unavailable") from error
-            self._files.save(key, sound, SOUND_TYPE)
-        return self._files.address(key, SOUND_ADDRESS_SECONDS)
+        try:
+            return self._sounds.address(
+                f"users/{user_id}/cards/{card.id}-",
+                voice,
+                text,
+                Charge(user_id, Feature.CARD_AUDIO),
+            )
+        except SpeechError as error:
+            raise CardError("unavailable") from error

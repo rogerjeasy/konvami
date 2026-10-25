@@ -792,7 +792,7 @@ class PracticeScript:
                 user_id, persona.id, today, history.last_at.date() if history else None
             ),
             avoid_topics=profile.avoid_topics,
-            plan=self._planner.plan(user_id, practise),
+            plan=self._planner.plan(user_id, practise, today),
         )
 
     def _exam(self, language: str, exam: dict[str, Any] | None) -> str | None:

@@ -1,13 +1,15 @@
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
-import type { Activity } from '@konvami/api-client';
+import type { Activity, WeekPlan } from '@konvami/api-client';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { Pill } from '@/components/pill';
 import { Text } from '@/components/text';
+import { TextButton } from '@/components/text-button';
+import { useTopicLabels } from '@/hooks/use-labels';
 import { WeekStrip, type WeekDay, type WeekDayState } from '@/components/week-strip';
-import { weekdayInitials, weekdayNames, wholeMinutes } from '@/lib/format';
+import { formatList, weekdayInitials, weekdayNames } from '@/lib/format';
 import { useTheme } from '@/theme';
 
 // Stands between the two numbers of the week ("15 min this week · 10 min today").
@@ -21,14 +23,24 @@ function stateOf(day: Activity['week'][number], today: string): WeekDayState {
 }
 
 /**
- * This week at a glance: the days practised, the streak and the minutes. A learner who has not
- * talked yet sees an empty week and what starts a streak, never a number that is not theirs.
+ * This week at a glance: the days practised, the streak, the minutes and days against the
+ * week's plan, and the grammar topics the week works on. A learner who has not talked yet sees
+ * an empty week and what starts a streak, never a number that is not theirs.
  */
-export function WeekCard({ activity }: { activity: Activity }) {
+export function WeekCard({
+  activity,
+  plan,
+  onChangeGoal,
+}: {
+  activity: Activity;
+  plan: WeekPlan;
+  onChangeGoal: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { color } = useTheme();
   const initials = weekdayInitials(i18n.language);
   const names = weekdayNames(i18n.language);
+  const labels = useTopicLabels();
 
   const days: WeekDay[] = activity.week.map((day, i) => {
     const state = stateOf(day, activity.today);
@@ -40,14 +52,12 @@ export function WeekCard({ activity }: { activity: Activity }) {
     };
   });
 
+  // Against the plan: "15 of 40 min this week · 2 of 4 days".
   const numbers = [
-    activity.weekSeconds > 0
-      ? t('today.week.minutes', { count: wholeMinutes(activity.weekSeconds) })
-      : null,
-    activity.todaySeconds > 0
-      ? t('today.week.today', { count: wholeMinutes(activity.todaySeconds) })
-      : null,
-  ].filter((text) => text !== null);
+    t('today.week.ofPlan', { done: plan.doneMinutes, count: plan.minutes }),
+    t('today.week.daysOfPlan', { done: plan.doneDays, count: plan.days }),
+  ];
+  const topics = plan.topics.map(labels.name);
 
   // What to do next, when there is something to say; a learner who talked today is all set.
   const nudge =
@@ -74,16 +84,31 @@ export function WeekCard({ activity }: { activity: Activity }) {
         ) : null}
       </View>
       <WeekStrip days={days} />
-      {numbers.length || nudge ? (
+      <View className="gap-1">
+        <Text variant="label">{numbers.join(SEPARATOR)}</Text>
+        {nudge ? (
+          <Text variant="callout" tone="muted">
+            {nudge}
+          </Text>
+        ) : null}
+      </View>
+      {topics.length || plan.capped ? (
         <View className="gap-1">
-          {numbers.length ? <Text variant="label">{numbers.join(SEPARATOR)}</Text> : null}
-          {nudge ? (
-            <Text variant="callout" tone="muted">
-              {nudge}
+          {topics.length ? (
+            <Text variant="small" tone="muted">
+              {t('today.week.topics', { topics: formatList(i18n.language, topics) })}
+            </Text>
+          ) : null}
+          {plan.capped ? (
+            <Text variant="small" tone="muted">
+              {t('today.week.capped', { count: plan.minutes })}
             </Text>
           ) : null}
         </View>
       ) : null}
+      <View className="items-start">
+        <TextButton tone="primary" label={t('today.week.changeGoal')} onPress={onChangeGoal} />
+      </View>
     </Card>
   );
 }

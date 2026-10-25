@@ -50,6 +50,9 @@ class Feature(StrEnum):
     CARD_AUDIO = "card_audio"
     # A card answered out loud (voice review, spec §6.7).
     VOICE_REVIEW = "voice_review"
+    # The weekly check-in (spec §6.12): its text, and its sound.
+    WEEK_REVIEW = "week_review"
+    WEEK_AUDIO = "week_audio"
     VOICE_SAMPLE = "voice_sample"
 
 

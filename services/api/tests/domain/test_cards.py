@@ -408,3 +408,29 @@ def test_nothing_of_a_report_is_saved_before_the_learner_saves_it() -> None:
     saved = world.cards.saved(USER, report)
 
     assert (saved.words, saved.mistakes) == ((False, False), (False, False))
+
+
+def test_what_comes_due_by_a_moment_is_counted_with_the_words_apart() -> None:
+    world = World()
+    call_id = reported(world)
+    word = world.cards.save(USER, call_id, "word", 0)
+    world.cards.save(USER, call_id, "word", 1)
+    world.cards.save(USER, call_id, "correction", 0)
+    world.cards.review(USER, word.id, "good")
+
+    now = world.cards.due_ahead(USER, world.clock())
+    later = world.cards.due_ahead(USER, world.clock() + 30 * DAY)
+
+    assert (now.now, now.by_then, now.words_by_then) == (2, 2, 1)
+    assert (later.now, later.by_then, later.words_by_then) == (2, 3, 2)
+
+
+def test_reviews_are_counted_from_a_moment_on() -> None:
+    world = World()
+    call_id = reported(world)
+    card = world.cards.save(USER, call_id, "word", 0)
+    world.cards.review(USER, card.id, "good")
+    world.clock.now += DAY
+
+    assert world.cards.reviews_since(USER, NOON - HOUR) == 1
+    assert world.cards.reviews_since(USER, NOON + HOUR) == 0

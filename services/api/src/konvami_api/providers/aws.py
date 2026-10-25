@@ -1,5 +1,6 @@
 """Small adapters over AWS services the backend uses besides the database."""
 
+import datetime as dt
 import json
 from collections.abc import Callable
 from typing import Any, Protocol
@@ -81,6 +82,23 @@ class LambdaDetailsStarter:
             FunctionName=self._function_name,
             InvocationType="Event",
             Payload=json.dumps({"card_details": str(user_id)}).encode(),
+        )
+
+
+class LambdaWeekReviewStarter:
+    """Has a learner's weekly check-in written by the worker function, in an invocation of its
+    own, so opening Progress does not wait for the text model."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, user_id: UUID, week: dt.date) -> None:
+        # The worker writes only a check-in that is waiting in the database for this learner.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"week_review": str(user_id), "week": week.isoformat()}).encode(),
         )
 
 

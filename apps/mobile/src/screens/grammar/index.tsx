@@ -19,7 +19,7 @@ import { backOr } from '@/lib/navigation';
 import { grammarTopicRoute, ROUTES } from '@/lib/routes';
 import { useGrammarMap, usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
-import { useTopicLabels } from './labels';
+import { useTopicLabels } from '@/hooks/use-labels';
 
 // The states that count as having a topic: what the summary at the top adds up.
 const SOLID: readonly GrammarTopic['mastery'][] = ['mostly_correct', 'mastered'];

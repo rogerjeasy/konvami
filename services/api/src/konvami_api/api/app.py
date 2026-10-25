@@ -57,6 +57,7 @@ from konvami_api.api.schemas import (
     RetriesOut,
     RetryOut,
     ReviewIn,
+    SoundOut,
     TranscriptOut,
     TutorCorrectionIn,
     TutorQuestionIn,
@@ -65,6 +66,7 @@ from konvami_api.api.schemas import (
     VoiceCallIn,
     VoiceCallOut,
     VoiceSampleOut,
+    WeekReviewOut,
 )
 from konvami_api.domain.accounts import AccountService, AccountView
 from konvami_api.domain.card_details import CardDetailsService
@@ -74,6 +76,7 @@ from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
+from konvami_api.domain.director import DirectorService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
@@ -91,6 +94,7 @@ from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.week_review import WeekReviewService
 
 
 @dataclass(frozen=True)
@@ -120,6 +124,8 @@ class Services:
     retries: RetryService
     voice_review: VoiceReviewService
     conversation_review: ConversationReview
+    director: DirectorService
+    week_reviews: WeekReviewService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -302,7 +308,8 @@ def _router(services: Services) -> APIRouter:
         # calendar. Left out or unknown, they follow UTC.
         tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
     ) -> HomeOut:
-        return HomeOut.of(services.home.view(user, tz))
+        home = services.home.view(user, tz)
+        return HomeOut.of(home, services.director.week(user, tz))
 
     @router.get("/progress", operation_id="getProgress", responses=CONFLICT)
     def get_progress(
@@ -310,7 +317,40 @@ def _router(services: Services) -> APIRouter:
         # The device's time zone, as for `/home`: days and weeks follow the learner's calendar.
         tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
     ) -> ProgressOut:
-        return ProgressOut.of(services.progress.view(user, tz))
+        progress = services.progress.view(user, tz)
+        return ProgressOut.of(progress, services.week_reviews.last_week(user, tz))
+
+    @router.post(
+        "/weeks/{week}/review",
+        operation_id="requestWeekReview",
+        responses=NOT_FOUND | CONFLICT | FORBIDDEN | UNAVAILABLE,
+    )
+    def request_week_review(
+        user: CurrentUser,
+        week: dt.date,
+        # The device's time zone, as for `/progress`: which week was last week.
+        tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
+    ) -> WeekReviewOut:
+        """Has last week's check-in written (once); `week` is its Monday."""
+        return WeekReviewOut.of(services.week_reviews.request(user, tz, week))
+
+    @router.get("/weeks/{week}/review", operation_id="getWeekReview", responses=NOT_FOUND)
+    def get_week_review(
+        user: CurrentUser,
+        week: dt.date,
+        tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
+    ) -> WeekReviewOut:
+        """Last week's check-in, to follow one being written; `week` is its Monday."""
+        return WeekReviewOut.of(services.week_reviews.get(user, tz, week))
+
+    @router.get(
+        "/weeks/{week}/review/audio",
+        operation_id="getWeekReviewAudio",
+        responses=NOT_FOUND | UNAVAILABLE,
+    )
+    def get_week_review_audio(user: CurrentUser, week: dt.date) -> SoundOut:
+        """Where the check-in plays from, spoken by the partner who wrote it."""
+        return SoundOut(url=services.week_reviews.audio(user, week))
 
     @router.get("/conversations", operation_id="getConversations", responses=REFUSED)
     def get_conversations(

@@ -261,6 +261,20 @@ def test_the_worker_fills_in_new_cards_when_that_is_what_it_is_started_for(stub:
     stub.assert_no_pending_responses()
 
 
+def test_the_worker_writes_a_weekly_check_in_when_that_is_what_it_is_started_for(
+    stub: Stubber,
+) -> None:
+    """Asked to write a learner's check-in, it reads their profile and the check-in (here: none
+    is waiting), and asks no model."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    for _ in range(2):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"week_review": USER, "week": "2026-10-05"})
+
+    stub.assert_no_pending_responses()
+
+
 def test_a_report_is_read_from_the_database(stub: Stubber) -> None:
     """The entry point builds the report service; here only that its route answers."""
     stub.add_response(
