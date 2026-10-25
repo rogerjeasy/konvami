@@ -229,6 +229,15 @@ _RESERVE_RETRY = f"""
     RETURNING attempts
 """
 
+_RESERVE_ANSWER = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO voice_answer_day (user_id, day, answers)
+    VALUES (CAST(:user_id AS uuid), CAST(:day AS date), 1)
+    ON CONFLICT (user_id, day) DO UPDATE SET answers = voice_answer_day.answers + 1
+        WHERE voice_answer_day.answers < :limit
+    RETURNING answers
+"""
+
 _RETRY_ATTEMPTED = f"""
     WITH {_ENSURE_USER}
     INSERT INTO retry_attempt (user_id, call_id, mistake_index, attempted_at, was_right)
@@ -1012,6 +1021,21 @@ class SqlRecordingRepository:
 
     def forget_all(self, user_id: UUID) -> None:
         self._client.execute(_FORGET_ALL_RECORDINGS, {"user_id": str(user_id)})
+
+
+class SqlAnswerAllowance:
+    """The cards a learner answered out loud each day (voice review)."""
+
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def reserve(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        if limit < 1:
+            return False
+        rows = self._client.execute(
+            _RESERVE_ANSWER, {"user_id": str(user_id), "day": day.isoformat(), "limit": limit}
+        )
+        return bool(rows)
 
 
 class SqlRetryRepository:
