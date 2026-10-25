@@ -12,6 +12,7 @@ from konvami_api.domain.voice import CallPurpose
 from konvami_api.providers.aws import (
     LambdaCallStarter,
     LambdaDetailsStarter,
+    LambdaExamStarter,
     LambdaReportStarter,
     LambdaWeekReviewStarter,
     SnsNotifier,
@@ -100,6 +101,20 @@ def test_a_weekly_check_in_is_handed_to_the_worker_to_be_written(functions: Stub
     )
 
     LambdaWeekReviewStarter(functions.client, "kv-dev-call-worker").start(USER, date(2026, 10, 5))
+
+
+def test_an_exam_simulation_is_handed_to_the_worker_to_be_scored(functions: Stubber) -> None:
+    functions.add_response(
+        "invoke",
+        {"StatusCode": 202},
+        {
+            "FunctionName": "kv-dev-call-worker",
+            "InvocationType": "Event",
+            "Payload": json.dumps({"exam": "rtc_1"}).encode(),
+        },
+    )
+
+    LambdaExamStarter(functions.client, "kv-dev-call-worker").start("rtc_1")
 
 
 def test_a_secret_is_fetched_once_and_then_remembered(secrets: Stubber) -> None:

@@ -23,6 +23,7 @@ from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.director import DirectorService
+from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
@@ -56,6 +57,7 @@ from konvami_api.persistence.repositories import (
     SqlChargeRepository,
     SqlConversationRepository,
     SqlDraftLog,
+    SqlExamRepository,
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
@@ -74,6 +76,7 @@ from konvami_api.providers.aws import (
     LambdaCallStarter,
     LambdaClient,
     LambdaDetailsStarter,
+    LambdaExamStarter,
     LambdaReportStarter,
     LambdaWeekReviewStarter,
     SecretsClient,
@@ -266,11 +269,27 @@ def build_backend(
         call_seconds=voice_config.max_seconds.get(CallPurpose.PRACTICE, 0),
         clock=_now,
     )
+    speech = OpenAiSpeech(openai_key, meter=meter)
+    sounds = Sounds(speech=speech, model=models.speech, files=files)
+    exams = ExamService(
+        profiles=profiles,
+        personas=personas,
+        conversations=conversations,
+        sessions=sessions,
+        repository=SqlExamRepository(sql),
+        starter=LambdaExamStarter(clients.functions, worker),
+        text_model=text,
+        # Scoring an exam is judging the learner's German, as the report does.
+        model=models.report,
+        sounds=sounds,
+        clock=_now,
+    )
     voice = VoiceCallService(
         settings=voice_config,
         scripts={
             CallPurpose.ONBOARDING: HostScript(CATALOG, profiles),
             CallPurpose.PLACEMENT: PlacementScript(placement),
+            CallPurpose.EXAM: ExamScript(exams),
             CallPurpose.PRACTICE: PracticeScript(
                 profiles=profiles,
                 onboarding=onboarding,
@@ -333,8 +352,6 @@ def build_backend(
     accounts = AccountService(
         records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
     )
-    speech = OpenAiSpeech(openai_key, meter=meter)
-    sounds = Sounds(speech=speech, model=models.speech, files=files)
     services = Services(
         catalog=CATALOG,
         profiles=profiles,
@@ -367,6 +384,7 @@ def build_backend(
         ),
         grammar=grammar,
         director=director,
+        exams=exams,
         week_reviews=WeekReviewService(
             profiles=profiles,
             accounts=directory,
@@ -459,7 +477,11 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     time from their recordings, counting the due words the learner used as reviewed, writing
     its report, moving the level if the reports say so, then writing down what it told about
     the learner; and filling in a learner's new word cards with
-    their forms (`card_details`); and writing a learner's weekly check-in (`week_review`)."""
+    their forms (`card_details`); writing a learner's weekly check-in (`week_review`); and scoring
+    an exam simulation (`exam`)."""
+    if "exam" in event:
+        backend.services.exams.score(event["exam"])
+        return
     if "week_review" in event:
         week = dt.date.fromisoformat(event["week"])
         backend.services.week_reviews.write(UUID(event["week_review"]), week)

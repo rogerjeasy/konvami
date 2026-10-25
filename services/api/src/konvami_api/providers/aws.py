@@ -85,6 +85,23 @@ class LambdaDetailsStarter:
         )
 
 
+class LambdaExamStarter:
+    """Has an exam simulation scored by the worker function, in an invocation of its own: the
+    scoring takes longer than an API request may, and must not hold up the end of the call."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, call_id: str) -> None:
+        # The worker reads whose simulation it is from the database.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"exam": call_id}).encode(),
+        )
+
+
 class LambdaWeekReviewStarter:
     """Has a learner's weekly check-in written by the worker function, in an invocation of its
     own, so opening Progress does not wait for the text model."""
