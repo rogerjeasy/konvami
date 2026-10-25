@@ -113,6 +113,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/{card_id}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer Card
+         * @description Hears a card answered out loud (voice review) and says how close it came. The card
+         *     is rated as before, by the learner.
+         */
+        post: operations["answerCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards/{card_id}/audio": {
         parameters: {
             query?: never;
@@ -825,6 +846,27 @@ export interface components {
             weeklySeconds: number;
         };
         /**
+         * AnsweredOut
+         * @description A card answered out loud: what was heard, how close it came, and the rating that points
+         *     to. The card is not rated yet.
+         */
+        AnsweredOut: {
+            /** Expected */
+            expected: string;
+            /** Heard */
+            heard: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "right" | "article" | "wrong";
+            /**
+             * Suggested
+             * @enum {string}
+             */
+            suggested: "again" | "hard" | "good" | "easy";
+        };
+        /**
          * CallPlanOut
          * @description What a practice conversation sets out to practise, as the learner sees it: the kinds of
          *     mistake (a language pack's categories) and the words to use. How the partner is told to
@@ -835,6 +877,8 @@ export interface components {
             focus: string[];
             /** Language */
             language: string;
+            /** Review */
+            review: boolean;
             /** Words */
             words: components["schemas"]["PlanWordOut"][];
         };
@@ -1701,6 +1745,20 @@ export interface components {
             cards: components["schemas"]["QueueCardOut"][];
             /** Due */
             due: number;
+            /** Language */
+            language: string;
+        };
+        /**
+         * RecordingIn
+         * @description A sentence recorded on the device: a correction said again, or a card's answer.
+         */
+        RecordingIn: {
+            /** Audio */
+            audio: string;
+            /** Durationms */
+            durationMs?: number | null;
+            /** Format */
+            format: string;
         };
         /** RecordingsOut */
         RecordingsOut: {
@@ -1791,18 +1849,6 @@ export interface components {
         RetriesOut: {
             /** Retries */
             retries: components["schemas"]["RetryOut"][];
-        };
-        /**
-         * RetryIn
-         * @description One attempt at saying a correction again, recorded on the device.
-         */
-        RetryIn: {
-            /** Audio */
-            audio: string;
-            /** Durationms */
-            durationMs?: number | null;
-            /** Format */
-            format: string;
         };
         /** RetryOut */
         RetryOut: {
@@ -2458,6 +2504,86 @@ export interface operations {
             };
         };
     };
+    answerCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnsweredOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     getCardAudio: {
         parameters: {
             query?: never;
@@ -2660,7 +2786,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RetryIn"];
+                "application/json": components["schemas"]["RecordingIn"];
             };
         };
         responses: {

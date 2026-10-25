@@ -15,8 +15,8 @@ import { TabHeader, TabScreen } from '@/components/tab-screen';
 import { Text } from '@/components/text';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
-import { ROUTES } from '@/lib/routes';
-import { useDeck, usePracticeServices } from '@/practice/services';
+import { reviewAloudRoute, reviewCallRoute, ROUTES } from '@/lib/routes';
+import { useDeck, usePracticeServices, useSuggestedPartner } from '@/practice/services';
 import { CardRow } from './card-row';
 import { CardSheet } from './card-sheet';
 import { dueLabel } from './due-label';
@@ -41,6 +41,7 @@ export function LearnScreen() {
   const { status } = useSession();
   const { deck: store, clock } = usePracticeServices();
   const deck = useDeck();
+  const partner = useSuggestedPartner();
   const [open, setOpen] = useState<Flashcard | null>(null);
   const signedIn = status === 'signedIn';
 
@@ -111,6 +112,18 @@ export function LearnScreen() {
                 commitFeedback();
                 router.push(ROUTES.review);
               }}
+              onReviewAloud={() => {
+                commitFeedback();
+                router.push(reviewAloudRoute);
+              }}
+              onConverse={
+                partner
+                  ? () => {
+                      commitFeedback();
+                      router.push(reviewCallRoute(partner));
+                    }
+                  : null
+              }
             />
           </Reveal>
           <Reveal delay={staggerDelay(2)}>

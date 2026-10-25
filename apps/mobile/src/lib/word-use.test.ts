@@ -1,4 +1,4 @@
-import { usesWord } from './word-use';
+import { blankWord, usesWord } from './word-use';
 
 describe('whether the learner used a word of their plan', () => {
   it('finds a noun without its article, in any case and with an ending', () => {
@@ -34,5 +34,37 @@ describe('whether the learner used a word of their plan', () => {
   it('compares plainly in a language it has no rules for', () => {
     expect(usesWord('la gare', 'Je vais à la gare.', 'fr')).toBe(true);
     expect(usesWord('la gare', 'Je vais au marché.', 'fr')).toBe(false);
+  });
+});
+
+describe('blankWord', () => {
+  it('blanks the word out of its sentence, keeping the rest as written', () => {
+    expect(blankWord('Ich habe morgen einen Termin.', 'der Termin', 'de')).toBe(
+      'Ich habe morgen einen ___.',
+    );
+  });
+
+  it('blanks a form of the word', () => {
+    expect(blankWord('Wir besuchen dich am Sonntag.', 'besuchen', 'de')).toBe(
+      'Wir ___ dich am Sonntag.',
+    );
+    expect(blankWord('Die Termine sind voll.', 'der Termin', 'de')).toBe('Die ___ sind voll.');
+    expect(blankWord('Ich habe sie besucht.', 'besuchen', 'de')).toBe('Ich habe sie ___.');
+  });
+
+  it('blanks the main word of a phrase', () => {
+    expect(blankWord('Ich freue mich auf Sonntag.', 'sich freuen auf', 'de')).toBe(
+      'Ich ___ mich auf Sonntag.',
+    );
+  });
+
+  it('gives nothing when the sentence does not have the word', () => {
+    expect(blankWord('Das passt mir gut.', 'der Termin', 'de')).toBeNull();
+    expect(blankWord('', 'der Termin', 'de')).toBeNull();
+  });
+
+  it('blanks the words of a language without rules as they are', () => {
+    expect(blankWord('See you on Friday.', 'on Friday', 'en')).toBe('See you ___.');
+    expect(blankWord('See you then.', 'on Friday', 'en')).toBeNull();
   });
 });

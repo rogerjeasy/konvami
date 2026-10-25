@@ -535,6 +535,8 @@ export interface FakeApi extends ApiClient {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
   /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
   hearsNextRetry(heard: string): void;
+  /** What the next card answered out loud is heard as; by default, its answer. */
+  hearsNextAnswer(heard: string | ApiError): void;
   /** Every call so far, as `[method, ...arguments]`, in order. */
   readonly calls: readonly unknown[][];
   /** Stores answers directly, as if they had been given earlier. */
@@ -660,6 +662,7 @@ export function createFakeApi(): FakeApi {
   // "Say it better": what the next attempt is heard as, and each conversation's corrections
   // said again, with whether one attempt was right.
   let nextRetryHeard: string | null = null;
+  let nextAnswerHeard: string | ApiError | null = null;
   const retried = new Map<string, Map<number, boolean>>();
   let tutorAnswer: TutorAnswer = FAKE_TUTOR_ANSWER;
   const keepQuestion = (question: string, source: TutorQuestion['source'], at: number) => {
@@ -1182,7 +1185,7 @@ export function createFakeApi(): FakeApi {
       essentialsConfirmed = true;
       return onboarding();
     },
-    async startVoiceCall(purpose, sdp, { personaId } = {}) {
+    async startVoiceCall(purpose, sdp, { personaId, practise } = {}) {
       await record('startVoiceCall', purpose, sdp, personaId);
       if (purpose === 'placement') placement = 'in_progress';
       if (purpose === 'practice' && !personas?.some(({ id }) => id === personaId)) {
@@ -1192,8 +1195,18 @@ export function createFakeApi(): FakeApi {
       if (left < MIN_CALL_SECONDS) throw new ApiError('minutes_used_up', 429);
       const maxSeconds = Math.min(purpose === 'practice' ? 600 : 480, left);
       usedSeconds += maxSeconds;
-      // Nothing to plan from yet: no reports and no cards in the fake.
-      const plan = purpose === 'practice' ? { language: 'de', focus: [], words: [] } : null;
+      // Nothing to plan from yet: no reports in the fake. A review brings the due words.
+      const review = practise === 'words';
+      const words = review ? dueCards().filter(({ kind }) => kind === 'word') : [];
+      const plan =
+        purpose === 'practice'
+          ? {
+              language: 'de',
+              focus: [],
+              words: words.map(({ front, back }) => ({ text: front, meaning: back })),
+              review,
+            }
+          : null;
       return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds, plan };
     },
     async getHome(timeZone) {
@@ -1298,6 +1311,7 @@ export function createFakeApi(): FakeApi {
           .slice(0, limit)
           .map((card) => ({ card, dueIn })),
         due: dueCards().length,
+        language: 'de',
       };
     },
     async reviewCard(id, rating) {
@@ -1388,6 +1402,29 @@ export function createFakeApi(): FakeApi {
       await record('getRetries', conversationId);
       const tried = retried.get(conversationId) ?? new Map<number, boolean>();
       return { retries: [...tried].map(([index, right]) => ({ index, right })) };
+    },
+    hearsNextAnswer(heard) {
+      nextAnswerHeard = heard;
+    },
+    async answerCard(id, answer) {
+      await record('answerCard', id, answer);
+      const card = cards.find((one) => one.id === id);
+      if (!card) throw new ApiError('not_found', 404);
+      const expected = card.kind === 'word' ? card.front : card.back;
+      const heard = nextAnswerHeard ?? expected;
+      nextAnswerHeard = null;
+      if (heard instanceof ApiError) throw heard;
+      // The server's check, roughly: the words together, or a noun's without its article.
+      const said = heard.toLowerCase();
+      const word = expected.toLowerCase();
+      const bare = word.replace(/^(der|die|das) /, '');
+      const outcome = said.includes(word)
+        ? 'right'
+        : bare !== word && said.includes(bare)
+          ? 'article'
+          : 'wrong';
+      const suggested = ({ right: 'good', article: 'hard', wrong: 'again' } as const)[outcome];
+      return { heard, outcome, expected, suggested };
     },
     async getCardAudio(id) {
       await record('getCardAudio', id);

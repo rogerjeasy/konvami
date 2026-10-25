@@ -707,6 +707,7 @@ export const de: Translation = {
     },
     plan: {
       focus: 'Heute im Fokus: {{topics}}',
+      review: 'Wiederholung: sag jedes Wort selbst · {{used}} von {{count}}',
       words: 'Wörter zum Einbauen: {{used}} von {{count}}',
       wordDone: '{{word}}: benutzt',
       wordOpen: '{{word}}: noch nicht benutzt',
@@ -1028,6 +1029,8 @@ export const de: Translation = {
       due_other: '{{count}} Karten zu wiederholen',
       body: 'Ein paar Minuten jetzt, und sie bleiben dir.',
       start: 'Jetzt wiederholen',
+      aloud: 'Laut antworten',
+      converse: 'In einem Gespräch üben',
       none: 'Alles erledigt',
       next: 'Deine nächste Karte kommt {{when}} zurück.',
     },
@@ -1192,6 +1195,32 @@ export const de: Translation = {
     ask: {
       word: 'Was bedeutet das?',
       correction: 'Wie ist es richtig?',
+    },
+    aloud: {
+      askWord: 'Wie sagt man das?',
+      askNoun: 'Wie sagt man das? Mit Artikel',
+      fromConversation: 'Aus deinem Gespräch',
+      answer: 'Laut antworten',
+      recording: 'Aufnahme läuft…',
+      recordingHint: 'Sag deine Antwort, dann tippe auf Stopp.',
+      stop: 'Stopp',
+      checking: 'Ich höre zu…',
+      outcome: {
+        right: 'Genau',
+        article: 'Fast: sag es mit Artikel',
+        wrong: 'Noch nicht ganz',
+      },
+      heard: 'Du hast gesagt: „{{heard}}“',
+      nothingHeard: 'Es war nichts zu hören.',
+      again: 'Noch einmal',
+      suggested: '{{label}}, vorgeschlagen',
+      failed: {
+        limit: 'Für heute sind die lauten Antworten aufgebraucht. Zeig stattdessen die Antwort.',
+        consent:
+          'Laut antworten braucht deine Zustimmung, Audio mit unserem KI-Anbieter zu teilen.',
+        unavailable:
+          'Deine Antwort konnte nicht geprüft werden. Versuch es noch einmal oder zeig die Antwort.',
+      },
     },
     show: 'Antwort zeigen',
     rateTitle: 'Wie gut wusstest du es?',
@@ -1389,6 +1418,7 @@ export const de: Translation = {
       retry: 'Besser sagen',
       card_details: 'Wortformen der Karten',
       card_audio: 'Klang der Karten',
+      voice_review: 'Laut beantwortete Karten',
       voice_sample: 'Stimmproben',
     },
   },

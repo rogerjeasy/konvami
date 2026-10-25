@@ -109,6 +109,8 @@ class Queue:
     cards: tuple[QueueItem, ...]
     # Every card that is due, of which `cards` are the first.
     due: int
+    # The language the cards are in: the one learned.
+    language: str = ""
 
 
 @dataclass(frozen=True)
@@ -355,6 +357,7 @@ class CardService:
                 for card in cards
             ),
             due=self._repository.counts(user_id, language, now)[1],
+            language=language,
         )
 
     def words_to_bring_back(self, user_id: UUID, limit: int) -> list[Card]:
@@ -363,6 +366,11 @@ class CardService:
         # Every card is due by then, so the store hands them over in the order of their dates.
         horizon = self._clock() + BRING_BACK_HORIZON
         cards = self._repository.due(user_id, self._language(user_id), horizon, QUEUE_MAX)
+        return [card for card in cards if card.kind == "word"][:limit]
+
+    def words_due(self, user_id: UUID, limit: int) -> list[Card]:
+        """The word cards due now, the longest waiting first."""
+        cards = self._repository.due(user_id, self._language(user_id), self._clock(), QUEUE_MAX)
         return [card for card in cards if card.kind == "word"][:limit]
 
     def review(self, user_id: UUID, card_id: UUID, rating: Rating) -> Card:
@@ -374,6 +382,18 @@ class CardService:
             # Another review of the same card was stored first (a rating tapped twice).
             raise CardError("conflict")
         return after
+
+    def reviewed_in_conversation(self, user_id: UUID, card_id: UUID, started: dt.datetime) -> bool:
+        """Counts a word the learner used in a conversation that began at `started` as known
+        ("good"): only when the card was due by then and has not been reviewed since, so a word
+        is never reviewed early, nor twice for one conversation."""
+        card = self._repository.get(user_id, card_id)
+        if card is None or card.kind != "word" or card.due_at > started:
+            return False
+        if card.reviewed_at is not None and card.reviewed_at >= started:
+            return False
+        after = _reviewed(card, "good", self._clock())
+        return self._repository.reviewed(user_id, after, "good", card.reviews)
 
     def remove(self, user_id: UUID, card_id: UUID) -> None:
         if not self._repository.remove(user_id, card_id):

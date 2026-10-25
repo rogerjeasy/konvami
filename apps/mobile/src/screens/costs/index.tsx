@@ -45,6 +45,7 @@ const FEATURE = {
   retry: 'costs.feature.retry',
   card_details: 'costs.feature.card_details',
   card_audio: 'costs.feature.card_audio',
+  voice_review: 'costs.feature.voice_review',
   voice_sample: 'costs.feature.voice_sample',
 } as const;
 

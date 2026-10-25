@@ -117,6 +117,15 @@ export const callRoute = (
     },
   }) as const satisfies Href;
 
+/** 5.11 Review, answering each card out loud instead of turning it over (voice review). */
+export const reviewAloudRoute = {
+  pathname: '/review',
+  params: { aloud: '1' },
+} as const satisfies Href;
+
+/** 5.3 A review conversation (spec §6.7): a call built around the learner's due words. */
+export const reviewCallRoute = (personaId: string) => callRoute(personaId, { practise: 'words' });
+
 /** 5.6 One past conversation, to read again. */
 export const conversationRoute = (id: string) =>
   ({ pathname: '/conversations/[id]', params: { id } }) as const satisfies Href;

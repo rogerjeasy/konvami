@@ -309,6 +309,7 @@ describe('5.3 Conversation', () => {
         { text: 'der Termin', meaning: 'appointment' },
         { text: 'umsteigen', meaning: 'to change trains' },
       ],
+      review: false,
     };
     await live({ voice });
 
@@ -323,9 +324,24 @@ describe('5.3 Conversation', () => {
     expect(screen.getByText('Words to use: 1 of 2')).toBeTruthy();
   });
 
+  it('says a review conversation is for saying each word, and counts them', async () => {
+    const voice = createFakeVoiceEngine();
+    voice.plan = {
+      language: 'de',
+      focus: [],
+      words: [{ text: 'der Termin', meaning: 'appointment' }],
+      review: true,
+    };
+    await live({ voice });
+
+    expect(screen.getByText('Review: say each word yourself · 0 of 1')).toBeTruthy();
+    await play(voice, learnerSaid('Ich habe einen Termin.'));
+    expect(screen.getByText('Review: say each word yourself · 1 of 1')).toBeTruthy();
+  });
+
   it('shows no plan when there is nothing to practise yet', async () => {
     const voice = createFakeVoiceEngine();
-    voice.plan = { language: 'de', focus: [], words: [] };
+    voice.plan = { language: 'de', focus: [], words: [], review: false };
     await live({ voice });
 
     expect(screen.queryByText(/^Practising today/)).toBeNull();

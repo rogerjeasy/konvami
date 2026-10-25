@@ -84,6 +84,7 @@ from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
 from konvami_api.domain.tutor import Source as TutorSource
 from konvami_api.domain.tutor import TutorQuestion
 from konvami_api.domain.voice import CallPurpose, CallStarted
+from konvami_api.domain.voice_review import Answered, Outcome
 
 # A request never needs more changes than the profile has fields.
 MAX_CHANGES = 20
@@ -268,7 +269,8 @@ class VoiceCallIn(ApiModel):
     local_date: dt.date | None = None
     # A practice call that rehearses a role-play (a scenario id from the catalog).
     scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
-    # A practice call that practises a grammar topic first (a topic id from the grammar map).
+    # A practice call that practises a grammar topic first (a topic id from the grammar map),
+    # or "words": a review conversation built around the learner's due words.
     practise: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
 
 
@@ -286,6 +288,8 @@ class CallPlanOut(ApiModel):
     language: str
     focus: list[str]
     words: list[PlanWordOut]
+    # A review conversation: the words are its point.
+    review: bool
 
     @classmethod
     def of(cls, plan: SessionPlan) -> "CallPlanOut":
@@ -293,6 +297,7 @@ class CallPlanOut(ApiModel):
             language=plan.language,
             focus=[point.topic for point in plan.focus],
             words=[PlanWordOut(text=word.text, meaning=word.meaning) for word in plan.words],
+            review=plan.review,
         )
 
 
@@ -396,15 +401,16 @@ class GrammarTopicPageOut(ApiModel):
         )
 
 
-# A sentence said again is a few seconds of compressed audio; this is a minute and more, in base64.
-MAX_RETRY_AUDIO = 2_000_000
+# A sentence said on purpose is a few seconds of compressed audio; this is a minute and more, in
+# base64.
+MAX_SPOKEN_AUDIO = 2_000_000
 
 
-class RetryIn(ApiModel):
-    """One attempt at saying a correction again, recorded on the device."""
+class RecordingIn(ApiModel):
+    """A sentence recorded on the device: a correction said again, or a card's answer."""
 
     # The recording, in base64.
-    audio: str = Field(min_length=1, max_length=MAX_RETRY_AUDIO)
+    audio: str = Field(min_length=1, max_length=MAX_SPOKEN_AUDIO)
     # Its file type: "m4a" (a phone) or "webm" (a browser).
     format: str = Field(min_length=1, max_length=8)
     # How long it plays, as the recorder measured it.
@@ -811,6 +817,25 @@ class WordDetailsOut(ApiModel):
         return cls(**dataclasses.asdict(details))
 
 
+class AnsweredOut(ApiModel):
+    """A card answered out loud: what was heard, how close it came, and the rating that points
+    to. The card is not rated yet."""
+
+    heard: str
+    outcome: Outcome
+    expected: str
+    suggested: Rating
+
+    @classmethod
+    def of(cls, answered: Answered) -> "AnsweredOut":
+        return cls(
+            heard=answered.heard,
+            outcome=answered.outcome,
+            expected=answered.expected,
+            suggested=answered.suggested,
+        )
+
+
 class CardAudioOut(ApiModel):
     # A short-lived address of the card's sound (MP3).
     url: str
@@ -887,6 +912,8 @@ class QueueOut(ApiModel):
     cards: list[QueueCardOut]
     # Every card that is due, of which `cards` are the first.
     due: int
+    # The language the cards are in (ISO 639-1).
+    language: str
 
     @classmethod
     def of(cls, queue: Queue) -> "QueueOut":
@@ -901,6 +928,7 @@ class QueueOut(ApiModel):
                 for item in queue.cards
             ],
             due=queue.due,
+            language=queue.language,
         )
 
 

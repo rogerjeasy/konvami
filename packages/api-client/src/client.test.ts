@@ -509,6 +509,25 @@ describe('api client', () => {
     });
   });
 
+  it('answers a card out loud', async () => {
+    const answered = {
+      heard: 'Termin',
+      outcome: 'article',
+      expected: 'der Termin',
+      suggested: 'hard',
+    };
+    const { fetch, calls } = fakeFetch(json(200, answered));
+    const { api } = client(fetch);
+
+    expect(await api.answerCard('c/1', { audio: 'AAEC', format: 'webm', durationMs: 900 })).toEqual(
+      answered,
+    );
+
+    expect(calls[0]?.method).toBe('POST');
+    expect(calls[0]?.url).toBe('https://api.example.test/v1/cards/c%2F1/answers');
+    expect(calls[0]?.body).toEqual({ audio: 'AAEC', format: 'webm', durationMs: 900 });
+  });
+
   it('says a correction again and reads which were said again', async () => {
     const retried = { heard: 'Ich bin gefahren.', right: true, said: 'habe', better: 'bin' };
     const { fetch, calls } = fakeFetch(

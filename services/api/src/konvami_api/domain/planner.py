@@ -9,6 +9,10 @@ Before every conversation it picks, from what is known of the learner:
   conversation");
 - what they talked about lately, so that the partner finds something new.
 
+A review conversation (spec §6.7, `practise=PRACTISE_WORDS`) is built around the words instead:
+more of them, the due ones only (or the next ones when none is due), and no structure to
+compete with them.
+
 It is plain code, not a model: it runs while the learner waits for the call to connect, and the
 partner, who is a model, makes the conversation out of it.
 """
@@ -28,6 +32,10 @@ MAX_FOCUS = 2
 # The learner's own sentences shown per kind of mistake: enough to see the pattern.
 MAX_EXAMPLES = 2
 MAX_PLAN_WORDS = 4
+# A review conversation's words: enough for a few minutes each in a ten-minute call.
+MAX_REVIEW_WORDS = 6
+# What a learner asks to practise for a review conversation, instead of a grammar topic.
+PRACTISE_WORDS = "words"
 # The conversations whose mistakes count; older ones are what the learner may since have learnt.
 RECENT_REPORTS = 5
 RECENT_TOPICS = 3
@@ -85,19 +93,24 @@ class SessionPlanner:
 
     def plan(self, user_id: UUID, practise: str | None = None) -> SessionPlan:
         """The plan of the learner's next conversation; `practise` is a grammar topic they
-        chose to practise in it. Raises `GrammarMapError` for a topic their language lacks."""
+        chose to practise in it, or `PRACTISE_WORDS` for a review conversation. Raises
+        `GrammarMapError` for a topic their language lacks."""
         language = self._profiles.get(user_id).target_language or ""
         pack = self._profiles.catalog.available_pack(language)
-        chosen = pack.topic(practise) if pack and practise else None
-        if practise is not None and chosen is None:
+        review = practise == PRACTISE_WORDS
+        chosen = pack.topic(practise) if pack and practise and not review else None
+        if practise is not None and not review and chosen is None:
             raise GrammarMapError("not_found")
         reports = self._reports.recent(user_id, RECENT_REPORTS)
+        if review:
+            due = self._cards.words_due(user_id, MAX_REVIEW_WORDS)
+            cards = due or self._cards.words_to_bring_back(user_id, MAX_REVIEW_WORDS)
+        else:
+            cards = self._cards.words_to_bring_back(user_id, MAX_PLAN_WORDS)
         return SessionPlan(
             language=language,
-            focus=choose_focus(reports, pack, chosen) if pack else (),
-            words=tuple(
-                PlanWord(card.front, card.back)
-                for card in self._cards.words_to_bring_back(user_id, MAX_PLAN_WORDS)
-            ),
+            focus=choose_focus(reports, pack, chosen) if pack and not review else (),
+            words=tuple(PlanWord(card.front, card.back, str(card.id)) for card in cards),
             recent_topics=tuple(report.summary for report in reports[:RECENT_TOPICS]),
+            review=review,
         )

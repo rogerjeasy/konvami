@@ -547,12 +547,20 @@ def _plan(plan: SessionPlan, role_play: bool) -> str:
             "name the structure or the rule, and never mention this plan."
         )
         parts += [_focus_point(point) for point in plan.focus]
-    if plan.words:
+    if plan.words and plan.review:
+        parts.append(
+            "This conversation is a review of words they saved: its point is that they say "
+            "each of these themselves. One word at a time, bring the talk to a situation where "
+            "they need it, without saying the word first. If they cannot find it, help a little "
+            "(describe it, or give its meaning in their language), let them say it, and use it "
+            "again later. Keep it a real conversation: never quiz them and never list the words:"
+        )
+    elif plan.words:
         parts.append(
             "Words they saved and are learning. Use each once or twice where it fits, so they "
             "hear it, and now and then ask something that gives them a reason to use it:"
         )
-        parts += [f"- {word.text} ({word.meaning})" for word in plan.words]
+    parts += [f"- {word.text} ({word.meaning})" for word in plan.words]
     if topics:
         parts.append(
             "What their last conversations were about (summaries written to the learner, maybe "

@@ -1,5 +1,6 @@
 """Flashcards over HTTP: making cards from a report, the deck, and reviewing."""
 
+import base64
 from datetime import timedelta
 from typing import Any
 from uuid import UUID
@@ -7,6 +8,7 @@ from uuid import UUID
 from konvami_api.api.app import Services
 from konvami_api.domain.cards import MAX_CARDS
 from konvami_api.domain.reports import MAX_REQUESTS, Mistake, Report, Stats, Word
+from konvami_api.domain.voice_review import MAX_ANSWERS_PER_DAY
 from tests.api.conftest import OTHER_USER, USER, Call
 from tests.api.test_report_api import talked
 from tests.fakes import (
@@ -14,6 +16,7 @@ from tests.fakes import (
     FixedClock,
     InMemoryVoiceSessionRepository,
     ScriptedTextModel,
+    ScriptedTranscriber,
 )
 
 REPORT = Report(
@@ -43,6 +46,7 @@ REPORT = Report(
     next_steps=(),
     stats=Stats(19, 14, 2, 10),
 )
+AUDIO = base64.b64encode(b"\x00\x01" * 400).decode()
 WORD = {"conversationId": "rtc_1", "kind": "word", "index": 0}
 FIRST_ID = "cccccccc-cccc-4ccc-8ccc-000000000001"
 
@@ -149,6 +153,75 @@ def test_a_card_that_is_not_the_learners_has_no_sound(call: Call) -> None:
     assert (response.status, response.body["error"]["code"]) == (404, "not_found")
 
 
+def test_a_card_answered_out_loud_says_what_was_heard_and_the_rating_it_points_to(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+    answer_transcriber: ScriptedTranscriber,
+) -> None:
+    reported(call, text_model, calls, services)
+    card_id = call("POST", "/v1/cards", WORD).body["id"]
+    answer_transcriber.answers.append("Wochenende")
+
+    response = call(
+        "POST", f"/v1/cards/{card_id}/answers", {"audio": AUDIO, "format": "m4a", "durationMs": 900}
+    )
+
+    assert (response.status, response.body) == (
+        200,
+        {
+            "heard": "Wochenende",
+            "outcome": "article",
+            "expected": "das Wochenende",
+            "suggested": "hard",
+        },
+    )
+    assert answer_transcriber.tasks[0].seconds == 0.9
+    # The rating is still the learner's.
+    assert call("GET", "/v1/cards/due").body["due"] == 1
+
+
+def test_an_answer_to_a_card_that_is_not_the_learners_is_refused(call: Call) -> None:
+    response = call("POST", f"/v1/cards/{UUID(int=7)}/answers", {"audio": AUDIO, "format": "m4a"})
+
+    assert (response.status, response.body["error"]["code"]) == (404, "not_found")
+
+
+def test_an_answer_that_is_not_base64_is_refused(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    reported(call, text_model, calls, services)
+    card_id = call("POST", "/v1/cards", WORD).body["id"]
+
+    response = call(
+        "POST", f"/v1/cards/{card_id}/answers", {"audio": "not audio!", "format": "m4a"}
+    )
+
+    assert (response.status, response.body["error"]["code"]) == (422, "invalid_value")
+
+
+def test_answers_past_the_days_limit_are_refused(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+    answer_transcriber: ScriptedTranscriber,
+) -> None:
+    reported(call, text_model, calls, services)
+    card_id = call("POST", "/v1/cards", WORD).body["id"]
+    answer_transcriber.answers += ["das Wochenende"] * MAX_ANSWERS_PER_DAY
+    for _ in range(MAX_ANSWERS_PER_DAY):
+        call("POST", f"/v1/cards/{card_id}/answers", {"audio": AUDIO, "format": "m4a"})
+
+    response = call("POST", f"/v1/cards/{card_id}/answers", {"audio": AUDIO, "format": "m4a"})
+
+    assert (response.status, response.body["error"]["code"]) == (429, "answer_limit")
+
+
 def test_a_correction_is_saved_as_a_card(
     call: Call,
     text_model: ScriptedTextModel,
@@ -245,6 +318,8 @@ def test_the_review_queue_says_when_each_card_would_come_back(
     short = call("GET", "/v1/cards/due?limit=1").body
 
     assert queue["due"] == 2
+    # The language the cards are in, for the app to find a word in its sentence.
+    assert queue["language"] == "de"
     assert [item["card"]["front"] for item in queue["cards"]] == [
         "das Wochenende",
         "Ich habe nach Berlin gefahren",
@@ -273,7 +348,7 @@ def test_a_review_moves_the_card_to_when_it_is_due_next(
     assert response.status == 200
     assert response.body["dueAt"] == "2026-10-11T12:00:00Z"
     assert (response.body["reviewedAt"], response.body["reviews"]) == ("2026-10-09T12:00:00Z", 1)
-    assert call("GET", "/v1/cards/due").body == {"cards": [], "due": 0}
+    assert call("GET", "/v1/cards/due").body == {"cards": [], "due": 0, "language": "de"}
 
 
 def test_a_review_is_refused_for_a_card_that_is_not_the_learners_or_a_rating_that_is_none(

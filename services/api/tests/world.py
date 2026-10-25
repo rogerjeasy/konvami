@@ -10,6 +10,7 @@ from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -21,6 +22,7 @@ from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
+from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
@@ -36,6 +38,7 @@ from konvami_api.domain.reports import (
     Word,
 )
 from konvami_api.domain.retries import RetryService
+from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.tutor import TutorService
@@ -46,6 +49,7 @@ from konvami_api.domain.voice import (
     VoiceSession,
     VoiceSettings,
 )
+from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
     FakeAccountDirectory,
@@ -58,6 +62,7 @@ from tests.fakes import (
     InMemoryCardRepository,
     InMemoryChargeRepository,
     InMemoryConversationRepository,
+    InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryFileStore,
     InMemoryLevelRepository,
@@ -220,13 +225,34 @@ class World:
         self.grammar = GrammarMapService(profiles=self.profiles, reports=self.reports)
         self.retry_transcriber = ScriptedTranscriber()
         self.retries = RetryService(
-            profiles=self.profiles,
             reports=self.reports,
-            accounts=self.accounts,
             repository=InMemoryRetryRepository(),
-            transcriber=self.retry_transcriber,
-            model="gpt-4o-transcribe",
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.retry_transcriber,
+                model="gpt-4o-transcribe",
+            ),
             clock=self.clock,
+        )
+        self.answer_transcriber = ScriptedTranscriber()
+        self.voice_review = VoiceReviewService(
+            profiles=self.profiles,
+            cards=self.card_store,
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.answer_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            allowance=InMemoryDailyAllowance(),
+            clock=self.clock,
+        )
+        self.conversation_review = ConversationReview(
+            profiles=self.profiles,
+            sessions=self.sessions,
+            conversations=self.conversations,
+            cards=self.cards,
         )
         self.planner = SessionPlanner(
             profiles=self.profiles, reports=self.reports, cards=self.cards
@@ -417,6 +443,7 @@ class World:
         learner_says: tuple[str, ...] = ("Hallo Lena!",),
         turns: tuple[Turn, ...] | None = None,
         ended: bool = True,
+        plan: SessionPlan | None = None,
     ) -> str:
         """Records a practice conversation as the broker and the worker would: started at `at`,
         and (unless `ended` is False) finished `minutes` later. What was said is `turns`, or a
@@ -431,6 +458,7 @@ class World:
                 "gpt-realtime-2.1-mini",
                 at,
                 persona_id=persona.id if persona else None,
+                plan=plan,
             )
         )
         if ended:

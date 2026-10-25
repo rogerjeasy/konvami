@@ -50,8 +50,10 @@ from konvami_api.domain.voice import (
     VoiceSession,
     VoiceSessionRepository,
 )
+from konvami_api.domain.voice_review import DailyAllowance
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
+    SqlAnswerAllowance,
     SqlCardRepository,
     SqlConversationRepository,
     SqlDraftLog,
@@ -72,6 +74,7 @@ from tests.fakes import (
     InMemoryAccountRepository,
     InMemoryCardRepository,
     InMemoryConversationRepository,
+    InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
@@ -1314,6 +1317,26 @@ def test_attempts_are_counted_per_learner_and_day_up_to_the_limit(
     assert not retries.reserve(USER, NOON.date(), 2)
     assert retries.reserve(OTHER_USER, NOON.date(), 2)
     assert retries.reserve(USER, NOON.date() + timedelta(days=1), 2)
+
+
+# --- Voice review ---------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def answers(request: pytest.FixtureRequest) -> DailyAllowance:
+    if request.param == "memory":
+        return InMemoryDailyAllowance()
+    return SqlAnswerAllowance(request.getfixturevalue("db"))
+
+
+def test_cards_answered_out_loud_are_counted_per_learner_and_day_up_to_the_limit(
+    answers: DailyAllowance,
+) -> None:
+    assert answers.reserve(USER, NOON.date(), 2)
+    assert answers.reserve(USER, NOON.date(), 2)
+    assert not answers.reserve(USER, NOON.date(), 2)
+    assert answers.reserve(OTHER_USER, NOON.date(), 2)
+    assert answers.reserve(USER, NOON.date() + timedelta(days=1), 2)
 
 
 # --- Session reports -------------------------------------------------------------------------

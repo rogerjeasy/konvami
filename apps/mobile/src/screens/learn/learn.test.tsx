@@ -88,6 +88,27 @@ describe('5.7 Learn', () => {
     expect(router.push).toHaveBeenCalledWith('/review');
   });
 
+  it('starts a conversation built around the cards that are due', async () => {
+    await open(await learning());
+
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Use them in a conversation' }),
+    );
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/call/[personaId]',
+      params: { personaId: expect.any(String), practise: 'words' },
+    });
+  });
+
+  it('starts a review answered out loud', async () => {
+    await open(await learning());
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Answer out loud' }));
+
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/review', params: { aloud: '1' } });
+  });
+
   it('lists the cards newest first, with when each is due', async () => {
     await open(await learning());
 
@@ -108,6 +129,8 @@ describe('5.7 Learn', () => {
     expect(screen.getByText('All caught up')).toBeTruthy();
     expect(screen.getByText('Your next card comes back in 2 days.')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Review now' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Answer out loud' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Use them in a conversation' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /, in 2 days$/ })).toHaveLength(3);
   });
 

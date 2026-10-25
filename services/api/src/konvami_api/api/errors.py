@@ -61,6 +61,9 @@ _PERSONA_STATUS = {
 _SAMPLE_STATUS = {"no_language": 409}
 _CARD_STATUS = {
     "unavailable": 503,
+    "consent_required": 403,
+    "answer_limit": 429,
+    "invalid_value": 422,
     "not_found": 404,
     "no_report": 409,
     "too_many": 409,

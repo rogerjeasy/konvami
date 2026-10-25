@@ -124,6 +124,47 @@
         "title": "AllowanceOut",
         "type": "object"
       },
+      "AnsweredOut": {
+        "additionalProperties": false,
+        "description": "A card answered out loud: what was heard, how close it came, and the rating that points\nto. The card is not rated yet.",
+        "properties": {
+          "expected": {
+            "title": "Expected",
+            "type": "string"
+          },
+          "heard": {
+            "title": "Heard",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "right",
+              "article",
+              "wrong"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "suggested": {
+            "enum": [
+              "again",
+              "hard",
+              "good",
+              "easy"
+            ],
+            "title": "Suggested",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heard",
+          "outcome",
+          "expected",
+          "suggested"
+        ],
+        "title": "AnsweredOut",
+        "type": "object"
+      },
       "CallPlanOut": {
         "additionalProperties": false,
         "description": "What a practice conversation sets out to practise, as the learner sees it: the kinds of\nmistake (a language pack's categories) and the words to use. How the partner is told to\nbring them up stays on the server.",
@@ -139,6 +180,10 @@
             "title": "Language",
             "type": "string"
           },
+          "review": {
+            "title": "Review",
+            "type": "boolean"
+          },
           "words": {
             "items": {
               "$ref": "#/components/schemas/PlanWordOut"
@@ -150,7 +195,8 @@
         "required": [
           "language",
           "focus",
-          "words"
+          "words",
+          "review"
         ],
         "title": "CallPlanOut",
         "type": "object"
@@ -2759,13 +2805,55 @@
           "due": {
             "title": "Due",
             "type": "integer"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
           }
         },
         "required": [
           "cards",
-          "due"
+          "due",
+          "language"
         ],
         "title": "QueueOut",
+        "type": "object"
+      },
+      "RecordingIn": {
+        "additionalProperties": false,
+        "description": "A sentence recorded on the device: a correction said again, or a card's answer.",
+        "properties": {
+          "audio": {
+            "maxLength": 2000000,
+            "minLength": 1,
+            "title": "Audio",
+            "type": "string"
+          },
+          "durationMs": {
+            "anyOf": [
+              {
+                "maximum": 600000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durationms"
+          },
+          "format": {
+            "maxLength": 8,
+            "minLength": 1,
+            "title": "Format",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audio",
+          "format"
+        ],
+        "title": "RecordingIn",
         "type": "object"
       },
       "RecordingsOut": {
@@ -3020,43 +3108,6 @@
           "retries"
         ],
         "title": "RetriesOut",
-        "type": "object"
-      },
-      "RetryIn": {
-        "additionalProperties": false,
-        "description": "One attempt at saying a correction again, recorded on the device.",
-        "properties": {
-          "audio": {
-            "maxLength": 2000000,
-            "minLength": 1,
-            "title": "Audio",
-            "type": "string"
-          },
-          "durationMs": {
-            "anyOf": [
-              {
-                "maximum": 600000.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Durationms"
-          },
-          "format": {
-            "maxLength": 8,
-            "minLength": 1,
-            "title": "Format",
-            "type": "string"
-          }
-        },
-        "required": [
-          "audio",
-          "format"
-        ],
-        "title": "RetryIn",
         "type": "object"
       },
       "RetryOut": {
@@ -4379,6 +4430,107 @@
         "summary": "Remove Card"
       }
     },
+    "/v1/cards/{card_id}/answers": {
+      "post": {
+        "description": "Hears a card answered out loud (voice review) and says how close it came. The card\nis rated as before, by the learner.",
+        "operationId": "answerCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnsweredOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Answer Card"
+      }
+    },
     "/v1/cards/{card_id}/audio": {
       "get": {
         "description": "Where the card's sound plays from: the word with its sentence, or a correction as it\nis right, in the learner's partner's voice. Made the first time it is asked for.",
@@ -4653,7 +4805,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RetryIn"
+                "$ref": "#/components/schemas/RecordingIn"
               }
             }
           },

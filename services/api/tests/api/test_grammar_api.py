@@ -144,6 +144,26 @@ def test_a_practice_call_can_practise_a_topic_of_the_map(
 
     assert response.status == 200
     assert response.body["plan"]["focus"] == ["passive", "dative"]
+    assert response.body["plan"]["review"] is False
+
+
+def test_a_practice_call_can_be_a_review_of_the_words_due(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    lena = reported(call, text_model, calls, services)
+
+    response = call(
+        "POST",
+        "/v1/voice/calls",
+        {"purpose": "practice", "sdp": "v=0 offer", "personaId": lena["id"], "practise": "words"},
+    )
+
+    assert response.status == 200
+    assert response.body["plan"]["review"] is True
+    assert response.body["plan"]["focus"] == []
 
 
 def test_a_topic_the_language_does_not_have_cannot_be_practised(

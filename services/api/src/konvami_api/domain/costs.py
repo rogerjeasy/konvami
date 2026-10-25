@@ -48,6 +48,8 @@ class Feature(StrEnum):
     # A word card's forms, and its sound (rich cards, spec §6.7).
     CARD_DETAILS = "card_details"
     CARD_AUDIO = "card_audio"
+    # A card answered out loud (voice review, spec §6.7).
+    VOICE_REVIEW = "voice_review"
     VOICE_SAMPLE = "voice_sample"
 
 
