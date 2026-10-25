@@ -26,6 +26,7 @@ from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.voice import VoiceError
 from konvami_api.domain.voices import SampleError
+from konvami_api.domain.week_review import WeekReviewError
 
 
 class ErrorDetail(BaseModel):
@@ -72,6 +73,7 @@ _CARD_STATUS = {
     "not_certain": 422,
 }
 _MEMORY_STATUS = {"not_found": 404, "duplicate": 409}
+_WEEK_STATUS = {"not_found": 404, "nothing_to_report": 409, "consent_required": 403}
 _REPORT_STATUS = {"nothing_to_report": 409, "consent_required": 403, "report_limit": 429}
 _TUTOR_STATUS = {
     "invalid_value": 422,
@@ -133,6 +135,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RetryError)
     async def _retry_error(_: Request, error: RetryError) -> JSONResponse:
         return _response(_RETRY_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(WeekReviewError)
+    async def _week_error(_: Request, error: WeekReviewError) -> JSONResponse:
+        return _response(_WEEK_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(GrammarMapError)
     async def _grammar_error(_: Request, error: GrammarMapError) -> JSONResponse:

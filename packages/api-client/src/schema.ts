@@ -784,6 +784,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/weeks/{week}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Week Review
+         * @description Has last week's check-in written (once); `week` is its Monday.
+         */
+        post: operations["requestWeekReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/weeks/{week}/review/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Week Review Audio
+         * @description Where the check-in plays from, spoken by the partner who wrote it.
+         */
+        get: operations["getWeekReviewAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1207,6 +1247,7 @@ export interface components {
             level: components["schemas"]["HomeLevelOut"] | null;
             /** Partners */
             partners: components["schemas"]["HomePartnerOut"][];
+            plan: components["schemas"]["WeekPlanOut"];
             /** Recent */
             recent: components["schemas"]["ConversationOut"][];
             /** Suggestedpartnerid */
@@ -1683,6 +1724,19 @@ export interface components {
          * @enum {string}
          */
         PlacementStatus: "not_started" | "in_progress" | "assessing" | "measured" | "inconclusive" | "decided" | "skipped";
+        /**
+         * PlanSessionOut
+         * @description One conversation of today's plan.
+         */
+        PlanSessionOut: {
+            kind: components["schemas"]["SessionKind"];
+            /** Minutes */
+            minutes: number;
+            /** Scenario */
+            scenario: string | null;
+            /** Topic */
+            topic: string | null;
+        };
         /** PlanWordOut */
         PlanWordOut: {
             /** Meaning */
@@ -1719,6 +1773,7 @@ export interface components {
             cards: components["schemas"]["CardProgressOut"];
             /** Language */
             language: string;
+            lastWeek: components["schemas"]["WeekReviewOut"] | null;
             level: components["schemas"]["HomeLevelOut"] | null;
             /** Levelhistory */
             levelHistory: components["schemas"]["LevelPointOut"][];
@@ -1748,6 +1803,12 @@ export interface components {
             /** Language */
             language: string;
         };
+        /**
+         * Reason
+         * @description Why today's part of the plan is what it is.
+         * @enum {string}
+         */
+        Reason: "on_track" | "missed" | "short_of_minutes" | "minutes_used_up" | "today_done" | "week_done";
         /**
          * RecordingIn
          * @description A sentence recorded on the device: a correction said again, or a card's answer.
@@ -1877,6 +1938,11 @@ export interface components {
              */
             level: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
         };
+        /**
+         * SessionKind
+         * @enum {string}
+         */
+        SessionKind: "review" | "role_play" | "free";
         /** SessionReportOut */
         SessionReportOut: {
             /** Language */
@@ -1904,6 +1970,11 @@ export interface components {
             requests: number;
             /** Usd */
             usd: number;
+        };
+        /** SoundOut */
+        SoundOut: {
+            /** Url */
+            url: string;
         };
         /**
          * Source
@@ -1965,6 +2036,15 @@ export interface components {
             explanation: string;
             /** Original */
             original: string;
+        };
+        /** TopicMoveOut */
+        TopicMoveOut: {
+            after: components["schemas"]["Mastery"];
+            before: components["schemas"]["Mastery"];
+            /** Moved */
+            moved: boolean;
+            /** Topic */
+            topic: string;
         };
         /** TranscriptOut */
         TranscriptOut: {
@@ -2088,6 +2168,42 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** WeekNumbersOut */
+        WeekNumbersOut: {
+            /** Cardsreviewed */
+            cardsReviewed: number;
+            /** Conversations */
+            conversations: number;
+            /** Days */
+            days: number;
+            /** Levelafter */
+            levelAfter: ("A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2") | null;
+            /** Levelbefore */
+            levelBefore: ("A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2") | null;
+            /** Minutes */
+            minutes: number;
+            /** Mistakes */
+            mistakes: number;
+            /** Planneddays */
+            plannedDays: number;
+            /** Plannedminutes */
+            plannedMinutes: number;
+            /** Previousminutes */
+            previousMinutes: number;
+            /** Previousmistakes */
+            previousMistakes: number;
+            /** Reviews */
+            reviews: number;
+            /** Roleplays */
+            rolePlays: number;
+            /** Topics */
+            topics: components["schemas"]["TopicMoveOut"][];
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
+        };
         /** WeekOut */
         WeekOut: {
             /** Conversations */
@@ -2099,6 +2215,63 @@ export interface components {
              * Format: date
              */
             start: string;
+        };
+        /**
+         * WeekPlanOut
+         * @description This week's plan (the Learning Director, spec §6.12), as it stands now.
+         */
+        WeekPlanOut: {
+            /** Capped */
+            capped: boolean;
+            /** Cards */
+            cards: number;
+            /** Days */
+            days: number;
+            /** Donedays */
+            doneDays: number;
+            /** Doneminutes */
+            doneMinutes: number;
+            /** Minutes */
+            minutes: number;
+            /** Missed */
+            missed: string[];
+            reason: components["schemas"]["Reason"];
+            sessions: components["schemas"]["WeekSessionsOut"];
+            /** Today */
+            today: components["schemas"]["PlanSessionOut"][];
+            /** Todaycards */
+            todayCards: number;
+            /** Topics */
+            topics: string[];
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
+        };
+        /**
+         * WeekReviewOut
+         * @description Last week's check-in (spec §6.12): its numbers, and a few sentences from the partner
+         *     once they are written.
+         */
+        WeekReviewOut: {
+            numbers: components["schemas"]["WeekNumbersOut"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "none" | "pending" | "ready" | "failed";
+            /** Text */
+            text: string | null;
+        };
+        /** WeekSessionsOut */
+        WeekSessionsOut: {
+            /** Free */
+            free: number;
+            /** Review */
+            review: number;
+            /** Roleplay */
+            rolePlay: number;
         };
         /**
          * WordDetailsOut
@@ -4637,6 +4810,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    requestWeekReview: {
+        parameters: {
+            query?: {
+                tz?: string | null;
+            };
+            header?: never;
+            path: {
+                week: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeekReviewOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getWeekReviewAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                week: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoundOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Service Unavailable */

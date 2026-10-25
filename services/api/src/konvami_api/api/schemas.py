@@ -32,6 +32,7 @@ from konvami_api.domain.conversations import (
     Transcript,
 )
 from konvami_api.domain.costs import Allowance, CostReport, Level, Share
+from konvami_api.domain.director import Reason, SessionKind, WeekPlan
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.grammar_map import GrammarMap, Mastery, TopicPage, TopicState, Trend
 from konvami_api.domain.home import HomeView, LevelView
@@ -85,6 +86,7 @@ from konvami_api.domain.tutor import Source as TutorSource
 from konvami_api.domain.tutor import TutorQuestion
 from konvami_api.domain.voice import CallPurpose, CallStarted
 from konvami_api.domain.voice_review import Answered, Outcome
+from konvami_api.domain.week_review import WeekReview
 
 # A request never needs more changes than the profile has fields.
 MAX_CHANGES = 20
@@ -1230,6 +1232,153 @@ class LevelPointOut(ApiModel):
     source: Source
 
 
+class PlanSessionOut(ApiModel):
+    """One conversation of today's plan."""
+
+    kind: SessionKind
+    minutes: int
+    # The grammar topic it puts first; null for a review conversation.
+    topic: str | None
+    # A role-play's scenario; null for the other kinds.
+    scenario: str | None
+
+
+class WeekSessionsOut(ApiModel):
+    review: int
+    role_play: int
+    free: int
+
+
+class WeekPlanOut(ApiModel):
+    """This week's plan (the Learning Director, spec §6.12), as it stands now."""
+
+    # The week's Monday, on the learner's calendar.
+    week: dt.date
+    # The speaking it sets out to do, and on how many days.
+    minutes: int
+    days: int
+    # True when the voice minutes made the week shorter than the learner's habit.
+    capped: bool
+    # Conversations of each kind the week plans.
+    sessions: WeekSessionsOut
+    # Grammar topics, in order.
+    topics: list[str]
+    # Card reviews to aim for.
+    cards: int
+    done_minutes: int
+    done_days: int
+    # What is left for today, the shortest first; empty when nothing is.
+    today: list[PlanSessionOut]
+    today_cards: int
+    # Why today's part is what it is.
+    reason: Reason
+    # The planned days that went by without practice, when they made today longer.
+    missed: list[dt.date]
+
+    @classmethod
+    def of(cls, plan: WeekPlan) -> "WeekPlanOut":
+        return cls(
+            week=plan.week,
+            minutes=plan.minutes,
+            days=plan.days,
+            capped=plan.capped,
+            sessions=WeekSessionsOut(
+                review=plan.sessions[SessionKind.REVIEW],
+                role_play=plan.sessions[SessionKind.ROLE_PLAY],
+                free=plan.sessions[SessionKind.FREE],
+            ),
+            topics=list(plan.topics),
+            cards=plan.cards,
+            done_minutes=plan.done_minutes,
+            done_days=plan.done_days,
+            today=[
+                PlanSessionOut(
+                    kind=session.kind,
+                    minutes=session.minutes,
+                    topic=session.topic,
+                    scenario=session.scenario,
+                )
+                for session in plan.today
+            ],
+            today_cards=plan.today_cards,
+            reason=plan.reason,
+            missed=list(plan.missed),
+        )
+
+
+class TopicMoveOut(ApiModel):
+    topic: str
+    # How well the learner had it when the week began, and when it ended.
+    before: Mastery
+    after: Mastery
+    moved: bool
+
+
+class WeekNumbersOut(ApiModel):
+    # The week's Monday, on the learner's calendar.
+    week: dt.date
+    minutes: int
+    planned_minutes: int
+    previous_minutes: int
+    days: int
+    planned_days: int
+    conversations: int
+    role_plays: int
+    reviews: int
+    cards_reviewed: int
+    topics: list[TopicMoveOut]
+    # Confirmed mistakes in the week's reports, and in the week before's.
+    mistakes: int
+    previous_mistakes: int
+    # The level when the week began and when it ended; null before there was one.
+    level_before: StartingLevel | None
+    level_after: StartingLevel | None
+
+
+class WeekReviewOut(ApiModel):
+    """Last week's check-in (spec §6.12): its numbers, and a few sentences from the partner
+    once they are written."""
+
+    status: Literal["none", "pending", "ready", "failed"]
+    text: str | None
+    numbers: WeekNumbersOut
+
+    @classmethod
+    def of(cls, review: WeekReview) -> "WeekReviewOut":
+        numbers = review.numbers
+        return cls(
+            status=review.status,
+            text=review.text,
+            numbers=WeekNumbersOut(
+                week=numbers.week,
+                minutes=numbers.minutes,
+                planned_minutes=numbers.planned_minutes,
+                previous_minutes=numbers.previous_minutes,
+                days=numbers.days,
+                planned_days=numbers.planned_days,
+                conversations=numbers.conversations,
+                role_plays=numbers.role_plays,
+                reviews=numbers.reviews,
+                cards_reviewed=numbers.cards_reviewed,
+                topics=[
+                    TopicMoveOut(
+                        topic=move.topic, before=move.before, after=move.after, moved=move.moved
+                    )
+                    for move in numbers.topics
+                ],
+                mistakes=numbers.mistakes,
+                previous_mistakes=numbers.previous_mistakes,
+                level_before=cast(StartingLevel | None, numbers.level_before),
+                level_after=cast(StartingLevel | None, numbers.level_after),
+            ),
+        )
+
+
+class SoundOut(ApiModel):
+    # A short-lived address of the sound (MP3).
+    url: str
+
+
 class ProgressOut(ApiModel):
     """The Progress screen in one answer."""
 
@@ -1247,11 +1396,14 @@ class ProgressOut(ApiModel):
     mistakes: MistakeTrendsOut
     cards: CardProgressOut
     milestones: list[MilestoneOut]
+    # Last week's check-in; null when the learner did not practise last week.
+    last_week: WeekReviewOut | None
 
     @classmethod
-    def of(cls, progress: ProgressView) -> "ProgressOut":
+    def of(cls, progress: ProgressView, last_week: WeekReview | None) -> "ProgressOut":
         talk, cards = progress.talk, progress.cards
         return cls(
+            last_week=WeekReviewOut.of(last_week) if last_week else None,
             language=progress.language,
             level=HomeLevelOut.of(progress.level) if progress.level else None,
             level_history=[
@@ -1310,11 +1462,13 @@ class HomeOut(ApiModel):
     suggested_partner_id: UUID | None
     activity: ActivityOut
     recent: list[ConversationOut]
+    plan: WeekPlanOut
 
     @classmethod
-    def of(cls, home: HomeView) -> "HomeOut":
+    def of(cls, home: HomeView, plan: WeekPlan) -> "HomeOut":
         level, exam = home.level, home.exam
         return cls(
+            plan=WeekPlanOut.of(plan),
             language=home.language,
             level=HomeLevelOut.of(level) if level else None,
             focus=list(home.focus),

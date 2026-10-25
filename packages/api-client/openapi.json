@@ -1235,6 +1235,9 @@
             "title": "Partners",
             "type": "array"
           },
+          "plan": {
+            "$ref": "#/components/schemas/WeekPlanOut"
+          },
           "recent": {
             "items": {
               "$ref": "#/components/schemas/ConversationOut"
@@ -1265,7 +1268,8 @@
           "partners",
           "suggestedPartnerId",
           "activity",
-          "recent"
+          "recent",
+          "plan"
         ],
         "title": "HomeOut",
         "type": "object"
@@ -2607,6 +2611,49 @@
         "title": "PlacementStatus",
         "type": "string"
       },
+      "PlanSessionOut": {
+        "additionalProperties": false,
+        "description": "One conversation of today's plan.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SessionKind"
+          },
+          "minutes": {
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          }
+        },
+        "required": [
+          "kind",
+          "minutes",
+          "topic",
+          "scenario"
+        ],
+        "title": "PlanSessionOut",
+        "type": "object"
+      },
       "PlanWordOut": {
         "additionalProperties": false,
         "properties": {
@@ -2699,6 +2746,16 @@
             "title": "Language",
             "type": "string"
           },
+          "lastWeek": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeekReviewOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "level": {
             "anyOf": [
               {
@@ -2758,7 +2815,8 @@
           "talk",
           "mistakes",
           "cards",
-          "milestones"
+          "milestones",
+          "lastWeek"
         ],
         "title": "ProgressOut",
         "type": "object"
@@ -2818,6 +2876,19 @@
         ],
         "title": "QueueOut",
         "type": "object"
+      },
+      "Reason": {
+        "description": "Why today's part of the plan is what it is.",
+        "enum": [
+          "on_track",
+          "missed",
+          "short_of_minutes",
+          "minutes_used_up",
+          "today_done",
+          "week_done"
+        ],
+        "title": "Reason",
+        "type": "string"
       },
       "RecordingIn": {
         "additionalProperties": false,
@@ -3184,6 +3255,15 @@
         "title": "ScenarioOut",
         "type": "object"
       },
+      "SessionKind": {
+        "enum": [
+          "review",
+          "role_play",
+          "free"
+        ],
+        "title": "SessionKind",
+        "type": "string"
+      },
       "SessionReportOut": {
         "additionalProperties": false,
         "properties": {
@@ -3280,6 +3360,20 @@
           "requests"
         ],
         "title": "ShareOut",
+        "type": "object"
+      },
+      "SoundOut": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "SoundOut",
         "type": "object"
       },
       "Source": {
@@ -3455,6 +3549,33 @@
           "certain"
         ],
         "title": "TopicMistakeOut",
+        "type": "object"
+      },
+      "TopicMoveOut": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/Mastery"
+          },
+          "before": {
+            "$ref": "#/components/schemas/Mastery"
+          },
+          "moved": {
+            "title": "Moved",
+            "type": "boolean"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "before",
+          "after",
+          "moved"
+        ],
+        "title": "TopicMoveOut",
         "type": "object"
       },
       "TranscriptOut": {
@@ -3842,6 +3963,126 @@
         "title": "VoiceSampleOut",
         "type": "object"
       },
+      "WeekNumbersOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cardsReviewed": {
+            "title": "Cardsreviewed",
+            "type": "integer"
+          },
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "levelAfter": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A0",
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2",
+                  "C1",
+                  "C2"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Levelafter"
+          },
+          "levelBefore": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A0",
+                  "A1",
+                  "A2",
+                  "B1",
+                  "B2",
+                  "C1",
+                  "C2"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Levelbefore"
+          },
+          "minutes": {
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "mistakes": {
+            "title": "Mistakes",
+            "type": "integer"
+          },
+          "plannedDays": {
+            "title": "Planneddays",
+            "type": "integer"
+          },
+          "plannedMinutes": {
+            "title": "Plannedminutes",
+            "type": "integer"
+          },
+          "previousMinutes": {
+            "title": "Previousminutes",
+            "type": "integer"
+          },
+          "previousMistakes": {
+            "title": "Previousmistakes",
+            "type": "integer"
+          },
+          "reviews": {
+            "title": "Reviews",
+            "type": "integer"
+          },
+          "rolePlays": {
+            "title": "Roleplays",
+            "type": "integer"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/TopicMoveOut"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "minutes",
+          "plannedMinutes",
+          "previousMinutes",
+          "days",
+          "plannedDays",
+          "conversations",
+          "rolePlays",
+          "reviews",
+          "cardsReviewed",
+          "topics",
+          "mistakes",
+          "previousMistakes",
+          "levelBefore",
+          "levelAfter"
+        ],
+        "title": "WeekNumbersOut",
+        "type": "object"
+      },
       "WeekOut": {
         "additionalProperties": false,
         "properties": {
@@ -3865,6 +4106,151 @@
           "conversations"
         ],
         "title": "WeekOut",
+        "type": "object"
+      },
+      "WeekPlanOut": {
+        "additionalProperties": false,
+        "description": "This week's plan (the Learning Director, spec \u00a76.12), as it stands now.",
+        "properties": {
+          "capped": {
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "cards": {
+            "title": "Cards",
+            "type": "integer"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "doneDays": {
+            "title": "Donedays",
+            "type": "integer"
+          },
+          "doneMinutes": {
+            "title": "Doneminutes",
+            "type": "integer"
+          },
+          "minutes": {
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "missed": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Missed",
+            "type": "array"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/Reason"
+          },
+          "sessions": {
+            "$ref": "#/components/schemas/WeekSessionsOut"
+          },
+          "today": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSessionOut"
+            },
+            "title": "Today",
+            "type": "array"
+          },
+          "todayCards": {
+            "title": "Todaycards",
+            "type": "integer"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "minutes",
+          "days",
+          "capped",
+          "sessions",
+          "topics",
+          "cards",
+          "doneMinutes",
+          "doneDays",
+          "today",
+          "todayCards",
+          "reason",
+          "missed"
+        ],
+        "title": "WeekPlanOut",
+        "type": "object"
+      },
+      "WeekReviewOut": {
+        "additionalProperties": false,
+        "description": "Last week's check-in (spec \u00a76.12): its numbers, and a few sentences from the partner\nonce they are written.",
+        "properties": {
+          "numbers": {
+            "$ref": "#/components/schemas/WeekNumbersOut"
+          },
+          "status": {
+            "enum": [
+              "none",
+              "pending",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "status",
+          "text",
+          "numbers"
+        ],
+        "title": "WeekReviewOut",
+        "type": "object"
+      },
+      "WeekSessionsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "free": {
+            "title": "Free",
+            "type": "integer"
+          },
+          "review": {
+            "title": "Review",
+            "type": "integer"
+          },
+          "rolePlay": {
+            "title": "Roleplay",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "review",
+          "rolePlay",
+          "free"
+        ],
+        "title": "WeekSessionsOut",
         "type": "object"
       },
       "WordDetailsOut": {
@@ -6938,6 +7324,185 @@
           }
         },
         "summary": "Get Voice Sample"
+      }
+    },
+    "/v1/weeks/{week}/review": {
+      "post": {
+        "description": "Has last week's check-in written (once); `week` is its Monday.",
+        "operationId": "requestWeekReview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "week",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Week",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tz",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tz"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeekReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Request Week Review"
+      }
+    },
+    "/v1/weeks/{week}/review/audio": {
+      "get": {
+        "description": "Where the check-in plays from, spoken by the partner who wrote it.",
+        "operationId": "getWeekReviewAudio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "week",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Week",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Week Review Audio"
       }
     }
   }

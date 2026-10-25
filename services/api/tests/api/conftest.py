@@ -16,6 +16,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
+from konvami_api.domain.director import DirectorService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
@@ -31,11 +32,13 @@ from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
+from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.week_review import WeekReviewService
 from tests.fakes import (
     FakeAccountDirectory,
     FakeSpeechModel,
@@ -61,9 +64,11 @@ from tests.fakes import (
     InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
+    InMemoryWeekReviewRepository,
     RecordingCallStarter,
     RecordingNotifier,
     RecordingReportStarter,
+    RecordingWeekStarter,
     ScriptedTextModel,
     ScriptedTranscriber,
 )
@@ -239,6 +244,11 @@ def report_starter() -> RecordingReportStarter:
 
 
 @pytest.fixture
+def week_starter() -> RecordingWeekStarter:
+    return RecordingWeekStarter()
+
+
+@pytest.fixture
 def level_store(calls: InMemoryVoiceSessionRepository) -> InMemoryLevelRepository:
     """The level engine's steps, for tests that need the level to have moved."""
     return InMemoryLevelRepository(calls)
@@ -266,6 +276,7 @@ def services(
     level_store: InMemoryLevelRepository,
     retry_transcriber: ScriptedTranscriber,
     answer_transcriber: ScriptedTranscriber,
+    week_starter: RecordingWeekStarter,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -359,7 +370,12 @@ def services(
                 recordings=recordings,
                 tutor=tutor,
                 sessions=calls,
-                planner=SessionPlanner(profiles=profiles, reports=reports, cards=cards),
+                planner=SessionPlanner(
+                    profiles=profiles,
+                    reports=reports,
+                    cards=cards,
+                    week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
+                ),
             ),
         },
         accounts=directory,
@@ -375,6 +391,17 @@ def services(
             notifier=RecordingNotifier(),
             clock=clock,
         ),
+    )
+    grammar = GrammarMapService(profiles=profiles, reports=reports)
+    director = DirectorService(
+        profiles=profiles,
+        onboarding=onboarding,
+        conversations=conversations,
+        cards=cards,
+        grammar=grammar,
+        allowance=voice.allowance,
+        call_seconds=VOICE.max_seconds[CallPurpose.PRACTICE],
+        clock=clock,
     )
     home = HomeService(
         profiles=profiles,
@@ -425,15 +452,33 @@ def services(
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
         ),
-        grammar=GrammarMapService(profiles=profiles, reports=reports),
+        grammar=grammar,
+        director=director,
+        week_reviews=WeekReviewService(
+            profiles=profiles,
+            accounts=directory,
+            personas=personas,
+            conversations=conversations,
+            reports=reports,
+            cards=cards,
+            grammar=grammar,
+            levels=levels,
+            director=director,
+            allowance=voice.allowance,
+            repository=InMemoryWeekReviewRepository(),
+            starter=week_starter,
+            text_model=text_model,
+            model="gpt-6-luna",
+            sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
+            clock=clock,
+        ),
         card_details=CardDetailsService(
             profiles=profiles,
             personas=personas,
             repository=card_store,
             text_model=text_model,
             model="gpt-6.1-sol",
-            speech=speech,
-            speech_model="gpt-4o-mini-tts",
+            sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
             files=files,
             clock=clock,
         ),
