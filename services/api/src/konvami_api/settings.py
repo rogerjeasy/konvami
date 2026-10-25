@@ -68,6 +68,9 @@ class TextModels:
     # Checks each of the learner's turns during a call (the Live Error Spotter, spec §8.2):
     # speed matters, and the report checks every mistake again. Empty: no live checks.
     spotter: str = ""
+    # Writes a word card's forms (spec §6.7): accuracy matters, a wrong form is learnt by heart.
+    # Empty: cards keep only their word, meaning and sentence.
+    cards: str = ""
 
 
 class _TextModels(BaseModel):
@@ -83,6 +86,7 @@ class _TextModels(BaseModel):
     verbatim: str = ""
     tutor: str = ""
     spotter: str = ""
+    cards: str = ""
 
 
 def text_models(raw: str | None) -> TextModels:
@@ -102,6 +106,7 @@ def text_models(raw: str | None) -> TextModels:
         verbatim=models.verbatim,
         tutor=models.tutor,
         spotter=models.spotter,
+        cards=models.cards,
     )
 
 

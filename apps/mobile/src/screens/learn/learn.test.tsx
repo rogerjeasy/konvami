@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react-nativ
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { createFakeApi, type FakeApi } from '@/test/fake-api';
+import { createFakeProfileDevice } from '@/test/fake-profile-device';
 import { renderScreen } from '@/test/render';
 import { LearnScreen } from '.';
 
@@ -68,6 +69,16 @@ describe('5.7 Learn', () => {
     expect(router.push).toHaveBeenCalledWith('/tutor');
   });
 
+  it('leads to the grammar map', async () => {
+    await open(inApp());
+
+    const row = screen.getByRole('button', { name: 'Grammar map' });
+    expect(row.props.accessibilityHint).toBe('How well you use each part of the grammar');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/grammar');
+  });
+
   it('says how many cards are due and starts the review', async () => {
     await open(await learning());
 
@@ -106,11 +117,35 @@ describe('5.7 Learn', () => {
     await fireEvent.press(screen.getByRole('button', { name: /^das Wochenende/ }));
 
     const sheet = within(screen.getByTestId('card-sheet'));
-    // The sheet's title is the word itself.
-    expect(screen.getByRole('header', { name: 'das Wochenende' })).toBeTruthy();
+    // The word stands as the heading, its article said in words as well as in its colour.
+    expect(screen.getByRole('header', { name: 'das Wochenende, neuter' })).toBeTruthy();
     expect(sheet.getByText('weekend')).toBeTruthy();
     expect(sheet.getByText('Wie war dein Wochenende?')).toBeTruthy();
     expect(sheet.getByText('Word · Not reviewed yet · Due now')).toBeTruthy();
+  });
+
+  it('shows a word’s forms once they are written down', async () => {
+    await open(await learning());
+
+    await fireEvent.press(screen.getByRole('button', { name: /^das Wochenende/ }));
+
+    const sheet = within(screen.getByTestId('card-sheet'));
+    expect(sheet.getByText('Plural')).toBeTruthy();
+    expect(sheet.getByText('die Wochenenden')).toBeTruthy();
+  });
+
+  it('plays a card in the partner’s voice', async () => {
+    const device = createFakeProfileDevice();
+    const api = await learning();
+    await renderScreen(<LearnScreen />, { api, signedIn: true, device });
+    await waitFor(() => expect(screen.queryByText('Loading your cards')).toBeNull());
+    await fireEvent.press(screen.getByRole('button', { name: /^das Wochenende/ }));
+
+    await fireEvent.press(
+      within(screen.getByTestId('card-sheet')).getByRole('button', { name: 'Listen' }),
+    );
+
+    await waitFor(() => expect(device.played).toEqual(['https://files.test/cards/card_1.mp3']));
   });
 
   it('shows a correction as what was said and how it is right', async () => {

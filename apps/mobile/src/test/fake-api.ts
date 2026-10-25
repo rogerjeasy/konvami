@@ -6,6 +6,9 @@ import {
   type Catalog,
   type Conversation,
   type Costs,
+  type GrammarMap,
+  type GrammarTopic,
+  type GrammarTopicPage,
   type ConversationReport,
   type Home,
   type HomePartner,
@@ -28,6 +31,7 @@ import {
   type TurnAudio,
   type TutorAnswer,
   type TutorQuestion,
+  type WordDetails,
 } from '@konvami/api-client';
 import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
 
@@ -439,8 +443,98 @@ const MAX_PARTNERS = 12;
 const DRAFTS_PER_DAY = 20;
 const FILES = 'https://files.test';
 
+/** The forms the fake knows of the words of `FAKE_REPORT`, as the worker writes them. */
+export const FAKE_WORD_FORMS: Record<string, WordDetails> = {
+  'das Wochenende': {
+    part: 'noun',
+    article: 'das',
+    plural: 'die Wochenenden',
+    present: null,
+    preterite: null,
+    perfect: null,
+    separable: null,
+    case: null,
+    comparative: null,
+    superlative: null,
+  },
+};
+
+const topic = (
+  id: string,
+  level: string,
+  mastery: GrammarTopic['mastery'],
+  uses = 0,
+  correct = 0,
+  conversations = 0,
+  trend: GrammarTopic['trend'] = null,
+): GrammarTopic => ({
+  id,
+  level,
+  mastery,
+  uses,
+  correct,
+  conversations,
+  trend,
+  lastUsedAt: uses ? '2026-10-08T18:00:00Z' : null,
+});
+
+/** A learner at A2 with a few conversations behind them: some topics used, most still ahead. */
+export const FAKE_GRAMMAR_MAP: GrammarMap = {
+  language: 'de',
+  level: 'A2',
+  topics: [
+    topic('present_tense', 'A1', 'mastered', 24, 23, 6, 'steady'),
+    topic('verb_second', 'A1', 'mostly_correct', 14, 11, 5, 'improving'),
+    topic('articles_gender', 'A1', 'practising', 9, 5, 4, 'steady'),
+    topic('negation', 'A1', 'introduced', 2, 2, 1),
+    topic('plural', 'A1', 'not_started'),
+    topic('perfekt', 'A2', 'mostly_correct', 12, 9, 4, 'improving'),
+    topic('dative', 'A2', 'practising', 10, 5, 4, 'slipping'),
+    topic('subordinate_clauses', 'A2', 'not_started'),
+    topic('adjective_endings', 'B1', 'not_started'),
+    topic('passive', 'B1', 'not_started'),
+    topic('konjunktiv_1', 'B2', 'not_started'),
+  ],
+};
+
+/** The page of a topic of `FAKE_GRAMMAR_MAP`: the dative with two of the learner's mistakes. */
+export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
+  const found = FAKE_GRAMMAR_MAP.topics.find((t) => t.id === id);
+  if (!found) return null;
+  const dative = id === 'dative';
+  return {
+    topic: found,
+    examples: dative
+      ? ['Ich fahre mit dem Bus.', 'Ich helfe meiner Nachbarin.']
+      : ['Ich wohne in Zürich.'],
+    typicalMistakes: dative ? ['Ich fahre mit der Bus.', 'Ich helfe meine Mutter.'] : [],
+    mistakes: dative
+      ? [
+          {
+            conversationId: 'rtc_2',
+            at: '2026-10-08T18:00:00Z',
+            original: 'bei meine Freundin',
+            corrected: 'bei meiner Freundin',
+            explanation: '« bei » est toujours suivi du datif.',
+            certain: false,
+          },
+          {
+            conversationId: 'rtc_1',
+            at: '2026-10-06T18:00:00Z',
+            original: 'mit der Bus',
+            corrected: 'mit dem Bus',
+            explanation: '« mit » est toujours suivi du datif : der Bus devient dem Bus.',
+            certain: true,
+          },
+        ]
+      : [],
+  };
+}
+
 export interface FakeApi extends ApiClient {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
+  /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
+  hearsNextRetry(heard: string): void;
   /** Every call so far, as `[method, ...arguments]`, in order. */
   readonly calls: readonly unknown[][];
   /** Stores answers directly, as if they had been given earlier. */
@@ -563,6 +657,10 @@ export function createFakeApi(): FakeApi {
   let memoryEnabled = true;
   // Newest first, as the server lists them.
   let tutorQuestions: TutorQuestion[] = [];
+  // "Say it better": what the next attempt is heard as, and each conversation's corrections
+  // said again, with whether one attempt was right.
+  let nextRetryHeard: string | null = null;
+  const retried = new Map<string, Map<number, boolean>>();
   let tutorAnswer: TutorAnswer = FAKE_TUTOR_ANSWER;
   const keepQuestion = (question: string, source: TutorQuestion['source'], at: number) => {
     const kept: TutorQuestion = {
@@ -1173,6 +1271,8 @@ export function createFakeApi(): FakeApi {
         reviewedAt: null,
         reviews: 0,
         lapses: 0,
+        // The worker writes a word's forms a moment later; the fake knows a few at once.
+        details: word ? (FAKE_WORD_FORMS[word.text] ?? null) : null,
       };
       cards.push(card);
       return card;
@@ -1267,6 +1367,42 @@ export function createFakeApi(): FakeApi {
     async getTutorQuestions() {
       await record('getTutorQuestions');
       return { questions: tutorQuestions };
+    },
+    hearsNextRetry(heard) {
+      nextRetryHeard = heard;
+    },
+    async retryCorrection(conversationId, index, attempt) {
+      await record('retryCorrection', conversationId, index, attempt);
+      const mistake = FAKE_REPORT.mistakes[index];
+      if (!mistake) throw new ApiError('not_found', 404);
+      if (!mistake.certain) throw new ApiError('unsure', 409);
+      const heard = nextRetryHeard ?? mistake.corrected;
+      nextRetryHeard = null;
+      const right = heard.includes(mistake.corrected) && !heard.includes(mistake.original);
+      const tried = retried.get(conversationId) ?? new Map<number, boolean>();
+      tried.set(index, (tried.get(index) ?? false) || right);
+      retried.set(conversationId, tried);
+      return { heard, right, said: mistake.original, better: mistake.corrected };
+    },
+    async getRetries(conversationId) {
+      await record('getRetries', conversationId);
+      const tried = retried.get(conversationId) ?? new Map<number, boolean>();
+      return { retries: [...tried].map(([index, right]) => ({ index, right })) };
+    },
+    async getCardAudio(id) {
+      await record('getCardAudio', id);
+      if (!cards.some((card) => card.id === id)) throw new ApiError('not_found', 404);
+      return { url: `https://files.test/cards/${id}.mp3` };
+    },
+    async getGrammarMap() {
+      await record('getGrammarMap');
+      return FAKE_GRAMMAR_MAP;
+    },
+    async getGrammarTopic(id) {
+      await record('getGrammarTopic', id);
+      const page = fakeGrammarTopic(id);
+      if (!page) throw new ApiError('not_found', 404);
+      return page;
     },
     async askTutor(question) {
       await record('askTutor', question);

@@ -11,6 +11,8 @@ from konvami_api.domain.speech import TranscriptionError, TranscriptionTask
 
 URL = "https://api.openai.com/v1/audio/transcriptions"
 PROVIDER = "openai"
+# The audio types the app sends: recordings (WAV), a phone's own recording, a browser's.
+_CONTENT_TYPES = {"wav": "audio/wav", "m4a": "audio/mp4", "webm": "audio/webm", "mp3": "audio/mpeg"}
 # A turn is seconds of speech; the worker writing a report waits for each in turn.
 TIMEOUT_SECONDS = 30.0
 
@@ -47,7 +49,13 @@ class OpenAiTranscription:
                 URL,
                 headers={"Authorization": f"Bearer {self._api_key()}"},
                 data=fields,
-                files={"file": ("turn.wav", task.audio, "audio/wav")},
+                files={
+                    "file": (
+                        f"turn.{task.format}",
+                        task.audio,
+                        _CONTENT_TYPES.get(task.format, "application/octet-stream"),
+                    )
+                },
                 timeout=TIMEOUT_SECONDS,
             )
         except httpx.HTTPError as error:
@@ -57,7 +65,8 @@ class OpenAiTranscription:
             raise TranscriptionError(f"transcription model answered {response.status_code}")
         # Transcription is billed by the minute of audio.
         if self._meter is not None:
-            units = {"audio_seconds": _seconds(task.audio)}
+            seconds = task.seconds if task.seconds is not None else _seconds(task.audio)
+            units = {"audio_seconds": seconds}
             self._meter.record(task.charge, PROVIDER, task.model, units)
         try:
             answer = response.json()

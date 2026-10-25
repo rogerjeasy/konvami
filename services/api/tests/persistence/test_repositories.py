@@ -15,7 +15,7 @@ import psycopg
 import pytest
 
 from konvami_api.domain.accounts import AccountRepository
-from konvami_api.domain.cards import Card, CardRepository, CardTotals, card_key
+from konvami_api.domain.cards import Card, CardRepository, CardTotals, WordDetails, card_key
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.levels import LevelFit, LevelRepository, LevelStep
@@ -31,15 +31,18 @@ from konvami_api.domain.recordings import RecordingRepository
 from konvami_api.domain.reports import (
     Mistake,
     Report,
+    ReportEntry,
     ReportRepository,
     ReportTotals,
     Rewrite,
     Stats,
     Status,
     StoredReport,
+    TopicUse,
     WeekMistakes,
     Word,
 )
+from konvami_api.domain.retries import RetryRepository
 from konvami_api.domain.tutor import Example, TutorAnswer, TutorQuestion, TutorRepository
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -60,6 +63,7 @@ from konvami_api.persistence.repositories import (
     SqlProfileRepository,
     SqlRecordingRepository,
     SqlReportRepository,
+    SqlRetryRepository,
     SqlTutorRepository,
     SqlVoiceSessionRepository,
 )
@@ -77,6 +81,7 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
 )
@@ -349,7 +354,11 @@ def test_a_session_keeps_its_plan(sessions: Sessions) -> None:
     plan = SessionPlan(
         focus=(
             FocusPoint(
-                "case_dative", "Dative", "Ask how they travel.", (("mit der Bus", "mit dem Bus"),)
+                "dative",
+                "Dative",
+                "Ask how they travel.",
+                (("mit der Bus", "mit dem Bus"),),
+                ("case_dative",),
             ),
         ),
         words=(PlanWord("der Termin", "le rendez-vous"),),
@@ -1268,6 +1277,45 @@ def test_questions_are_counted_per_learner_and_day_up_to_the_limit(tutor: TutorR
     assert tutor.reserve(USER, NOON.date() + timedelta(days=1), 2)
 
 
+# --- "Say it better" ------------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def retries(request: pytest.FixtureRequest) -> RetryRepository:
+    """Retry storage, with the calls `rtc_1` and `rtc_2` there to retry corrections of."""
+    if request.param == "memory":
+        return InMemoryRetryRepository()
+    db = request.getfixturevalue("db")
+    for call_id in ("rtc_1", "rtc_2"):
+        SqlVoiceSessionRepository(db).started(
+            VoiceSession(call_id, USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+        )
+    return SqlRetryRepository(db)
+
+
+def test_attempts_are_kept_per_correction_with_whether_one_was_right(
+    retries: RetryRepository,
+) -> None:
+    retries.attempted(USER, "rtc_1", 0, NOON, False)
+    retries.attempted(USER, "rtc_1", 0, NOON + HOUR, True)
+    retries.attempted(USER, "rtc_1", 2, NOON + HOUR, False)
+    retries.attempted(USER, "rtc_2", 1, NOON + HOUR, True)
+
+    assert retries.of_conversation(USER, "rtc_1") == {0: True, 2: False}
+    assert retries.of_conversation(USER, "rtc_2") == {1: True}
+    assert retries.of_conversation(OTHER_USER, "rtc_1") == {}
+
+
+def test_attempts_are_counted_per_learner_and_day_up_to_the_limit(
+    retries: RetryRepository,
+) -> None:
+    assert retries.reserve(USER, NOON.date(), 2)
+    assert retries.reserve(USER, NOON.date(), 2)
+    assert not retries.reserve(USER, NOON.date(), 2)
+    assert retries.reserve(OTHER_USER, NOON.date(), 2)
+    assert retries.reserve(USER, NOON.date() + timedelta(days=1), 2)
+
+
 # --- Session reports -------------------------------------------------------------------------
 
 
@@ -1349,6 +1397,17 @@ def test_a_written_report_is_read_back_as_it_was_stored(reports: Reports) -> Non
     reports.reports.written("rtc_1", "ready", REPORT)
 
     assert reports.reports.load("rtc_1") == StoredReport("ready", NOON, REPORT)
+
+
+def test_a_report_keeps_the_grammar_topics_the_learner_used(reports: Reports) -> None:
+    counted = replace(REPORT, usage=(TopicUse("perfekt", 3, 1), TopicUse("dative", 1, 0)))
+    ask(reports.reports, "rtc_1", NOON)
+
+    reports.reports.written("rtc_1", "ready", counted)
+
+    stored = reports.reports.load("rtc_1")
+    assert stored is not None
+    assert stored.report == counted
 
 
 @pytest.mark.parametrize("status", ["failed", "too_short"])
@@ -1505,7 +1564,7 @@ def test_the_latest_report_is_the_ready_one_of_the_learners_newest_conversation(
     assert reports.reports.latest(USER) == newer
 
 
-def test_recent_reports_are_the_ready_ones_of_the_learners_last_conversations_in_a_language(
+def test_a_learners_report_history_is_the_ready_reports_of_their_last_conversations(
     reports: Reports,
 ) -> None:
     def call(call_id: str, at: datetime, user: UUID = USER) -> None:
@@ -1525,9 +1584,12 @@ def test_recent_reports_are_the_ready_ones_of_the_learners_last_conversations_in
     reports.reports.written("rtc_r5", "ready", third)
     reports.reports.written("rtc_theirs", "ready", replace(REPORT, summary="Le leur."))
 
-    assert reports.reports.recent(USER, "de", 2) == [third, second]
-    assert reports.reports.recent(USER, "de", 5) == [third, second, first]
-    assert reports.reports.recent(USER, "fr", 5) == []
+    assert reports.reports.history(USER, "de", 2) == [
+        ReportEntry("rtc_r5", NOON + 5 * HOUR, third),
+        ReportEntry("rtc_r2", NOON + 2 * HOUR, second),
+    ]
+    assert [e.report for e in reports.reports.history(USER, "de", 5)] == [third, second, first]
+    assert reports.reports.history(USER, "fr", 5) == []
 
 
 def test_a_learner_without_a_ready_report_has_no_latest_one(reports: Reports) -> None:
@@ -1581,6 +1643,38 @@ def test_a_card_is_read_back_as_it_was_stored(cards: CardRepository) -> None:
     assert stored is True
     assert cards.get(USER, new.id) == card(1, note=None, created_at=NOON, due_at=NOON)
     assert cards.by_key(USER, "de", "word", "das wochenende") == cards.get(USER, new.id)
+
+
+def test_word_cards_without_forms_are_claimed_once_then_kept_with_their_forms(
+    cards: CardRepository,
+) -> None:
+    for number in (1, 2, 3):
+        add(cards, card(number, front=f"das Wort{number}"))
+    add(cards, card(4, front="mit der Bus", kind="correction"))
+    add(cards, card(5, front="la parola"), language="it")
+    stale = NOON - timedelta(minutes=5)
+
+    first = cards.claim_for_details(USER, "de", NOON, stale, 2)
+    second = cards.claim_for_details(USER, "de", NOON, stale, 10)
+    wort = WordDetails(part="noun", article="das", plural="die Wörter")
+    cards.set_details(USER, first[0].id, wort)
+
+    assert [c.front for c in first] == ["das Wort1", "das Wort2"]
+    assert [c.front for c in second] == ["das Wort3"]
+    assert cards.claim_for_details(USER, "de", NOON, stale, 10) == []
+    stored = cards.get(USER, first[0].id)
+    assert stored is not None
+    assert stored.details == wort
+
+
+def test_a_claim_that_was_lost_runs_out(cards: CardRepository) -> None:
+    add(cards, card(1))
+    cards.claim_for_details(USER, "de", NOON, NOON - timedelta(minutes=5), 10)
+
+    later = NOON + timedelta(minutes=6)
+    again = cards.claim_for_details(USER, "de", later, later - timedelta(minutes=5), 10)
+
+    assert [c.front for c in again] == ["das Wochenende"]
 
 
 def test_a_card_is_found_only_by_its_owner_kind_language_and_words(cards: CardRepository) -> None:

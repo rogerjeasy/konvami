@@ -12,7 +12,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool
 from pydantic.alias_generators import to_camel
 
 from konvami_api.domain.accounts import AccountView, PictureUpload
-from konvami_api.domain.cards import Card, Deck, Queue, Saved
+from konvami_api.domain.cards import Article, Card, Deck, Part, Queue, Saved, WordDetails
 from konvami_api.domain.cards import Kind as CardKind
 from konvami_api.domain.catalog import (
     CEFR_LEVELS,
@@ -33,6 +33,7 @@ from konvami_api.domain.conversations import (
 )
 from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.fsrs import Rating
+from konvami_api.domain.grammar_map import GrammarMap, Mastery, TopicPage, TopicState, Trend
 from konvami_api.domain.home import HomeView, LevelView
 from konvami_api.domain.levels import LevelStep
 from konvami_api.domain.live_call import Speaker, TurnAudio
@@ -78,6 +79,7 @@ from konvami_api.domain.profile import (
 from konvami_api.domain.progress import ProgressView
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
+from konvami_api.domain.retries import Retried
 from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
 from konvami_api.domain.tutor import Source as TutorSource
 from konvami_api.domain.tutor import TutorQuestion
@@ -266,6 +268,8 @@ class VoiceCallIn(ApiModel):
     local_date: dt.date | None = None
     # A practice call that rehearses a role-play (a scenario id from the catalog).
     scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
+    # A practice call that practises a grammar topic first (a topic id from the grammar map).
+    practise: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
 
 
 class PlanWordOut(ApiModel):
@@ -309,6 +313,126 @@ class VoiceCallOut(ApiModel):
             max_seconds=started.max_seconds,
             plan=CallPlanOut.of(started.plan) if started.plan else None,
         )
+
+
+class GrammarTopicOut(ApiModel):
+    """A topic of the grammar map and how well the learner has it. The app names it in the
+    interface language."""
+
+    id: str
+    level: str
+    mastery: Mastery
+    # Over the conversations that count: how often it was used, how often right, in how many.
+    uses: int
+    correct: int
+    conversations: int
+    trend: Trend | None
+    last_used_at: dt.datetime | None
+
+    @classmethod
+    def of(cls, state: TopicState) -> "GrammarTopicOut":
+        found = state.mastery
+        return cls(
+            id=state.topic.id,
+            level=state.topic.level,
+            mastery=found.state,
+            uses=found.uses,
+            correct=found.correct,
+            conversations=found.conversations,
+            trend=found.trend,
+            last_used_at=found.last_used_at,
+        )
+
+
+class GrammarMapOut(ApiModel):
+    language: str
+    # The learner's level, for the map to show where they are.
+    level: str
+    topics: list[GrammarTopicOut]
+
+    @classmethod
+    def of(cls, found: GrammarMap) -> "GrammarMapOut":
+        return cls(
+            language=found.language,
+            level=found.level,
+            topics=[GrammarTopicOut.of(state) for state in found.topics],
+        )
+
+
+class TopicMistakeOut(ApiModel):
+    conversation_id: str
+    at: dt.datetime
+    original: str
+    corrected: str
+    explanation: str
+    certain: bool
+
+
+class GrammarTopicPageOut(ApiModel):
+    topic: GrammarTopicOut
+    # Sentences that use it well, and typical learner sentences that break it.
+    examples: list[str]
+    typical_mistakes: list[str]
+    # The learner's own, newest first.
+    mistakes: list[TopicMistakeOut]
+
+    @classmethod
+    def of(cls, page: TopicPage) -> "GrammarTopicPageOut":
+        return cls(
+            topic=GrammarTopicOut.of(page.state),
+            examples=list(page.state.topic.examples),
+            typical_mistakes=list(page.typical_mistakes),
+            mistakes=[
+                TopicMistakeOut(
+                    conversation_id=m.call_id,
+                    at=m.at,
+                    original=m.original,
+                    corrected=m.corrected,
+                    explanation=m.explanation,
+                    certain=m.certain,
+                )
+                for m in page.mistakes
+            ],
+        )
+
+
+# A sentence said again is a few seconds of compressed audio; this is a minute and more, in base64.
+MAX_RETRY_AUDIO = 2_000_000
+
+
+class RetryIn(ApiModel):
+    """One attempt at saying a correction again, recorded on the device."""
+
+    # The recording, in base64.
+    audio: str = Field(min_length=1, max_length=MAX_RETRY_AUDIO)
+    # Its file type: "m4a" (a phone) or "webm" (a browser).
+    format: str = Field(min_length=1, max_length=8)
+    # How long it plays, as the recorder measured it.
+    duration_ms: int | None = Field(default=None, ge=0, le=600_000)
+
+
+class RetriedOut(ApiModel):
+    heard: str
+    right: bool
+    said: str
+    better: str
+
+    @classmethod
+    def of(cls, retried: Retried) -> "RetriedOut":
+        return cls(
+            heard=retried.heard, right=retried.right, said=retried.said, better=retried.better
+        )
+
+
+class RetryOut(ApiModel):
+    # The correction's position in the report.
+    index: int
+    # Whether one of the attempts was right.
+    right: bool
+
+
+class RetriesOut(ApiModel):
+    retries: list[RetryOut]
 
 
 class LookModel(ApiModel):
@@ -668,6 +792,30 @@ class CardIn(ApiModel):
     index: int = Field(ge=0, le=MAX_REPORT_INDEX)
 
 
+class WordDetailsOut(ApiModel):
+    """A word's forms (spec §6.7); a form the word does not have is null."""
+
+    part: Part
+    article: Article | None
+    plural: str | None
+    present: str | None
+    preterite: str | None
+    perfect: str | None
+    separable: bool | None
+    case: str | None
+    comparative: str | None
+    superlative: str | None
+
+    @classmethod
+    def of(cls, details: WordDetails) -> "WordDetailsOut":
+        return cls(**dataclasses.asdict(details))
+
+
+class CardAudioOut(ApiModel):
+    # A short-lived address of the card's sound (MP3).
+    url: str
+
+
 class CardOut(ApiModel):
     id: UUID
     kind: CardKind
@@ -686,6 +834,8 @@ class CardOut(ApiModel):
     reviewed_at: dt.datetime | None
     reviews: int
     lapses: int
+    # A word's forms; null until they are written down, and for a correction.
+    details: WordDetailsOut | None
 
     @classmethod
     def of(cls, card: Card) -> "CardOut":
@@ -702,6 +852,7 @@ class CardOut(ApiModel):
             reviewed_at=card.reviewed_at,
             reviews=card.reviews,
             lapses=card.lapses,
+            details=WordDetailsOut.of(card.details) if card.details else None,
         )
 
 

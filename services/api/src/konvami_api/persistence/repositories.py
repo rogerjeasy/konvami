@@ -11,7 +11,7 @@ from uuid import UUID
 
 from konvami_api.domain import memories
 from konvami_api.domain.accounts import DELETION_MEMORY
-from konvami_api.domain.cards import Card, CardTotals, Kind
+from konvami_api.domain.cards import Card, CardTotals, Kind, WordDetails
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -37,11 +37,13 @@ from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile
 from konvami_api.domain.reports import (
     Mistake,
     Report,
+    ReportEntry,
     ReportTotals,
     Rewrite,
     Stats,
     Status,
     StoredReport,
+    TopicUse,
     WeekMistakes,
     Word,
 )
@@ -216,6 +218,28 @@ _RESERVE_QUESTION = f"""
     ON CONFLICT (user_id, day) DO UPDATE SET questions = tutor_day.questions + 1
         WHERE tutor_day.questions < :limit
     RETURNING questions
+"""
+
+_RESERVE_RETRY = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO retry_day (user_id, day, attempts)
+    VALUES (CAST(:user_id AS uuid), CAST(:day AS date), 1)
+    ON CONFLICT (user_id, day) DO UPDATE SET attempts = retry_day.attempts + 1
+        WHERE retry_day.attempts < :limit
+    RETURNING attempts
+"""
+
+_RETRY_ATTEMPTED = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO retry_attempt (user_id, call_id, mistake_index, attempted_at, was_right)
+    VALUES (CAST(:user_id AS uuid), :call_id, :index, CAST(:at AS timestamptz), :right)
+"""
+
+_RETRIES_OF_CALL = """
+    SELECT mistake_index, bool_or(was_right) AS right
+    FROM retry_attempt
+    WHERE user_id = CAST(:user_id AS uuid) AND call_id = :call_id
+    GROUP BY mistake_index
 """
 
 _SAVE_QUESTION = f"""
@@ -477,14 +501,40 @@ _LATEST_REPORT = """
     LIMIT 1
 """
 
+_CARD_COLUMNS = f"""
+    CAST(id AS text) AS id, kind, front, back, note, explained_in, source_call_id,
+    {epoch_micros("created_at")} AS created_at, {epoch_micros("due_at")} AS due_at,
+    {epoch_micros("reviewed_at")} AS reviewed_at, stability, difficulty, reviews, lapses,
+    CAST(details AS text) AS details
+"""
 _CARD = f"""
-    SELECT CAST(id AS text) AS id, kind, front, back, note, explained_in, source_call_id,
-           {epoch_micros("created_at")} AS created_at, {epoch_micros("due_at")} AS due_at,
-           {epoch_micros("reviewed_at")} AS reviewed_at, stability, difficulty, reviews, lapses
+    SELECT {_CARD_COLUMNS}
     FROM card
 """
+
 # A learner's cards in one language.
 _DECK = "user_id = CAST(:user_id AS uuid) AND language = :language"
+
+# The oldest word cards without their forms, claimed for one worker in the same statement: a
+# card another worker claimed lately is skipped (SKIP LOCKED keeps two at once from waiting).
+_CLAIM_FOR_DETAILS = f"""
+    UPDATE card SET details_claimed_at = CAST(:at AS timestamptz)
+    WHERE id IN (
+        SELECT id FROM card
+        WHERE {_DECK} AND kind = 'word' AND details IS NULL
+          AND (details_claimed_at IS NULL
+               OR details_claimed_at <= CAST(:stale_before AS timestamptz))
+        ORDER BY created_at, id
+        LIMIT :limit
+        FOR UPDATE SKIP LOCKED
+    )
+    RETURNING {_CARD_COLUMNS}
+"""
+
+_SET_DETAILS = """
+    UPDATE card SET details = CAST(:details AS jsonb)
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+"""
 
 # The limit bounds storage, not money: two requests at the same moment could both count one
 # card too few and leave the deck one over, which harms nobody.
@@ -573,8 +623,9 @@ _READY_REPORTS = """
     AND r.content ->> 'target' = :language
 """
 
-_RECENT_REPORTS = f"""
-    SELECT CAST(r.content AS text) AS content
+_REPORT_HISTORY = f"""
+    SELECT r.call_id, {epoch_micros("s.started_at")} AS started_at,
+           CAST(r.content AS text) AS content
     FROM {_REPORT_CALLS}
     WHERE {_READY_REPORTS}
     ORDER BY s.started_at DESC, s.call_id DESC
@@ -963,6 +1014,37 @@ class SqlRecordingRepository:
         self._client.execute(_FORGET_ALL_RECORDINGS, {"user_id": str(user_id)})
 
 
+class SqlRetryRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def reserve(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        if limit < 1:
+            return False
+        rows = self._client.execute(
+            _RESERVE_RETRY, {"user_id": str(user_id), "day": day.isoformat(), "limit": limit}
+        )
+        return bool(rows)
+
+    def attempted(
+        self, user_id: UUID, call_id: str, index: int, at: dt.datetime, right: bool
+    ) -> None:
+        self._client.execute(
+            _RETRY_ATTEMPTED,
+            {
+                "user_id": str(user_id),
+                "call_id": call_id,
+                "index": index,
+                "at": at.isoformat(),
+                "right": right,
+            },
+        )
+
+    def of_conversation(self, user_id: UUID, call_id: str) -> dict[int, bool]:
+        rows = self._client.execute(_RETRIES_OF_CALL, {"user_id": str(user_id), "call_id": call_id})
+        return {int(row["mistake_index"]): bool(row["right"]) for row in rows}
+
+
 class SqlTutorRepository:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
@@ -1215,6 +1297,7 @@ def _report(document: dict[str, Any]) -> Report:
         next_steps=tuple(document["next_steps"]),
         stats=Stats(**document["stats"]),
         level_fit=LevelFit(**document["level_fit"]) if document.get("level_fit") else None,
+        usage=tuple(TopicUse(**use) for use in document.get("usage", [])),
     )
 
 
@@ -1260,11 +1343,18 @@ class SqlReportRepository:
         rows = self._client.execute(_LATEST_REPORT, {"user_id": str(user_id)})
         return _report(json.loads(rows[0]["content"])) if rows else None
 
-    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
+    def history(self, user_id: UUID, language: str, limit: int) -> list[ReportEntry]:
         rows = self._client.execute(
-            _RECENT_REPORTS, {"user_id": str(user_id), "language": language, "limit": limit}
+            _REPORT_HISTORY, {"user_id": str(user_id), "language": language, "limit": limit}
         )
-        return [_report(json.loads(row["content"])) for row in rows]
+        return [
+            ReportEntry(
+                row["call_id"],
+                from_epoch_micros(row["started_at"]),
+                _report(json.loads(row["content"])),
+            )
+            for row in rows
+        ]
 
     def mistakes_by_week(
         self, user_id: UUID, language: str, timezone: str | None, since: dt.date
@@ -1345,12 +1435,38 @@ def _card(row: dict[str, Any]) -> Card:
         memory=Memory(float(row["stability"]), float(row["difficulty"])) if learned else None,
         reviews=row["reviews"],
         lapses=row["lapses"],
+        details=WordDetails(**json.loads(row["details"])) if row.get("details") else None,
     )
 
 
 class SqlCardRepository:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
+
+    def claim_for_details(
+        self, user_id: UUID, language: str, at: dt.datetime, stale_before: dt.datetime, limit: int
+    ) -> list[Card]:
+        rows = self._client.execute(
+            _CLAIM_FOR_DETAILS,
+            {
+                "user_id": str(user_id),
+                "language": language,
+                "at": at.isoformat(),
+                "stale_before": stale_before.isoformat(),
+                "limit": limit,
+            },
+        )
+        return sorted((_card(row) for row in rows), key=lambda c: (c.created_at, str(c.id)))
+
+    def set_details(self, user_id: UUID, card_id: UUID, details: WordDetails) -> None:
+        self._client.execute(
+            _SET_DETAILS,
+            {
+                "id": str(card_id),
+                "user_id": str(user_id),
+                "details": json.dumps(dataclasses.asdict(details)),
+            },
+        )
 
     def add(self, user_id: UUID, language: str, key: str, card: Card, limit: int) -> bool:
         rows = self._client.execute(

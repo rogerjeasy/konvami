@@ -10,10 +10,12 @@ from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import Account, AccountService
+from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -27,6 +29,7 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
+from konvami_api.domain.retries import RetryService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voices import VoiceSampleService
@@ -51,12 +54,14 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
     RecordingNotifier,
     RecordingReportStarter,
     ScriptedTextModel,
+    ScriptedTranscriber,
 )
 
 USER = "11111111-1111-4111-8111-111111111111"
@@ -180,6 +185,11 @@ def text_model() -> ScriptedTextModel:
 
 
 @pytest.fixture
+def retry_transcriber() -> ScriptedTranscriber:
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
 def calls() -> InMemoryVoiceSessionRepository:
     """The recorded voice calls, for tests that need one to have taken place."""
     return InMemoryVoiceSessionRepository()
@@ -244,6 +254,7 @@ def services(
     report_starter: RecordingReportStarter,
     charges: InMemoryChargeRepository,
     level_store: InMemoryLevelRepository,
+    retry_transcriber: ScriptedTranscriber,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -282,10 +293,11 @@ def services(
     )
     # Card ids in the order they are handed out: ...0001, ...0002, and so on.
     card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
+    card_store = InMemoryCardRepository()
     cards = CardService(
         profiles=profiles,
         reports=reports,
-        repository=InMemoryCardRepository(),
+        repository=card_store,
         clock=clock,
         new_id=lambda: next(card_ids),
     )
@@ -401,6 +413,27 @@ def services(
         tutor=tutor,
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
+        ),
+        grammar=GrammarMapService(profiles=profiles, reports=reports),
+        card_details=CardDetailsService(
+            profiles=profiles,
+            personas=personas,
+            repository=card_store,
+            text_model=text_model,
+            model="gpt-6.1-sol",
+            speech=speech,
+            speech_model="gpt-4o-mini-tts",
+            files=files,
+            clock=clock,
+        ),
+        retries=RetryService(
+            profiles=profiles,
+            reports=reports,
+            accounts=directory,
+            repository=InMemoryRetryRepository(),
+            transcriber=retry_transcriber,
+            model="gpt-4o-transcribe",
+            clock=clock,
         ),
         costs=CostService(
             owners=frozenset({UUID(OWNER)}),

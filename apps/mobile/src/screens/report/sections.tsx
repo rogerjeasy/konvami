@@ -18,18 +18,25 @@ import type { CardSaver } from './use-card-saver';
 
 /**
  * The learner's mistakes, each as what they said, how it is right and why, with the way to ask
- * the Tutor about it. One the second check could not confirm is marked as a hint. Without any,
- * the report says so in one line.
+ * the Tutor about it and, for a confirmed one, to say it better. One the second check could not
+ * confirm is marked as a hint; one said right since is marked as such. Without any, the report
+ * says so in one line.
  */
 export function Polish({
   mistakes,
   saver,
+  practised,
   onExplain,
+  onRetry,
 }: {
   mistakes: readonly ReportMistake[];
   saver: CardSaver;
+  /** The mistakes the learner has said right since ("Say it better"). */
+  practised: ReadonlySet<number>;
   /** Asks the Tutor about mistake `index` (spec §6.5 "Explain my mistake"). */
   onExplain: (index: number) => void;
+  /** Says mistake `index` again, put right (spec §6.5 "Say it better"). */
+  onRetry: (index: number) => void;
 }) {
   const { t } = useTranslation();
   if (mistakes.length === 0) {
@@ -51,7 +58,13 @@ export function Polish({
               topic={t(`report.category.${mistake.category}` as 'report.category.other', {
                 defaultValue: t('report.category.other'),
               })}
-              badge={mistake.certain ? undefined : t('report.polish.unsure')}
+              badge={
+                !mistake.certain
+                  ? t('report.polish.unsure')
+                  : practised.has(i)
+                    ? t('report.retry.practised')
+                    : undefined
+              }
               saidLabel={t('report.said')}
               said={before}
               betterLabel={t('report.better')}
@@ -62,11 +75,18 @@ export function Polish({
                 <View className="flex-row flex-wrap items-center gap-x-2">
                   {/* Only what the second check confirmed is worth learning by heart. */}
                   {mistake.certain ? (
-                    <SaveCorrection
-                      saved={saver.isSaved('correction', i)}
-                      saving={saver.isSaving('correction', i)}
-                      onSave={() => void saver.save('correction', i)}
-                    />
+                    <>
+                      <TextButton
+                        tone="primary"
+                        label={t('report.retry.open')}
+                        onPress={() => onRetry(i)}
+                      />
+                      <SaveCorrection
+                        saved={saver.isSaved('correction', i)}
+                        saving={saver.isSaving('correction', i)}
+                        onSave={() => void saver.save('correction', i)}
+                      />
+                    </>
                   ) : null}
                   <TextButton label={t('report.polish.explain')} onPress={() => onExplain(i)} />
                 </View>

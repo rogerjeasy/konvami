@@ -53,8 +53,10 @@ describe('5.11 Review', () => {
 
     expect(screen.getByRole('progressbar', { name: 'Card 1 of 3' })).toBeTruthy();
     expect(screen.getByText('What does it mean?')).toBeTruthy();
-    expect(screen.getByRole('header', { name: 'das Wochenende' })).toBeTruthy();
+    // The article in its gender's colour, and in words for a screen reader.
+    expect(screen.getByRole('header', { name: 'das Wochenende, neuter' })).toBeTruthy();
     expect(screen.queryByText('weekend')).toBeNull();
+    expect(screen.queryByText('die Wochenenden')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Good/ })).toBeNull();
   });
 
@@ -70,6 +72,15 @@ describe('5.11 Review', () => {
       expect(screen.getByRole('button', { name: label })).toBeTruthy();
     }
     expect(screen.queryByRole('button', { name: 'Show answer' })).toBeNull();
+  });
+
+  it('shows a word’s forms with the answer, and plays it', async () => {
+    await open(await learning());
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Show answer' }));
+
+    expect(screen.getByText('die Wochenenden')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Listen' })).toBeTruthy();
   });
 
   it('stores each rating and moves on to the next card', async () => {
@@ -100,7 +111,12 @@ describe('5.11 Review', () => {
 
   it('says so when every card is done, and leads back to Learn', async () => {
     await open(await learning());
-    for (const front of ['das Wochenende', 'die Ausstellung', 'Ich habe nach Berlin gefahren']) {
+    // "das Wochenende" has its forms, so it is heard with its gender.
+    for (const front of [
+      'das Wochenende, neuter',
+      'die Ausstellung',
+      'Ich habe nach Berlin gefahren',
+    ]) {
       await screen.findByRole('header', { name: front });
       await answer('Good');
     }
@@ -120,7 +136,7 @@ describe('5.11 Review', () => {
     await screen.findByRole('header', { name: 'Ich habe nach Berlin gefahren' });
     await answer('Good');
 
-    expect(await screen.findByRole('header', { name: 'das Wochenende' })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'das Wochenende, neuter' })).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Show answer' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Good' }));
 
@@ -134,7 +150,7 @@ describe('5.11 Review', () => {
 
     await answer('Good');
     expect(await screen.findByText('That couldn’t be saved. Tap your answer again.')).toBeTruthy();
-    expect(screen.getByRole('header', { name: 'das Wochenende' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'das Wochenende, neuter' })).toBeTruthy();
 
     await fireEvent.press(screen.getByRole('button', { name: /^Good,/ }));
     expect(await screen.findByRole('header', { name: 'die Ausstellung' })).toBeTruthy();
@@ -161,7 +177,7 @@ describe('5.11 Review', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
 
-    expect(await screen.findByRole('header', { name: 'das Wochenende' })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'das Wochenende, neuter' })).toBeTruthy();
   });
 
   it('can be left at any time', async () => {

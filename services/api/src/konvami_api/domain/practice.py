@@ -735,6 +735,7 @@ class PracticeScript:
         today: dt.date,
         persona_id: UUID | None,
         scenario: str | None = None,
+        practise: str | None = None,
     ) -> Briefing:
         if self._onboarding.status(user_id).stage is not Stage.DONE:
             raise OnboardingError("wrong_stage")
@@ -742,7 +743,7 @@ class PracticeScript:
         if persona is None:
             raise PersonaError("not_found")
         role_play = self._scenario(user_id, scenario)
-        learner = self._learner(user_id, account, persona, today)
+        learner = self._learner(user_id, account, persona, today, practise)
         return Briefing(
             practice_instructions(persona, learner, today, role_play),
             voice=persona.voice,
@@ -752,7 +753,12 @@ class PracticeScript:
         )
 
     def _learner(
-        self, user_id: UUID, account: Account, persona: Persona, today: dt.date
+        self,
+        user_id: UUID,
+        account: Account,
+        persona: Persona,
+        today: dt.date,
+        practise: str | None = None,
     ) -> Learner:
         profile = self._profiles.get(user_id)
         catalog = self._profiles.catalog
@@ -778,7 +784,7 @@ class PracticeScript:
                 user_id, persona.id, today, history.last_at.date() if history else None
             ),
             avoid_topics=profile.avoid_topics,
-            plan=self._planner.plan(user_id),
+            plan=self._planner.plan(user_id, practise),
         )
 
     def _exam(self, language: str, exam: dict[str, Any] | None) -> str | None:

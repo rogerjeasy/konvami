@@ -8,7 +8,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
-from konvami_api.domain.cards import Card, CardTotals
+from konvami_api.domain.cards import Card, CardTotals, WordDetails
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -30,7 +30,14 @@ from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
-from konvami_api.domain.reports import Report, ReportTotals, Status, StoredReport, WeekMistakes
+from konvami_api.domain.reports import (
+    Report,
+    ReportEntry,
+    ReportTotals,
+    Status,
+    StoredReport,
+    WeekMistakes,
+)
 from konvami_api.domain.speech import SpeechTask, TranscriptionTask
 from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
@@ -578,9 +585,15 @@ class InMemoryReportRepository:
         ready = self._ready(user_id)
         return max(ready, key=lambda found: found[0])[1] if ready else None
 
-    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
-        ready = [found for found in self._ready(user_id) if found[1].target == language]
-        return [report for _, report in sorted(ready, key=lambda f: f[0], reverse=True)][:limit]
+    def history(self, user_id: UUID, language: str, limit: int) -> list[ReportEntry]:
+        ready = [
+            ReportEntry(call_id, self._calls.sessions[call_id].started_at, stored.report)
+            for call_id, stored in self.reports.items()
+            if stored.report is not None
+            and stored.report.target == language
+            and self._calls.sessions[call_id].user_id == user_id
+        ]
+        return sorted(ready, key=lambda entry: entry.started_at, reverse=True)[:limit]
 
     def mistakes_by_week(
         self, user_id: UUID, language: str, timezone: str | None, since: date
@@ -627,8 +640,18 @@ class RecordingReportStarter:
         self.started.append(call_id)
 
 
+class RecordingDetailsStarter:
+    def __init__(self) -> None:
+        self.started: list[UUID] = []
+
+    def start(self, user_id: UUID) -> None:
+        self.started.append(user_id)
+
+
 class InMemoryCardRepository:
     def __init__(self) -> None:
+        # When each card was last claimed to be filled in with its forms.
+        self.claimed: dict[UUID, datetime] = {}
         # Per card: its owner, its language and what makes it the same card as another.
         self.cards: dict[UUID, tuple[UUID, str, str, Card]] = {}
         # (card, rating, when) of every review, in order.
@@ -699,6 +722,27 @@ class InMemoryCardRepository:
     ) -> set[tuple[str, str]]:
         have: set[tuple[str, str]] = {(card.kind, key) for key, card in self._of(user_id, language)}
         return have & set(keys)
+
+    def claim_for_details(
+        self, user_id: UUID, language: str, at: datetime, stale_before: datetime, limit: int
+    ) -> list[Card]:
+        waiting = [
+            card
+            for _, card in self._of(user_id, language)
+            if card.kind == "word"
+            and card.details is None
+            and self.claimed.get(card.id, stale_before) <= stale_before
+        ]
+        chosen = sorted(waiting, key=lambda c: (c.created_at, str(c.id)))[:limit]
+        for card in chosen:
+            self.claimed[card.id] = at
+        return chosen
+
+    def set_details(self, user_id: UUID, card_id: UUID, details: WordDetails) -> None:
+        stored = self.cards.get(card_id)
+        if stored and stored[0] == user_id:
+            owner, language, key, card = stored
+            self.cards[card_id] = (owner, language, key, replace(card, details=details))
 
     def totals(self, user_id: UUID, language: str, since: datetime) -> CardTotals:
         mine = {card.id for _, card in self._of(user_id, language)}
@@ -882,3 +926,26 @@ class ScriptedTranscriber:
         if isinstance(answer, Exception):
             raise answer
         return answer
+
+
+class InMemoryRetryRepository:
+    def __init__(self) -> None:
+        self.days: dict[tuple[UUID, date], int] = {}
+        self.attempts: list[tuple[UUID, str, int, datetime, bool]] = []
+
+    def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
+        used = self.days.get((user_id, day), 0)
+        if used >= limit:
+            return False
+        self.days[(user_id, day)] = used + 1
+        return True
+
+    def attempted(self, user_id: UUID, call_id: str, index: int, at: datetime, right: bool) -> None:
+        self.attempts.append((user_id, call_id, index, at, right))
+
+    def of_conversation(self, user_id: UUID, call_id: str) -> dict[int, bool]:
+        tried: dict[int, bool] = {}
+        for owner, call, index, _, right in self.attempts:
+            if (owner, call) == (user_id, call_id):
+                tried[index] = tried.get(index, False) or right
+        return tried

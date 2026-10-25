@@ -31,6 +31,13 @@ const TEXT_PAIRS: [ColorToken, ColorToken][] = [
   ['fg', 'field'],
   ['fgSubtle', 'field'],
   ['appleFg', 'appleBg'],
+  // A noun's article in its gender's colour (der, die, das), wherever a card shows it.
+  ['genderMasc', 'chip'],
+  ['genderMasc', 'surface'],
+  ['genderFem', 'chip'],
+  ['genderFem', 'surface'],
+  ['genderNeut', 'chip'],
+  ['genderNeut', 'surface'],
 ];
 
 describe.each(['light', 'dark'] as const)('%s theme', (scheme) => {

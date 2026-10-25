@@ -94,11 +94,17 @@ export function TutorScreen() {
   const { status } = useSession();
   const { tutor: store, askTutor } = usePracticeServices();
   const state = useTutor();
-  const { conversation, correction } = useLocalSearchParams<{
+  const {
+    conversation,
+    correction,
+    question: suggested,
+  } = useLocalSearchParams<{
     conversation?: string;
     correction?: string;
+    /** A question written for the learner elsewhere (a grammar topic's page), ready to send. */
+    question?: string;
   }>();
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(suggested ?? '');
   // What is on its way to the Tutor, shown until the answer is there.
   const [asking, setAsking] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);

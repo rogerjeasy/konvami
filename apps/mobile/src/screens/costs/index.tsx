@@ -42,6 +42,9 @@ const FEATURE = {
   tutor: 'costs.feature.tutor',
   verbatim: 'costs.feature.verbatim',
   live_corrections: 'costs.feature.live_corrections',
+  retry: 'costs.feature.retry',
+  card_details: 'costs.feature.card_details',
+  card_audio: 'costs.feature.card_audio',
   voice_sample: 'costs.feature.voice_sample',
 } as const;
 

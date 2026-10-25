@@ -1,5 +1,7 @@
 """The HTTP API. Handlers translate between HTTP and the domain services and decide nothing."""
 
+import base64
+import binascii
 import datetime as dt
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -15,6 +17,7 @@ from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
     AllowanceOut,
+    CardAudioOut,
     CardIn,
     CardOut,
     CatalogOut,
@@ -22,6 +25,8 @@ from konvami_api.api.schemas import (
     CostsOut,
     DeckOut,
     DeckSummaryOut,
+    GrammarMapOut,
+    GrammarTopicPageOut,
     HomeOut,
     MemoriesOut,
     MemoryOut,
@@ -46,6 +51,10 @@ from konvami_api.api.schemas import (
     RecordingsOut,
     RecordingsPatch,
     ReportOut,
+    RetriedOut,
+    RetriesOut,
+    RetryIn,
+    RetryOut,
     ReviewIn,
     TranscriptOut,
     TutorCorrectionIn,
@@ -57,11 +66,13 @@ from konvami_api.api.schemas import (
     VoiceSampleOut,
 )
 from konvami_api.domain.accounts import AccountService, AccountView
+from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardService
 from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
@@ -73,6 +84,7 @@ from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService, ReportState
+from konvami_api.domain.retries import RetryError, RetryService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
@@ -100,6 +112,9 @@ class Services:
     tutor: TutorService
     voices: VoiceSampleService
     costs: CostService
+    grammar: GrammarMapService
+    card_details: CardDetailsService
+    retries: RetryService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -110,6 +125,7 @@ CONFLICT: Responses = {409: {"model": ErrorBody}}
 NOT_FOUND: Responses = {404: {"model": ErrorBody}}
 TUTOR_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 429, 503)}
 CALL_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 429, 503)}
+RETRY_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 422, 429, 503)}
 LIMITED: Responses = {429: {"model": ErrorBody}}
 UNAVAILABLE: Responses = {503: {"model": ErrorBody}}
 # An IANA time zone name is at most a few dozen characters ("America/Argentina/ComodRivadavia").
@@ -241,7 +257,13 @@ def _router(services: Services) -> APIRouter:
     @router.post("/voice/calls", operation_id="startVoiceCall", responses=CALL_REFUSED)
     def start_voice_call(user: CurrentUser, offer: VoiceCallIn) -> VoiceCallOut:
         started = services.voice.start(
-            user, offer.purpose, offer.sdp, offer.persona_id, offer.local_date, offer.scenario
+            user,
+            offer.purpose,
+            offer.sdp,
+            offer.persona_id,
+            offer.local_date,
+            offer.scenario,
+            offer.practise,
         )
         return VoiceCallOut.of(started)
 
@@ -338,9 +360,18 @@ def _router(services: Services) -> APIRouter:
     def review_card(user: CurrentUser, card_id: UUID, review: ReviewIn) -> CardOut:
         return CardOut.of(services.cards.review(user, card_id, review.rating))
 
+    @router.get(
+        "/cards/{card_id}/audio", operation_id="getCardAudio", responses=NOT_FOUND | UNAVAILABLE
+    )
+    def get_card_audio(user: CurrentUser, card_id: UUID) -> CardAudioOut:
+        """Where the card's sound plays from: the word with its sentence, or a correction as it
+        is right, in the learner's partner's voice. Made the first time it is asked for."""
+        return CardAudioOut(url=services.card_details.audio(user, card_id))
+
     @router.delete("/cards/{card_id}", operation_id="removeCard", responses=NOT_FOUND | REFUSED)
     def remove_card(user: CurrentUser, card_id: UUID) -> DeckSummaryOut:
         services.cards.remove(user, card_id)
+        services.card_details.forget(user, card_id)
         deck = services.cards.deck(user, limit=1)
         return DeckSummaryOut(total=deck.total, due=deck.due)
 
@@ -352,6 +383,42 @@ def _router(services: Services) -> APIRouter:
 
     def memories_of(user: UUID, book: MemoryBook) -> MemoriesOut:
         return MemoriesOut.of(book, partners_named(user, book.memories))
+
+    @router.post(
+        "/conversations/{call_id}/report/mistakes/{index}/retries",
+        operation_id="retryCorrection",
+        responses=RETRY_REFUSED,
+    )
+    def retry_correction(
+        user: CurrentUser, call_id: str, index: int, attempt: RetryIn
+    ) -> RetriedOut:
+        """Says correction `index` of a conversation's report again ("Say it better")."""
+        try:
+            audio = base64.b64decode(attempt.audio, validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise RetryError("invalid_value") from error
+        seconds = attempt.duration_ms / 1000 if attempt.duration_ms is not None else None
+        return RetriedOut.of(
+            services.retries.retry(user, call_id, index, audio, attempt.format, seconds)
+        )
+
+    @router.get("/conversations/{call_id}/retries", operation_id="getRetries", responses=NOT_FOUND)
+    def get_retries(user: CurrentUser, call_id: str) -> RetriesOut:
+        """The corrections of a conversation's report the learner said again."""
+        tried = services.retries.of_conversation(user, call_id)
+        return RetriesOut(
+            retries=[RetryOut(index=index, right=right) for index, right in sorted(tried.items())]
+        )
+
+    @router.get("/grammar", operation_id="getGrammarMap")
+    def get_grammar_map(user: CurrentUser) -> GrammarMapOut:
+        """Every grammar topic of the language learned, with how well the learner has it."""
+        return GrammarMapOut.of(services.grammar.map(user))
+
+    @router.get("/grammar/{topic_id}", operation_id="getGrammarTopic", responses=NOT_FOUND)
+    def get_grammar_topic(user: CurrentUser, topic_id: str) -> GrammarTopicPageOut:
+        """One topic of the map, with the learner's own mistakes on it."""
+        return GrammarTopicPageOut.of(services.grammar.topic(user, topic_id))
 
     @router.get("/tutor/questions", operation_id="getTutorQuestions")
     def get_tutor_questions(user: CurrentUser) -> TutorQuestionsOut:

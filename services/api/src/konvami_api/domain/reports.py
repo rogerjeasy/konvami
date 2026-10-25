@@ -54,6 +54,8 @@ MAX_REWRITES = 4
 MAX_WORDS = 8
 MAX_WINS = 3
 MAX_NEXT_STEPS = 3
+# Grammar topics counted per conversation: more than a conversation can show.
+MAX_USAGE = 12
 # How long a report may be on its way. Writing takes a minute or two at most (two answers from
 # the text model); one still pending after this was lost with its worker and counts as failed.
 PENDING_FOR = dt.timedelta(minutes=5)
@@ -114,6 +116,16 @@ class Word:
 
 
 @dataclass(frozen=True)
+class TopicUse:
+    """How often the learner used one grammar topic in a conversation (the grammar map's
+    evidence, `grammar_map.py`), and how many of those uses were wrong."""
+
+    topic: str
+    uses: int
+    wrong: int
+
+
+@dataclass(frozen=True)
 class Report:
     # The language that was practised, and the one the explanations are written in (codes, as
     # in the profile).
@@ -129,6 +141,18 @@ class Report:
     # How the learner did against the conversation's level, for the level engine (spec §6.9);
     # never shown. None in a report from before it existed, or when the analyst gave none.
     level_fit: LevelFit | None = None
+    # The grammar topics the learner used, for the grammar map (spec §6.8); empty in a report
+    # from before it existed.
+    usage: tuple[TopicUse, ...] = ()
+
+
+@dataclass(frozen=True)
+class ReportEntry:
+    """A ready report with the conversation it is about."""
+
+    call_id: str
+    started_at: dt.datetime
+    report: Report
 
 
 @dataclass(frozen=True)
@@ -213,7 +237,7 @@ class ReportRepository(Protocol):
     def latest(self, user_id: UUID) -> Report | None:
         """The ready report of the learner's most recent conversation that has one."""
 
-    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
+    def history(self, user_id: UUID, language: str, limit: int) -> list[ReportEntry]:
         """The ready reports of the learner's last `limit` conversations in `language` that
         have one, the newest first."""
 
@@ -288,6 +312,12 @@ class _FoundFit(_Answer):
     speaking: Fit
 
 
+class _FoundUse(_Answer):
+    topic: str
+    uses: int
+    wrong: int
+
+
 class _Analysis(_Answer):
     summary: str
     mistakes: list[_FoundMistake]
@@ -295,6 +325,8 @@ class _Analysis(_Answer):
     words: list[_FoundWord]
     wins: list[str]
     next_steps: list[str]
+    # Required of the model by the schema; an answer without it still makes a report.
+    usage: list[_FoundUse] = []
     # Required of the model by the schema; an answer without one still makes a report.
     level_fit: _FoundFit | None = None
 
@@ -322,7 +354,7 @@ _STRING = {"type": "string"}
 _INTEGER = {"type": "integer"}
 
 
-def _analysis_schema(categories: Sequence[str]) -> dict[str, Any]:
+def _analysis_schema(categories: Sequence[str], topics: Sequence[str]) -> dict[str, Any]:
     mistake = answer_object(
         {
             "turn": _INTEGER,
@@ -338,6 +370,9 @@ def _analysis_schema(categories: Sequence[str]) -> dict[str, Any]:
     )
     word = answer_object({"word": _STRING, "meaning": _STRING, "example": _STRING})
     fit = {"type": "string", "enum": list(FITS)}
+    use = answer_object(
+        {"topic": {"type": "string", "enum": list(topics)}, "uses": _INTEGER, "wrong": _INTEGER}
+    )
     return answer_object(
         {
             "summary": _STRING,
@@ -346,6 +381,7 @@ def _analysis_schema(categories: Sequence[str]) -> dict[str, Any]:
             "words": answer_list(word, MAX_WORDS),
             "wins": answer_list(_STRING, MAX_WINS),
             "next_steps": answer_list(_STRING, MAX_NEXT_STEPS),
+            "usage": answer_list(use, MAX_USAGE),
             "level_fit": answer_object({"grammar": fit, "vocabulary": fit, "speaking": fit}),
         }
     )
@@ -427,6 +463,12 @@ shows (a structure used correctly, a long answer, a question they asked). No gen
 following from the mistakes. Each is one short phrase that names the thing, with a brief example
 where that helps, in at most fifteen words. Not an exercise and not a full sentence of advice:
 the learner's conversation partner is given these and brings them up.
+
+`usage`: for the app only, never shown as such. For each grammar topic of `topics` that the
+learner used in their own turns, at most {MAX_USAGE}: `uses`, how many times they used it, and
+`wrong`, how many of those uses were wrong. Count the right ones too, not only the mistakes: a
+verb in the Perfekt, a noun after a dative preposition, a clause with weil each count once. Count
+only clear uses, and leave out the topics they did not use.
 
 `level_fit`: for the app only, never shown to the learner. The partner spoke at the learner's
 level, so judge only the learner's own turns, and say for each skill how they compare with what
@@ -582,6 +624,18 @@ def _vocabulary(found: Sequence[_FoundWord], said: _Said) -> tuple[Word, ...]:
     return tuple(words[:MAX_WORDS])
 
 
+def _usage(found: Sequence[_FoundUse], pack: LanguagePack | None) -> tuple[TopicUse, ...]:
+    """The counts that make sense: a topic of the pack, counted once, with uses, and no more
+    wrong uses than uses."""
+    usage: list[TopicUse] = []
+    for item in found:
+        known = pack is not None and pack.topic(item.topic) is not None
+        if not known or item.uses < 1 or any(use.topic == item.topic for use in usage):
+            continue
+        usage.append(TopicUse(item.topic, item.uses, min(max(item.wrong, 0), item.uses)))
+    return tuple(usage[:MAX_USAGE])
+
+
 # --- The service ---------------------------------------------------------------------------------
 
 
@@ -692,8 +746,12 @@ class ReportService:
     def recent(self, user_id: UUID, limit: int) -> list[Report]:
         """The reports of the learner's last conversations in the language they are learning
         now, the newest first."""
+        return [entry.report for entry in self.history(user_id, limit)]
+
+    def history(self, user_id: UUID, limit: int) -> list[ReportEntry]:
+        """The same, each with the conversation it is about."""
         language = self._profiles.get(user_id).target_language or ""
-        return self._repository.recent(user_id, language, limit)
+        return self._repository.history(user_id, language, limit)
 
     def mistakes_by_week(
         self, user_id: UUID, timezone: str | None, since: dt.date
@@ -736,6 +794,10 @@ class ReportService:
             "level": profile.level(language) or DEFAULT_LEVEL,
             "partner": partner.name if partner else None,
             "transcript": [_line(number, turn) for number, turn in enumerate(turns)],
+            "topics": [
+                {"id": topic.id, "title": topic.title, "level": topic.level}
+                for topic in (pack.grammar_map if pack else ())
+            ],
         }
         try:
             analysis = self._analyse(session.user_id, pack, target, explanation, content)
@@ -762,6 +824,7 @@ class ReportService:
             next_steps=_lines(analysis.next_steps, MAX_NEXT_STEPS),
             stats=stats,
             level_fit=LevelFit(**analysis.level_fit.model_dump()) if analysis.level_fit else None,
+            usage=_usage(analysis.usage, pack),
         )
         self._repository.written(call_id, "ready", report)
 
@@ -778,7 +841,10 @@ class ReportService:
             instructions=_analyst_instructions(target, explanation),
             content=json.dumps(content, ensure_ascii=False),
             answer_name="session_report",
-            answer_schema=_analysis_schema(pack.error_categories if pack else ()),
+            answer_schema=_analysis_schema(
+                pack.error_categories if pack else (),
+                [topic.id for topic in pack.grammar_map] if pack else (),
+            ),
             charge=Charge(user_id, Feature.REPORT),
         )
         return _Analysis.model_validate(self._text_model.answer(task))

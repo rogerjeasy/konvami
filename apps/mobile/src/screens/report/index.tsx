@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import type { Conversation, SessionReport } from '@konvami/api-client';
+import type { Conversation, SessionReport, TranscriptTurn } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -14,11 +15,13 @@ import { TextButton } from '@/components/text-button';
 import { wholeMinutes } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
+import { practiceSentence } from '@/lib/practice-sentence';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { callRoute, conversationRoute, explainRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices, useReport } from '@/practice/services';
 import { LevelStepNote } from './level-step';
 import { Keep, Natural, NextSteps, Polish, Wins, Words } from './sections';
+import { SayItBetterSheet } from './say-it-better';
 import { ReportStatus } from './status';
 import { TalkShare } from './talk-share';
 import { useCardSaver } from './use-card-saver';
@@ -53,9 +56,57 @@ function Heading({ conversation }: { conversation: Conversation | null }) {
   );
 }
 
+/**
+ * The corrections of a report the learner said right since ("Say it better"): read once, then
+ * kept up to date as they practise.
+ */
+function usePractised(id: string): [ReadonlySet<number>, (index: number) => void] {
+  const { readRetries } = usePracticeServices();
+  const [practised, setPractised] = useState<ReadonlySet<number>>(new Set());
+  useEffect(() => {
+    let current = true;
+    readRetries(id).then(
+      ({ retries }) =>
+        current &&
+        setPractised(new Set(retries.filter(({ right }) => right).map(({ index }) => index))),
+      // Without them the report only lacks the marks.
+      () => {},
+    );
+    return () => {
+      current = false;
+    };
+  }, [readRetries, id]);
+  return [practised, (index) => setPractised((done) => new Set([...done, index]))];
+}
+
 /** The report itself, read from top to bottom: what happened, what to polish, what to keep. */
-function Report({ id, report, partner }: { id: string; report: SessionReport; partner: string }) {
+function Report({
+  id,
+  report,
+  partner,
+  turns,
+}: {
+  id: string;
+  report: SessionReport;
+  partner: string;
+  /** What was said in the conversation, once it is read; for saying a correction better. */
+  turns: readonly TranscriptTurn[];
+}) {
   const saver = useCardSaver(id, report);
+  const [practised, markRight] = usePractised(id);
+  const [retrying, setRetrying] = useState<number | null>(null);
+  const mistake = retrying === null ? null : report.mistakes[retrying];
+  const turn = mistake ? turns[mistake.turn] : undefined;
+  const said = turn ? (turn.verbatim ?? turn.text) : null;
+  const sentence = mistake
+    ? practiceSentence(
+        said,
+        mistake,
+        report.mistakes.filter(
+          (other, i) => i !== retrying && other.certain && other.turn === mistake.turn,
+        ),
+      )
+    : '';
   const parts = [
     report.levelStep ? <LevelStepNote key="level" step={report.levelStep} /> : null,
     <Card key="summary" className="gap-4 p-4">
@@ -74,20 +125,37 @@ function Report({ id, report, partner }: { id: string; report: SessionReport; pa
       key="polish"
       mistakes={report.mistakes}
       saver={saver}
+      practised={practised}
       onExplain={(index) => router.push(explainRoute(id, index))}
+      onRetry={setRetrying}
     />,
     <Natural key="natural" rewrites={report.rewrites} />,
     <Words key="words" words={report.words} saver={saver} />,
     <Wins key="wins" wins={report.wins} />,
     <NextSteps key="next" steps={report.nextSteps} />,
   ];
-  return parts
-    .filter((part) => part !== null)
-    .map((part, i) => (
-      <Reveal key={part.key} delay={staggerDelay(i + 1)}>
-        {part}
-      </Reveal>
-    ));
+  return (
+    <>
+      {parts
+        .filter((part) => part !== null)
+        .map((part, i) => (
+          <Reveal key={part.key} delay={staggerDelay(i + 1)}>
+            {part}
+          </Reveal>
+        ))}
+      <SayItBetterSheet
+        conversationId={id}
+        index={retrying}
+        // What the sentence to say is compared with, to show what changes: the learner's turn,
+        // or their own words when the sentence is the corrected words alone.
+        said={sentence === mistake?.corrected ? mistake.original : (said ?? '')}
+        sentence={sentence}
+        before={turn?.audio ?? null}
+        onClose={() => setRetrying(null)}
+        onRight={markRight}
+      />
+    </>
+  );
 }
 
 /**
@@ -150,6 +218,7 @@ export function ReportScreen() {
           <Heading conversation={conversation} />
           <Report
             id={id}
+            turns={reading.phase === 'ready' ? reading.transcript.turns : []}
             report={view.report}
             partner={partner?.name ?? t('conversations.formerPartner')}
           />

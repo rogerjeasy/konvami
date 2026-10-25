@@ -102,10 +102,19 @@ describe('5.3 Conversation', () => {
     voice = createFakeVoiceEngine(),
     personaId = LENA.id,
     scenario,
-  }: { api?: FakeApi; voice?: FakeVoiceEngine; personaId?: string; scenario?: string } = {}) {
-    jest
-      .mocked(useLocalSearchParams)
-      .mockReturnValue(scenario ? { personaId, scenario } : { personaId });
+    practise,
+  }: {
+    api?: FakeApi;
+    voice?: FakeVoiceEngine;
+    personaId?: string;
+    scenario?: string;
+    practise?: string;
+  } = {}) {
+    jest.mocked(useLocalSearchParams).mockReturnValue({
+      personaId,
+      ...(scenario ? { scenario } : {}),
+      ...(practise ? { practise } : {}),
+    });
     await renderScreen(<LiveConversationScreen />, { api, voice, signedIn: true });
     return { api, voice };
   }
@@ -229,6 +238,12 @@ describe('5.3 Conversation', () => {
     expect(screen.getByLabelText('Order two things: reached')).toBeTruthy();
   });
 
+  it('practises the grammar topic that was chosen', async () => {
+    const { voice } = await live({ practise: 'dative' });
+
+    expect(voice.openedPractise).toEqual(['dative']);
+  });
+
   it('shows no goals in a free conversation', async () => {
     const { voice } = await live();
 
@@ -289,7 +304,7 @@ describe('5.3 Conversation', () => {
     const voice = createFakeVoiceEngine();
     voice.plan = {
       language: 'de',
-      focus: ['case_dative'],
+      focus: ['dative'],
       words: [
         { text: 'der Termin', meaning: 'appointment' },
         { text: 'umsteigen', meaning: 'to change trains' },

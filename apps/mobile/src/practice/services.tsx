@@ -11,6 +11,10 @@ import type {
   ApiClient,
   Card,
   Catalog,
+  GrammarMap,
+  GrammarTopicPage,
+  Retried,
+  Retries,
   Scenario,
   CardSource,
   Progress,
@@ -20,6 +24,7 @@ import type {
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
 import type { ClipPlayer } from '@/lib/clip-player';
+import type { SentenceRecording } from '@/voice/sentence-recorder';
 import { createDeckStore, type DeckState, type DeckStore } from './deck-store';
 import { createHomeStore, type HomeState, type HomeStore } from './home-store';
 import { createLibraryStore, type LibraryState, type LibraryStore } from './library-store';
@@ -63,6 +68,23 @@ export interface PracticeServices {
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
   /**
+   * Says correction `index` of a conversation's report again, from a recording ("Say it better").
+   * Rejects with an `ApiError` (`unsure`, `retry_limit`, …).
+   */
+  retryCorrection: (
+    conversationId: string,
+    index: number,
+    recording: SentenceRecording,
+  ) => Promise<Retried>;
+  /** The corrections of a conversation's report the learner said again, and whether right. */
+  readRetries: (conversationId: string) => Promise<Retries>;
+  /** Where a card's sound plays from (made the first time). Rejects with an `ApiError`. */
+  cardSound: (id: string) => Promise<string>;
+  /** The grammar map (5.14). */
+  grammar: ResourceStore<GrammarMap>;
+  /** One topic of the map (5.15). Rejects with an `ApiError` (`not_found`, …). */
+  readGrammarTopic: (id: string) => Promise<GrammarTopicPage>;
+  /**
    * Asks the Tutor, about a typed question or about correction `index` of a report, and puts
    * the answer first. Rejects with an `ApiError` (`tutor_limit`, `unavailable`, …).
    */
@@ -92,6 +114,11 @@ export function createPracticeServices(
     | 'getCatalog'
     | 'askTutor'
     | 'explainCorrection'
+    | 'getGrammarMap'
+    | 'getGrammarTopic'
+    | 'retryCorrection'
+    | 'getRetries'
+    | 'getCardAudio'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -116,6 +143,16 @@ export function createPracticeServices(
     reviewCards: () => createReviewSession(api),
     catalog,
     tutor,
+    grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
+    readGrammarTopic: (id) => api.getGrammarTopic(id),
+    cardSound: async (id) => (await api.getCardAudio(id)).url,
+    retryCorrection: (conversationId, index, recording) =>
+      api.retryCorrection(conversationId, index, {
+        audio: recording.base64,
+        format: recording.format,
+        durationMs: recording.durationMs,
+      }),
+    readRetries: (conversationId) => api.getRetries(conversationId),
     askTutor: (asked) =>
       tutor.mutate(
         () =>
@@ -150,6 +187,7 @@ export function PracticeProvider({
     services.deck.reset();
     services.progress.reset();
     services.tutor.reset();
+    services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
 }
@@ -250,6 +288,43 @@ export function useReport(id: string): {
   }, [follower]);
   const view = useSyncExternalStore(follower.subscribe, follower.getState, follower.getState);
   return { view, request: () => void follower.request(), reload: follower.start };
+}
+
+/** The grammar map; re-renders when it changes. */
+export function useGrammarMap(): ResourceState<GrammarMap> {
+  const { grammar } = usePracticeServices();
+  return useSyncExternalStore(grammar.subscribe, grammar.getState, grammar.getState);
+}
+
+export type TopicReading =
+  | { phase: 'loading' }
+  | { phase: 'failed'; code: string }
+  | { phase: 'ready'; page: GrammarTopicPage };
+
+/** Reads one topic of the grammar map; `retry` reads it again after a failure. */
+export function useGrammarTopic(id: string): TopicReading & { retry: () => void } {
+  const { readGrammarTopic } = usePracticeServices();
+  const [reading, setReading] = useState<TopicReading>({ phase: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let current = true;
+    readGrammarTopic(id).then(
+      (page) => current && setReading({ phase: 'ready', page }),
+      (error: unknown) => current && setReading({ phase: 'failed', code: apiErrorCode(error) }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [readGrammarTopic, id, attempt]);
+
+  return {
+    ...reading,
+    retry: () => {
+      setReading({ phase: 'loading' });
+      setAttempt((count) => count + 1);
+    },
+  };
 }
 
 /** The questions asked to the Tutor; re-renders when they change. */

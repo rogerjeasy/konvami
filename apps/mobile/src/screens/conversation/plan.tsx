@@ -21,8 +21,8 @@ function useWordsUsed(plan: CallPlan, said: readonly string[]): ReadonlySet<stri
 }
 
 /**
- * What the conversation sets out to practise (the Session Planner, spec §8.2): the kinds of
- * mistake the partner steers towards, and the learner's saved words, each ticked off once they
+ * What the conversation sets out to practise (the Session Planner, spec §8.2): the grammar
+ * topics the partner steers towards, and the learner's saved words, each ticked off once they
  * have used it (spec §6.4 "3 of 5 target words used"). Nothing to plan, nothing shown.
  */
 export function CallPlanStrip({
@@ -37,9 +37,7 @@ export function CallPlanStrip({
   const used = useWordsUsed(plan, learnerLines);
   if (plan.focus.length === 0 && plan.words.length === 0) return null;
   const topics = plan.focus.map((topic) =>
-    t(`report.category.${topic}` as 'report.category.other', {
-      defaultValue: t('report.category.other'),
-    }),
+    t(`grammar.topics.${topic}` as 'grammar.topics.dative', { defaultValue: topic }),
   );
   return (
     <View className="items-center gap-2 pt-1">

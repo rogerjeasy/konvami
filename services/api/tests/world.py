@@ -7,10 +7,12 @@ from typing import Any
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountService
+from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelFit, LevelService
@@ -30,8 +32,10 @@ from konvami_api.domain.reports import (
     Report,
     ReportService,
     Stats,
+    TopicUse,
     Word,
 )
+from konvami_api.domain.retries import RetryService
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.tutor import TutorService
@@ -64,9 +68,11 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
+    RecordingDetailsStarter,
     RecordingNotifier,
     RecordingReportStarter,
     ScriptedTextModel,
@@ -202,12 +208,25 @@ class World:
         self.card_store = InMemoryCardRepository()
         # Card ids in the order they are handed out: ...0001, ...0002, and so on.
         card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
+        self.card_details_starter = RecordingDetailsStarter()
         self.cards = CardService(
             profiles=self.profiles,
             reports=self.reports,
             repository=self.card_store,
             clock=self.clock,
             new_id=lambda: next(card_ids),
+            details=self.card_details_starter,
+        )
+        self.grammar = GrammarMapService(profiles=self.profiles, reports=self.reports)
+        self.retry_transcriber = ScriptedTranscriber()
+        self.retries = RetryService(
+            profiles=self.profiles,
+            reports=self.reports,
+            accounts=self.accounts,
+            repository=InMemoryRetryRepository(),
+            transcriber=self.retry_transcriber,
+            model="gpt-4o-transcribe",
+            clock=self.clock,
         )
         self.planner = SessionPlanner(
             profiles=self.profiles, reports=self.reports, cards=self.cards
@@ -321,6 +340,17 @@ class World:
             clock=self.clock,
         )
         self.speech = FakeSpeechModel()
+        self.card_details = CardDetailsService(
+            profiles=self.profiles,
+            personas=self.personas,
+            repository=self.card_store,
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            speech=self.speech,
+            speech_model="gpt-4o-mini-tts",
+            files=self.files,
+            clock=self.clock,
+        )
         self.voices = VoiceSampleService(
             profiles=self.profiles, files=self.files, speech=self.speech, model="gpt-4o-mini-tts"
         )
@@ -427,6 +457,7 @@ class World:
         mistakes: tuple[Mistake, ...] = (),
         stats: Stats | None = None,
         level_fit: LevelFit | None = None,
+        usage: tuple[TopicUse, ...] = (),
     ) -> None:
         """Stores a ready report for a conversation, as the worker would after writing it."""
         now = self.clock()
@@ -445,5 +476,6 @@ class World:
                 next_steps=next_steps,
                 stats=stats or Stats(20, 15, 3, 9),
                 level_fit=level_fit,
+                usage=usage,
             ),
         )

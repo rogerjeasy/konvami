@@ -9,13 +9,15 @@ from typing import Any
 
 @dataclass(frozen=True)
 class FocusPoint:
-    # A language pack's kind of mistake.
+    # A topic of the language pack's grammar map (`grammar_topics.py`).
     topic: str
-    # The grammar note's title (English, as the partner's instructions are).
+    # Its title (English, as the partner's instructions are).
     title: str
     elicit: str
     # What the learner said, and how it is right, from their own reports.
     examples: tuple[tuple[str, str], ...]
+    # The kinds of mistake that are mistakes in it, for the live checks.
+    categories: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,7 @@ class SessionPlan:
                     "title": point.title,
                     "elicit": point.elicit,
                     "examples": [list(example) for example in point.examples],
+                    "categories": list(point.categories),
                 }
                 for point in self.focus
             ],
@@ -61,6 +64,7 @@ class SessionPlan:
                     title=point["title"],
                     elicit=point["elicit"],
                     examples=tuple((said, better) for said, better in point["examples"]),
+                    categories=tuple(point.get("categories", ())),
                 )
                 for point in document.get("focus", [])
             ),

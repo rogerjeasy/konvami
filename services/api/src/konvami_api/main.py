@@ -10,15 +10,18 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import cache
 from typing import Any
+from uuid import UUID
 
 from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import AccountService
+from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -32,6 +35,7 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
+from konvami_api.domain.retries import RetryService
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
@@ -53,6 +57,7 @@ from konvami_api.persistence.repositories import (
     SqlProfileRepository,
     SqlRecordingRepository,
     SqlReportRepository,
+    SqlRetryRepository,
     SqlTutorRepository,
     SqlVoiceSessionRepository,
 )
@@ -60,6 +65,7 @@ from konvami_api.persistence.sql import SqlClient
 from konvami_api.providers.aws import (
     LambdaCallStarter,
     LambdaClient,
+    LambdaDetailsStarter,
     LambdaReportStarter,
     SecretsClient,
     SnsClient,
@@ -186,8 +192,13 @@ def build_backend(
         model=models.report,
         clock=_now,
     )
+    card_store = SqlCardRepository(sql)
     cards = CardService(
-        profiles=profiles, reports=reports, repository=SqlCardRepository(sql), clock=_now
+        profiles=profiles,
+        reports=reports,
+        repository=card_store,
+        clock=_now,
+        details=LambdaDetailsStarter(clients.functions, worker),
     )
     levels = LevelService(
         profiles=profiles,
@@ -288,6 +299,7 @@ def build_backend(
     accounts = AccountService(
         records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
     )
+    speech = OpenAiSpeech(openai_key, meter=meter)
     services = Services(
         catalog=CATALOG,
         profiles=profiles,
@@ -306,10 +318,28 @@ def build_backend(
         recordings=recordings,
         tutor=tutor,
         voices=VoiceSampleService(
+            profiles=profiles, files=files, speech=speech, model=models.speech
+        ),
+        card_details=CardDetailsService(
             profiles=profiles,
+            personas=personas,
+            repository=card_store,
+            text_model=text,
+            model=models.cards,
+            speech=speech,
+            speech_model=models.speech,
             files=files,
-            speech=OpenAiSpeech(openai_key, meter=meter),
-            model=models.speech,
+            clock=_now,
+        ),
+        grammar=GrammarMapService(profiles=profiles, reports=reports),
+        retries=RetryService(
+            profiles=profiles,
+            reports=reports,
+            accounts=directory,
+            repository=SqlRetryRepository(sql),
+            transcriber=transcriber,
+            model=models.verbatim,
+            clock=_now,
         ),
         costs=CostService(
             owners=costs.owners,
@@ -365,10 +395,14 @@ def migrate_handler(event: dict[str, Any], context: Any) -> dict[str, list[str]]
 
 
 def run_worker(backend: Backend, event: dict[str, Any]) -> None:
-    """The worker's two jobs, both too long for an API request: following a live call to its
-    end (`call_id`), and what follows a conversation (`report`): writing its learner turns down
-    a second time from their recordings, writing its report, moving the level if the reports
-    say so, then writing down what it told about the learner."""
+    """The worker's jobs, all too long for an API request: following a live call to its end
+    (`call_id`); what follows a conversation (`report`): writing its learner turns down a second
+    time from their recordings, writing its report, moving the level if the reports say so, then
+    writing down what it told about the learner; and filling in a learner's new word cards with
+    their forms (`card_details`)."""
+    if "card_details" in event:
+        backend.services.card_details.fill_in(UUID(event["card_details"]))
+        return
     if "report" in event:
         call_id = event["report"]
         services = backend.services

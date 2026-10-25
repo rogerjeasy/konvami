@@ -9,7 +9,12 @@ from konvami_api.domain.cards import MAX_CARDS
 from konvami_api.domain.reports import MAX_REQUESTS, Mistake, Report, Stats, Word
 from tests.api.conftest import OTHER_USER, USER, Call
 from tests.api.test_report_api import talked
-from tests.fakes import FixedClock, InMemoryVoiceSessionRepository, ScriptedTextModel
+from tests.fakes import (
+    FakeSpeechModel,
+    FixedClock,
+    InMemoryVoiceSessionRepository,
+    ScriptedTextModel,
+)
 
 REPORT = Report(
     target="de",
@@ -81,9 +86,67 @@ def test_a_word_of_a_report_is_saved_as_a_card(
         "reviewedAt": None,
         "reviews": 0,
         "lapses": 0,
+        # The forms come a moment later, from the worker.
+        "details": None,
     }
     # Saving it again answers with the same card.
     assert call("POST", "/v1/cards", WORD).body["id"] == FIRST_ID
+
+
+def test_a_cards_forms_and_sound_are_read_with_it(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+    speech: FakeSpeechModel,
+) -> None:
+    reported(call, text_model, calls, services)
+    card_id = call("POST", "/v1/cards", WORD).body["id"]
+    text_model.answers.append(
+        {
+            "cards": [
+                {
+                    "id": 0,
+                    "part": "noun",
+                    "article": "das",
+                    "plural": "die Wochenenden",
+                    "present": None,
+                    "preterite": None,
+                    "perfect": None,
+                    "separable": None,
+                    "case": None,
+                    "comparative": None,
+                    "superlative": None,
+                }
+            ]
+        }
+    )
+    services.card_details.fill_in(UUID(USER))
+
+    card = call("GET", "/v1/cards").body["cards"][0]
+    sound = call("GET", f"/v1/cards/{card_id}/audio")
+
+    assert card["details"] == {
+        "part": "noun",
+        "article": "das",
+        "plural": "die Wochenenden",
+        "present": None,
+        "preterite": None,
+        "perfect": None,
+        "separable": None,
+        "case": None,
+        "comparative": None,
+        "superlative": None,
+    }
+    assert sound.status == 200
+    assert sound.body["url"].startswith("https://files.test/")
+    assert speech.tasks[0].text == "das Wochenende. Wie war dein Wochenende?"
+
+
+def test_a_card_that_is_not_the_learners_has_no_sound(call: Call) -> None:
+    response = call("GET", f"/v1/cards/{UUID(int=7)}/audio")
+
+    assert (response.status, response.body["error"]["code"]) == (404, "not_found")
 
 
 def test_a_correction_is_saved_as_a_card(

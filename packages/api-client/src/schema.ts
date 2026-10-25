@@ -113,6 +113,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/{card_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Card Audio
+         * @description Where the card's sound plays from: the word with its sentence, or a correction as it
+         *     is right, in the learner's partner's voice. Made the first time it is asked for.
+         */
+        get: operations["getCardAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards/{card_id}/review": {
         parameters: {
             query?: never;
@@ -164,6 +185,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/conversations/{call_id}/report/mistakes/{index}/retries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Correction
+         * @description Says correction `index` of a conversation's report again ("Say it better").
+         */
+        post: operations["retryCorrection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{call_id}/retries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Retries
+         * @description The corrections of a conversation's report the learner said again.
+         */
+        get: operations["getRetries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/conversations/{conversation_id}": {
         parameters: {
             query?: never;
@@ -197,6 +258,46 @@ export interface paths {
          *     failed. Answers at once; the report is written in the background.
          */
         post: operations["requestConversationReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/grammar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Grammar Map
+         * @description Every grammar topic of the language learned, with how well the learner has it.
+         */
+        get: operations["getGrammarMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/grammar/{topic_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Grammar Topic
+         * @description One topic of the map, with the learner's own mistakes on it.
+         */
+        get: operations["getGrammarTopic"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -742,6 +843,11 @@ export interface components {
          * @enum {string}
          */
         CallPurpose: "onboarding" | "placement" | "practice";
+        /** CardAudioOut */
+        CardAudioOut: {
+            /** Url */
+            url: string;
+        };
         /**
          * CardIn
          * @description Which word or correction of a conversation's report to make a card of. The server reads
@@ -769,6 +875,7 @@ export interface components {
              * Format: date-time
              */
             createdAt: string;
+            details: components["schemas"]["WordDetailsOut"] | null;
             /**
              * Dueat
              * Format: date-time
@@ -967,6 +1074,46 @@ export interface components {
             /** Value */
             value: unknown;
         };
+        /** GrammarMapOut */
+        GrammarMapOut: {
+            /** Language */
+            language: string;
+            /** Level */
+            level: string;
+            /** Topics */
+            topics: components["schemas"]["GrammarTopicOut"][];
+        };
+        /**
+         * GrammarTopicOut
+         * @description A topic of the grammar map and how well the learner has it. The app names it in the
+         *     interface language.
+         */
+        GrammarTopicOut: {
+            /** Conversations */
+            conversations: number;
+            /** Correct */
+            correct: number;
+            /** Id */
+            id: string;
+            /** Lastusedat */
+            lastUsedAt: string | null;
+            /** Level */
+            level: string;
+            mastery: components["schemas"]["Mastery"];
+            trend: components["schemas"]["Trend"] | null;
+            /** Uses */
+            uses: number;
+        };
+        /** GrammarTopicPageOut */
+        GrammarTopicPageOut: {
+            /** Examples */
+            examples: string[];
+            /** Mistakes */
+            mistakes: components["schemas"]["TopicMistakeOut"][];
+            topic: components["schemas"]["GrammarTopicOut"];
+            /** Typicalmistakes */
+            typicalMistakes: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1128,6 +1275,11 @@ export interface components {
              */
             top: "teal" | "graphite" | "stone" | "amber";
         };
+        /**
+         * Mastery
+         * @enum {string}
+         */
+        Mastery: "not_started" | "introduced" | "practising" | "mostly_correct" | "mastered";
         /**
          * MemoriesOut
          * @description What the learner's partners know about them, and what the learner set (spec §6.11).
@@ -1624,6 +1776,41 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** RetriedOut */
+        RetriedOut: {
+            /** Better */
+            better: string;
+            /** Heard */
+            heard: string;
+            /** Right */
+            right: boolean;
+            /** Said */
+            said: string;
+        };
+        /** RetriesOut */
+        RetriesOut: {
+            /** Retries */
+            retries: components["schemas"]["RetryOut"][];
+        };
+        /**
+         * RetryIn
+         * @description One attempt at saying a correction again, recorded on the device.
+         */
+        RetryIn: {
+            /** Audio */
+            audio: string;
+            /** Durationms */
+            durationMs?: number | null;
+            /** Format */
+            format: string;
+        };
+        /** RetryOut */
+        RetryOut: {
+            /** Index */
+            index: number;
+            /** Right */
+            right: boolean;
+        };
         /** ReviewIn */
         ReviewIn: {
             /**
@@ -1715,12 +1902,35 @@ export interface components {
              */
             strictness: "meaning" | "important" | "everything";
         };
+        /** TopicMistakeOut */
+        TopicMistakeOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Certain */
+            certain: boolean;
+            /** Conversationid */
+            conversationId: string;
+            /** Corrected */
+            corrected: string;
+            /** Explanation */
+            explanation: string;
+            /** Original */
+            original: string;
+        };
         /** TranscriptOut */
         TranscriptOut: {
             conversation: components["schemas"]["ConversationOut"];
             /** Turns */
             turns: components["schemas"]["TurnOut"][];
         };
+        /**
+         * Trend
+         * @enum {string}
+         */
+        Trend: "improving" | "steady" | "slipping";
         /** TurnAudioOut */
         TurnAudioOut: {
             /** Milliseconds */
@@ -1809,6 +2019,8 @@ export interface components {
             localDate?: string | null;
             /** Personaid */
             personaId?: string | null;
+            /** Practise */
+            practise?: string | null;
             purpose: components["schemas"]["CallPurpose"];
             /** Scenario */
             scenario?: string | null;
@@ -1841,6 +2053,35 @@ export interface components {
              * Format: date
              */
             start: string;
+        };
+        /**
+         * WordDetailsOut
+         * @description A word's forms (spec §6.7); a form the word does not have is null.
+         */
+        WordDetailsOut: {
+            /** Article */
+            article: ("der" | "die" | "das") | null;
+            /** Case */
+            case: string | null;
+            /** Comparative */
+            comparative: string | null;
+            /**
+             * Part
+             * @enum {string}
+             */
+            part: "noun" | "verb" | "adjective" | "phrase" | "other";
+            /** Perfect */
+            perfect: string | null;
+            /** Plural */
+            plural: string | null;
+            /** Present */
+            present: string | null;
+            /** Preterite */
+            preterite: string | null;
+            /** Separable */
+            separable: boolean | null;
+            /** Superlative */
+            superlative: string | null;
         };
     };
     responses: never;
@@ -2217,6 +2458,64 @@ export interface operations {
             };
         };
     };
+    getCardAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardAudioOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     reviewCard: {
         parameters: {
             query?: never;
@@ -2345,6 +2644,145 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    retryCorrection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getRetries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2528,6 +2966,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getGrammarMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrammarMapOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getGrammarTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                topic_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrammarTopicPageOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

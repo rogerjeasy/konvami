@@ -9,6 +9,7 @@ import {
   FAKE_REPORT_SAYS,
   type FakeApi,
 } from '@/test/fake-api';
+import { createFakeRecorder } from '@/test/fake-recorder';
 import { renderScreen } from '@/test/render';
 import { ReportScreen } from '.';
 
@@ -485,5 +486,82 @@ describe('5.10 Session report', () => {
 
       expect(screen.queryByRole('button', { name: 'Change my level' })).toBeNull();
     });
+  });
+});
+
+describe('5.10 Say it better', () => {
+  const SAY = 'Say it better';
+
+  it('is offered on confirmed corrections only', async () => {
+    await openReady();
+
+    expect(screen.getAllByRole('button', { name: SAY })).toHaveLength(1);
+  });
+
+  it('asks for the whole sentence put right, checks it, and celebrates', async () => {
+    const api = await openReady();
+
+    await fireEvent.press(screen.getByRole('button', { name: SAY }));
+    expect(await screen.findByText('Gut. Ich bin nach Berlin gefahren mit der Bus.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Record' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Stop' }));
+
+    expect(await screen.findByText('That’s it!')).toBeTruthy();
+    expect(api.calls).toContainEqual([
+      'retryCorrection',
+      ID,
+      0,
+      { audio: 'AAEC', format: 'm4a', durationMs: 2400 },
+    ]);
+  });
+
+  it('marks a correction said right once the sheet is closed', async () => {
+    await openReady();
+    await fireEvent.press(screen.getByRole('button', { name: SAY }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Record' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Stop' }));
+    await screen.findByText('That’s it!');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(screen.getByText('Said better')).toBeTruthy());
+  });
+
+  it('shows what was heard when it is not right yet, and lets them try again', async () => {
+    const api = await openReady();
+    api.hearsNextRetry('Ich habe nach Berlin gefahren.');
+    await fireEvent.press(screen.getByRole('button', { name: SAY }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Record' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Stop' }));
+
+    expect(await screen.findByText('Almost. This is what I heard:')).toBeTruthy();
+    expect(screen.getByText('Ich habe nach Berlin gefahren.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByRole('button', { name: 'Record' })).toBeTruthy();
+  });
+
+  it('says so when the microphone is not allowed', async () => {
+    const recorder = createFakeRecorder();
+    recorder.failNextStart('mic_denied');
+    const api = talked();
+    api.reported(ID, FAKE_REPORT);
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: ID });
+    await renderScreen(<ReportScreen />, { api, signedIn: true, recorder });
+    await screen.findByText(FAKE_REPORT.summary);
+
+    await fireEvent.press(screen.getByRole('button', { name: SAY }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Record' }));
+
+    expect(await screen.findByText(/Konvami can’t use the microphone/)).toBeTruthy();
+  });
+
+  it('shows the corrections said right before, when the report opens', async () => {
+    const api = talked();
+    await api.retryCorrection(ID, 0, { audio: 'AAEC', format: 'm4a' });
+
+    await openReady(api);
+
+    expect(await screen.findByText('Said better')).toBeTruthy();
   });
 });

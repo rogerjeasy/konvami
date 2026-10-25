@@ -15,11 +15,13 @@ from konvami_api.domain.cards import CardError
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import CostError
 from konvami_api.domain.errors import ServiceUnavailable
+from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.reports import ReportError
+from konvami_api.domain.retries import RetryError
 from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.voice import VoiceError
@@ -58,6 +60,7 @@ _PERSONA_STATUS = {
 }
 _SAMPLE_STATUS = {"no_language": 409}
 _CARD_STATUS = {
+    "unavailable": 503,
     "not_found": 404,
     "no_report": 409,
     "too_many": 409,
@@ -73,6 +76,13 @@ _TUTOR_STATUS = {
     "not_found": 404,
     "no_language": 409,
     "tutor_limit": 429,
+}
+_RETRY_STATUS = {
+    "not_found": 404,
+    "unsure": 409,
+    "invalid_value": 422,
+    "consent_required": 403,
+    "retry_limit": 429,
 }
 _UNAVAILABLE = 503
 
@@ -116,6 +126,14 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(CardError)
     async def _card_error(_: Request, error: CardError) -> JSONResponse:
         return _response(_CARD_STATUS.get(error.code, 422), error.code)
+
+    @app.exception_handler(RetryError)
+    async def _retry_error(_: Request, error: RetryError) -> JSONResponse:
+        return _response(_RETRY_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(GrammarMapError)
+    async def _grammar_error(_: Request, error: GrammarMapError) -> JSONResponse:
+        return _response(404, error.code)
 
     @app.exception_handler(ScenarioError)
     async def _scenario_error(_: Request, error: ScenarioError) -> JSONResponse:

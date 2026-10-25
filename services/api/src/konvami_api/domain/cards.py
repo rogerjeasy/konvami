@@ -7,6 +7,7 @@ from the stored report, so a card never holds text the app made up. `fsrs.py` de
 card comes back; this module keeps the cards and applies each review.
 """
 
+import contextlib
 import datetime as dt
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -34,6 +35,32 @@ QUEUE_MAX = 50
 BRING_BACK_HORIZON = dt.timedelta(days=fsrs.MAX_INTERVAL_DAYS + 1)
 
 
+# What a word is: its forms follow from it.
+Part = Literal["noun", "verb", "adjective", "phrase", "other"]
+Article = Literal["der", "die", "das"]
+
+
+@dataclass(frozen=True)
+class WordDetails:
+    """A word's forms, as a rich card shows them (spec §6.7). Written once by a text model
+    (`card_details.py`); a form a word does not have is None."""
+
+    part: Part
+    # A noun: its article (its gender) and its plural with the article ("die Termine").
+    article: Article | None = None
+    plural: str | None = None
+    # A verb: er/sie/es in the present, in the Präteritum, and the Perfekt with its auxiliary
+    # ("ist gefahren"); whether its prefix separates; the case of its object.
+    present: str | None = None
+    preterite: str | None = None
+    perfect: str | None = None
+    separable: bool | None = None
+    case: str | None = None
+    # An adjective: its comparative and superlative.
+    comparative: str | None = None
+    superlative: str | None = None
+
+
 @dataclass(frozen=True)
 class Card:
     id: UUID
@@ -56,6 +83,8 @@ class Card:
     reviews: int
     # How often the card was forgotten after it had been learned.
     lapses: int
+    # A word's forms; None until they are written down, and always for a correction.
+    details: WordDetails | None = None
 
 
 @dataclass(frozen=True)
@@ -155,6 +184,21 @@ class CardRepository(Protocol):
     def totals(self, user_id: UUID, language: str, since: dt.datetime) -> CardTotals:
         """What the learner's reviews in a language add up to; `since` bounds the recent ones."""
 
+    def claim_for_details(
+        self,
+        user_id: UUID,
+        language: str,
+        at: dt.datetime,
+        stale_before: dt.datetime,
+        limit: int,
+    ) -> list[Card]:
+        """Up to `limit` of the learner's word cards without their forms, oldest first, marked
+        as being filled in at `at`. A card claimed before `stale_before` can be claimed again
+        (its worker was lost). Claiming and marking are one step: of two workers at once, each
+        card goes to one."""
+
+    def set_details(self, user_id: UUID, card_id: UUID, details: WordDetails) -> None: ...
+
 
 def card_key(front: str) -> str:
     """What makes two cards the same: their words, whatever the capitals and punctuation."""
@@ -178,6 +222,12 @@ def _reviewed(card: Card, rating: Rating, now: dt.datetime) -> Card:
     )
 
 
+class DetailsStarter(Protocol):
+    def start(self, user_id: UUID) -> None:
+        """Has the learner's new word cards filled in with their forms, apart from the request
+        that saved them (`card_details.py`)."""
+
+
 class CardService:
     def __init__(
         self,
@@ -187,12 +237,15 @@ class CardService:
         repository: CardRepository,
         clock: Callable[[], dt.datetime],
         new_id: Callable[[], UUID] = uuid4,
+        details: DetailsStarter | None = None,
     ) -> None:
+        """Without `details`, word cards keep only their word, meaning and sentence."""
         self._profiles = profiles
         self._reports = reports
         self._repository = repository
         self._clock = clock
         self._new_id = new_id
+        self._details = details
 
     def _language(self, user_id: UUID) -> str:
         """The language whose deck the learner sees: the one they are learning now."""
@@ -228,6 +281,11 @@ class CardService:
             lapses=0,
         )
         if self._repository.add(user_id, report.target, key, card, MAX_CARDS):
+            if kind == "word" and self._details is not None:
+                # The card is saved either way; without its worker, its forms come with the
+                # next word card saved.
+                with contextlib.suppress(Exception):
+                    self._details.start(user_id)
             return card
         # Not stored: another request made the same card meanwhile, or the deck is full.
         existing = self._repository.by_key(user_id, report.target, kind, key)

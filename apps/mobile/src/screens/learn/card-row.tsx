@@ -4,6 +4,7 @@ import { size } from '@konvami/design-tokens';
 import type { Card } from '@konvami/api-client';
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
+import { ArticleWord } from '@/components/word-forms';
 import { useTheme } from '@/theme';
 
 /** One card in the deck: its two sides and when it is due. The whole row opens the card. */
@@ -18,7 +19,7 @@ export function CardRow({ card, due, onPress }: { card: Card; due: string; onPre
       className="min-h-button flex-row items-center gap-3 p-3.5 active:opacity-pressed"
     >
       <View className="flex-1 gap-0.5">
-        <Text variant="label">{card.front}</Text>
+        <ArticleWord text={card.front} article={card.details?.article ?? null} variant="label" />
         <Text variant="small" tone="muted">
           {card.back}
         </Text>

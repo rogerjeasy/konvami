@@ -20,7 +20,12 @@ import { SignUpDraftProvider } from '@/screens/create-account/draft';
 import { ScreenBoundary } from '@/screens/error';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
 import { ThemeProvider, useTheme } from '@/theme';
-import { createAppVoiceEngine, VoiceProvider } from '@/voice';
+import {
+  createAppVoiceEngine,
+  RecorderProvider,
+  useAppSentenceRecorder,
+  VoiceProvider,
+} from '@/voice';
 
 // What shows when this layout itself breaks; each screen has its own boundary (`RootStack`).
 export { AppError as ErrorBoundary } from '@/screens/error';
@@ -59,14 +64,16 @@ export default function RootLayout() {
         <OnboardingProvider store={onboardingStore}>
           <PracticeProvider services={practiceServices}>
             <ProfileProvider services={profileServices}>
-              <VoiceProvider createEngine={createAppVoiceEngine}>
-                <SignUpDraftProvider>
-                  <AccessDraftProvider>
-                    <StatusBar style="auto" />
-                    <RootStack />
-                  </AccessDraftProvider>
-                </SignUpDraftProvider>
-              </VoiceProvider>
+              <RecorderProvider useRecorder={useAppSentenceRecorder}>
+                <VoiceProvider createEngine={createAppVoiceEngine}>
+                  <SignUpDraftProvider>
+                    <AccessDraftProvider>
+                      <StatusBar style="auto" />
+                      <RootStack />
+                    </AccessDraftProvider>
+                  </SignUpDraftProvider>
+                </VoiceProvider>
+              </RecorderProvider>
             </ProfileProvider>
           </PracticeProvider>
         </OnboardingProvider>
