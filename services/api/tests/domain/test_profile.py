@@ -184,6 +184,49 @@ def test_an_exam_today_is_accepted(service: ProfileService) -> None:
     assert service.get(USER).fields[("de", "exam")].value["date"] == "2026-10-09"
 
 
+def test_goals_are_a_level_by_a_date_and_a_weekly_habit(service: ProfileService) -> None:
+    asked(
+        service,
+        Change("target_language", "de"),
+        Change("level_goal", {"level": "B1", "by": "2027-03-31"}),
+        Change("weekly_habit", {"days": 4, "minutes": 40}),
+    )
+
+    profile = service.get(USER)
+    assert profile.value("de", "level_goal") == {"level": "B1", "by": "2027-03-31"}
+    assert profile.value("de", "weekly_habit") == {"days": 4, "minutes": 40}
+
+
+def test_a_level_goal_needs_no_date_and_can_be_dropped(service: ProfileService) -> None:
+    asked(service, Change("target_language", "de"), Change("level_goal", {"level": "B2"}))
+    assert service.get(USER).value("de", "level_goal") == {"level": "B2", "by": None}
+
+    asked(service, Change("level_goal", None))
+    assert service.get(USER).value("de", "level_goal") is None
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        # A goal's date has passed, or it is not a CEFR level (A0 is where one starts).
+        ("level_goal", {"level": "B1", "by": "2026-10-08"}),
+        ("level_goal", {"level": "A0"}),
+        # A week has seven days, and a habit is at least one short call.
+        ("weekly_habit", {"days": 0, "minutes": 40}),
+        ("weekly_habit", {"days": 8, "minutes": 40}),
+        ("weekly_habit", {"days": 3, "minutes": 5}),
+        ("weekly_habit", {"days": 3, "minutes": 425}),
+        # Minutes come in steps of five, as the form offers them.
+        ("weekly_habit", {"days": 3, "minutes": 42}),
+    ],
+)
+def test_a_goal_out_of_range_is_refused(service: ProfileService, field: str, value: Any) -> None:
+    with pytest.raises(ProfileError) as error:
+        asked(service, Change("target_language", "de"), Change(field, value))
+
+    assert error.value.code == "invalid_value"
+
+
 def test_one_invalid_change_stops_the_whole_request(service: ProfileService) -> None:
     with pytest.raises(ProfileError):
         asked(service, Change("target_language", "de"), Change("self_assessed_level", "Z9"))
