@@ -33,6 +33,7 @@ import { createLibraryStore, type LibraryState, type LibraryStore } from './libr
 import { createReportFollower, type ReportFollower, type ReportView } from './report-follower';
 import { createResourceStore, type ResourceState, type ResourceStore } from './resource-store';
 import { createReviewSession, type ReviewSession, type ReviewState } from './review-session';
+import { createWeekReviewFollower, type WeekReviewFollower } from './week-review-follower';
 
 /** What the device tells the app about time. Replaced in tests. */
 export interface DeviceClock {
@@ -56,6 +57,10 @@ export interface PracticeServices {
   followReport: (id: string) => ReportFollower;
   /** What the Progress screen charts. */
   progress: ResourceStore<Progress>;
+  /** Asks for the words of last week's check-in (`week` is its Monday) and follows them. */
+  followWeekReview: (week: string) => WeekReviewFollower;
+  /** Where last week's check-in plays from, in the partner's voice. Rejects with an `ApiError`. */
+  weekSound: (week: string) => Promise<string>;
   /** The learner's flashcards. */
   deck: DeckStore;
   /**
@@ -134,6 +139,9 @@ export function createPracticeServices(
     | 'getRetries'
     | 'getCardAudio'
     | 'answerCard'
+    | 'requestWeekReview'
+    | 'getWeekReview'
+    | 'getWeekReviewAudio'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -145,6 +153,8 @@ export function createPracticeServices(
   return {
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
+    followWeekReview: (week) => createWeekReviewFollower(api, week, clock.timeZone()),
+    weekSound: async (week) => (await api.getWeekReviewAudio(week)).url,
     library: createLibraryStore(api),
     readConversation: (id) => api.getConversation(id),
     followReport: (id) => createReportFollower(api, id),

@@ -11,7 +11,7 @@ import { formatDayOfYear, wholeMinutes } from '@/lib/format';
 const STAT_MIN_WIDTH = 92;
 
 /** One number with what it counts under it. A screen reader hears the two as one phrase. */
-function Stat({ value, label }: { value: string; label: string }) {
+export function Stat({ value, label }: { value: string; label: string }) {
   return (
     <View
       accessible
