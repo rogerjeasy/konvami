@@ -1,12 +1,12 @@
 from datetime import timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from konvami_api.domain.cards import Card
 from konvami_api.domain.grammar_map import GrammarMapError
-from konvami_api.domain.plan import FocusPoint, PlanWord
-from konvami_api.domain.planner import MAX_FOCUS, MAX_PLAN_WORDS
+from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
+from konvami_api.domain.planner import MAX_FOCUS, MAX_PLAN_WORDS, MAX_REVIEW_WORDS, PRACTISE_WORDS
 from konvami_api.domain.reports import Mistake, Severity, Word
 from tests.world import NOON, OTHER_USER, USER, World
 
@@ -158,14 +158,15 @@ def test_reports_of_another_language_do_not_count() -> None:
     assert topics(world) == []
 
 
-def card(world: World, front: str, back: str, *, due_in: timedelta, kind: str = "word") -> None:
+def card(world: World, front: str, back: str, *, due_in: timedelta, kind: str = "word") -> UUID:
     created = NOON - timedelta(days=3)
+    card_id = uuid4()
     world.card_store.add(
         USER,
         "de",
         front.casefold(),
         Card(
-            id=uuid4(),
+            id=card_id,
             kind=kind,  # type: ignore[arg-type]
             front=front,
             back=back,
@@ -181,6 +182,7 @@ def card(world: World, front: str, back: str, *, due_in: timedelta, kind: str = 
         ),
         limit=1000,
     )
+    return card_id
 
 
 def test_the_partner_works_in_the_words_that_are_due_first() -> None:
@@ -287,3 +289,75 @@ def test_a_topic_the_language_does_not_have_cannot_be_practised() -> None:
 
     with pytest.raises(GrammarMapError):
         world.planner.plan(USER, practise="klingon")
+
+
+# --- Review conversations ------------------------------------------------------------------
+
+
+def test_plan_words_know_their_cards() -> None:
+    world = World()
+    world.onboard()
+    termin = card(world, "der Termin", "le rendez-vous", due_in=-timedelta(days=1))
+
+    (word,) = world.planner.plan(USER).words
+
+    assert word.card_id == str(termin)
+
+
+def test_a_review_conversation_is_built_around_the_words_that_are_due() -> None:
+    world = World()
+    world.onboard()
+    report(world, mistake("case_dative"))
+    card(world, "der Termin", "le rendez-vous", due_in=-timedelta(days=2))
+    card(world, "umsteigen", "changer de train", due_in=-timedelta(hours=1))
+    card(world, "pünktlich", "à l'heure", due_in=timedelta(days=5))
+
+    plan = world.planner.plan(USER, practise=PRACTISE_WORDS)
+
+    assert plan.review
+    assert [word.text for word in plan.words] == ["der Termin", "umsteigen"]
+    # The words are the point: no structure competes with them.
+    assert plan.focus == ()
+
+
+def test_a_review_conversation_holds_more_words_than_a_plan_but_not_too_many() -> None:
+    world = World()
+    world.onboard()
+    for number in range(10):
+        card(world, f"das Wort{number}", "un mot", due_in=-timedelta(hours=number + 1))
+
+    plan = world.planner.plan(USER, practise=PRACTISE_WORDS)
+
+    assert len(plan.words) == MAX_REVIEW_WORDS == 6
+    assert MAX_REVIEW_WORDS > MAX_PLAN_WORDS
+
+
+def test_a_review_conversation_without_due_words_brings_the_next_ones() -> None:
+    world = World()
+    world.onboard()
+    card(world, "pünktlich", "à l'heure", due_in=timedelta(days=5))
+
+    plan = world.planner.plan(USER, practise=PRACTISE_WORDS)
+
+    assert [word.text for word in plan.words] == ["pünktlich"]
+
+
+def test_an_ordinary_plan_is_not_a_review() -> None:
+    world = World()
+    world.onboard()
+
+    assert not world.planner.plan(USER).review
+
+
+def test_a_plan_is_stored_with_its_cards_and_whether_it_reviews() -> None:
+    plan = SessionPlan(
+        language="de",
+        words=(PlanWord("der Termin", "le rendez-vous", card_id="c1"),),
+        review=True,
+    )
+
+    stored = SessionPlan.from_document(plan.document())
+
+    assert stored == plan
+    assert stored.words[0].card_id == "c1"
+    assert stored.review

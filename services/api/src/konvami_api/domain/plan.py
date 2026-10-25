@@ -3,7 +3,7 @@ Session Planner (`planner.py`) makes it. Kept apart from the planner so that the
 carry a plan without depending on what the plan is made from.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -25,6 +25,9 @@ class PlanWord:
     text: str
     # In the learner's explanation language.
     meaning: str
+    # The card it comes from, to count it as reviewed when the learner uses it. A word is the
+    # same word whatever card it is on.
+    card_id: str | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -35,6 +38,8 @@ class SessionPlan:
     words: tuple[PlanWord, ...] = ()
     # The summaries of the learner's last conversations, newest first.
     recent_topics: tuple[str, ...] = ()
+    # A review conversation (spec §6.7): the words are its point, and the learner is to say them.
+    review: bool = False
 
     def document(self) -> dict[str, Any]:
         """The plan as JSON, as it is stored with the call."""
@@ -50,8 +55,12 @@ class SessionPlan:
                 }
                 for point in self.focus
             ],
-            "words": [{"text": word.text, "meaning": word.meaning} for word in self.words],
+            "words": [
+                {"text": word.text, "meaning": word.meaning, "card_id": word.card_id}
+                for word in self.words
+            ],
             "recent_topics": list(self.recent_topics),
+            "review": self.review,
         }
 
     @classmethod
@@ -68,6 +77,10 @@ class SessionPlan:
                 )
                 for point in document.get("focus", [])
             ),
-            words=tuple(PlanWord(w["text"], w["meaning"]) for w in document.get("words", [])),
+            words=tuple(
+                PlanWord(w["text"], w["meaning"], w.get("card_id"))
+                for w in document.get("words", [])
+            ),
             recent_topics=tuple(document.get("recent_topics", [])),
+            review=document.get("review", False),
         )

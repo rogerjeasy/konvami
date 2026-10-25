@@ -7,6 +7,7 @@ from konvami_api.domain.live_call import LIVE_CORRECTION_NOTE, Turn
 from konvami_api.domain.memories import MAX_MEMORIES, Memory
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
+from konvami_api.domain.planner import PRACTISE_WORDS
 from konvami_api.domain.practice import HELP_NOTE
 from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.reports import Mistake, Word
@@ -901,6 +902,25 @@ def test_the_partner_works_in_the_learners_saved_words() -> None:
     text = world.practice.prepare(USER, world.accounts.get(USER), TODAY, lena.id).instructions
 
     assert "- der Termin (le rendez-vous)" in text
+
+
+def test_in_a_review_conversation_the_learner_is_to_say_the_words_themselves() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.talk(lena, at=NOON - timedelta(days=1))
+    world.reported(call_id, words=(Word("der Termin", "le rendez-vous", "Ich habe einen Termin."),))
+    world.cards.save(USER, call_id, "word", 0)
+
+    briefing = world.practice.prepare(
+        USER, world.accounts.get(USER), TODAY, lena.id, practise=PRACTISE_WORDS
+    )
+
+    assert briefing.plan is not None
+    assert briefing.plan.review
+    assert "- der Termin (le rendez-vous)" in briefing.instructions
+    assert "review" in briefing.instructions
+    assert "without saying the word first" in briefing.instructions
+    assert "Words they saved and are learning. Use each" not in briefing.instructions
 
 
 def test_the_partner_hears_what_was_talked_about_lately() -> None:

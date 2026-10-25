@@ -11,6 +11,7 @@ from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
 from konvami_api.domain.grammar_topics import GERMAN_MAP, GrammarTopic
 from konvami_api.domain.persona_parts import PersonaTemplate
 from konvami_api.domain.scenarios import GERMAN_SCENARIOS, Scenario
+from konvami_api.domain.word_use import GERMAN_WORD_RULES, WordRules
 
 CefrLevel = Literal["A1", "A2", "B1", "B2", "C1", "C2"]
 # "A0" is a learner starting from zero, below the first CEFR level.
@@ -58,6 +59,8 @@ class LanguagePack:
     scenarios: tuple[Scenario, ...] = ()
     # Its grammar topics from A1 up, easiest first (spec §6.8, §13.2).
     grammar_map: tuple[GrammarTopic, ...] = ()
+    # How its words change form, to tell whether a learner used one (`word_use.py`).
+    word_rules: WordRules | None = None
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
@@ -123,6 +126,7 @@ GERMAN = LanguagePack(
     ),
     grammar=GERMAN_NOTES,
     grammar_map=GERMAN_MAP,
+    word_rules=GERMAN_WORD_RULES,
     scenarios=GERMAN_SCENARIOS,
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),

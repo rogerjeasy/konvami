@@ -928,6 +928,18 @@ class ScriptedTranscriber:
         return answer
 
 
+class InMemoryDailyAllowance:
+    def __init__(self) -> None:
+        self.days: dict[tuple[UUID, date], int] = {}
+
+    def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
+        used = self.days.get((user_id, day), 0)
+        if used >= limit:
+            return False
+        self.days[(user_id, day)] = used + 1
+        return True
+
+
 class InMemoryRetryRepository:
     def __init__(self) -> None:
         self.days: dict[tuple[UUID, date], int] = {}

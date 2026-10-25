@@ -1,11 +1,10 @@
 """ "Say it better" (spec §6.5): the learner says a corrected sentence again and hears whether it
 is right now.
 
-The attempt is written down by the verbatim pass (spec §9.4), told to keep mistakes, so that a
-mistake said again is not tidied away. It is right when the corrected words are in it and the
-wrong ones are gone: plain words compared, no model's opinion. Only corrections the report's
-second check confirmed can be practised: drilling a doubtful correction could teach a mistake.
-The recording itself is not kept; each attempt is remembered with whether it was right.
+The attempt is heard by the `Listener`, which keeps mistakes, and is right when the corrected
+words are in it and the wrong ones are gone. Only corrections the report's second check
+confirmed can be practised: drilling a doubtful correction could teach a mistake. Each attempt
+is remembered with whether it was right.
 """
 
 import datetime as dt
@@ -14,25 +13,12 @@ from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
-from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
-from konvami_api.domain.costs import Charge, Feature
-from konvami_api.domain.profile import ProfileService
-from konvami_api.domain.reports import ReportService, within, words_in
-from konvami_api.domain.speech import (
-    Transcriber,
-    TranscriptionError,
-    TranscriptionTask,
-    verbatim_prompt,
-)
+from konvami_api.domain.costs import Feature
+from konvami_api.domain.reports import ReportService
+from konvami_api.domain.spoken import Listener, SpokenError, is_right
 
 # Each attempt is a request to a paid model; a learner practising hard still stays far below.
 MAX_RETRIES_PER_DAY = 100
-# The audio types the app records in, and the transcription model takes.
-FORMATS = frozenset({"m4a", "webm", "wav", "mp3"})
-# The fewest bits per second a recording of the app has. An attempt is metered at least as long
-# as its size at this rate: the length the app reports is a hint, and a modified app must not be
-# able to make attempts look free and slip past the spending limits.
-LOWEST_BITS_PER_SECOND = 32_000
 
 
 @dataclass(frozen=True)
@@ -65,32 +51,18 @@ class RetryRepository(Protocol):
         right."""
 
 
-def is_right(heard: str, said: str, better: str) -> bool:
-    """Whether an attempt says the correction: its words are there, and the wrong ones are not."""
-    words = words_in(heard)
-    wrong = set(words_in(said)) - set(words_in(better))
-    return within(words_in(better), words) and not wrong & set(words)
-
-
 class RetryService:
     def __init__(
         self,
         *,
-        profiles: ProfileService,
         reports: ReportService,
-        accounts: AccountDirectory,
         repository: RetryRepository,
-        transcriber: Transcriber,
-        model: str,
+        listener: Listener,
         clock: Callable[[], dt.datetime],
     ) -> None:
-        self._profiles = profiles
         self._reports = reports
-        self._accounts = accounts
         self._repository = repository
-        self._transcriber = transcriber
-        # An empty name: retries are unavailable.
-        self._model = model
+        self._listener = listener
         self._clock = clock
 
     def retry(
@@ -112,35 +84,17 @@ class RetryService:
         mistake = mistakes[index]
         if not mistake.certain:
             raise RetryError("unsure")
-        if audio_format not in FORMATS or not audio:
-            raise RetryError("invalid_value")
-        if not self._model:
-            raise RetryError("unavailable")
-        # The recording goes to the transcription model's provider, which the learner must have
-        # agreed to; they may have withdrawn since the conversation.
         try:
-            consented = self._accounts.get(user_id).voice_consent
-        except AccountNotFound:
-            consented = False
-        if not consented:
-            raise RetryError("consent_required")
-        now = self._clock()
-        if not self._repository.reserve(user_id, now.date(), MAX_RETRIES_PER_DAY):
-            raise RetryError("retry_limit")
-        language = state.report.target if state.report else ""
-        task = TranscriptionTask(
-            model=self._model,
-            audio=audio,
-            language=language,
-            prompt=verbatim_prompt(self._profiles.catalog.english_name(language)),
-            charge=Charge(user_id, Feature.RETRY),
-            format=audio_format,
-            seconds=max(seconds or 0.0, len(audio) * 8 / LOWEST_BITS_PER_SECOND),
-        )
-        try:
-            heard = self._transcriber.transcribe(task).strip()
-        except TranscriptionError as error:
-            raise RetryError("unavailable") from error
+            self._listener.ready(user_id, audio, audio_format)
+            now = self._clock()
+            if not self._repository.reserve(user_id, now.date(), MAX_RETRIES_PER_DAY):
+                raise RetryError("retry_limit")
+            language = state.report.target if state.report else ""
+            heard = self._listener.hear(
+                user_id, language, audio, audio_format, seconds, Feature.RETRY
+            )
+        except SpokenError as error:
+            raise RetryError(error.code) from error
         right = is_right(heard, mistake.original, mistake.corrected)
         self._repository.attempted(user_id, call_id, index, now, right)
         return Retried(heard, right, mistake.original, mistake.corrected)
