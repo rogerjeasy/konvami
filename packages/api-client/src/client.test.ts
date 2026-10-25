@@ -509,6 +509,26 @@ describe('api client', () => {
     });
   });
 
+  it('says a correction again and reads which were said again', async () => {
+    const retried = { heard: 'Ich bin gefahren.', right: true, said: 'habe', better: 'bin' };
+    const { fetch, calls } = fakeFetch(
+      json(200, retried),
+      json(200, { retries: [{ index: 0, right: true }] }),
+    );
+    const { api } = client(fetch);
+
+    expect(
+      await api.retryCorrection('rtc/1', 0, { audio: 'AAEC', format: 'm4a', durationMs: 2400 }),
+    ).toEqual(retried);
+    expect(await api.getRetries('rtc/1')).toEqual({ retries: [{ index: 0, right: true }] });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/conversations/rtc%2F1/report/mistakes/0/retries',
+      'GET https://api.example.test/v1/conversations/rtc%2F1/retries',
+    ]);
+    expect(calls[0]?.body).toEqual({ audio: 'AAEC', format: 'm4a', durationMs: 2400 });
+  });
+
   it('reads and sets whether recordings are kept', async () => {
     const { fetch, calls } = fakeFetch(json(200, { kept: true }), json(200, { kept: false }));
     const { api } = client(fetch);

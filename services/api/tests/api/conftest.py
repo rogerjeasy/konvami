@@ -28,6 +28,7 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
+from konvami_api.domain.retries import RetryService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voices import VoiceSampleService
@@ -52,12 +53,14 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
     RecordingNotifier,
     RecordingReportStarter,
     ScriptedTextModel,
+    ScriptedTranscriber,
 )
 
 USER = "11111111-1111-4111-8111-111111111111"
@@ -181,6 +184,11 @@ def text_model() -> ScriptedTextModel:
 
 
 @pytest.fixture
+def retry_transcriber() -> ScriptedTranscriber:
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
 def calls() -> InMemoryVoiceSessionRepository:
     """The recorded voice calls, for tests that need one to have taken place."""
     return InMemoryVoiceSessionRepository()
@@ -245,6 +253,7 @@ def services(
     report_starter: RecordingReportStarter,
     charges: InMemoryChargeRepository,
     level_store: InMemoryLevelRepository,
+    retry_transcriber: ScriptedTranscriber,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -404,6 +413,15 @@ def services(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
         ),
         grammar=GrammarMapService(profiles=profiles, reports=reports),
+        retries=RetryService(
+            profiles=profiles,
+            reports=reports,
+            accounts=directory,
+            repository=InMemoryRetryRepository(),
+            transcriber=retry_transcriber,
+            model="gpt-4o-transcribe",
+            clock=clock,
+        ),
         costs=CostService(
             owners=frozenset({UUID(OWNER)}),
             budget=BUDGET,

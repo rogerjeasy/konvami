@@ -79,6 +79,7 @@ from konvami_api.domain.profile import (
 from konvami_api.domain.progress import ProgressView
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
+from konvami_api.domain.retries import Retried
 from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
 from konvami_api.domain.tutor import Source as TutorSource
 from konvami_api.domain.tutor import TutorQuestion
@@ -393,6 +394,45 @@ class GrammarTopicPageOut(ApiModel):
                 for m in page.mistakes
             ],
         )
+
+
+# A sentence said again is a few seconds of compressed audio; this is a minute and more, in base64.
+MAX_RETRY_AUDIO = 2_000_000
+
+
+class RetryIn(ApiModel):
+    """One attempt at saying a correction again, recorded on the device."""
+
+    # The recording, in base64.
+    audio: str = Field(min_length=1, max_length=MAX_RETRY_AUDIO)
+    # Its file type: "m4a" (a phone) or "webm" (a browser).
+    format: str = Field(min_length=1, max_length=8)
+    # How long it plays, as the recorder measured it.
+    duration_ms: int | None = Field(default=None, ge=0, le=600_000)
+
+
+class RetriedOut(ApiModel):
+    heard: str
+    right: bool
+    said: str
+    better: str
+
+    @classmethod
+    def of(cls, retried: Retried) -> "RetriedOut":
+        return cls(
+            heard=retried.heard, right=retried.right, said=retried.said, better=retried.better
+        )
+
+
+class RetryOut(ApiModel):
+    # The correction's position in the report.
+    index: int
+    # Whether one of the attempts was right.
+    right: bool
+
+
+class RetriesOut(ApiModel):
+    retries: list[RetryOut]
 
 
 class LookModel(ApiModel):
