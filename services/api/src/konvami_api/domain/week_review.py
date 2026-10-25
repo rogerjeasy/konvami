@@ -188,9 +188,41 @@ check-in: what you would say to them about last week, three to five short senten
 The content is last week's numbers. Use only them and never invent any: say how long they
 spoke, against the week's plan and the week before; name one thing that went well (a topic that
 moved on, fewer mistakes, cards reviewed, a level reached); name one thing to keep at. A quiet
-week is fine: say so kindly and never make them feel guilty. Last, ask whether this week's plan
-suits them, and say they can change their weekly goal in their profile.
-Plain sentences only: no lists, headings or emoji. Grammar topics go by the names given."""
+week is fine: say so kindly and never make them feel guilty. Mistakes are the ones their
+conversation reports confirmed: after one or two short conversations, fewer of them says little,
+so do not praise it then. Last, ask whether this week's plan suits them, and say they can change
+their weekly goal in their profile.
+Plain sentences only: no lists, headings or emoji. The names of grammar topics and how well
+they are known come in English: say them as a learner would in {explanation}, never in quotes."""
+
+
+def _for_model(numbers: WeekNumbers, titles: dict[str, str]) -> dict[str, Any]:
+    """The week's numbers as the model reads them: each named for what it is, states as words.
+    Ids and bare names were read back to the learner as they were ("mostly_correct")."""
+    state = {mastery: mastery.value.replace("_", " ") for mastery in Mastery}
+    return {
+        "minutes_spoken": numbers.minutes,
+        "minutes_planned": numbers.planned_minutes,
+        "minutes_spoken_the_week_before": numbers.previous_minutes,
+        "days_practised": numbers.days,
+        "days_planned": numbers.planned_days,
+        "conversations": numbers.conversations,
+        "of_them_role_plays": numbers.role_plays,
+        "of_them_review_conversations": numbers.reviews,
+        "cards_reviewed": numbers.cards_reviewed,
+        "grammar_topics": [
+            {
+                "topic": titles.get(move.topic, move.topic),
+                "when_the_week_began": state[move.before],
+                "when_it_ended": state[move.after],
+            }
+            for move in numbers.topics
+        ],
+        "confirmed_mistakes": numbers.mistakes,
+        "confirmed_mistakes_the_week_before": numbers.previous_mistakes,
+        "level_when_the_week_began": numbers.level_before,
+        "level_when_it_ended": numbers.level_after,
+    }
 
 
 def _monday(day: dt.date) -> dt.date:
@@ -306,9 +338,6 @@ class WeekReviewService:
         explanation = profile.value(language, "explanation_language") or "en"
         pack = catalog.available_pack(language)
         titles = {topic.id: topic.title for topic in pack.grammar_map} if pack else {}
-        content = stored.numbers.document()
-        for move in content["topics"]:
-            move["topic"] = titles.get(move["topic"], move["topic"])
         task = TextTask(
             model=self._model,
             instructions=_instructions(
@@ -316,7 +345,7 @@ class WeekReviewService:
                 catalog.english_name(language),
                 catalog.english_name(explanation),
             ),
-            content=json.dumps(content, ensure_ascii=False),
+            content=json.dumps(_for_model(stored.numbers, titles), ensure_ascii=False),
             answer_name="weekly_check_in",
             answer_schema=_SCHEMA,
             charge=Charge(user_id, Feature.WEEK_REVIEW),

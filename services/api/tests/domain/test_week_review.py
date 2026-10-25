@@ -1,5 +1,6 @@
 """The weekly report (spec §6.12, §6.15): how last week went, in numbers and in a few words."""
 
+import json
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -168,8 +169,17 @@ def test_the_partner_writes_a_few_sentences_in_the_learners_explanation_language
     assert task.model == "gpt-6-luna"
     assert "Lena" in task.instructions
     assert "French" in task.instructions
-    assert '"minutes": 25' in task.content
-    assert "Dative" in task.content
+    content = json.loads(task.content)
+    # Readable to the model: what each number is, and states as words, not ids.
+    assert (content["minutes_spoken"], content["minutes_planned"]) == (25, 40)
+    assert content["grammar_topics"][0] == {
+        "topic": "Dative",
+        "when_the_week_began": "practising",
+        "when_it_ended": "mostly correct",
+    }
+    assert content["confirmed_mistakes"] == 1
+    # Topic names come in English: the model is told to name them in the learner's language.
+    assert "as a learner would in French" in task.instructions
     assert task.charge is not None
     assert task.charge.feature is Feature.WEEK_REVIEW
     review = world.week_reviews.last_week(USER, ZURICH)
