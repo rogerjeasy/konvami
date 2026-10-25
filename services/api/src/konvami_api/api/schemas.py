@@ -1510,6 +1510,8 @@ class WeekPlanOut(ApiModel):
     missed: list[dt.date]
     # The week's exam simulations; null without an exam that has a speaking test.
     exam: ExamWeekOut | None
+    # The planned days among the next seven, today's included: the app reminds on them.
+    upcoming: list[dt.date]
 
     @classmethod
     def of(cls, plan: WeekPlan) -> "WeekPlanOut":
@@ -1542,6 +1544,7 @@ class WeekPlanOut(ApiModel):
             reason=plan.reason,
             missed=list(plan.missed),
             exam=ExamWeekOut.of(plan.exam) if plan.exam else None,
+            upcoming=list(plan.upcoming),
         )
 
 

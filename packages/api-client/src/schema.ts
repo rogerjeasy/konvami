@@ -2549,6 +2549,8 @@ export interface components {
             todayCards: number;
             /** Topics */
             topics: string[];
+            /** Upcoming */
+            upcoming: string[];
             /**
              * Week
              * Format: date

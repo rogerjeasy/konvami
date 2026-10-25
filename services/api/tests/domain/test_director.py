@@ -336,6 +336,20 @@ def test_a_beginner_has_no_role_play() -> None:
     assert choose_scenario(GERMAN_SCENARIOS, level="A0", played=()) is None
 
 
+def test_the_planned_days_ahead_run_into_next_week() -> None:
+    # Monday, Tuesday, Thursday and Saturday: from Thursday, the next seven days hold Thursday,
+    # Saturday, and next week's Monday and Tuesday.
+    plan = plan_week(inputs(today=THURSDAY))
+
+    next_monday = MONDAY + dt.timedelta(days=7)
+    assert plan.upcoming == (
+        THURSDAY,
+        SATURDAY,
+        next_monday,
+        next_monday + dt.timedelta(days=1),
+    )
+
+
 # --- Exam simulations ----------------------------------------------------------------------------
 
 

@@ -4809,6 +4809,14 @@
             "title": "Topics",
             "type": "array"
           },
+          "upcoming": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Upcoming",
+            "type": "array"
+          },
           "week": {
             "format": "date",
             "title": "Week",
@@ -4829,7 +4837,8 @@
           "todayCards",
           "reason",
           "missed",
-          "exam"
+          "exam",
+          "upcoming"
         ],
         "title": "WeekPlanOut",
         "type": "object"

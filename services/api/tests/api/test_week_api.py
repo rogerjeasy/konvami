@@ -47,6 +47,8 @@ def test_today_carries_this_weeks_plan(call: Call, text_model: ScriptedTextModel
     ]
     assert (plan["todayCards"], plan["missed"]) == (0, [])
     assert plan["exam"] is None
+    # Saturday, then next week's Monday, Tuesday and Thursday.
+    assert plan["upcoming"] == ["2026-10-10", "2026-10-12", "2026-10-13", "2026-10-15"]
 
 
 def test_an_exam_puts_simulations_of_its_speaking_test_in_the_week(
