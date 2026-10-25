@@ -1266,6 +1266,12 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * ExamPace
+         * @description How often the week plans a simulation of the learner's speaking test.
+         * @enum {string}
+         */
+        ExamPace: "first" | "fortnightly" | "weekly" | "final";
         /** ExamPartOut */
         ExamPartOut: {
             /** Id */
@@ -1277,6 +1283,26 @@ export interface components {
             kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience";
             /** Seconds */
             seconds: number;
+        };
+        /**
+         * ExamWeekOut
+         * @description The week's simulations of the learner's speaking test.
+         */
+        ExamWeekOut: {
+            /** Done */
+            done: number;
+            /** Minutes */
+            minutes: number;
+            /** Name */
+            name: string;
+            pace: components["schemas"]["ExamPace"];
+            /** Simulations */
+            simulations: number;
+            /** Test */
+            test: string;
+            /** Wanted */
+            wanted: number;
+            weakest: components["schemas"]["WeakestPartOut"] | null;
         };
         /** ExampleOut */
         ExampleOut: {
@@ -1905,6 +1931,8 @@ export interface components {
          * @description One conversation of today's plan.
          */
         PlanSessionOut: {
+            /** Exam */
+            exam: string | null;
             kind: components["schemas"]["SessionKind"];
             /** Minutes */
             minutes: number;
@@ -2131,7 +2159,7 @@ export interface components {
          * SessionKind
          * @enum {string}
          */
-        SessionKind: "review" | "role_play" | "free";
+        SessionKind: "exam" | "review" | "role_play" | "free";
         /** SessionReportOut */
         SessionReportOut: {
             /** Language */
@@ -2431,6 +2459,16 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** WeakestPartOut */
+        WeakestPartOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience";
+            /** Number */
+            number: number;
+        };
         /** WeekNumbersOut */
         WeekNumbersOut: {
             /** Cardsreviewed */
@@ -2498,6 +2536,7 @@ export interface components {
             doneDays: number;
             /** Doneminutes */
             doneMinutes: number;
+            exam: components["schemas"]["ExamWeekOut"] | null;
             /** Minutes */
             minutes: number;
             /** Missed */
@@ -2533,6 +2572,8 @@ export interface components {
         };
         /** WeekSessionsOut */
         WeekSessionsOut: {
+            /** Exam */
+            exam: number;
             /** Free */
             free: number;
             /** Review */

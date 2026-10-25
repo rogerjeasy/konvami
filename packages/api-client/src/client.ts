@@ -103,6 +103,8 @@ export type WeekPlan = Schemas['WeekPlanOut'];
 /** One conversation of today's part of the plan. */
 export type PlanSession = Schemas['PlanSessionOut'];
 export type PlanReason = WeekPlan['reason'];
+/** The week's simulations of the learner's speaking test. */
+export type ExamWeek = Schemas['ExamWeekOut'];
 /** Last week's check-in on Progress: its numbers, and the partner's few sentences once written. */
 export type WeekReview = Schemas['WeekReviewOut'];
 export type WeekNumbers = Schemas['WeekNumbersOut'];

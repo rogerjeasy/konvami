@@ -4,8 +4,19 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from konvami_api.api.app import Services
+from konvami_api.api.schemas import WeekPlanOut
+from konvami_api.domain.director import (
+    DEFAULT_HABIT,
+    ExamInputs,
+    Lean,
+    WeakestPart,
+    WeekInputs,
+    WeekSoFar,
+    plan_week,
+)
 from tests.api.conftest import USER, Call
 from tests.api.test_api import onboarded, talked
+from tests.api.test_exam_api import learner as preparing
 from tests.fakes import (
     FakeSpeechModel,
     FixedClock,
@@ -27,14 +38,73 @@ def test_today_carries_this_weeks_plan(call: Call, text_model: ScriptedTextModel
     # They joined on Friday: their first week is Saturday's share, and today's.
     assert plan["week"] == "2026-10-05"
     assert (plan["minutes"], plan["days"], plan["capped"]) == (10, 1, False)
-    assert plan["sessions"] == {"review": 0, "rolePlay": 0, "free": 1}
+    assert plan["sessions"] == {"exam": 0, "review": 0, "rolePlay": 0, "free": 1}
     assert len(plan["topics"]) == 3
     assert (plan["doneMinutes"], plan["doneDays"]) == (0, 0)
     assert plan["reason"] == "on_track"
     assert plan["today"] == [
-        {"kind": "free", "minutes": 5, "topic": plan["topics"][0], "scenario": None}
+        {"kind": "free", "minutes": 5, "topic": plan["topics"][0], "scenario": None, "exam": None}
     ]
     assert (plan["todayCards"], plan["missed"]) == (0, [])
+    assert plan["exam"] is None
+
+
+def test_an_exam_puts_simulations_of_its_speaking_test_in_the_week(
+    call: Call, text_model: ScriptedTextModel, clock: FixedClock
+) -> None:
+    preparing(call, text_model)
+    clock.now = NEXT_MONDAY
+
+    plan = call("GET", "/v1/home?tz=Europe/Zurich").body["plan"]
+
+    # The test backend's learners have 15 voice minutes a week: a first simulation is due, but
+    # a whole call would be more than half of them.
+    assert plan["exam"] == {
+        "test": "goethe_b1",
+        "name": "Goethe-Zertifikat B1",
+        "pace": "first",
+        "minutes": 10,
+        "wanted": 1,
+        "simulations": 0,
+        "done": 0,
+        "weakest": None,
+    }
+    assert plan["sessions"]["exam"] == 0
+
+
+def test_a_planned_simulation_names_its_speaking_test() -> None:
+    week = plan_week(
+        WeekInputs(
+            today=NEXT_MONDAY.date(),
+            habit=DEFAULT_HABIT,
+            weekly_seconds=3600,
+            remaining_seconds=3600,
+            call_minutes=10,
+            lean=Lean.EXAM,
+            topics=(),
+            words_due=0,
+            cards_due_now=0,
+            cards_due_by_end=0,
+            role_plays=True,
+            so_far=WeekSoFar(days=(), free=0, role_plays=0, reviews=0, cards_reviewed=0),
+            exam=ExamInputs(
+                test="goethe_b1",
+                name="Goethe-Zertifikat B1",
+                date=None,
+                before=1,
+                last_week=0,
+                weakest=WeakestPart(2, "present_topic"),
+            ),
+        )
+    )
+
+    plan = WeekPlanOut.of(week).model_dump(mode="json", by_alias=True)
+
+    assert plan["today"] == [
+        {"kind": "exam", "minutes": 10, "topic": None, "scenario": None, "exam": "goethe_b1"}
+    ]
+    assert plan["exam"]["pace"] == "fortnightly"
+    assert plan["exam"]["weakest"] == {"number": 2, "kind": "present_topic"}
 
 
 def test_progress_has_no_check_in_before_a_week_with_practice(
