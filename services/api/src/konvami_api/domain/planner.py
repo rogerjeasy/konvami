@@ -17,7 +17,8 @@ It is plain code, not a model: it runs while the learner waits for the call to c
 partner, who is a model, makes the conversation out of it.
 """
 
-from collections.abc import Sequence
+import datetime as dt
+from collections.abc import Callable, Sequence
 from uuid import UUID
 
 from konvami_api.domain.cards import CardService
@@ -83,24 +84,42 @@ def choose_focus(
     )
 
 
+# The topic of the learner's week a call on a given day puts first (the Learning Director's
+# `topic_for_call`); None when the week has none.
+type WeekTopic = Callable[[UUID, dt.date], str | None]
+
+
 class SessionPlanner:
     def __init__(
-        self, *, profiles: ProfileService, reports: ReportService, cards: CardService
+        self,
+        *,
+        profiles: ProfileService,
+        reports: ReportService,
+        cards: CardService,
+        week_topic: WeekTopic | None = None,
     ) -> None:
         self._profiles = profiles
         self._reports = reports
         self._cards = cards
+        self._week_topic = week_topic
 
-    def plan(self, user_id: UUID, practise: str | None = None) -> SessionPlan:
+    def plan(
+        self, user_id: UUID, practise: str | None = None, today: dt.date | None = None
+    ) -> SessionPlan:
         """The plan of the learner's next conversation; `practise` is a grammar topic they
-        chose to practise in it, or `PRACTISE_WORDS` for a review conversation. Raises
-        `GrammarMapError` for a topic their language lacks."""
+        chose to practise in it, or `PRACTISE_WORDS` for a review conversation. A call on
+        `today` without a topic of its own puts the week's next topic first (spec §8.3: the
+        Learning Director feeds the Session Planner). Raises `GrammarMapError` for a topic
+        their language lacks."""
         language = self._profiles.get(user_id).target_language or ""
         pack = self._profiles.catalog.available_pack(language)
         review = practise == PRACTISE_WORDS
         chosen = pack.topic(practise) if pack and practise and not review else None
         if practise is not None and not review and chosen is None:
             raise GrammarMapError("not_found")
+        if pack and practise is None and today is not None and self._week_topic:
+            week_topic = self._week_topic(user_id, today)
+            chosen = pack.topic(week_topic) if week_topic else None
         reports = self._reports.recent(user_id, RECENT_REPORTS)
         if review:
             due = self._cards.words_due(user_id, MAX_REVIEW_WORDS)

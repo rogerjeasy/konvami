@@ -164,6 +164,19 @@ def test_reports_of_another_language_or_learner_do_not_count() -> None:
     assert {t.mastery.state for t in world.grammar.map(OTHER_USER).topics} == {Mastery.NOT_STARTED}
 
 
+def test_the_map_can_be_read_as_it_stood_at_a_moment() -> None:
+    world = World()
+    world.onboard()
+    reported(world, TopicUse("dative", 4, 3), days_ago=3)
+    reported(world, TopicUse("perfekt", 4, 2), days_ago=1)
+
+    states = world.grammar.states(USER, before=world.clock() - timedelta(days=2))
+
+    by_id = {s.topic.id: s.mastery.state for s in states}
+    assert by_id["dative"] is Mastery.PRACTISING
+    assert by_id["perfekt"] is Mastery.NOT_STARTED
+
+
 DATIVE = Mistake(
     1, "mit der Bus", "mit dem Bus", "« mit » + datif.", "case_dative", "noticeable", True
 )

@@ -541,7 +541,7 @@ def test_a_partner_asks_how_something_went() -> None:
     known = section(told(world), "What you know from before")
 
     asking, _, rest = known.partition("- Thursday, 2026-10-08: A un entretien d'embauche.")
-    assert "Ask how" in asking
+    assert "Ask how it went" in asking
     assert "A un entretien" not in rest
 
 
@@ -624,8 +624,8 @@ def test_only_the_partner_who_has_not_talked_since_asks_how_it_went() -> None:
     # Lena talked with them the day after; Jonas has not.
     world.talk(lena, at=NOON - timedelta(days=1))
 
-    assert "Ask how" not in told(world, partner_index=0)
-    assert "Ask how" in told(world, partner_index=1)
+    assert "Ask how it went" not in told(world, partner_index=0)
+    assert "Ask how it went" in told(world, partner_index=1)
 
 
 def test_a_partner_leaves_alone_what_the_learner_asked_to_leave_alone() -> None:
@@ -930,10 +930,13 @@ def test_the_partner_hears_what_was_talked_about_lately() -> None:
     assert "something else" in text
 
 
-def test_a_first_conversation_has_no_plan_to_speak_of() -> None:
+def test_a_first_conversation_practises_the_weeks_first_topic_only() -> None:
+    # Nothing is known of an A2 learner yet: the week starts on their level's first topic.
     text = instructions(World())
 
-    assert "# Today's plan" not in text
+    plan = text.split("# Today's plan", 1)[1]
+    assert "- Perfekt" in plan
+    assert "Words to bring back" not in plan
 
 
 def test_the_plan_travels_with_the_briefing() -> None:

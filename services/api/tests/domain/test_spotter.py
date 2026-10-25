@@ -87,7 +87,8 @@ def test_a_turn_is_written_down_again_from_its_audio_and_checked() -> None:
                 better="ich bin nach Berlin gefahren",
                 why="Avec « fahren », le Perfekt se forme avec « sein ».",
                 topic="perfekt_auxiliary",
-                focus=False,
+                # The week's first topic for a new A2 learner is the Perfekt.
+                focus=True,
             ),
         ),
     )
@@ -120,7 +121,7 @@ def test_the_checker_reads_what_was_said_what_was_heard_and_what_it_answers() ->
         "partner": PARTNER,
         "said": SAID,
         "live": LIVE,
-        "focus": [],
+        "focus": ["perfekt_auxiliary", "participle_form"],
     }
     assert task.model == "gpt-6-luna"
     assert "French" in task.instructions

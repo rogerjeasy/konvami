@@ -145,6 +145,15 @@ class CardProgress:
     reviews_ever: int
 
 
+@dataclass(frozen=True)
+class DueAhead:
+    """How many cards are due now, and by a later moment; the word cards of those apart."""
+
+    now: int
+    by_then: int
+    words_by_then: int
+
+
 class CardError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
@@ -327,6 +336,20 @@ class CardService:
 
     def due_count(self, user_id: UUID) -> int:
         return self._repository.counts(user_id, self._language(user_id), self._clock())[1]
+
+    def due_ahead(self, user_id: UUID, until: dt.datetime) -> DueAhead:
+        """What is due now and what will be by `until` (the end of a week). The words are
+        counted up to a queue's length, which is more than a week's conversations use."""
+        language = self._language(user_id)
+        words = self._repository.due(user_id, language, until, QUEUE_MAX)
+        return DueAhead(
+            now=self._repository.counts(user_id, language, self._clock())[1],
+            by_then=self._repository.counts(user_id, language, until)[1],
+            words_by_then=sum(1 for card in words if card.kind == "word"),
+        )
+
+    def reviews_since(self, user_id: UUID, since: dt.datetime) -> int:
+        return self._repository.totals(user_id, self._language(user_id), since).reviews
 
     def progress(self, user_id: UUID, since: dt.datetime) -> CardProgress:
         """The deck in numbers; reviews are counted since `since`."""

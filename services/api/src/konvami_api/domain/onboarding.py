@@ -160,6 +160,10 @@ class OnboardingService:
         state = self._repository.load(user_id)
         self._repository.save(user_id, replace(state, partners_confirmed_at=self._clock()))
 
+    def completed_at(self, user_id: UUID) -> dt.datetime | None:
+        """When the learner entered the app; None before then."""
+        return self._repository.load(user_id).completed_at
+
     def complete(self, user_id: UUID) -> None:
         """The learner enters the app. Repeating it changes nothing."""
         stage = self.status(user_id).stage

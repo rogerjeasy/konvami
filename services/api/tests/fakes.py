@@ -49,6 +49,8 @@ from konvami_api.domain.voice import (
     VoiceProviderError,
     VoiceSession,
 )
+from konvami_api.domain.week_review import Status as WeekStatus
+from konvami_api.domain.week_review import StoredReview
 
 
 def zone_of(timezone: str | None) -> tzinfo:
@@ -376,6 +378,7 @@ class InMemoryConversationRepository:
                     else 0,
                     scenario=session.scenario,
                     goals_reached=self._calls.goals.get(session.call_id, ()),
+                    review=session.plan.review if session.plan else False,
                 )
             )
         return sorted(conversations, key=lambda c: c.started_at, reverse=True)
@@ -409,6 +412,14 @@ class InMemoryConversationRepository:
 
     def longest(self, user_id: UUID) -> int:
         return max((c.seconds for c in self._counted(user_id)), default=0)
+
+    def week(self, user_id: UUID, timezone: str | None, monday: date) -> list[Conversation]:
+        zone = zone_of(timezone)
+        return [
+            c
+            for c in self._counted(user_id)
+            if 0 <= (c.started_at.astimezone(zone).date() - monday).days < 7
+        ]
 
     def days(self, user_id: UUID, timezone: str | None, now: datetime) -> ActivityDays:
         zone = zone_of(timezone)
@@ -961,3 +972,46 @@ class InMemoryRetryRepository:
             if (owner, call) == (user_id, call_id):
                 tried[index] = tried.get(index, False) or right
         return tried
+
+
+class InMemoryWeekReviewRepository:
+    def __init__(self) -> None:
+        self.reviews: dict[tuple[UUID, str, date], StoredReview] = {}
+        self._requests: dict[tuple[UUID, str, date], int] = {}
+
+    def request(
+        self,
+        user_id: UUID,
+        language: str,
+        review: StoredReview,
+        *,
+        stale_before: datetime,
+        max_requests: int,
+    ) -> bool:
+        key = (user_id, language, review.numbers.week)
+        stored = self.reviews.get(key)
+        if stored is not None:
+            lost = stored.status == "pending" and stored.requested_at < stale_before
+            if not (stored.status == "failed" or lost) or self._requests[key] >= max_requests:
+                return False
+        self._requests[key] = self._requests.get(key, 0) + 1
+        self.reviews[key] = review
+        return True
+
+    def written(
+        self, user_id: UUID, language: str, week: date, status: WeekStatus, text: str | None
+    ) -> None:
+        key = (user_id, language, week)
+        if key in self.reviews:
+            self.reviews[key] = replace(self.reviews[key], status=status, text=text)
+
+    def load(self, user_id: UUID, language: str, week: date) -> StoredReview | None:
+        return self.reviews.get((user_id, language, week))
+
+
+class RecordingWeekStarter:
+    def __init__(self) -> None:
+        self.started: list[tuple[UUID, date]] = []
+
+    def start(self, user_id: UUID, week: date) -> None:
+        self.started.append((user_id, week))

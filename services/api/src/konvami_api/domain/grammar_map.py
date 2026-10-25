@@ -192,13 +192,23 @@ class GrammarMapService:
 
     def map(self, user_id: UUID) -> GrammarMap:
         """Every topic of the language learned, with how well the learner has it."""
-        language, topics = self._topics(user_id)
-        history = self._reports.history(user_id, HISTORY)
+        language, _ = self._topics(user_id)
         return GrammarMap(
             language=language,
             level=self._profiles.get(user_id).level(language) or DEFAULT_LEVEL,
-            topics=tuple(TopicState(topic, _mastered(topic, history)) for topic in topics),
+            topics=self.states(user_id),
         )
+
+    def states(self, user_id: UUID, before: dt.datetime | None = None) -> tuple[TopicState, ...]:
+        """How well the learner has each topic; with `before`, as it stood then, from the
+        conversations that began before it."""
+        _, topics = self._topics(user_id)
+        history = [
+            entry
+            for entry in self._reports.history(user_id, HISTORY)
+            if before is None or entry.started_at < before
+        ]
+        return tuple(TopicState(topic, _mastered(topic, history)) for topic in topics)
 
     def topic(self, user_id: UUID, topic_id: str) -> TopicPage:
         """One topic, with the learner's own mistakes on it. Raises `GrammarMapError`."""

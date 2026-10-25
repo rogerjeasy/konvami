@@ -35,6 +35,8 @@ class Conversation:
     # conversation.
     scenario: str | None = None
     goals_reached: tuple[str, ...] = ()
+    # A review conversation (spec §6.7): one built around the learner's due words.
+    review: bool = False
     # Filled in by `ConversationService`; a repository leaves it out.
     partner: Persona | None = None
 
@@ -119,6 +121,10 @@ class ConversationRepository(Protocol):
     def longest(self, user_id: UUID) -> int:
         """The seconds of the longest conversation that counts; 0 without one."""
 
+    def week(self, user_id: UUID, timezone: str | None, monday: dt.date) -> list[Conversation]:
+        """The conversations that count which began in the week from `monday` on the learner's
+        calendar, newest first. An unknown or missing time zone means UTC."""
+
 
 def summarise(activity: ActivityDays) -> Activity:
     today = activity.today
@@ -202,3 +208,7 @@ class ConversationService:
 
     def longest_seconds(self, user_id: UUID) -> int:
         return self._repository.longest(user_id)
+
+    def week(self, user_id: UUID, timezone: str | None, monday: dt.date) -> list[Conversation]:
+        """The conversations of one week, Monday to Sunday on the learner's calendar."""
+        return self._repository.week(user_id, timezone, monday)
