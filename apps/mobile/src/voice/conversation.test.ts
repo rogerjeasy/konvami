@@ -221,6 +221,29 @@ describe('progress', () => {
   });
 });
 
+describe('an exam simulation', () => {
+  it('shows no part before the examiner begins one', () => {
+    expect(after(SESSION_CREATED).examPart).toBeNull();
+  });
+
+  it('follows the part the examiner begins, with its time, and keeps the parts begun', () => {
+    const state = after(
+      SESSION_CREATED,
+      toolResult({ part: 'teil_1', seconds: 180 }),
+      toolResult({ part: 'teil_2', seconds: 120 }),
+    );
+
+    expect(state.examPart).toEqual({ id: 'teil_2', seconds: 120 });
+    expect(state.examParts).toEqual(['teil_1', 'teil_2']);
+  });
+
+  it('ends with the examiner ending the test', () => {
+    const state = after(toolResult({ part: 'teil_1', seconds: 180 }), toolResult({ done: true }));
+
+    expect(state.finished).toBe(true);
+  });
+});
+
 describe('a placement test', () => {
   const noted = (count: number, task: string, enough = false) =>
     toolResult({ noted: count, enough, task });

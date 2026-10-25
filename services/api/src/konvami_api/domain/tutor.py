@@ -21,7 +21,14 @@ from konvami_api.domain.conversations import ConversationError, ConversationServ
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.profile import Profile, ProfileService
 from konvami_api.domain.reports import DEFAULT_LEVEL, Mistake, ReportService
-from konvami_api.domain.text import TextModel, TextModelError, TextTask, answer_list, answer_object
+from konvami_api.domain.text import (
+    TextModel,
+    TextModelError,
+    TextTask,
+    answer_list,
+    answer_object,
+    familiar_address,
+)
 
 Source = Literal["text", "report", "call"]
 
@@ -119,8 +126,8 @@ def _instructions(target: str, written_in: str, spoken: bool) -> str:
     language = (
         f"Write the explanation in simple {target}, at the learner's level."
         if written_in == target
-        else f"Write the explanation in {written_in}, quoting {target} as it is. Where "
-        f"{written_in} has a familiar form of address, use it, as the app does."
+        else f"Write the explanation in {written_in}, quoting {target} as it is. "
+        + familiar_address(written_in)
     )
     length = (
         "The answer is spoken by the learner's conversation partner in the middle of a "

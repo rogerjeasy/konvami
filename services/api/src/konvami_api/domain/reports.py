@@ -34,6 +34,7 @@ from konvami_api.domain.text import (
     TextTask,
     answer_list,
     answer_object,
+    familiar_address,
 )
 from konvami_api.domain.voice import VoiceSessionRepository
 
@@ -427,7 +428,7 @@ differ, the difference is often a mistake the live recognition tidied away; eith
 have misheard a name or a word that sounds alike.
 
 Write to the learner ("you") in {explanation}, warmly and plainly, and quote {target} as it is.
-Where {explanation} has a familiar form of address, use it, as the app does. Never grade them
+{familiar_address(explanation)} Never grade them
 and never mention a level.
 
 `summary`: two or three sentences on what the two of them talked about.

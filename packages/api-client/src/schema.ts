@@ -285,6 +285,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/exams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Exam Centre */
+        get: operations["getExamCentre"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exams/simulations/{call_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Simulation */
+        get: operations["getSimulation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exams/simulations/{call_id}/parts/{part_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Model Answer Audio
+         * @description Where a part's model answer plays from, in the examiner's voice.
+         */
+        get: operations["getModelAnswerAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exams/simulations/{call_id}/score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rescore Simulation
+         * @description Asks again for a score that could not be written.
+         */
+        post: operations["rescoreSimulation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exams/{exam_id}/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Next Simulation
+         * @description The cards of the learner's next simulation of a speaking test, to prepare with.
+         */
+        get: operations["getNextSimulation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/grammar": {
         parameters: {
             query?: never;
@@ -930,7 +1024,7 @@ export interface components {
          * CallPurpose
          * @enum {string}
          */
-        CallPurpose: "onboarding" | "placement" | "practice";
+        CallPurpose: "onboarding" | "placement" | "practice" | "exam";
         /** CardAudioOut */
         CardAudioOut: {
             /** Url */
@@ -1135,6 +1229,34 @@ export interface components {
             /** Field */
             field?: string | null;
         };
+        /** ExamCardOut */
+        ExamCardOut: {
+            /** Id */
+            id: string;
+            /** Prompts */
+            prompts: string[];
+            /** Title */
+            title: string;
+        };
+        /**
+         * ExamCentreOut
+         * @description The exam centre in one answer.
+         */
+        ExamCentreOut: {
+            exam: components["schemas"]["LearnerExamOut"] | null;
+            /** Formats */
+            formats: components["schemas"]["SpeakingExamOut"][];
+            /** Language */
+            language: string;
+            /** Readiness */
+            readiness: {
+                [key: string]: components["schemas"]["ReadinessOut"];
+            };
+            /** Simulations */
+            simulations: components["schemas"]["SimulationSummaryOut"][];
+            /** Suggested */
+            suggested: string | null;
+        };
         /** ExamOut */
         ExamOut: {
             /** Id */
@@ -1143,6 +1265,18 @@ export interface components {
             levels: ("A1" | "A2" | "B1" | "B2" | "C1" | "C2")[];
             /** Name */
             name: string;
+        };
+        /** ExamPartOut */
+        ExamPartOut: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience";
+            /** Seconds */
+            seconds: number;
         };
         /** ExampleOut */
         ExampleOut: {
@@ -1276,6 +1410,15 @@ export interface components {
             /** Scenarios */
             scenarios: components["schemas"]["ScenarioOut"][];
         };
+        /** LearnerExamOut */
+        LearnerExamOut: {
+            /** Date */
+            date: string | null;
+            /** Targetlevel */
+            targetLevel: string | null;
+            /** Type */
+            type: string;
+        };
         /** LearnerSpendOut */
         LearnerSpendOut: {
             /** Name */
@@ -1363,6 +1506,17 @@ export interface components {
              * @enum {string}
              */
             top: "teal" | "graphite" | "stone" | "amber";
+        };
+        /** MarksOut */
+        MarksOut: {
+            /** Coherence */
+            coherence: number;
+            /** Grammar */
+            grammar: number;
+            /** Task */
+            task: number;
+            /** Vocabulary */
+            vocabulary: number;
         };
         /**
          * Mastery
@@ -1468,12 +1622,30 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** NextSimulationOut */
+        NextSimulationOut: {
+            /** Cards */
+            cards: components["schemas"]["ExamCardOut"][];
+            exam: components["schemas"]["SpeakingExamOut"];
+        };
         /** OnboardingOut */
         OnboardingOut: {
             /** Missing */
             missing: string[];
             placement: components["schemas"]["PlacementStatus"];
             stage: components["schemas"]["Stage"];
+        };
+        /** PartScoreOut */
+        PartScoreOut: {
+            /** Feedback */
+            feedback: string;
+            marks: components["schemas"]["MarksOut"];
+            /** Modelanswer */
+            modelAnswer: string;
+            /** Part */
+            part: string;
+            /** Share */
+            share: number;
         };
         /** PersonaDescription */
         PersonaDescription: {
@@ -1807,6 +1979,19 @@ export interface components {
             /** Language */
             language: string;
         };
+        /** ReadinessOut */
+        ReadinessOut: {
+            /** Change */
+            change: number | null;
+            /** Latest */
+            latest: number;
+            /** Passing */
+            passing: boolean;
+            /** Readyon */
+            readyOn: string | null;
+            /** Weakest */
+            weakest: string | null;
+        };
         /**
          * Reason
          * @description Why today's part of the plan is what it is.
@@ -1975,6 +2160,60 @@ export interface components {
             /** Usd */
             usd: number;
         };
+        /** SimulationOut */
+        SimulationOut: {
+            /** Callid */
+            callId: string;
+            /** Cards */
+            cards: components["schemas"]["ExamCardOut"][];
+            /** Exam */
+            exam: string;
+            result: components["schemas"]["SimulationResultOut"] | null;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "ready" | "failed" | "too_short";
+        };
+        /** SimulationResultOut */
+        SimulationResultOut: {
+            /** Parts */
+            parts: components["schemas"]["PartScoreOut"][];
+            /** Passshare */
+            passShare: number;
+            /** Passed */
+            passed: boolean;
+            /** Summary */
+            summary: string;
+            /** Total */
+            total: number;
+        };
+        /** SimulationSummaryOut */
+        SimulationSummaryOut: {
+            /** Callid */
+            callId: string;
+            /** Exam */
+            exam: string;
+            /** Passed */
+            passed: boolean | null;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "ready" | "failed" | "too_short";
+            /** Total */
+            total: number | null;
+        };
         /** SoundOut */
         SoundOut: {
             /** Url */
@@ -1986,6 +2225,26 @@ export interface components {
          * @enum {string}
          */
         Source: "asked" | "measured" | "inferred_confirmed";
+        /**
+         * SpeakingExamOut
+         * @description A speaking test the exam centre simulates (spec §6.13).
+         */
+        SpeakingExamOut: {
+            /** Exam */
+            exam: string;
+            /** Id */
+            id: string;
+            /** Levels */
+            levels: string[];
+            /** Name */
+            name: string;
+            /** Parts */
+            parts: components["schemas"]["ExamPartOut"][];
+            /** Passshare */
+            passShare: number;
+            /** Prepseconds */
+            prepSeconds: number;
+        };
         /**
          * Stage
          * @enum {string}
@@ -3273,6 +3532,250 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getExamCentre: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExamCentreOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getSimulation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getModelAnswerAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+                part_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoundOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    rescoreSimulation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getNextSimulation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exam_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NextSimulationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

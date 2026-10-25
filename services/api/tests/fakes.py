@@ -23,6 +23,8 @@ from konvami_api.domain.costs import (
     Share,
     Spending,
 )
+from konvami_api.domain.exam_centre import Simulation, SimulationResult
+from konvami_api.domain.exam_centre import Status as ExamStatus
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
@@ -1015,3 +1017,57 @@ class RecordingWeekStarter:
 
     def start(self, user_id: UUID, week: date) -> None:
         self.started.append((user_id, week))
+
+
+class InMemoryExamRepository:
+    def __init__(self) -> None:
+        self.simulations: dict[str, tuple[UUID, str, Simulation]] = {}
+        self._requests: dict[str, int] = {}
+
+    def started(self, user_id: UUID, language: str, simulation: Simulation) -> None:
+        self.simulations[simulation.call_id] = (user_id, language, simulation)
+        self._requests[simulation.call_id] = 1
+
+    def request(
+        self, call_id: str, at: datetime, *, stale_before: datetime, max_requests: int
+    ) -> bool:
+        if call_id not in self.simulations:
+            return False
+        user_id, language, simulation = self.simulations[call_id]
+        lost = simulation.status == "pending" and simulation.requested_at < stale_before
+        if not (simulation.status == "failed" or lost) or self._requests[call_id] >= max_requests:
+            return False
+        self._requests[call_id] += 1
+        self.simulations[call_id] = (
+            user_id,
+            language,
+            replace(simulation, status="pending", requested_at=at, result=None),
+        )
+        return True
+
+    def written(self, call_id: str, status: ExamStatus, result: SimulationResult | None) -> None:
+        user_id, language, simulation = self.simulations[call_id]
+        self.simulations[call_id] = (
+            user_id,
+            language,
+            replace(simulation, status=status, result=result),
+        )
+
+    def load(self, user_id: UUID, call_id: str) -> Simulation | None:
+        found = self.simulations.get(call_id)
+        return found[2] if found and found[0] == user_id else None
+
+    def listed(self, user_id: UUID, language: str, limit: int) -> list[Simulation]:
+        mine = [s for u, lang, s in self.simulations.values() if u == user_id and lang == language]
+        return sorted(mine, key=lambda s: s.started_at, reverse=True)[:limit]
+
+    def count(self, user_id: UUID, exam: str) -> int:
+        return sum(1 for u, _, s in self.simulations.values() if u == user_id and s.exam == exam)
+
+
+class RecordingExamStarter:
+    def __init__(self) -> None:
+        self.started: list[str] = []
+
+    def start(self, call_id: str) -> None:
+        self.started.append(call_id)

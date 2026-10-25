@@ -26,6 +26,9 @@ from konvami_api.domain.costs import (
     Share,
     Spending,
 )
+from konvami_api.domain.exam_centre import Simulation, SimulationResult
+from konvami_api.domain.exam_centre import Status as ExamStatus
+from konvami_api.domain.exams import PartScore
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn, TurnAudio
@@ -477,6 +480,55 @@ _LOAD_WEEK_REVIEW = f"""
            {epoch_micros("requested_at")} AS requested_at
     FROM week_review
     WHERE user_id = CAST(:user_id AS uuid) AND language = :language AND week = CAST(:week AS date)
+"""
+
+_START_SIMULATION = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO exam_simulation
+        (call_id, user_id, language, exam, cards, voice, started_at, status, requested_at,
+         requests, result)
+    VALUES (:call_id, CAST(:user_id AS uuid), :language, :exam, CAST(:cards AS jsonb), :voice,
+            CAST(:started_at AS timestamptz), 'pending', CAST(:requested_at AS timestamptz), 1,
+            NULL)
+    ON CONFLICT (call_id) DO NOTHING
+"""
+
+_REQUEST_SCORE = """
+    UPDATE exam_simulation
+    SET status = 'pending', requested_at = CAST(:at AS timestamptz), requests = requests + 1,
+        result = NULL
+    WHERE call_id = :call_id AND requests < :max_requests
+      AND (
+          status = 'failed'
+          OR (status = 'pending' AND requested_at < CAST(:stale_before AS timestamptz))
+      )
+    RETURNING call_id
+"""
+
+_WRITE_SCORE = """
+    UPDATE exam_simulation SET status = :status, result = CAST(:result AS jsonb)
+    WHERE call_id = :call_id
+"""
+
+_SIMULATION = f"""
+    SELECT call_id, exam, CAST(cards AS text) AS cards, voice,
+           {epoch_micros("started_at")} AS started_at, status,
+           {epoch_micros("requested_at")} AS requested_at, CAST(result AS text) AS result
+    FROM exam_simulation
+"""
+
+_LOAD_SIMULATION = f"""
+    {_SIMULATION} WHERE call_id = :call_id AND user_id = CAST(:user_id AS uuid)
+"""
+
+_LIST_SIMULATIONS = f"""
+    {_SIMULATION} WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+    ORDER BY started_at DESC, call_id DESC LIMIT :limit
+"""
+
+_COUNT_SIMULATIONS = """
+    SELECT CAST(count(*) AS integer) AS done FROM exam_simulation
+    WHERE user_id = CAST(:user_id AS uuid) AND exam = :exam
 """
 
 # Days are cut in the learner's time zone, by the database, which knows every zone's rules. A
@@ -1528,6 +1580,81 @@ class SqlWeekReviewRepository:
             partner=row["partner"],
             voice=row["voice"],
         )
+
+
+def _simulation(row: dict[str, Any]) -> Simulation:
+    result = json.loads(row["result"]) if row["result"] else None
+    return Simulation(
+        call_id=row["call_id"],
+        exam=row["exam"],
+        cards=tuple(json.loads(row["cards"])),
+        started_at=from_epoch_micros(row["started_at"]),
+        status=row["status"],
+        requested_at=from_epoch_micros(row["requested_at"]),
+        result=SimulationResult(
+            parts=tuple(PartScore(**part) for part in result["parts"]),
+            summary=result["summary"],
+            pass_share=result["pass_share"],
+        )
+        if result
+        else None,
+        voice=row["voice"],
+    )
+
+
+class SqlExamRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def started(self, user_id: UUID, language: str, simulation: Simulation) -> None:
+        self._client.execute(
+            _START_SIMULATION,
+            {
+                "call_id": simulation.call_id,
+                "user_id": str(user_id),
+                "language": language,
+                "exam": simulation.exam,
+                "cards": json.dumps(list(simulation.cards)),
+                "voice": simulation.voice,
+                "started_at": simulation.started_at.isoformat(),
+                "requested_at": simulation.requested_at.isoformat(),
+            },
+        )
+
+    def request(
+        self, call_id: str, at: dt.datetime, *, stale_before: dt.datetime, max_requests: int
+    ) -> bool:
+        rows = self._client.execute(
+            _REQUEST_SCORE,
+            {
+                "call_id": call_id,
+                "at": at.isoformat(),
+                "stale_before": stale_before.isoformat(),
+                "max_requests": max_requests,
+            },
+        )
+        return bool(rows)
+
+    def written(self, call_id: str, status: ExamStatus, result: SimulationResult | None) -> None:
+        document = None if result is None else json.dumps(dataclasses.asdict(result))
+        self._client.execute(
+            _WRITE_SCORE, {"call_id": call_id, "status": status, "result": document}
+        )
+
+    def load(self, user_id: UUID, call_id: str) -> Simulation | None:
+        rows = self._client.execute(_LOAD_SIMULATION, {"call_id": call_id, "user_id": str(user_id)})
+        return _simulation(rows[0]) if rows else None
+
+    def listed(self, user_id: UUID, language: str, limit: int) -> list[Simulation]:
+        rows = self._client.execute(
+            _LIST_SIMULATIONS, {"user_id": str(user_id), "language": language, "limit": limit}
+        )
+        return [_simulation(row) for row in rows]
+
+    def count(self, user_id: UUID, exam: str) -> int:
+        rows = self._client.execute(_COUNT_SIMULATIONS, {"user_id": str(user_id), "exam": exam})
+        done: int = rows[0]["done"]
+        return done
 
 
 class SqlLevelRepository:

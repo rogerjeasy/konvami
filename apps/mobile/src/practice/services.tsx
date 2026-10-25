@@ -12,6 +12,8 @@ import type {
   ApiClient,
   Card,
   Catalog,
+  ExamCentre,
+  NextSimulation,
   GrammarMap,
   GrammarTopicPage,
   Retried,
@@ -33,6 +35,7 @@ import { createLibraryStore, type LibraryState, type LibraryStore } from './libr
 import { createReportFollower, type ReportFollower, type ReportView } from './report-follower';
 import { createResourceStore, type ResourceState, type ResourceStore } from './resource-store';
 import { createReviewSession, type ReviewSession, type ReviewState } from './review-session';
+import { createSimulationFollower, type SimulationFollower } from './simulation-follower';
 import { createWeekReviewFollower, type WeekReviewFollower } from './week-review-follower';
 
 /** What the device tells the app about time. Replaced in tests. */
@@ -61,6 +64,14 @@ export interface PracticeServices {
   followWeekReview: (week: string) => WeekReviewFollower;
   /** Where last week's check-in plays from, in the partner's voice. Rejects with an `ApiError`. */
   weekSound: (week: string) => Promise<string>;
+  /** The exam centre (5.16). */
+  exams: ResourceStore<ExamCentre>;
+  /** The cards of the next simulation of a speaking test. Rejects with an `ApiError`. */
+  readNextSimulation: (exam: string) => Promise<NextSimulation>;
+  /** Follows a simulation's score while it is written (5.18). */
+  followSimulation: (callId: string) => SimulationFollower;
+  /** Where a part's model answer plays from. Rejects with an `ApiError`. */
+  modelAnswerSound: (callId: string, part: string) => Promise<string>;
   /** The learner's flashcards. */
   deck: DeckStore;
   /**
@@ -142,6 +153,11 @@ export function createPracticeServices(
     | 'requestWeekReview'
     | 'getWeekReview'
     | 'getWeekReviewAudio'
+    | 'getExamCentre'
+    | 'getNextSimulation'
+    | 'getSimulation'
+    | 'rescoreSimulation'
+    | 'getModelAnswerAudio'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -155,6 +171,10 @@ export function createPracticeServices(
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
     followWeekReview: (week) => createWeekReviewFollower(api, week, clock.timeZone()),
     weekSound: async (week) => (await api.getWeekReviewAudio(week)).url,
+    exams: createResourceStore(() => api.getExamCentre(), clock.now),
+    readNextSimulation: (exam) => api.getNextSimulation(exam),
+    followSimulation: (callId) => createSimulationFollower(api, callId),
+    modelAnswerSound: async (callId, part) => (await api.getModelAnswerAudio(callId, part)).url,
     library: createLibraryStore(api),
     readConversation: (id) => api.getConversation(id),
     followReport: (id) => createReportFollower(api, id),
@@ -208,6 +228,7 @@ export function PracticeProvider({
     services.library.reset();
     services.deck.reset();
     services.progress.reset();
+    services.exams.reset();
     services.tutor.reset();
     services.grammar.reset();
   }, [status, services]);
@@ -248,6 +269,12 @@ export function useLibrary(): LibraryState {
 }
 
 /** What the Progress screen charts; re-renders when it changes. */
+/** The exam centre; re-renders when it changes. */
+export function useExamCentre(): ResourceState<ExamCentre> {
+  const { exams } = usePracticeServices();
+  return useSyncExternalStore(exams.subscribe, exams.getState, exams.getState);
+}
+
 export function useProgress(): ResourceState<Progress> {
   const { progress } = usePracticeServices();
   return useSyncExternalStore(progress.subscribe, progress.getState, progress.getState);

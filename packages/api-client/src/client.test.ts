@@ -394,6 +394,32 @@ describe('api client', () => {
     ]);
   });
 
+  it('reads the exam centre, prepares a simulation and reads its score', async () => {
+    const { fetch, calls } = fakeFetch(
+      json(200, { formats: [] }),
+      json(200, { cards: [] }),
+      json(200, { status: 'pending' }),
+      json(200, { status: 'pending' }),
+      json(200, { url: 'https://files/model.mp3' }),
+    );
+    const { api } = client(fetch);
+
+    await api.getExamCentre();
+    await api.getNextSimulation('goethe_b1');
+    await api.getSimulation('rtc/1');
+    await api.rescoreSimulation('rtc/1');
+    expect(await api.getModelAnswerAudio('rtc/1', 'teil_1')).toEqual({
+      url: 'https://files/model.mp3',
+    });
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/exams',
+      'GET https://api.example.test/v1/exams/goethe_b1/next',
+      'GET https://api.example.test/v1/exams/simulations/rtc%2F1',
+      'POST https://api.example.test/v1/exams/simulations/rtc%2F1/score',
+      'GET https://api.example.test/v1/exams/simulations/rtc%2F1/parts/teil_1/audio',
+    ]);
+  });
+
   it('reads the library page by page and one transcript', async () => {
     const page = { conversations: [], next: '2026-10-09T10:00:00Z' };
     const transcript = { conversation: { id: 'rtc/1' }, turns: [] };

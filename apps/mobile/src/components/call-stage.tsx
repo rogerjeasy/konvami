@@ -29,6 +29,10 @@ import type { VoiceCall } from '@/voice/use-voice-call';
 // The avatar on the design's frame (pt), and the share of a tall window its panel takes.
 const AVATAR_FRAME = 200;
 const HERO_SHARE = 0.44;
+// A compact stage (an exam, where the task card matters more than the face): a smaller portrait
+// in a smaller share of the window.
+const COMPACT_AVATAR_FRAME = 112;
+const COMPACT_HERO_SHARE = 0.26;
 // The listening ring stands this far outside the avatar and grows by this share when loud.
 const RING_GAP = 10;
 const RING_GROWTH = 0.08;
@@ -92,6 +96,7 @@ export function CallStage({
   belowLearner,
   problem,
   failedActions,
+  compact = false,
 }: {
   call: VoiceCall;
   /** Who the learner is talking to. */
@@ -122,10 +127,13 @@ export function CallStage({
   problem: string | null;
   /** What the learner can do after a failure. */
   failedActions: ReactNode;
+  /** Keeps the portrait small, so that `progress` has the room (an exam's task card). */
+  compact?: boolean;
 }) {
+  const heroShare = compact ? COMPACT_HERO_SHARE : HERO_SHARE;
   const { t } = useTranslation();
   const { color } = useTheme();
-  const { illustrationWidth } = useScreenLayout(HERO_SHARE);
+  const { illustrationWidth } = useScreenLayout(heroShare);
   const { height: windowHeight } = useWindowDimensions();
   const { conversation } = call;
   const { name } = persona;
@@ -143,7 +151,7 @@ export function CallStage({
     call.toggleMute();
   };
   const avatarSize = heroDrawingSize({
-    frame: AVATAR_FRAME,
+    frame: compact ? COMPACT_AVATAR_FRAME : AVATAR_FRAME,
     available: illustrationWidth,
     windowHeight,
   });
@@ -151,7 +159,7 @@ export function CallStage({
   return (
     <HeroLayout
       panel
-      heroShare={HERO_SHARE}
+      heroShare={heroShare}
       screenHeader={header}
       hero={
         <View className="items-center gap-4">

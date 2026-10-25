@@ -5,6 +5,7 @@ import '@/i18n';
 import { AuthServicesProvider, type AuthServices } from '@/auth/services';
 import { createSessionStore } from '@/auth/session';
 import { SignUpDraftProvider, type SignUpDraft } from '@/screens/create-account/draft';
+import { ExamNotesProvider } from '@/screens/exams/notes';
 import { AccessDraftProvider, type AccessDraft } from '@/screens/sign-in/draft';
 import { createFakeAuthProvider, type FakeAuthProvider } from '@/test/fake-auth-provider';
 import { createFakeProfileDevice, type FakeProfileDevice } from '@/test/fake-profile-device';
@@ -111,7 +112,9 @@ export async function renderScreen(
                   }}
                 >
                   <SignUpDraftProvider initial={draft}>
-                    <AccessDraftProvider initial={access}>{ui}</AccessDraftProvider>
+                    <AccessDraftProvider initial={access}>
+                      <ExamNotesProvider>{ui}</ExamNotesProvider>
+                    </AccessDraftProvider>
                   </SignUpDraftProvider>
                 </VoiceProvider>
               </RecorderProvider>

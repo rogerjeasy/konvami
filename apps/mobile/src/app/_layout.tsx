@@ -18,6 +18,7 @@ import { followPhoneLanguage, loadPreferences } from '@/preferences';
 import { ProfileProvider, profileServices } from '@/profile';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
 import { ScreenBoundary } from '@/screens/error';
+import { ExamNotesProvider } from '@/screens/exams/notes';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
 import { ThemeProvider, useTheme } from '@/theme';
 import {
@@ -68,8 +69,10 @@ export default function RootLayout() {
                 <VoiceProvider createEngine={createAppVoiceEngine}>
                   <SignUpDraftProvider>
                     <AccessDraftProvider>
-                      <StatusBar style="auto" />
-                      <RootStack />
+                      <ExamNotesProvider>
+                        <StatusBar style="auto" />
+                        <RootStack />
+                      </ExamNotesProvider>
                     </AccessDraftProvider>
                   </SignUpDraftProvider>
                 </VoiceProvider>

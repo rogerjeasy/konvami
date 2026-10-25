@@ -17,6 +17,8 @@ import pytest
 from konvami_api.domain.accounts import AccountRepository
 from konvami_api.domain.cards import Card, CardRepository, CardTotals, WordDetails, card_key
 from konvami_api.domain.conversations import ConversationRepository
+from konvami_api.domain.exam_centre import ExamRepository, Simulation, SimulationResult
+from konvami_api.domain.exams import PartScore
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.grammar_map import Mastery
 from konvami_api.domain.levels import LevelFit, LevelRepository, LevelStep
@@ -64,6 +66,7 @@ from konvami_api.persistence.repositories import (
     SqlCardRepository,
     SqlConversationRepository,
     SqlDraftLog,
+    SqlExamRepository,
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
@@ -84,6 +87,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
+    InMemoryExamRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
@@ -2534,3 +2538,80 @@ def test_a_pending_week_review_is_not_asked_for_twice(week_reviews: WeekReviewRe
     assert ask_week(week_reviews, asked_review())
     assert not ask_week(week_reviews, asked_review())
     assert ask_week(week_reviews, asked_review(), user=OTHER_USER)
+
+
+# --- Exam simulations ----------------------------------------------------------------------------
+
+
+@dataclass
+class Exams:
+    calls: VoiceSessionRepository
+    simulations: ExamRepository
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def exams(request: pytest.FixtureRequest) -> Exams:
+    """Exam simulations, with the learner's exam calls `rtc_1` and `rtc_2` there to keep."""
+    if request.param == "memory":
+        stored = Exams(InMemoryVoiceSessionRepository(), InMemoryExamRepository())
+    else:
+        db: SqlClient = request.getfixturevalue("db")
+        stored = Exams(SqlVoiceSessionRepository(db), SqlExamRepository(db))
+    for call_id in ("rtc_1", "rtc_2"):
+        stored.calls.started(
+            VoiceSession(call_id, USER, CallPurpose.EXAM, "m", NOON, scenario="goethe_b1")
+        )
+    return stored
+
+
+def simulation(call_id: str = "rtc_1", at: datetime = NOON, exam: str = "goethe_b1") -> Simulation:
+    return Simulation(call_id, exam, ("b1_1a", "b1_2a", "b1_3"), at, "pending", at, voice="sage")
+
+
+SCORED = SimulationResult(
+    parts=(
+        PartScore(
+            "teil_1", {"task": 3, "coherence": 2, "vocabulary": 2, "grammar": 1}, "Bien.", "Ich …"
+        ),
+    ),
+    summary="Travaille les connecteurs.",
+    pass_share=0.6,
+)
+
+
+def test_a_simulation_is_kept_and_scored(exams: Exams) -> None:
+    exams.simulations.started(USER, "de", simulation())
+
+    assert exams.simulations.load(USER, "rtc_1") == simulation()
+    exams.simulations.written("rtc_1", "ready", SCORED)
+
+    stored = exams.simulations.load(USER, "rtc_1")
+    assert stored is not None
+    assert (stored.status, stored.result) == ("ready", SCORED)
+    assert exams.simulations.load(OTHER_USER, "rtc_1") is None
+
+
+def test_simulations_are_listed_newest_first_and_counted_per_test(exams: Exams) -> None:
+    exams.simulations.started(USER, "de", simulation("rtc_1", NOON - HOUR))
+    exams.simulations.started(USER, "de", simulation("rtc_2", NOON, exam="telc_b1"))
+
+    assert [s.call_id for s in exams.simulations.listed(USER, "de", 10)] == ["rtc_2", "rtc_1"]
+    assert exams.simulations.listed(USER, "it", 10) == []
+    assert (exams.simulations.count(USER, "goethe_b1"), exams.simulations.count(USER, "dtz")) == (
+        1,
+        0,
+    )
+
+
+def test_a_failed_or_lost_score_is_asked_for_again_up_to_a_limit(exams: Exams) -> None:
+    exams.simulations.started(USER, "de", simulation(at=NOON - 2 * HOUR))
+
+    # Pending since long ago: its worker was lost.
+    assert exams.simulations.request("rtc_1", NOON, stale_before=NOON - HOUR, max_requests=3)
+    assert not exams.simulations.request("rtc_1", NOON, stale_before=NOON - HOUR, max_requests=3)
+    exams.simulations.written("rtc_1", "failed", None)
+    assert exams.simulations.request("rtc_1", NOON, stale_before=NOON - HOUR, max_requests=3)
+    exams.simulations.written("rtc_1", "failed", None)
+
+    assert not exams.simulations.request("rtc_1", NOON, stale_before=NOON - HOUR, max_requests=3)
+    assert exams.simulations.load(USER, "rtc_1").status == "failed"  # type: ignore[union-attr]

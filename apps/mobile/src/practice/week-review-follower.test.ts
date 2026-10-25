@@ -39,7 +39,7 @@ describe('following last week’s check-in', () => {
     await clock.tick();
     await settled();
 
-    expect(follower.getState()).toEqual({ phase: 'ready', text: FAKE_WEEK_TEXT });
+    expect(follower.getState()).toEqual({ phase: 'ready', value: FAKE_WEEK_TEXT });
     expect(api.calls.filter(([method]) => method === 'requestWeekReview')).toHaveLength(1);
   });
 
@@ -49,7 +49,7 @@ describe('following last week’s check-in', () => {
 
     follower.start({ ...FAKE_WEEK_REVIEW, status: 'ready', text: 'Gut gemacht!' });
 
-    expect(follower.getState()).toEqual({ phase: 'ready', text: 'Gut gemacht!' });
+    expect(follower.getState()).toEqual({ phase: 'ready', value: 'Gut gemacht!' });
     expect(api.calls).toEqual([]);
   });
 

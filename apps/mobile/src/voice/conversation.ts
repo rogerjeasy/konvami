@@ -58,6 +58,10 @@ export interface ConversationState {
   corrections: LiveCorrection[];
   /** Everything the learner said in the call, final lines only (captions keep the latest). */
   learnerLines: string[];
+  /** The part of an exam simulation the examiner began last, with its time; null before one. */
+  examPart: { id: string; seconds: number } | null;
+  /** The parts begun so far, in order. */
+  examParts: string[];
 }
 
 export const INITIAL_CONVERSATION: ConversationState = {
@@ -69,6 +73,8 @@ export const INITIAL_CONVERSATION: ConversationState = {
   over: false,
   corrections: [],
   learnerLines: [],
+  examPart: null,
+  examParts: [],
 };
 
 /**
@@ -123,8 +129,24 @@ function withToolResult(state: ConversationState, output: unknown): Conversation
     done,
     still_open: stillOpen,
     task,
-  } = result as { done?: unknown; still_open?: unknown; task?: unknown };
+    part,
+    seconds,
+  } = result as {
+    done?: unknown;
+    still_open?: unknown;
+    task?: unknown;
+    part?: unknown;
+    seconds?: unknown;
+  };
   if (done === true) return { ...state, finished: true, stillOpen: [] };
+  // An exam's examiner begins a part (services/api: domain/exam_centre.py `begin_part`).
+  if (typeof part === 'string' && typeof seconds === 'number') {
+    return {
+      ...state,
+      examPart: { id: part, seconds },
+      examParts: state.examParts.includes(part) ? state.examParts : [...state.examParts, part],
+    };
+  }
   if (Array.isArray(stillOpen)) {
     return { ...state, stillOpen: stillOpen.filter((q): q is string => typeof q === 'string') };
   }

@@ -30,7 +30,10 @@ def test_voice_settings_are_read_from_the_json_terraform_sets() -> None:
         CallPurpose.ONBOARDING: "gpt-realtime-2.1-mini",
         CallPurpose.PLACEMENT: "gpt-realtime-2.1",
         CallPurpose.PRACTICE: "gpt-realtime-2.1-mini",
+        # Settings written before exam simulations: an exam is voiced and timed as practice.
+        CallPurpose.EXAM: "gpt-realtime-2.1-mini",
     }
+    assert settings.max_seconds[CallPurpose.EXAM] == 600
     assert settings.max_seconds[CallPurpose.PLACEMENT] == 720
     assert settings.max_seconds[CallPurpose.PRACTICE] == 600
     assert (settings.voice, settings.transcription_model, settings.weekly_seconds) == (

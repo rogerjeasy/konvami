@@ -50,12 +50,15 @@ class CallPurpose(StrEnum):
     PLACEMENT = "placement"
     # A conversation with one of the learner's partners.
     PRACTICE = "practice"
+    # A simulated speaking exam (spec §6.13); its "scenario" is the exam's format.
+    EXAM = "exam"
 
 
 _FEATURES = {
     CallPurpose.ONBOARDING: Feature.VOICE_ONBOARDING,
     CallPurpose.PLACEMENT: Feature.VOICE_PLACEMENT,
     CallPurpose.PRACTICE: Feature.VOICE_PRACTICE,
+    CallPurpose.EXAM: Feature.VOICE_EXAM,
 }
 
 
@@ -69,6 +72,8 @@ _TURN_DETECTION: dict[CallPurpose, dict[str, Any]] = {
     # In the language being learned people pause to think: wait for the thought, within a limit.
     CallPurpose.PLACEMENT: {"type": "semantic_vad", "eagerness": "auto"},
     CallPurpose.PRACTICE: {"type": "semantic_vad", "eagerness": "auto"},
+    # A candidate thinks before answering, as in the language practised.
+    CallPurpose.EXAM: {"type": "semantic_vad", "eagerness": "auto"},
 }
 
 

@@ -4,7 +4,7 @@ they are stored (`target_language`).
 
 import dataclasses
 import datetime as dt
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
@@ -33,6 +33,8 @@ from konvami_api.domain.conversations import (
 )
 from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.director import Reason, SessionKind, WeekPlan
+from konvami_api.domain.exam_centre import ExamCentre, Simulation
+from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.grammar_map import GrammarMap, Mastery, TopicPage, TopicState, Trend
 from konvami_api.domain.home import HomeView, LevelView
@@ -269,7 +271,8 @@ class VoiceCallIn(ApiModel):
     # Today on the learner's calendar, so a persona names the right weekday. Left out, or not
     # a date any time zone has right now, the date in UTC is used.
     local_date: dt.date | None = None
-    # A practice call that rehearses a role-play (a scenario id from the catalog).
+    # A practice call that rehearses a role-play (a scenario id from the catalog), or the
+    # speaking test an exam call simulates (a format id of the exam centre).
     scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
     # A practice call that practises a grammar topic first (a topic id from the grammar map),
     # or "words": a review conversation built around the learner's due words.
@@ -1230,6 +1233,196 @@ class LevelPointOut(ApiModel):
     level: StartingLevel
     # "asked": set by the learner; "measured": by the placement test or the level engine.
     source: Source
+
+
+class ExamCardOut(ApiModel):
+    id: str
+    # In the language of the exam, as printed on the card.
+    title: str
+    prompts: list[str]
+
+    @classmethod
+    def of(cls, card: ExamCard) -> "ExamCardOut":
+        return cls(id=card.id, title=card.title, prompts=list(card.prompts))
+
+
+class ExamPartOut(ApiModel):
+    id: str
+    # The app names each kind of part in its own strings.
+    kind: PartKind
+    seconds: int
+
+
+class SpeakingExamOut(ApiModel):
+    """A speaking test the exam centre simulates (spec §6.13)."""
+
+    id: str
+    # The profile's exam type ("goethe"), and the levels it is the test for.
+    exam: str
+    levels: list[str]
+    name: str
+    prep_seconds: int
+    parts: list[ExamPartOut]
+    # The share of the points it takes to pass.
+    pass_share: float
+
+    @classmethod
+    def of(cls, exam: SpeakingExam) -> "SpeakingExamOut":
+        return cls(
+            id=exam.id,
+            exam=exam.exam,
+            levels=list(exam.levels),
+            name=exam.name,
+            prep_seconds=exam.prep_seconds,
+            parts=[ExamPartOut(id=p.id, kind=p.kind, seconds=p.seconds) for p in exam.parts],
+            pass_share=exam.pass_share,
+        )
+
+
+class ReadinessOut(ApiModel):
+    # The latest simulation's share of the points, and its change from the one before.
+    latest: float
+    change: float | None
+    passing: bool
+    # The part with the lowest share lately.
+    weakest: str | None
+    # When a steady rise would reach the pass mark; null without one.
+    ready_on: dt.date | None
+
+
+class SimulationSummaryOut(ApiModel):
+    call_id: str
+    exam: str
+    started_at: dt.datetime
+    status: Literal["pending", "ready", "failed", "too_short"]
+    # Null until it is scored.
+    total: float | None
+    passed: bool | None
+
+
+class LearnerExamOut(ApiModel):
+    type: str
+    target_level: str | None
+    date: dt.date | None
+
+
+class ExamCentreOut(ApiModel):
+    """The exam centre in one answer."""
+
+    language: str
+    # The exam in the learner's profile; null without one.
+    exam: LearnerExamOut | None
+    # The speaking test of that exam; null when there is none.
+    suggested: str | None
+    formats: list[SpeakingExamOut]
+    # Newest first.
+    simulations: list[SimulationSummaryOut]
+    # Per speaking test the learner tried.
+    readiness: dict[str, ReadinessOut]
+
+    @classmethod
+    def of(cls, centre: ExamCentre) -> "ExamCentreOut":
+        exam = centre.exam
+        return cls(
+            language=centre.language,
+            exam=LearnerExamOut(type=exam.type, target_level=exam.target_level, date=exam.date)
+            if exam
+            else None,
+            suggested=centre.suggested,
+            formats=[SpeakingExamOut.of(found) for found in centre.formats],
+            simulations=[
+                SimulationSummaryOut(
+                    call_id=s.call_id,
+                    exam=s.exam,
+                    started_at=s.started_at,
+                    status=s.status,
+                    total=s.result.total if s.result else None,
+                    passed=s.result.passed if s.result else None,
+                )
+                for s in centre.simulations
+            ],
+            readiness={
+                exam_id: ReadinessOut(
+                    latest=r.latest,
+                    change=r.change,
+                    passing=r.passing,
+                    weakest=r.weakest,
+                    ready_on=r.ready_on,
+                )
+                for exam_id, r in centre.readiness.items()
+            },
+        )
+
+
+class NextSimulationOut(ApiModel):
+    exam: SpeakingExamOut
+    # One per part, in order.
+    cards: list[ExamCardOut]
+
+
+class MarksOut(ApiModel):
+    task: int
+    coherence: int
+    vocabulary: int
+    grammar: int
+
+
+class PartScoreOut(ApiModel):
+    part: str
+    marks: MarksOut
+    share: float
+    # In the learner's explanation language.
+    feedback: str
+    # In the language of the exam.
+    model_answer: str
+
+
+class SimulationResultOut(ApiModel):
+    # An estimate from the transcript, never an official score.
+    total: float
+    passed: bool
+    pass_share: float
+    summary: str
+    parts: list[PartScoreOut]
+
+
+class SimulationOut(ApiModel):
+    call_id: str
+    exam: str
+    # The card of each part, in order.
+    cards: list[ExamCardOut]
+    started_at: dt.datetime
+    status: Literal["pending", "ready", "failed", "too_short"]
+    result: SimulationResultOut | None
+
+    @classmethod
+    def of(cls, simulation: Simulation, cards: Sequence[ExamCard]) -> "SimulationOut":
+        result = simulation.result
+        return cls(
+            call_id=simulation.call_id,
+            exam=simulation.exam,
+            cards=[ExamCardOut.of(card) for card in cards],
+            started_at=simulation.started_at,
+            status=simulation.status,
+            result=SimulationResultOut(
+                total=result.total,
+                passed=result.passed,
+                pass_share=result.pass_share,
+                summary=result.summary,
+                parts=[
+                    PartScoreOut(
+                        part=part.part,
+                        marks=MarksOut.model_validate(dict(part.marks)),
+                        share=round(part.share, 4),
+                        feedback=part.feedback,
+                        model_answer=part.model_answer,
+                    )
+                    for part in result.parts
+                ],
+            )
+            if result
+            else None,
+        )
 
 
 class PlanSessionOut(ApiModel):

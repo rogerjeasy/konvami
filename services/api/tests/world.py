@@ -14,6 +14,7 @@ from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
 from konvami_api.domain.director import DirectorService
+from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
@@ -67,6 +68,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
+    InMemoryExamRepository,
     InMemoryFileStore,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
@@ -82,6 +84,7 @@ from tests.fakes import (
     InMemoryWeekReviewRepository,
     RecordingCallStarter,
     RecordingDetailsStarter,
+    RecordingExamStarter,
     RecordingNotifier,
     RecordingReportStarter,
     RecordingWeekStarter,
@@ -98,11 +101,13 @@ VOICE = VoiceSettings(
         CallPurpose.ONBOARDING: "gpt-realtime-2.1",
         CallPurpose.PLACEMENT: "gpt-realtime-2.1",
         CallPurpose.PRACTICE: "gpt-realtime-2.1-mini",
+        CallPurpose.EXAM: "gpt-realtime-2.1-mini",
     },
     max_seconds={
         CallPurpose.ONBOARDING: 480,
         CallPurpose.PLACEMENT: 720,
         CallPurpose.PRACTICE: 600,
+        CallPurpose.EXAM: 600,
     },
     voice="marin",
     transcription_model="gpt-transcribe",
@@ -330,12 +335,29 @@ class World:
                 model="gpt-6-luna",
             ),
         )
+        self.exam_store = InMemoryExamRepository()
+        self.exam_starter = RecordingExamStarter()
+        self.speech = FakeSpeechModel()
+        self.exams = ExamService(
+            profiles=self.profiles,
+            personas=self.personas,
+            conversations=self.conversations,
+            sessions=self.sessions,
+            repository=self.exam_store,
+            starter=self.exam_starter,
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
+            clock=self.clock,
+        )
+        self.exam_script = ExamScript(self.exams)
         self.voice = VoiceCallService(
             settings=VOICE,
             scripts={
                 CallPurpose.ONBOARDING: HostScript(CATALOG, self.profiles),
                 CallPurpose.PLACEMENT: PlacementScript(self.placement),
                 CallPurpose.PRACTICE: self.practice,
+                CallPurpose.EXAM: self.exam_script,
             },
             accounts=self.accounts,
             provider=self.provider,
@@ -384,7 +406,6 @@ class World:
             call_seconds=VOICE.max_seconds[CallPurpose.PRACTICE],
             clock=self.clock,
         )
-        self.speech = FakeSpeechModel()
         self.card_details = CardDetailsService(
             profiles=self.profiles,
             personas=self.personas,

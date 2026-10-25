@@ -7,6 +7,7 @@ others are listed so the app can say they are coming.
 from dataclasses import dataclass
 from typing import Literal, get_args
 
+from konvami_api.domain.exams import GERMAN_EXAMS, SpeakingExam
 from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
 from konvami_api.domain.grammar_topics import GERMAN_MAP, GrammarTopic
 from konvami_api.domain.persona_parts import PersonaTemplate
@@ -61,6 +62,8 @@ class LanguagePack:
     grammar_map: tuple[GrammarTopic, ...] = ()
     # How its words change form, to tell whether a learner used one (`word_use.py`).
     word_rules: WordRules | None = None
+    # The speaking tests of its exams, for simulations (spec §6.13, `exams.py`).
+    speaking_exams: tuple[SpeakingExam, ...] = ()
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
@@ -70,6 +73,9 @@ class LanguagePack:
 
     def topic(self, topic_id: str) -> GrammarTopic | None:
         return next((topic for topic in self.grammar_map if topic.id == topic_id), None)
+
+    def speaking_exam(self, exam_id: str) -> SpeakingExam | None:
+        return next((exam for exam in self.speaking_exams if exam.id == exam_id), None)
 
     def scenario(self, scenario_id: str) -> Scenario | None:
         return next((s for s in self.scenarios if s.id == scenario_id), None)
@@ -127,6 +133,7 @@ GERMAN = LanguagePack(
     grammar=GERMAN_NOTES,
     grammar_map=GERMAN_MAP,
     word_rules=GERMAN_WORD_RULES,
+    speaking_exams=GERMAN_EXAMS,
     scenarios=GERMAN_SCENARIOS,
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),

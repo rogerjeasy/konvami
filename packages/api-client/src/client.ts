@@ -21,7 +21,10 @@ export interface VoiceCallDetails {
   personaId?: string;
   /** Today on the device's calendar ("2026-10-10"), so a persona names the right weekday. */
   localDate?: string;
-  /** A practice call that rehearses a role-play: a scenario id from the catalog. */
+  /**
+   * A practice call that rehearses a role-play: a scenario id from the catalog. An exam call:
+   * the speaking test it simulates (an exam centre format id).
+   */
   scenario?: string;
   /** A practice call that practises a grammar topic first: a topic id of the grammar map. */
   practise?: string;
@@ -82,6 +85,19 @@ export type Progress = Schemas['ProgressOut'];
 /** One level on the way, from when it was set and by whom. */
 export type LevelPoint = Schemas['LevelPointOut'];
 export type ProgressWeek = Schemas['WeekOut'];
+/** The exam centre (spec §6.13): the learner's exam, the speaking tests, simulations, readiness. */
+export type ExamCentre = Schemas['ExamCentreOut'];
+export type SpeakingExam = Schemas['SpeakingExamOut'];
+export type ExamPart = Schemas['ExamPartOut'];
+export type ExamPartKind = ExamPart['kind'];
+export type ExamCard = Schemas['ExamCardOut'];
+export type ExamReadiness = Schemas['ReadinessOut'];
+/** The cards of the next simulation of a speaking test, to prepare with. */
+export type NextSimulation = Schemas['NextSimulationOut'];
+/** One simulation and, once written, its estimated score per part. */
+export type Simulation = Schemas['SimulationOut'];
+export type SimulationResult = Schemas['SimulationResultOut'];
+export type PartScore = Schemas['PartScoreOut'];
 /** This week's plan (the Learning Director, spec §6.12), on Today. */
 export type WeekPlan = Schemas['WeekPlanOut'];
 /** One conversation of today's part of the plan. */
@@ -249,6 +265,16 @@ export interface ApiClient {
   getWeekReview(week: string, timeZone?: string): Promise<WeekReview>;
   /** Where the check-in plays from, in the partner's voice. Fails with `not_found`, `unavailable`. */
   getWeekReviewAudio(week: string): Promise<{ url: string }>;
+  /** The exam centre in one answer. */
+  getExamCentre(): Promise<ExamCentre>;
+  /** The cards of the next simulation of a speaking test. Fails with `not_found`. */
+  getNextSimulation(exam: string): Promise<NextSimulation>;
+  /** One simulation, and its score once written. Fails with `not_found`. */
+  getSimulation(callId: string): Promise<Simulation>;
+  /** Asks again for a score that could not be written. Fails with `not_found`, `score_limit`. */
+  rescoreSimulation(callId: string): Promise<Simulation>;
+  /** Where a part's model answer plays from. Fails with `not_found`, `unavailable`. */
+  getModelAnswerAudio(callId: string, part: string): Promise<{ url: string }>;
   /** Past conversations, newest first. `before` is the `next` of the page read before. */
   getConversations(page?: { before?: string; limit?: number }): Promise<ConversationPage>;
   /** One conversation and what was said in it. Fails with `not_found`. */
@@ -447,6 +473,17 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('POST', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
     getWeekReview: (week, timeZone) =>
       request('GET', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
+    getExamCentre: () => request('GET', '/v1/exams'),
+    getNextSimulation: (exam) => request('GET', `/v1/exams/${encodeURIComponent(exam)}/next`),
+    getSimulation: (callId) =>
+      request('GET', `/v1/exams/simulations/${encodeURIComponent(callId)}`),
+    rescoreSimulation: (callId) =>
+      request('POST', `/v1/exams/simulations/${encodeURIComponent(callId)}/score`),
+    getModelAnswerAudio: (callId, part) =>
+      request(
+        'GET',
+        `/v1/exams/simulations/${encodeURIComponent(callId)}/parts/${encodeURIComponent(part)}/audio`,
+      ),
     getWeekReviewAudio: (week) =>
       request('GET', `/v1/weeks/${encodeURIComponent(week)}/review/audio`),
     getConversations: (page = {}) =>
