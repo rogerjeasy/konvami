@@ -32,6 +32,7 @@ from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
+from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile, Source
 from konvami_api.domain.reports import (
     Mistake,
@@ -236,15 +237,16 @@ _LIST_QUESTIONS = f"""
 _START_SESSION = f"""
     WITH {_ENSURE_USER}
     INSERT INTO voice_session
-        (call_id, user_id, purpose, model, started_at, persona_id, scenario, max_seconds)
+        (call_id, user_id, purpose, model, started_at, persona_id, scenario, max_seconds, plan)
     VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
-            CAST(:persona_id AS uuid), :scenario, CAST(:max_seconds AS integer))
+            CAST(:persona_id AS uuid), :scenario, CAST(:max_seconds AS integer),
+            CAST(:plan AS jsonb))
 """
 
 _LOAD_SESSION = f"""
     SELECT call_id, CAST(user_id AS text) AS user_id, purpose, model,
            {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id,
-           scenario, max_seconds
+           scenario, max_seconds, CAST(plan AS text) AS plan
     FROM voice_session
     WHERE call_id = :call_id
 """
@@ -291,9 +293,10 @@ _FINISH_SESSION = """
         RETURNING call_id
     ),
     said AS (
-        INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms)
+        INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms, verbatim)
         SELECT done.call_id, turn.position, turn.item ->> 'speaker', turn.item ->> 'text',
-               turn.item ->> 'audio_key', CAST(turn.item ->> 'audio_ms' AS integer)
+               turn.item ->> 'audio_key', CAST(turn.item ->> 'audio_ms' AS integer),
+               turn.item ->> 'verbatim'
         FROM done,
              jsonb_array_elements(CAST(:turns AS jsonb)) WITH ORDINALITY AS turn (item, position)
         ON CONFLICT (call_id, position) DO NOTHING
@@ -568,6 +571,14 @@ _REPORT_CALLS = "session_report r JOIN voice_session s ON s.call_id = r.call_id"
 _READY_REPORTS = """
     s.user_id = CAST(:user_id AS uuid) AND r.status = 'ready'
     AND r.content ->> 'target' = :language
+"""
+
+_RECENT_REPORTS = f"""
+    SELECT CAST(r.content AS text) AS content
+    FROM {_REPORT_CALLS}
+    WHERE {_READY_REPORTS}
+    ORDER BY s.started_at DESC, s.call_id DESC
+    LIMIT :limit
 """
 
 # Weeks begin on Monday and are cut in the learner's time zone, like days (see `_ZONE`). The
@@ -859,6 +870,7 @@ class SqlVoiceSessionRepository:
                 "persona_id": str(session.persona_id) if session.persona_id else None,
                 "scenario": session.scenario,
                 "max_seconds": session.max_seconds,
+                "plan": json.dumps(session.plan.document()) if session.plan else None,
             },
         )
 
@@ -876,6 +888,7 @@ class SqlVoiceSessionRepository:
             persona_id=UUID(row["persona_id"]) if row["persona_id"] else None,
             scenario=row["scenario"],
             max_seconds=row["max_seconds"],
+            plan=SessionPlan.from_document(json.loads(row["plan"])) if row["plan"] else None,
         )
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
@@ -918,6 +931,8 @@ class SqlVoiceSessionRepository:
                 "text": turn.text,
                 "audio_key": turn.audio.key if turn.audio else None,
                 "audio_ms": turn.audio.milliseconds if turn.audio else None,
+                # Written during the call by the Live Error Spotter; the pass after it skips it.
+                "verbatim": turn.verbatim,
             }
             for turn in result.turns
         ]
@@ -1244,6 +1259,12 @@ class SqlReportRepository:
     def latest(self, user_id: UUID) -> Report | None:
         rows = self._client.execute(_LATEST_REPORT, {"user_id": str(user_id)})
         return _report(json.loads(rows[0]["content"])) if rows else None
+
+    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
+        rows = self._client.execute(
+            _RECENT_REPORTS, {"user_id": str(user_id), "language": language, "limit": limit}
+        )
+        return [_report(json.loads(row["content"])) for row in rows]
 
     def mistakes_by_week(
         self, user_id: UUID, language: str, timezone: str | None, since: dt.date
