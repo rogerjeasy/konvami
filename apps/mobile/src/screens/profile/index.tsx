@@ -19,7 +19,7 @@ import { Text } from '@/components/text';
 import { UserPhoto } from '@/components/user-photo';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { isLanguage } from '@/i18n';
-import { wholeMinutes } from '@/lib/format';
+import { formatTimeOfDay, wholeMinutes } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
@@ -27,6 +27,7 @@ import { useHome, usePracticeServices } from '@/practice/services';
 import { Meter } from '@/components/meter';
 import { TextButton } from '@/components/text-button';
 import { useAccount, useAllowance, useMinutesBack, useProfileServices } from '@/profile/services';
+import { usePreferences } from '@/preferences';
 import { withLine } from '@/voice/problems';
 import { useTheme } from '@/theme';
 
@@ -176,7 +177,8 @@ function VoiceMinutes() {
  * their privacy choices and the security of the account. Every number comes from their own practice.
  */
 export function ProfileScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { reminders } = usePreferences();
   const { color } = useTheme();
   const { session } = useAuthServices();
   const { status } = useSession();
@@ -228,6 +230,17 @@ export function ProfileScreen() {
               title={t('profile.rows.learning')}
               detail={t('profile.rows.learningHint')}
               onPress={go(ROUTES.accountLearning)}
+            />
+            <ListRow
+              icon="clock"
+              title={t('profile.rows.reminders')}
+              detail={t('profile.rows.remindersHint')}
+              value={
+                reminders?.on
+                  ? formatTimeOfDay(i18n.language, reminders.time)
+                  : t('profile.rows.remindersOff')
+              }
+              onPress={go(ROUTES.accountReminders)}
             />
           </ListGroup>
         </Section>
