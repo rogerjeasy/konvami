@@ -1305,6 +1305,7 @@ export const de: Translation = {
       steady: '{{topic}}: {{state}}',
       mistakes_one: '{{count}} bestätigter Fehler ({{previous}} in der Woche davor)',
       mistakes_other: '{{count}} bestätigte Fehler ({{previous}} in der Woche davor)',
+      words: '{{used}} von {{count}} gespeicherten Wörtern im Gespräch benutzt',
       level: 'Niveau: {{before}} → {{after}}',
     },
     levelHistory: {

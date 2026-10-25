@@ -158,6 +158,8 @@ export const FAKE_WEEK_REVIEW: WeekReview = {
     previousMistakes: 5,
     levelBefore: 'A2',
     levelAfter: 'A2',
+    wordsPlanned: 5,
+    wordsUsed: 3,
   },
 };
 

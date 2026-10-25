@@ -1289,6 +1289,7 @@ export const en = {
       steady: '{{topic}}: {{state}}',
       mistakes_one: '{{count}} confirmed mistake ({{previous}} the week before)',
       mistakes_other: '{{count}} confirmed mistakes ({{previous}} the week before)',
+      words: '{{used}} of {{count}} saved words used in conversation',
       level: 'Level: {{before}} → {{after}}',
     },
     levelHistory: {

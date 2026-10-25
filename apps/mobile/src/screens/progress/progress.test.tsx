@@ -257,6 +257,7 @@ describe('5.8 Progress', () => {
       expect(screen.getByLabelText('12 cards reviewed')).toBeTruthy();
       expect(screen.getByText('25 min the week before')).toBeTruthy();
       expect(screen.getByText('3 confirmed mistakes (5 the week before)')).toBeTruthy();
+      expect(screen.getByText('3 of 5 saved words used in conversation')).toBeTruthy();
       expect(screen.getByText('Dative: Practising → Mostly right')).toBeTruthy();
       expect(screen.getByText('Perfekt: Mostly right')).toBeTruthy();
     });

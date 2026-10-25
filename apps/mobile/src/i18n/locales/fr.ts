@@ -1307,6 +1307,7 @@ export const fr: Translation = {
       steady: '{{topic}} : {{state}}',
       mistakes_one: '{{count}} erreur confirmée ({{previous}} la semaine d’avant)',
       mistakes_other: '{{count}} erreurs confirmées ({{previous}} la semaine d’avant)',
+      words: '{{used}} mots enregistrés sur {{count}} utilisés en conversation',
       level: 'Niveau : {{before}} → {{after}}',
     },
     levelHistory: {

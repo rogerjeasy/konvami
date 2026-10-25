@@ -119,6 +119,14 @@ export function LastWeekCard({ review }: { review: WeekReview }) {
             previous: numbers.previousMistakes,
           })}
         </Text>
+        {numbers.wordsPlanned > 0 ? (
+          <Text variant="small" tone="muted">
+            {t('progress.lastWeek.words', {
+              used: numbers.wordsUsed,
+              count: numbers.wordsPlanned,
+            })}
+          </Text>
+        ) : null}
         {levelBefore && levelAfter && levelAfter !== levelBefore ? (
           <Text variant="small" tone="muted">
             {t('progress.lastWeek.level', { before: levelBefore, after: levelAfter })}
