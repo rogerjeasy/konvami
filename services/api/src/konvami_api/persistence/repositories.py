@@ -49,6 +49,8 @@ from konvami_api.domain.reports import (
 )
 from konvami_api.domain.tutor import Example, TutorAnswer, TutorQuestion
 from konvami_api.domain.voice import CallPurpose, FinishedCall, VoiceSession
+from konvami_api.domain.week_review import Status as WeekStatus
+from konvami_api.domain.week_review import StoredReview, WeekNumbers
 from konvami_api.persistence.sql import SqlClient, epoch_micros, from_epoch_micros
 
 # Every write for a learner begins by making sure their `app_user` row is there. A trigger on
@@ -375,7 +377,8 @@ _CONVERSATION = f"""
                SELECT CAST(count(*) AS integer) FROM voice_turn t
                WHERE t.call_id = s.call_id AND t.speaker = 'learner'
            ) AS learner_turns,
-           s.scenario, CAST(s.goals_reached AS text) AS goals_reached
+           s.scenario, CAST(s.goals_reached AS text) AS goals_reached,
+           COALESCE(CAST(s.plan ->> 'review' AS boolean), false) AS review
     FROM voice_session s
 """
 
@@ -429,6 +432,51 @@ _ZONE = """
             (SELECT name FROM pg_timezone_names WHERE name = :timezone), 'UTC'
         ) AS name
     )
+"""
+
+# One week of conversations, Monday to Sunday in the learner's time zone.
+_WEEK_CONVERSATIONS = f"""
+    WITH {_ZONE}
+    {_CONVERSATION}, zone
+    WHERE {_COUNTED}
+      AND CAST(s.started_at AT TIME ZONE zone.name AS date) >= CAST(:monday AS date)
+      AND CAST(s.started_at AT TIME ZONE zone.name AS date) < CAST(:monday AS date) + 7
+    ORDER BY s.started_at DESC, s.call_id DESC
+"""
+
+# A review is asked for again only once its writing failed or was lost, and a few times at most.
+_REQUEST_WEEK_REVIEW = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO week_review
+        (user_id, language, week, status, numbers, text, partner, voice, requested_at, requests)
+    VALUES (CAST(:user_id AS uuid), :language, CAST(:week AS date), 'pending',
+            CAST(:numbers AS jsonb), NULL, :partner, :voice,
+            CAST(:requested_at AS timestamptz), 1)
+    ON CONFLICT (user_id, language, week) DO UPDATE
+        SET status = 'pending', numbers = EXCLUDED.numbers, text = NULL,
+            partner = EXCLUDED.partner, voice = EXCLUDED.voice,
+            requested_at = EXCLUDED.requested_at, requests = week_review.requests + 1
+        WHERE week_review.requests < :max_requests
+          AND (
+              week_review.status = 'failed'
+              OR (
+                  week_review.status = 'pending'
+                  AND week_review.requested_at < CAST(:stale_before AS timestamptz)
+              )
+          )
+    RETURNING week
+"""
+
+_WRITE_WEEK_REVIEW = """
+    UPDATE week_review SET status = :status, text = :text
+    WHERE user_id = CAST(:user_id AS uuid) AND language = :language AND week = CAST(:week AS date)
+"""
+
+_LOAD_WEEK_REVIEW = f"""
+    SELECT status, CAST(numbers AS text) AS numbers, text, partner, voice,
+           {epoch_micros("requested_at")} AS requested_at
+    FROM week_review
+    WHERE user_id = CAST(:user_id AS uuid) AND language = :language AND week = CAST(:week AS date)
 """
 
 # Days are cut in the learner's time zone, by the database, which knows every zone's rules. A
@@ -1247,6 +1295,7 @@ def _conversation(row: dict[str, Any]) -> Conversation:
         learner_turns=row["learner_turns"],
         scenario=row["scenario"],
         goals_reached=tuple(json.loads(row["goals_reached"])) if row["goals_reached"] else (),
+        review=row["review"],
     )
 
 
@@ -1278,6 +1327,13 @@ class SqlConversationRepository:
             )
             for row in rows
         ]
+
+    def week(self, user_id: UUID, timezone: str | None, monday: dt.date) -> list[Conversation]:
+        rows = self._client.execute(
+            _WEEK_CONVERSATIONS,
+            {"user_id": str(user_id), "timezone": timezone, "monday": monday.isoformat()},
+        )
+        return [_conversation(row) for row in rows]
 
     def longest(self, user_id: UUID) -> int:
         rows = self._client.execute(_LONGEST_CONVERSATION, {"user_id": str(user_id)})
@@ -1411,6 +1467,67 @@ class SqlReportRepository:
         )
         row = rows[0]
         return ReportTotals(row["learner_words"], row["partner_words"], row["most_words"])
+
+
+class SqlWeekReviewRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def request(
+        self,
+        user_id: UUID,
+        language: str,
+        review: StoredReview,
+        *,
+        stale_before: dt.datetime,
+        max_requests: int,
+    ) -> bool:
+        rows = self._client.execute(
+            _REQUEST_WEEK_REVIEW,
+            {
+                "user_id": str(user_id),
+                "language": language,
+                "week": review.numbers.week.isoformat(),
+                "numbers": json.dumps(review.numbers.document()),
+                "partner": review.partner,
+                "voice": review.voice,
+                "requested_at": review.requested_at.isoformat(),
+                "stale_before": stale_before.isoformat(),
+                "max_requests": max_requests,
+            },
+        )
+        return bool(rows)
+
+    def written(
+        self, user_id: UUID, language: str, week: dt.date, status: WeekStatus, text: str | None
+    ) -> None:
+        self._client.execute(
+            _WRITE_WEEK_REVIEW,
+            {
+                "user_id": str(user_id),
+                "language": language,
+                "week": week.isoformat(),
+                "status": status,
+                "text": text,
+            },
+        )
+
+    def load(self, user_id: UUID, language: str, week: dt.date) -> StoredReview | None:
+        rows = self._client.execute(
+            _LOAD_WEEK_REVIEW,
+            {"user_id": str(user_id), "language": language, "week": week.isoformat()},
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        return StoredReview(
+            status=row["status"],
+            numbers=WeekNumbers.from_document(json.loads(row["numbers"])),
+            text=row["text"],
+            requested_at=from_epoch_micros(row["requested_at"]),
+            partner=row["partner"],
+            voice=row["voice"],
+        )
 
 
 class SqlLevelRepository:
