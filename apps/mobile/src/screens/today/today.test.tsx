@@ -2,7 +2,13 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { STALE_AFTER_MS } from '@/practice/home-store';
-import { createFakeApi, FAKE_NOW, FAKE_PERSONAS, type FakeApi } from '@/test/fake-api';
+import {
+  createFakeApi,
+  FAKE_EXAM_WEEK,
+  FAKE_NOW,
+  FAKE_PERSONAS,
+  type FakeApi,
+} from '@/test/fake-api';
 import { renderScreen } from '@/test/render';
 import { TodayScreen } from '.';
 
@@ -296,8 +302,8 @@ describe('5.1 Today', () => {
       const api = inApp();
       api.planned({
         today: [
-          { kind: 'review', minutes: 5, topic: null, scenario: null },
-          { kind: 'role_play', minutes: 10, topic: 'dative', scenario: 'doctor' },
+          { kind: 'review', minutes: 5, topic: null, scenario: null, exam: null },
+          { kind: 'role_play', minutes: 10, topic: 'dative', scenario: 'doctor', exam: null },
         ],
         todayCards: 6,
       });
@@ -311,9 +317,12 @@ describe('5.1 Today', () => {
     });
 
     it.each([
-      [{ kind: 'review', minutes: 5, topic: null, scenario: null }, { practise: 'words' }],
       [
-        { kind: 'role_play', minutes: 10, topic: 'dative', scenario: 'doctor' },
+        { kind: 'review', minutes: 5, topic: null, scenario: null, exam: null },
+        { practise: 'words' },
+      ],
+      [
+        { kind: 'role_play', minutes: 10, topic: 'dative', scenario: 'doctor', exam: null },
         { scenario: 'doctor', practise: 'dative' },
       ],
     ] as const)('starts the next planned conversation in one tap', async (session, params) => {
@@ -345,6 +354,80 @@ describe('5.1 Today', () => {
       await fireEvent.press(screen.getByRole('button', { name: 'Talk with Lena' }));
 
       expect(router.push).toHaveBeenCalledWith(call(LENA.id));
+    });
+
+    describe('with an exam ahead (spec §6.13)', () => {
+      const SIMULATION = {
+        kind: 'exam',
+        minutes: 10,
+        topic: null,
+        scenario: null,
+        exam: 'goethe_b1',
+      } as const;
+      const GOETHE = { type: 'goethe', target_level: 'B1', date: '2026-11-13' };
+
+      it('plans a simulation and prepares it in one tap', async () => {
+        const api = inApp({ exam: GOETHE });
+        api.planned({ today: [SIMULATION], exam: FAKE_EXAM_WEEK });
+        await open(api);
+
+        expect(screen.getByText('10 min · Exam simulation')).toBeTruthy();
+        expect(screen.getByText('The speaking test of the Goethe-Zertifikat B1')).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Prepare the simulation' }));
+
+        expect(router.push).toHaveBeenCalledWith({
+          pathname: '/exams/[exam]',
+          params: { exam: 'goethe_b1' },
+        });
+      });
+
+      it('names the weakest part the simulation will show again', async () => {
+        const api = inApp({ exam: GOETHE });
+        api.planned({
+          today: [SIMULATION],
+          exam: { ...FAKE_EXAM_WEEK, weakest: { number: 2, kind: 'present_topic' } },
+        });
+        await open(api);
+
+        expect(screen.getAllByText('Weakest lately: Part 2 · Present a topic')).toHaveLength(2);
+      });
+
+      it('says on the exam how many simulations the week has, and why', async () => {
+        const api = inApp({ exam: GOETHE });
+        api.planned({
+          exam: { ...FAKE_EXAM_WEEK, pace: 'final', wanted: 2, simulations: 2, done: 1 },
+        });
+        await open(api);
+
+        expect(screen.getByText('Simulations this week: 1 of 2')).toBeTruthy();
+        expect(screen.getByText('Your exam is close: two this week.')).toBeTruthy();
+        await fireEvent.press(screen.getByRole('button', { name: 'Open the exam centre' }));
+
+        expect(router.push).toHaveBeenCalledWith('/exams');
+      });
+
+      it.each([
+        [{ pace: 'first' }, 'A first simulation shows where you stand.'],
+        [{ pace: 'weekly' }, 'One a week in the last two months before your exam.'],
+        [
+          { pace: 'fortnightly', simulations: 0, wanted: 0 },
+          'One every two weeks while your exam is more than two months away. The next one is next week.',
+        ],
+        [
+          { pace: 'final', wanted: 2, simulations: 1 },
+          'Your weekly goal has room for one: each simulation takes a whole 10-minute call.',
+        ],
+        [
+          { simulations: 0 },
+          'Your weekly goal has no room for one: a simulation takes a whole 10-minute call, more than half of it.',
+        ],
+      ] as const)('says why the week has the simulations it has', async (changes, why) => {
+        const api = inApp({ exam: GOETHE });
+        api.planned({ exam: { ...FAKE_EXAM_WEEK, ...changes } });
+        await open(api);
+
+        expect(screen.getByText(why)).toBeTruthy();
+      });
     });
 
     it('names the week’s topics, says when the voice minutes shaped it, and opens the goals', async () => {

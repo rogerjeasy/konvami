@@ -100,7 +100,14 @@ function Day({ home, now }: { home: Home; now: Date }) {
     home.focus.length ? (
       <FocusCard key="focus" focus={home.focus} source={home.focusSource} />
     ) : null,
-    home.exam ? <ExamCard key="exam" exam={home.exam} /> : null,
+    home.exam ? (
+      <ExamCard
+        key="exam"
+        exam={home.exam}
+        week={home.plan.exam}
+        onOpen={() => router.push(ROUTES.exams)}
+      />
+    ) : null,
     home.recent.length ? (
       <Section
         key="recent"

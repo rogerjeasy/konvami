@@ -41,9 +41,15 @@ export function TalkCard({
   const { color } = useTheme();
   const { persona, lastTalkedAt } = partner;
   const next = plan.today[0];
-  const label = next
-    ? t(plan.doneMinutes > 0 ? 'today.plan.continue' : 'today.plan.start', { name: persona.name })
-    : t('today.talk.start', { name: persona.name });
+  // A simulation is with the examiner, after its preparation: not a talk with the partner.
+  const label =
+    next?.kind === 'exam'
+      ? t('today.plan.prepare')
+      : next
+        ? t(plan.doneMinutes > 0 ? 'today.plan.continue' : 'today.plan.start', {
+            name: persona.name,
+          })
+        : t('today.talk.start', { name: persona.name });
   return (
     <View className="gap-4 rounded-panel bg-surface p-5">
       <View className="flex-row items-center gap-4">

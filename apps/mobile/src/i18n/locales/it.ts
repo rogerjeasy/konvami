@@ -627,11 +627,14 @@ export const it: Translation = {
       start: 'Inizia con {{name}}',
       continue: 'Continua con {{name}}',
       kinds: {
+        exam: 'Simulazione d’esame',
         review: 'Conversazione di ripasso',
         role_play: 'Gioco di ruolo: {{scenario}}',
         free: 'Conversazione',
       },
       words: 'Con le parole da ripassare',
+      simulation: 'La prova orale del {{name}}',
+      prepare: 'Prepara la simulazione',
       focus: 'Obiettivo: {{topic}}',
       session: '{{minutes}}, {{kind}}',
       reasons: {
@@ -685,6 +688,24 @@ export const it: Translation = {
       inDays_other: 'Tra {{count}} giorni',
       today: 'Oggi',
       noDate: 'Data non ancora fissata',
+      simulations: 'Simulazioni questa settimana: {{done}} su {{count}}',
+      open: 'Apri il centro esami',
+      pace: {
+        first: 'Una prima simulazione ti mostra a che punto sei.',
+        weekly: 'Una a settimana negli ultimi due mesi prima dell’esame.',
+        final: 'Il tuo esame è vicino: due questa settimana.',
+        fortnightly: 'Una ogni due settimane finché l’esame è a più di due mesi.',
+        fortnightlyOff:
+          'Una ogni due settimane finché l’esame è a più di due mesi. La prossima è la settimana prossima.',
+        fortnightlyNoDate: 'Una ogni due settimane.',
+        fortnightlyNoDateOff: 'Una ogni due settimane. La prossima è la settimana prossima.',
+      },
+      someRoom_one:
+        'Il tuo obiettivo settimanale ha spazio per una: ogni simulazione occupa un’intera chiamata di {{minutes}} minuti.',
+      someRoom_other:
+        'Il tuo obiettivo settimanale ha spazio per {{count}}: ogni simulazione occupa un’intera chiamata di {{minutes}} minuti.',
+      noRoom:
+        'Il tuo obiettivo settimanale non ha spazio per una simulazione: occupa un’intera chiamata di {{minutes}} minuti, più della metà.',
     },
     recent: {
       title: 'Conversazioni recenti',

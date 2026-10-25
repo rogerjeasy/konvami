@@ -1,9 +1,10 @@
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
-import type { PlanSession, WeekPlan } from '@konvami/api-client';
+import type { ExamWeek, PlanSession, WeekPlan } from '@konvami/api-client';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
+import { useExamLabels } from '@/hooks/use-exam-labels';
 import { useScenarioTitle, useTopicLabels } from '@/hooks/use-labels';
 import { missedDays } from '@/lib/plan';
 import { useTheme } from '@/theme';
@@ -12,27 +13,38 @@ import { useTheme } from '@/theme';
 const SEPARATOR = ' · ';
 
 const KIND_ICON: Record<PlanSession['kind'], IconName> = {
+  exam: 'award',
   review: 'refresh',
   role_play: 'users',
   free: 'message',
 };
 
-/** One conversation of today's plan: how long, what kind, and what it works on. */
-function SessionRow({ session }: { session: PlanSession }) {
+/**
+ * One conversation of today's plan: how long, what kind, and what it works on. A simulation
+ * names its test, or the part that scored lowest lately.
+ */
+function SessionRow({ session, exam }: { session: PlanSession; exam: ExamWeek | null }) {
   const { t } = useTranslation();
   const { color } = useTheme();
   const topics = useTopicLabels();
   const scenarioTitle = useScenarioTitle();
+  const exams = useExamLabels();
   const kind = t(`today.plan.kinds.${session.kind}`, {
     scenario: session.scenario ? scenarioTitle(session.scenario) : '',
   });
   const minutes = t('time.minutes', { count: session.minutes });
   const detail =
-    session.kind === 'review'
-      ? t('today.plan.words')
-      : session.topic
-        ? t('today.plan.focus', { topic: topics.name(session.topic) })
-        : null;
+    session.kind === 'exam'
+      ? exam?.weakest
+        ? exams.weakest(exam.weakest.number - 1, exam.weakest.kind)
+        : exam
+          ? t('today.plan.simulation', { name: exam.name })
+          : null
+      : session.kind === 'review'
+        ? t('today.plan.words')
+        : session.topic
+          ? t('today.plan.focus', { topic: topics.name(session.topic) })
+          : null;
   return (
     <View className="flex-row items-start gap-2.5">
       <View className="pt-0.5" aria-hidden>
@@ -79,7 +91,7 @@ export function PlanBlock({ plan }: { plan: WeekPlan }) {
       {plan.today.length ? (
         <View className="gap-3">
           {plan.today.map((session, i) => (
-            <SessionRow key={`${session.kind}-${i}`} session={session} />
+            <SessionRow key={`${session.kind}-${i}`} session={session} exam={plan.exam} />
           ))}
         </View>
       ) : null}

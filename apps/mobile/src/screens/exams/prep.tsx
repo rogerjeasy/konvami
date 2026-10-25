@@ -19,7 +19,7 @@ import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { examTalkRoute, ROUTES } from '@/lib/routes';
 import { ExamCard } from './exam-card';
-import { useExamLabels } from './labels';
+import { useExamLabels } from '@/hooks/use-exam-labels';
 import { useExamNotes } from './notes';
 import { useNextSimulation } from './use-next-simulation';
 

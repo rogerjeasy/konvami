@@ -22,7 +22,7 @@ import { examPrepRoute, ROUTES } from '@/lib/routes';
 import { useExamCentre, usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
 import { ExamCard } from './exam-card';
-import { CRITERIA, MAX_MARK, useExamLabels } from './labels';
+import { CRITERIA, MAX_MARK, useExamLabels } from '@/hooks/use-exam-labels';
 
 /** The model answer of a part, in writing and in the examiner's voice. */
 function ModelAnswer({ callId, score }: { callId: string; score: PartScore }) {

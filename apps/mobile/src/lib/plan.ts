@@ -1,13 +1,14 @@
 import type { PlanSession } from '@konvami/api-client';
 import { formatList, weekdayNames } from './format';
-import { callRoute, reviewCallRoute } from './routes';
+import { callRoute, examPrepRoute, reviewCallRoute } from './routes';
 
 /**
- * The call one session of the week's plan starts: a review conversation around the due words,
- * a role-play with its situation, or a free conversation; the last two put the week's topic
- * first.
+ * Where one session of the week's plan starts: a simulation with the preparation of its
+ * speaking test, a review conversation around the due words, a role-play with its situation, or
+ * a free conversation; the last two put the week's topic first.
  */
 export function sessionRoute(session: PlanSession, personaId: string) {
+  if (session.kind === 'exam' && session.exam) return examPrepRoute(session.exam);
   if (session.kind === 'review') return reviewCallRoute(personaId);
   return callRoute(personaId, {
     scenario: session.scenario ?? undefined,
