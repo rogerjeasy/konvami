@@ -73,7 +73,8 @@ conditions, and to know how close they are to passing.
 
 ## Left out, and why
 
-- **The weekly plan scheduling simulations** (spec §6.12): next, on its own.
+- **The weekly plan scheduling simulations** (spec §6.12): built next, on its own; see
+  `2026-10-25-plan-exam-simulations-design.md`.
 - **Phrase banks per task turned into cards**: a content project with meanings in every
   explanation language.
 - **TestDaF and ÖSD**: their task sets need the exam bodies' own material.
