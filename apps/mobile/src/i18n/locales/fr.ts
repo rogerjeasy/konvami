@@ -628,11 +628,14 @@ export const fr: Translation = {
       start: 'Commencer avec {{name}}',
       continue: 'Continuer avec {{name}}',
       kinds: {
+        exam: 'Simulation d’examen',
         review: 'Conversation de révision',
         role_play: 'Jeu de rôle : {{scenario}}',
         free: 'Conversation',
       },
       words: 'Avec les mots à réviser',
+      simulation: 'L’épreuve orale du {{name}}',
+      prepare: 'Préparer la simulation',
       focus: 'Point de mire : {{topic}}',
       session: '{{minutes}}, {{kind}}',
       reasons: {
@@ -687,6 +690,25 @@ export const fr: Translation = {
       inDays_other: 'Dans {{count}} jours',
       today: 'Aujourd’hui',
       noDate: 'Pas encore de date',
+      simulations: 'Simulations cette semaine : {{done}} sur {{count}}',
+      open: 'Ouvrir le centre d’examen',
+      pace: {
+        first: 'Une première simulation montre où tu en es.',
+        weekly: 'Une par semaine pendant les deux derniers mois avant ton examen.',
+        final: 'Ton examen approche : deux cette semaine.',
+        fortnightly: 'Une toutes les deux semaines tant que ton examen est à plus de deux mois.',
+        fortnightlyOff:
+          'Une toutes les deux semaines tant que ton examen est à plus de deux mois. La prochaine, c’est la semaine prochaine.',
+        fortnightlyNoDate: 'Une toutes les deux semaines.',
+        fortnightlyNoDateOff:
+          'Une toutes les deux semaines. La prochaine, c’est la semaine prochaine.',
+      },
+      someRoom_one:
+        'Ton objectif de la semaine a de la place pour une : chaque simulation prend un appel entier de {{minutes}} minutes.',
+      someRoom_other:
+        'Ton objectif de la semaine a de la place pour {{count}} : chaque simulation prend un appel entier de {{minutes}} minutes.',
+      noRoom:
+        'Ton objectif de la semaine n’a pas de place pour une simulation : elle prend un appel entier de {{minutes}} minutes, plus de la moitié.',
     },
     recent: {
       title: 'Conversations récentes',

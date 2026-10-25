@@ -2,10 +2,9 @@
 
 from collections.abc import Sequence
 from dataclasses import replace
-from datetime import UTC, date, datetime, timedelta, tzinfo
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
 from konvami_api.domain.cards import Card, CardTotals, WordDetails
@@ -14,6 +13,7 @@ from konvami_api.domain.conversations import (
     Conversation,
     DayActivity,
     PartnerHistory,
+    zone_of,
 )
 from konvami_api.domain.costs import (
     ChargeRecord,
@@ -53,14 +53,6 @@ from konvami_api.domain.voice import (
 )
 from konvami_api.domain.week_review import Status as WeekStatus
 from konvami_api.domain.week_review import StoredReview
-
-
-def zone_of(timezone: str | None) -> tzinfo:
-    """The time zone a name stands for; an unknown or missing one means UTC, as in the database."""
-    try:
-        return ZoneInfo(timezone) if timezone else UTC
-    except (ZoneInfoNotFoundError, ValueError):
-        return UTC
 
 
 class FixedClock:

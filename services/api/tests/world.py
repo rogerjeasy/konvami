@@ -96,6 +96,15 @@ USER = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_USER = UUID("22222222-2222-4222-8222-222222222222")
 # A Friday, at noon in UTC.
 NOON = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
+# What a learner says in a simulation of the Goethe B1: enough to be scored.
+SIMULATED = (
+    Turn("persona", "Guten Tag. Wir beginnen mit Teil 1."),
+    Turn("learner", "Ich schlage vor, dass wir die Feier am Freitag machen."),
+    Turn("persona", "Gute Idee. Und wo?"),
+    Turn("learner", "Vielleicht im Restaurant neben dem Büro, weil es dort ruhig ist."),
+    Turn("learner", "Mein Thema ist Homeoffice. Ich arbeite zwei Tage pro Woche zu Hause."),
+    Turn("learner", "Vielen Dank für Ihre Aufmerksamkeit."),
+)
 VOICE = VoiceSettings(
     models={
         CallPurpose.ONBOARDING: "gpt-realtime-2.1",
@@ -402,6 +411,7 @@ class World:
             conversations=self.conversations,
             cards=self.cards,
             grammar=self.grammar,
+            exams=self.exams,
             allowance=self.voice.allowance,
             call_seconds=VOICE.max_seconds[CallPurpose.PRACTICE],
             clock=self.clock,
@@ -537,6 +547,28 @@ class World:
                 ),
             )
         return call_id
+
+    def simulate(
+        self,
+        turns: tuple[Turn, ...] = SIMULATED,
+        *,
+        at: datetime | None = None,
+        minutes: float = 8,
+        exam: str = "goethe_b1",
+    ) -> str:
+        """Records a whole simulation of a speaking test as the broker and the worker would:
+        started at `at` (or now) and over `minutes` later, where the clock is left. Returns its
+        id."""
+        if at is not None:
+            self.clock.now = at
+        started = self.voice.start(USER, CallPurpose.EXAM, "v=0 offer", scenario=exam)
+        call = self.voice.live_call(started.call_id)
+        assert call is not None
+        self.clock.now += timedelta(minutes=minutes)
+        finished = FinishedCall(self.clock(), "closed", {"input_audio_tokens": 10}, turns)
+        self.sessions.finish(started.call_id, finished)
+        self.exam_script.concluded(USER, started.call_id, call.tools, finished)
+        return started.call_id
 
     def reported(
         self,

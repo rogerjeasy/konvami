@@ -21,7 +21,7 @@ import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { examPrepRoute, ROUTES, simulationRoute } from '@/lib/routes';
 import { useExamCentre, usePracticeServices } from '@/practice/services';
-import { useExamLabels } from './labels';
+import { useExamLabels } from '@/hooks/use-exam-labels';
 
 // Points are shares of 100 ("+10 points since last time").
 const POINTS = 100;
@@ -119,7 +119,7 @@ function Readiness({ centre, exam }: { centre: ExamCentre; exam: SpeakingExam })
       ) : null}
       {weakPart ? (
         <Text variant="small" tone="muted">
-          {t('exams.readiness.weakest', { part: labels.part(weakest, weakPart.kind) })}
+          {labels.weakest(weakest, weakPart.kind)}
         </Text>
       ) : null}
       <Text variant="callout">

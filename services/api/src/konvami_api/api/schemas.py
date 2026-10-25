@@ -32,7 +32,7 @@ from konvami_api.domain.conversations import (
     Transcript,
 )
 from konvami_api.domain.costs import Allowance, CostReport, Level, Share
-from konvami_api.domain.director import Reason, SessionKind, WeekPlan
+from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind, WeekPlan
 from konvami_api.domain.exam_centre import ExamCentre, Simulation
 from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
 from konvami_api.domain.fsrs import Rating
@@ -1434,12 +1434,53 @@ class PlanSessionOut(ApiModel):
     topic: str | None
     # A role-play's scenario; null for the other kinds.
     scenario: str | None
+    # A simulation's speaking test (an exam centre format id); null for the other kinds.
+    exam: str | None
 
 
 class WeekSessionsOut(ApiModel):
+    exam: int
     review: int
     role_play: int
     free: int
+
+
+class WeakestPartOut(ApiModel):
+    # Its place in the test, 1 for the first.
+    number: int
+    kind: PartKind
+
+
+class ExamWeekOut(ApiModel):
+    """The week's simulations of the learner's speaking test."""
+
+    # The speaking test (an exam centre format id) and its name.
+    test: str
+    name: str
+    # How often the plan has one, from how close the exam is.
+    pace: ExamPace
+    # How long one takes.
+    minutes: int
+    # The simulations the pace asks for, those the week has room for, and those done.
+    wanted: int
+    simulations: int
+    done: int
+    # The part that scored lowest lately; null before a score.
+    weakest: WeakestPartOut | None
+
+    @classmethod
+    def of(cls, exam: ExamWeek) -> "ExamWeekOut":
+        weakest = exam.weakest
+        return cls(
+            test=exam.test,
+            name=exam.name,
+            pace=exam.pace,
+            minutes=exam.minutes,
+            wanted=exam.wanted,
+            simulations=exam.simulations,
+            done=exam.done,
+            weakest=WeakestPartOut(number=weakest.number, kind=weakest.kind) if weakest else None,
+        )
 
 
 class WeekPlanOut(ApiModel):
@@ -1467,6 +1508,8 @@ class WeekPlanOut(ApiModel):
     reason: Reason
     # The planned days that went by without practice, when they made today longer.
     missed: list[dt.date]
+    # The week's exam simulations; null without an exam that has a speaking test.
+    exam: ExamWeekOut | None
 
     @classmethod
     def of(cls, plan: WeekPlan) -> "WeekPlanOut":
@@ -1476,6 +1519,7 @@ class WeekPlanOut(ApiModel):
             days=plan.days,
             capped=plan.capped,
             sessions=WeekSessionsOut(
+                exam=plan.sessions[SessionKind.EXAM],
                 review=plan.sessions[SessionKind.REVIEW],
                 role_play=plan.sessions[SessionKind.ROLE_PLAY],
                 free=plan.sessions[SessionKind.FREE],
@@ -1490,12 +1534,14 @@ class WeekPlanOut(ApiModel):
                     minutes=session.minutes,
                     topic=session.topic,
                     scenario=session.scenario,
+                    exam=session.exam,
                 )
                 for session in plan.today
             ],
             today_cards=plan.today_cards,
             reason=plan.reason,
             missed=list(plan.missed),
+            exam=ExamWeekOut.of(plan.exam) if plan.exam else None,
         )
 
 

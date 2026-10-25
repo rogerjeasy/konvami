@@ -1,7 +1,6 @@
 """The exam centre on a whole backend (spec §6.13): a simulation from the centre to its score."""
 
 import json
-from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -11,19 +10,11 @@ from konvami_api.domain.exam_centre import MAX_REQUESTS, ExamError, ExamTools
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.text import TextModelError
-from konvami_api.domain.voice import CallPurpose, FinishedCall
+from konvami_api.domain.voice import CallPurpose
 from tests.world import NOON, OTHER_USER, USER, World
 
 GOETHE_B1 = {"type": "goethe", "target_level": "B1", "date": "2027-04-15"}
 OFFER = "v=0 offer"
-SAID = (
-    Turn("persona", "Guten Tag. Wir beginnen mit Teil 1."),
-    Turn("learner", "Ich schlage vor, dass wir die Feier am Freitag machen."),
-    Turn("persona", "Gute Idee. Und wo?"),
-    Turn("learner", "Vielleicht im Restaurant neben dem Büro, weil es dort ruhig ist."),
-    Turn("learner", "Mein Thema ist Homeoffice. Ich arbeite zwei Tage pro Woche zu Hause."),
-    Turn("learner", "Vielen Dank für Ihre Aufmerksamkeit."),
-)
 
 
 def scored(model_answer: str = "Ich würde vorschlagen …") -> dict[str, Any]:
@@ -43,18 +34,6 @@ def scored(model_answer: str = "Ich würde vorschlagen …") -> dict[str, Any]:
 
 def learner(world: World) -> None:
     world.onboard(exam=GOETHE_B1)
-
-
-def simulate(world: World, turns: tuple[Turn, ...] = SAID) -> str:
-    """A whole simulation of the Goethe B1 test, as the broker and the worker record it."""
-    started = world.voice.start(USER, CallPurpose.EXAM, OFFER, scenario="goethe_b1")
-    call = world.voice.live_call(started.call_id)
-    assert call is not None
-    world.clock.now += timedelta(minutes=8)
-    finished = FinishedCall(world.clock(), "closed", {"input_audio_tokens": 10}, turns)
-    world.sessions.finish(started.call_id, finished)
-    world.exam_script.concluded(USER, started.call_id, call.tools, finished)
-    return started.call_id
 
 
 def test_the_centre_names_the_learners_exam_and_its_speaking_test() -> None:
@@ -146,7 +125,7 @@ def test_after_the_call_the_simulation_is_scored_in_the_background() -> None:
     world = World()
     learner(world)
 
-    call_id = simulate(world)
+    call_id = world.simulate()
 
     simulation = world.exams.result(USER, call_id)
     assert simulation.status == "pending"
@@ -157,7 +136,7 @@ def test_after_the_call_the_simulation_is_scored_in_the_background() -> None:
 def test_the_scorer_judges_each_part_by_the_rubric_and_writes_a_model_answer() -> None:
     world = World()
     learner(world)
-    call_id = simulate(world)
+    call_id = world.simulate()
     world.text.answers.append(scored())
 
     world.exams.score(call_id)
@@ -189,7 +168,7 @@ def test_the_scorer_judges_each_part_by_the_rubric_and_writes_a_model_answer() -
 def test_a_simulation_with_almost_nothing_said_is_not_scored() -> None:
     world = World()
     learner(world)
-    call_id = simulate(world, (Turn("persona", "Guten Tag."), Turn("learner", "Hallo.")))
+    call_id = world.simulate((Turn("persona", "Guten Tag."), Turn("learner", "Hallo.")))
 
     world.exams.score(call_id)
 
@@ -200,7 +179,7 @@ def test_a_simulation_with_almost_nothing_said_is_not_scored() -> None:
 def test_marks_out_of_range_or_parts_left_out_fail_the_scoring() -> None:
     world = World()
     learner(world)
-    call_id = simulate(world)
+    call_id = world.simulate()
     broken = scored()
     broken["parts"] = broken["parts"][:2]
     world.text.answers.append(broken)
@@ -213,7 +192,7 @@ def test_marks_out_of_range_or_parts_left_out_fail_the_scoring() -> None:
 def test_a_failed_scoring_can_be_asked_for_again_a_few_times() -> None:
     world = World()
     learner(world)
-    call_id = simulate(world)
+    call_id = world.simulate()
     # Three attempts in all: the first, and two asked for again.
     for _ in range(MAX_REQUESTS - 1):
         world.text.answers.append(TextModelError())
@@ -233,7 +212,7 @@ def test_scores_build_up_the_readiness_and_rotate_the_cards() -> None:
     world = World()
     learner(world)
     for marks in (1, 3):
-        call_id = simulate(world)
+        call_id = world.simulate()
         answer = scored()
         for part in answer["parts"]:
             part["marks"] = dict.fromkeys(part["marks"], marks)
@@ -255,7 +234,7 @@ def test_scores_build_up_the_readiness_and_rotate_the_cards() -> None:
 def test_a_model_answer_is_heard_in_the_examiners_voice_once() -> None:
     world = World()
     learner(world)
-    call_id = simulate(world)
+    call_id = world.simulate()
     world.text.answers.append(scored("Ich würde vorschlagen, dass wir am Freitag feiern."))
     world.exams.score(call_id)
 
@@ -274,7 +253,7 @@ def test_a_model_answer_is_heard_in_the_examiners_voice_once() -> None:
 def test_a_simulation_is_the_learners_own() -> None:
     world = World()
     learner(world)
-    call_id = simulate(world)
+    call_id = world.simulate()
     world.onboard(OTHER_USER)
 
     with pytest.raises(ExamError) as missing:

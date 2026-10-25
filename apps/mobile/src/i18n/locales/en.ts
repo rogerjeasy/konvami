@@ -617,11 +617,14 @@ export const en = {
       start: 'Start with {{name}}',
       continue: 'Continue with {{name}}',
       kinds: {
+        exam: 'Exam simulation',
         review: 'Review conversation',
         role_play: 'Role-play: {{scenario}}',
         free: 'Conversation',
       },
       words: 'Using the words that are due',
+      simulation: 'The speaking test of the {{name}}',
+      prepare: 'Prepare the simulation',
       focus: 'Focus: {{topic}}',
       session: '{{minutes}}, {{kind}}',
       reasons: {
@@ -675,6 +678,24 @@ export const en = {
       inDays_other: 'In {{count}} days',
       today: 'Today',
       noDate: 'No date set yet',
+      simulations: 'Simulations this week: {{done}} of {{count}}',
+      open: 'Open the exam centre',
+      pace: {
+        first: 'A first simulation shows where you stand.',
+        weekly: 'One a week in the last two months before your exam.',
+        final: 'Your exam is close: two this week.',
+        fortnightly: 'One every two weeks while your exam is more than two months away.',
+        fortnightlyOff:
+          'One every two weeks while your exam is more than two months away. The next one is next week.',
+        fortnightlyNoDate: 'One every two weeks.',
+        fortnightlyNoDateOff: 'One every two weeks. The next one is next week.',
+      },
+      someRoom_one:
+        'Your weekly goal has room for one: each simulation takes a whole {{minutes}}-minute call.',
+      someRoom_other:
+        'Your weekly goal has room for {{count}}: each simulation takes a whole {{minutes}}-minute call.',
+      noRoom:
+        'Your weekly goal has no room for one: a simulation takes a whole {{minutes}}-minute call, more than half of it.',
     },
     recent: {
       title: 'Recent conversations',

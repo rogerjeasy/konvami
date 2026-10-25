@@ -103,7 +103,8 @@ week afterwards.
 
 ## Left out, and why
 
-- **Exam simulations** in the plan: the exam centre (spec §6.13) is not built.
+- **Exam simulations** in the plan: built afterwards, with the exam centre; see
+  `2026-10-25-plan-exam-simulations-design.md`.
 - **Reminders and notifications:** there is no push set-up yet (spec §6.18).
 - **Changing the plan by voice:** it belongs to the full live session, like changing the profile
   by voice.

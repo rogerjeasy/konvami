@@ -22,7 +22,7 @@ import { useTheme } from '@/theme';
 import { withLine } from '@/voice/problems';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
 import { ExamCard } from './exam-card';
-import { useExamLabels } from './labels';
+import { useExamLabels } from '@/hooks/use-exam-labels';
 import { useExamNotes } from './notes';
 import { useNextSimulation } from './use-next-simulation';
 

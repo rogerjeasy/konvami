@@ -630,11 +630,14 @@ export const de: Translation = {
       start: 'Mit {{name}} loslegen',
       continue: 'Mit {{name}} weitermachen',
       kinds: {
+        exam: 'Prüfungssimulation',
         review: 'Wiederholungsgespräch',
         role_play: 'Rollenspiel: {{scenario}}',
         free: 'Gespräch',
       },
       words: 'Mit den Wörtern, die fällig sind',
+      simulation: 'Die mündliche Prüfung: {{name}}',
+      prepare: 'Simulation vorbereiten',
       focus: 'Schwerpunkt: {{topic}}',
       session: '{{minutes}}, {{kind}}',
       reasons: {
@@ -688,6 +691,25 @@ export const de: Translation = {
       inDays_other: 'In {{count}} Tagen',
       today: 'Heute',
       noDate: 'Noch kein Termin',
+      simulations: 'Simulationen diese Woche: {{done}} von {{count}}',
+      open: 'Zum Prüfungszentrum',
+      pace: {
+        first: 'Eine erste Simulation zeigt dir, wo du stehst.',
+        weekly: 'Eine pro Woche in den letzten zwei Monaten vor deiner Prüfung.',
+        final: 'Deine Prüfung ist bald: Diese Woche sind es zwei.',
+        fortnightly:
+          'Eine alle zwei Wochen, solange deine Prüfung mehr als zwei Monate entfernt ist.',
+        fortnightlyOff:
+          'Eine alle zwei Wochen, solange deine Prüfung mehr als zwei Monate entfernt ist. Die nächste ist nächste Woche.',
+        fortnightlyNoDate: 'Eine alle zwei Wochen.',
+        fortnightlyNoDateOff: 'Eine alle zwei Wochen. Die nächste ist nächste Woche.',
+      },
+      someRoom_one:
+        'Dein Wochenziel hat Platz für eine: Jede Simulation dauert ein ganzes Gespräch von {{minutes}} Minuten.',
+      someRoom_other:
+        'Dein Wochenziel hat Platz für {{count}}: Jede Simulation dauert ein ganzes Gespräch von {{minutes}} Minuten.',
+      noRoom:
+        'Dein Wochenziel hat keinen Platz für eine: Eine Simulation dauert ein ganzes Gespräch von {{minutes}} Minuten, mehr als die Hälfte davon.',
     },
     recent: {
       title: 'Letzte Gespräche',

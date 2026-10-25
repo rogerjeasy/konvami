@@ -258,17 +258,6 @@ def build_backend(
         profiles=profiles, sessions=sessions, conversations=conversations, cards=cards
     )
     voice_config = voice_settings(environment.get(VOICE_VARIABLE))
-    director = DirectorService(
-        profiles=profiles,
-        onboarding=onboarding,
-        conversations=conversations,
-        cards=cards,
-        grammar=grammar,
-        # The calls are built below, with the planner that reads this week's topics from here.
-        allowance=lambda user_id: voice.allowance(user_id),
-        call_seconds=voice_config.max_seconds.get(CallPurpose.PRACTICE, 0),
-        clock=_now,
-    )
     speech = OpenAiSpeech(openai_key, meter=meter)
     sounds = Sounds(speech=speech, model=models.speech, files=files)
     exams = ExamService(
@@ -282,6 +271,18 @@ def build_backend(
         # Scoring an exam is judging the learner's German, as the report does.
         model=models.report,
         sounds=sounds,
+        clock=_now,
+    )
+    director = DirectorService(
+        profiles=profiles,
+        onboarding=onboarding,
+        conversations=conversations,
+        cards=cards,
+        grammar=grammar,
+        exams=exams,
+        # The calls are built below, with the planner that reads this week's topics from here.
+        allowance=lambda user_id: voice.allowance(user_id),
+        call_seconds=voice_config.max_seconds.get(CallPurpose.PRACTICE, 0),
         clock=_now,
     )
     voice = VoiceCallService(

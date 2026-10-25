@@ -128,15 +128,28 @@ export const FAKE_PLAN: WeekPlan = {
   minutes: 40,
   days: 4,
   capped: false,
-  sessions: { review: 0, rolePlay: 1, free: 3 },
+  sessions: { exam: 0, review: 0, rolePlay: 1, free: 3 },
   topics: ['perfekt', 'dative', 'two_way_prepositions'],
   cards: 0,
   doneMinutes: 0,
   doneDays: 0,
-  today: [{ kind: 'free', minutes: 10, topic: 'perfekt', scenario: null }],
+  today: [{ kind: 'free', minutes: 10, topic: 'perfekt', scenario: null, exam: null }],
   todayCards: 0,
   reason: 'on_track',
   missed: [],
+  exam: null,
+};
+
+/** The week's simulations for a learner five weeks from the Goethe B1: one, not done yet. */
+export const FAKE_EXAM_WEEK: NonNullable<WeekPlan['exam']> = {
+  test: 'goethe_b1',
+  name: 'Goethe-Zertifikat B1',
+  pace: 'weekly',
+  minutes: 10,
+  wanted: 1,
+  simulations: 1,
+  done: 0,
+  weakest: null,
 };
 
 /** Last week's check-in as Progress gets it before anyone asked for its words. */

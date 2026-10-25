@@ -426,6 +426,7 @@ def services(
         conversations=conversations,
         cards=cards,
         grammar=grammar,
+        exams=exams,
         allowance=voice.allowance,
         call_seconds=VOICE.max_seconds[CallPurpose.PRACTICE],
         clock=clock,

@@ -1,7 +1,8 @@
 """The Learning Director (spec §6.12, §8.2): the learner's week, not just their next call.
 
-From the learner's goals it makes a weekly plan: how many free conversations, role-plays and
-review conversations, which grammar topics in which order, and how many cards to review. Every
+From the learner's goals it makes a weekly plan: how many exam simulations, free conversations,
+role-plays and review conversations, which grammar topics in which order, and how many cards to
+review. Every
 time Today opens, the rest of the week is worked out again from what was done, and the plan says
 why when it changed: days missed, voice minutes running short, the week already done.
 
@@ -25,8 +26,11 @@ from konvami_api.domain.conversations import (
     Conversation,
     ConversationService,
     DayActivity,
+    zone_of,
 )
 from konvami_api.domain.costs import Allowance, week_start
+from konvami_api.domain.exam_centre import ExamService, Preparation
+from konvami_api.domain.exams import PartKind
 from konvami_api.domain.grammar_map import GrammarMapService, Mastery, TopicState, Trend
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.profile import LEVEL_GOAL, WEEKLY_HABIT, Profile, ProfileService
@@ -45,21 +49,25 @@ _WEEK = dt.timedelta(days=_WEEK_DAYS)
 
 
 class SessionKind(StrEnum):
+    # A simulation of the learner's speaking test (spec §6.13), with the examiner.
+    EXAM = "exam"
     # A review conversation (spec §6.7): built around the due words.
     REVIEW = "review"
     ROLE_PLAY = "role_play"
     FREE = "free"
 
 
-# Who comes first when two kinds are as far behind: words while they are fresh, then a
-# situation, then free talk.
-_KIND_ORDER = (SessionKind.REVIEW, SessionKind.ROLE_PLAY, SessionKind.FREE)
+# Who comes first when two kinds are as far behind: a simulation early in the week, so the rest
+# of it can work on what it showed, then words while they are fresh, then a situation, then free
+# talk.
+_KIND_ORDER = (SessionKind.EXAM, SessionKind.REVIEW, SessionKind.ROLE_PLAY, SessionKind.FREE)
 
 
 class Lean(StrEnum):
     """What the goals make the week lean on."""
 
-    # An exam on a date: role-plays, the nearest the app has to an exam's speaking part.
+    # An exam on a date: role-plays, everyday situations like the exam's tasks, besides the
+    # simulations of the test itself.
     EXAM = "exam"
     # Living, working or travelling in the language: real-life situations.
     LIFE = "life"
@@ -95,19 +103,81 @@ class Habit:
 DEFAULT_HABIT = Habit(days=4, minutes=40)
 
 
+class ExamPace(StrEnum):
+    """How often the week plans a simulation of the learner's speaking test."""
+
+    # No simulation yet: a first one shows where the learner stands, however far the exam.
+    FIRST = "first"
+    # More than eight weeks to go, or no date: one every second week.
+    FORTNIGHTLY = "fortnightly"
+    # The last eight weeks: one a week.
+    WEEKLY = "weekly"
+    # The last two weeks: two.
+    FINAL = "final"
+
+
+# The weeks before the exam with a simulation every week, and with two.
+WEEKLY_FROM = dt.timedelta(weeks=8)
+FINAL_FROM = dt.timedelta(weeks=2)
+_FINAL_SIMULATIONS = 2
+
+
+@dataclass(frozen=True)
+class WeakestPart:
+    """A part of the speaking test, as the learner sees it: "Part 2 · Present a topic"."""
+
+    # Its place in the test, 1 for the first.
+    number: int
+    kind: PartKind
+
+
+@dataclass(frozen=True)
+class ExamInputs:
+    """The learner's speaking test, when their exam has one."""
+
+    # The speaking test (`SpeakingExam.id`) and its name.
+    test: str
+    name: str
+    # The exam's day; None when the learner gave none.
+    date: dt.date | None
+    # Simulations of it held before this week, and in the week before.
+    before: int
+    last_week: int
+    # The part that scored lowest lately; None before a scored simulation.
+    weakest: WeakestPart | None
+
+
+@dataclass(frozen=True)
+class ExamWeek:
+    """The week's simulations of the learner's speaking test."""
+
+    test: str
+    name: str
+    pace: ExamPace
+    # How long one takes: a whole call.
+    minutes: int
+    # The simulations the pace asks for, and those the week has room for.
+    wanted: int
+    simulations: int
+    done: int
+    weakest: WeakestPart | None
+
+
 @dataclass(frozen=True)
 class WeekSoFar:
     """What the learner did this week."""
 
-    # The days they practised on, with how long.
+    # The days they practised on, with how long, simulations included.
     days: tuple[DayActivity, ...]
     free: int
     role_plays: int
     reviews: int
     cards_reviewed: int
+    simulations: int = 0
 
     def done(self, kind: SessionKind) -> int:
         return {
+            SessionKind.EXAM: self.simulations,
             SessionKind.REVIEW: self.reviews,
             SessionKind.ROLE_PLAY: self.role_plays,
             SessionKind.FREE: self.free,
@@ -137,6 +207,8 @@ class WeekInputs:
     # The day the learner joined (finished onboarding): in their first week, the planned days
     # before it are not theirs. None when unknown.
     started: dt.date | None = None
+    # The speaking test of the exam ahead; None without one.
+    exam: ExamInputs | None = None
 
 
 @dataclass(frozen=True)
@@ -147,6 +219,8 @@ class Session:
     topic: str | None
     # A role-play's situation (a scenario id); None for the other kinds.
     scenario: str | None = None
+    # A simulation's speaking test (`SpeakingExam.id`); None for the other kinds.
+    exam: str | None = None
 
 
 @dataclass(frozen=True)
@@ -170,6 +244,8 @@ class WeekPlan:
     reason: Reason
     # The planned days that went by without practice, when they shaped today.
     missed: tuple[dt.date, ...]
+    # The week's simulations; None without an exam that has a speaking test.
+    exam: ExamWeek | None = None
 
 
 def _steps_down(minutes: int) -> int:
@@ -205,15 +281,50 @@ def _mix(calls: int, lean: Lean, words_due: int, role_plays: bool) -> dict[Sessi
     }
 
 
+def _exam_week(exam: ExamInputs, inputs: WeekInputs, week_minutes: int) -> ExamWeek:
+    """The simulations the week plans: more often as the exam comes closer, never more than
+    half the week's speaking (each takes a whole call), and none from the exam's day on."""
+    monday = inputs.today - dt.timedelta(days=inputs.today.weekday())
+    ahead = exam.date - monday if exam.date else None
+    if ahead is not None and ahead < FINAL_FROM:
+        pace, wanted = ExamPace.FINAL, _FINAL_SIMULATIONS
+    elif exam.before == 0:
+        pace, wanted = ExamPace.FIRST, 1
+    elif ahead is not None and ahead < WEEKLY_FROM:
+        pace, wanted = ExamPace.WEEKLY, 1
+    else:
+        pace, wanted = ExamPace.FORTNIGHTLY, 0 if exam.last_week else 1
+    done = inputs.so_far.simulations
+    room = week_minutes // 2 // inputs.call_minutes
+    planned = min(wanted, room)
+    if exam.date is not None and exam.date <= inputs.today:
+        planned = min(planned, done)
+    return ExamWeek(
+        test=exam.test,
+        name=exam.name,
+        pace=pace,
+        minutes=inputs.call_minutes,
+        wanted=wanted,
+        simulations=planned,
+        done=done,
+        weakest=exam.weakest,
+    )
+
+
 def _next_kinds(
-    targets: Mapping[SessionKind, int], so_far: WeekSoFar, count: int
+    targets: Mapping[SessionKind, int], so_far: WeekSoFar, pieces: Sequence[int], whole: int
 ) -> list[SessionKind]:
-    """The next `count` kinds of conversation: each time the one furthest behind its target.
-    Once every target is met, free conversation."""
+    """The kinds of conversation for the next `pieces` (their minutes): each time the one
+    furthest behind its target, a simulation only for a piece of a `whole` call. Once every
+    target is met, free conversation."""
     left = {kind: max(0, targets[kind] - so_far.done(kind)) for kind in _KIND_ORDER}
     kinds: list[SessionKind] = []
-    for _ in range(count):
-        behind = [kind for kind in _KIND_ORDER if left[kind] > 0]
+    for piece in pieces:
+        behind = [
+            kind
+            for kind in _KIND_ORDER
+            if left[kind] > 0 and (kind is not SessionKind.EXAM or piece >= whole)
+        ]
         if not behind:
             kinds.append(SessionKind.FREE)
             continue
@@ -233,11 +344,16 @@ def _sessions(
     inputs: WeekInputs, targets: Mapping[SessionKind, int], minutes: int
 ) -> tuple[Session, ...]:
     pieces = _pieces(minutes, inputs.call_minutes)
-    kinds = _next_kinds(targets, inputs.so_far, len(pieces))
+    kinds = _next_kinds(targets, inputs.so_far, pieces, inputs.call_minutes)
     # Topics take turns across the week's conversations, in their order.
     turn = inputs.so_far.free + inputs.so_far.role_plays
     sessions = []
     for kind, piece in zip(kinds, pieces, strict=True):
+        if kind is SessionKind.EXAM:
+            sessions.append(
+                Session(kind, piece, None, exam=inputs.exam.test if inputs.exam else None)
+            )
+            continue
         topic = None
         if kind is not SessionKind.REVIEW and inputs.topics:
             topic = inputs.topics[turn % len(inputs.topics)]
@@ -297,7 +413,12 @@ def plan_week(inputs: WeekInputs) -> WeekPlan:
         math.ceil(week_minutes / inputs.call_minutes),
         min(week_days, week_minutes // MINUTES_STEP),
     )
-    targets = _mix(calls, inputs.lean, inputs.words_due, inputs.role_plays)
+    exam = _exam_week(inputs.exam, inputs, week_minutes) if inputs.exam else None
+    simulations = exam.simulations if exam else 0
+    targets = {
+        SessionKind.EXAM: simulations,
+        **_mix(calls - simulations, inputs.lean, inputs.words_due, inputs.role_plays),
+    }
 
     practised = {day.day: day.seconds for day in inputs.so_far.days}
     done_minutes = sum(practised.values()) // 60
@@ -310,6 +431,10 @@ def plan_week(inputs: WeekInputs) -> WeekPlan:
     days_to_share = 1 + len([d for d in weekdays if d > today.weekday()])
     share = min(_steps_up((left + today_done) / days_to_share), left + today_done)
     wanted = max(0, share - today_done)
+    # A simulation takes a whole call: the day one is due is that long, and the planned days
+    # after it share a little less.
+    if simulations > inputs.so_far.simulations and 0 < wanted < inputs.call_minutes <= left:
+        wanted = inputs.call_minutes
     granted = min(wanted, voice_left)
 
     missed: tuple[dt.date, ...] = ()
@@ -352,6 +477,7 @@ def plan_week(inputs: WeekInputs) -> WeekPlan:
         today_cards=inputs.cards_due_now,
         reason=reason,
         missed=missed,
+        exam=exam,
     )
 
 
@@ -460,17 +586,55 @@ def _monday(day: dt.date) -> dt.date:
 
 
 def _so_far(
-    days: Sequence[DayActivity], held: Sequence[Conversation], monday: dt.date, reviewed: int
+    days: Sequence[DayActivity],
+    held: Sequence[Conversation],
+    simulated: Sequence[tuple[dt.date, int]],
+    monday: dt.date,
+    reviewed: int,
 ) -> WeekSoFar:
+    """The week so far: its conversations, and its simulations (their day and seconds), which
+    are speaking too."""
     role_plays = sum(1 for c in held if c.scenario)
     reviews = sum(1 for c in held if c.review and not c.scenario)
+    by_day = {day.day: day for day in days if monday <= day.day < monday + _WEEK}
+    for day, seconds in simulated:
+        found = by_day.get(day, DayActivity(day, 0, 0))
+        by_day[day] = DayActivity(day, found.seconds + seconds, found.conversations + 1)
     return WeekSoFar(
-        days=tuple(day for day in days if monday <= day.day < monday + _WEEK),
+        days=tuple(by_day[day] for day in sorted(by_day)),
         free=len(held) - role_plays - reviews,
         role_plays=role_plays,
         reviews=reviews,
         cards_reviewed=reviewed,
+        simulations=len(simulated),
     )
+
+
+def _exam_inputs(
+    preparation: Preparation, timezone: str | None, monday: dt.date
+) -> tuple[ExamInputs, list[tuple[dt.date, int]]]:
+    """What the plan needs of the learner's speaking test, and this week's simulations of it
+    (their day on the learner's calendar and seconds)."""
+    zone = zone_of(timezone)
+    days = [(held.ended_at.astimezone(zone).date(), held.seconds) for held in preparation.held]
+    exam = preparation.exam
+    weakest = next(
+        (
+            WeakestPart(number, part.kind)
+            for number, part in enumerate(exam.parts, start=1)
+            if part.id == preparation.weakest
+        ),
+        None,
+    )
+    inputs = ExamInputs(
+        test=exam.id,
+        name=exam.name,
+        date=preparation.date,
+        before=sum(1 for day, _ in days if day < monday),
+        last_week=sum(1 for day, _ in days if monday - _WEEK <= day < monday),
+        weakest=weakest,
+    )
+    return inputs, [(day, seconds) for day, seconds in days if day >= monday]
 
 
 class DirectorService:
@@ -482,6 +646,7 @@ class DirectorService:
         conversations: ConversationService,
         cards: CardService,
         grammar: GrammarMapService,
+        exams: ExamService,
         allowance: Callable[[UUID], Allowance],
         call_seconds: int,
         clock: Callable[[], dt.datetime],
@@ -493,6 +658,7 @@ class DirectorService:
         self._conversations = conversations
         self._cards = cards
         self._grammar = grammar
+        self._exams = exams
         self._allowance = allowance
         self._call_minutes = max(MINUTES_STEP, call_seconds // 60)
         self._clock = clock
@@ -518,6 +684,12 @@ class DirectorService:
             for c in self._conversations.listed(user_id, limit=PAGE_MAX).conversations
             if c.scenario
         ]
+        exam: ExamInputs | None = None
+        simulated: list[tuple[dt.date, int]] = []
+        if upcoming_exam(profile, language, today):
+            preparation = self._exams.preparation(user_id)
+            if preparation is not None:
+                exam, simulated = _exam_inputs(preparation, timezone, monday)
         plan = plan_week(
             WeekInputs(
                 today=today,
@@ -534,10 +706,12 @@ class DirectorService:
                 so_far=_so_far(
                     days.days,
                     self._conversations.week(user_id, timezone, monday),
+                    simulated,
                     monday,
                     self._cards.reviews_since(user_id, voice_week),
                 ),
                 started=self.started(user_id),
+                exam=exam,
             )
         )
         return replace(plan, today=_with_scenarios(plan.today, scenarios, level, played))

@@ -957,6 +957,17 @@
         "title": "ExamOut",
         "type": "object"
       },
+      "ExamPace": {
+        "description": "How often the week plans a simulation of the learner's speaking test.",
+        "enum": [
+          "first",
+          "fortnightly",
+          "weekly",
+          "final"
+        ],
+        "title": "ExamPace",
+        "type": "string"
+      },
       "ExamPartOut": {
         "additionalProperties": false,
         "properties": {
@@ -993,6 +1004,61 @@
           "seconds"
         ],
         "title": "ExamPartOut",
+        "type": "object"
+      },
+      "ExamWeekOut": {
+        "additionalProperties": false,
+        "description": "The week's simulations of the learner's speaking test.",
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "minutes": {
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pace": {
+            "$ref": "#/components/schemas/ExamPace"
+          },
+          "simulations": {
+            "title": "Simulations",
+            "type": "integer"
+          },
+          "test": {
+            "title": "Test",
+            "type": "string"
+          },
+          "wanted": {
+            "title": "Wanted",
+            "type": "integer"
+          },
+          "weakest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeakestPartOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "test",
+          "name",
+          "pace",
+          "minutes",
+          "wanted",
+          "simulations",
+          "done",
+          "weakest"
+        ],
+        "title": "ExamWeekOut",
         "type": "object"
       },
       "ExampleOut": {
@@ -2865,6 +2931,17 @@
         "additionalProperties": false,
         "description": "One conversation of today's plan.",
         "properties": {
+          "exam": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam"
+          },
           "kind": {
             "$ref": "#/components/schemas/SessionKind"
           },
@@ -2899,7 +2976,8 @@
           "kind",
           "minutes",
           "topic",
-          "scenario"
+          "scenario",
+          "exam"
         ],
         "title": "PlanSessionOut",
         "type": "object"
@@ -3563,6 +3641,7 @@
       },
       "SessionKind": {
         "enum": [
+          "exam",
           "review",
           "role_play",
           "free"
@@ -4472,6 +4551,39 @@
         "title": "VoiceSampleOut",
         "type": "object"
       },
+      "WeakestPartOut": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "introduce",
+              "ask_answer",
+              "requests",
+              "questions_about_you",
+              "talk_about_life",
+              "plan_together",
+              "present_topic",
+              "feedback_questions",
+              "talk",
+              "discussion",
+              "topic_conversation",
+              "picture_experience"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "number",
+          "kind"
+        ],
+        "title": "WeakestPartOut",
+        "type": "object"
+      },
       "WeekNumbersOut": {
         "additionalProperties": false,
         "properties": {
@@ -4651,6 +4763,16 @@
             "title": "Doneminutes",
             "type": "integer"
           },
+          "exam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExamWeekOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "minutes": {
             "title": "Minutes",
             "type": "integer"
@@ -4706,7 +4828,8 @@
           "today",
           "todayCards",
           "reason",
-          "missed"
+          "missed",
+          "exam"
         ],
         "title": "WeekPlanOut",
         "type": "object"
@@ -4751,6 +4874,10 @@
       "WeekSessionsOut": {
         "additionalProperties": false,
         "properties": {
+          "exam": {
+            "title": "Exam",
+            "type": "integer"
+          },
           "free": {
             "title": "Free",
             "type": "integer"
@@ -4765,6 +4892,7 @@
           }
         },
         "required": [
+          "exam",
           "review",
           "rolePlay",
           "free"
