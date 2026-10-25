@@ -47,6 +47,14 @@ async function ask(question: string) {
 }
 
 describe('5.12 Ask the tutor', () => {
+  it('has a question written elsewhere ready to send', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ question: 'How does “Dative” work?' });
+    await open();
+
+    expect(screen.getByLabelText(FIELD)).toHaveProp('value', 'How does “Dative” work?');
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled();
+  });
+
   it('invites a first question', async () => {
     await open();
 

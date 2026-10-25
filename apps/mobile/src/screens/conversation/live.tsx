@@ -147,15 +147,18 @@ function HelpSheet({
 function Call({
   partner,
   scenario,
+  practise,
   onRetry,
 }: {
   partner: Persona;
   /** The role-play, for one; its goals show once the catalog is read. */
   scenario?: string;
+  /** A grammar topic the learner chose to practise (the grammar map's "Practise this"). */
+  practise?: string;
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const call = useVoiceCall('practice', partner.id, scenario);
+  const call = useVoiceCall('practice', partner.id, scenario, practise);
   const { scenarios } = useScenarios();
   const rolePlay = scenario ? scenarios?.find(({ id }) => id === scenario) : undefined;
   const { conversation, callId, stop, plan } = call;
@@ -272,9 +275,10 @@ function Call({
 export function LiveConversationScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { personaId, scenario } = useLocalSearchParams<{
+  const { personaId, scenario, practise } = useLocalSearchParams<{
     personaId: string;
     scenario?: string;
+    practise?: string;
   }>();
   const { home: store } = usePracticeServices();
   const home = useHome();
@@ -321,6 +325,7 @@ export function LiveConversationScreen() {
       key={attempt}
       partner={partner}
       scenario={scenario}
+      practise={practise}
       onRetry={() => setAttempt((count) => count + 1)}
     />
   );

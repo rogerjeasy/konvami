@@ -6,6 +6,9 @@ import {
   type Catalog,
   type Conversation,
   type Costs,
+  type GrammarMap,
+  type GrammarTopic,
+  type GrammarTopicPage,
   type ConversationReport,
   type Home,
   type HomePartner,
@@ -438,6 +441,78 @@ const wording = (text: string) => (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?
 const MAX_PARTNERS = 12;
 const DRAFTS_PER_DAY = 20;
 const FILES = 'https://files.test';
+
+const topic = (
+  id: string,
+  level: string,
+  mastery: GrammarTopic['mastery'],
+  uses = 0,
+  correct = 0,
+  conversations = 0,
+  trend: GrammarTopic['trend'] = null,
+): GrammarTopic => ({
+  id,
+  level,
+  mastery,
+  uses,
+  correct,
+  conversations,
+  trend,
+  lastUsedAt: uses ? '2026-10-08T18:00:00Z' : null,
+});
+
+/** A learner at A2 with a few conversations behind them: some topics used, most still ahead. */
+export const FAKE_GRAMMAR_MAP: GrammarMap = {
+  language: 'de',
+  level: 'A2',
+  topics: [
+    topic('present_tense', 'A1', 'mastered', 24, 23, 6, 'steady'),
+    topic('verb_second', 'A1', 'mostly_correct', 14, 11, 5, 'improving'),
+    topic('articles_gender', 'A1', 'practising', 9, 5, 4, 'steady'),
+    topic('negation', 'A1', 'introduced', 2, 2, 1),
+    topic('plural', 'A1', 'not_started'),
+    topic('perfekt', 'A2', 'mostly_correct', 12, 9, 4, 'improving'),
+    topic('dative', 'A2', 'practising', 10, 5, 4, 'slipping'),
+    topic('subordinate_clauses', 'A2', 'not_started'),
+    topic('adjective_endings', 'B1', 'not_started'),
+    topic('passive', 'B1', 'not_started'),
+    topic('konjunktiv_1', 'B2', 'not_started'),
+  ],
+};
+
+/** The page of a topic of `FAKE_GRAMMAR_MAP`: the dative with two of the learner's mistakes. */
+export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
+  const found = FAKE_GRAMMAR_MAP.topics.find((t) => t.id === id);
+  if (!found) return null;
+  const dative = id === 'dative';
+  return {
+    topic: found,
+    examples: dative
+      ? ['Ich fahre mit dem Bus.', 'Ich helfe meiner Nachbarin.']
+      : ['Ich wohne in Zürich.'],
+    typicalMistakes: dative ? ['Ich fahre mit der Bus.', 'Ich helfe meine Mutter.'] : [],
+    mistakes: dative
+      ? [
+          {
+            conversationId: 'rtc_2',
+            at: '2026-10-08T18:00:00Z',
+            original: 'bei meine Freundin',
+            corrected: 'bei meiner Freundin',
+            explanation: '« bei » est toujours suivi du datif.',
+            certain: false,
+          },
+          {
+            conversationId: 'rtc_1',
+            at: '2026-10-06T18:00:00Z',
+            original: 'mit der Bus',
+            corrected: 'mit dem Bus',
+            explanation: '« mit » est toujours suivi du datif : der Bus devient dem Bus.',
+            certain: true,
+          },
+        ]
+      : [],
+  };
+}
 
 export interface FakeApi extends ApiClient {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
@@ -1267,6 +1342,16 @@ export function createFakeApi(): FakeApi {
     async getTutorQuestions() {
       await record('getTutorQuestions');
       return { questions: tutorQuestions };
+    },
+    async getGrammarMap() {
+      await record('getGrammarMap');
+      return FAKE_GRAMMAR_MAP;
+    },
+    async getGrammarTopic(id) {
+      await record('getGrammarTopic', id);
+      const page = fakeGrammarTopic(id);
+      if (!page) throw new ApiError('not_found', 404);
+      return page;
     },
     async askTutor(question) {
       await record('askTutor', question);

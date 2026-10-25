@@ -277,6 +277,8 @@ export const size = {
   progressHeight: 4,
   /** A bar that shows a share of a whole (the learner's part of the talking). */
   meterHeight: 8,
+  /** The width of one of the four steps of a grammar topic's mastery (5.14, 5.15). */
+  masteryStep: 14,
   /** The tallest bar of a small bar chart (minutes per week). */
   chartHeight: 96,
   /** One cell of a week-by-week grid (how often a kind of mistake came up). */

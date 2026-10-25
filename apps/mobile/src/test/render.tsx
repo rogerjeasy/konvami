@@ -96,10 +96,11 @@ export async function renderScreen(
           <PracticeProvider services={practice}>
             <ProfileProvider services={profile}>
               <VoiceProvider
-                createEngine={(purpose, personaId, scenario) => {
+                createEngine={(purpose, personaId, scenario, practise) => {
                   engine.openedFor.push(purpose);
                   engine.openedWith.push(personaId);
                   engine.openedScenarios.push(scenario);
+                  engine.openedPractise.push(practise);
                   return engine;
                 }}
               >

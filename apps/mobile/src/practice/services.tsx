@@ -11,6 +11,8 @@ import type {
   ApiClient,
   Card,
   Catalog,
+  GrammarMap,
+  GrammarTopicPage,
   Scenario,
   CardSource,
   Progress,
@@ -62,6 +64,10 @@ export interface PracticeServices {
   catalog: ResourceStore<Catalog>;
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
+  /** The grammar map (5.14). */
+  grammar: ResourceStore<GrammarMap>;
+  /** One topic of the map (5.15). Rejects with an `ApiError` (`not_found`, …). */
+  readGrammarTopic: (id: string) => Promise<GrammarTopicPage>;
   /**
    * Asks the Tutor, about a typed question or about correction `index` of a report, and puts
    * the answer first. Rejects with an `ApiError` (`tutor_limit`, `unavailable`, …).
@@ -92,6 +98,8 @@ export function createPracticeServices(
     | 'getCatalog'
     | 'askTutor'
     | 'explainCorrection'
+    | 'getGrammarMap'
+    | 'getGrammarTopic'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -116,6 +124,8 @@ export function createPracticeServices(
     reviewCards: () => createReviewSession(api),
     catalog,
     tutor,
+    grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
+    readGrammarTopic: (id) => api.getGrammarTopic(id),
     askTutor: (asked) =>
       tutor.mutate(
         () =>
@@ -150,6 +160,7 @@ export function PracticeProvider({
     services.deck.reset();
     services.progress.reset();
     services.tutor.reset();
+    services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
 }
@@ -250,6 +261,43 @@ export function useReport(id: string): {
   }, [follower]);
   const view = useSyncExternalStore(follower.subscribe, follower.getState, follower.getState);
   return { view, request: () => void follower.request(), reload: follower.start };
+}
+
+/** The grammar map; re-renders when it changes. */
+export function useGrammarMap(): ResourceState<GrammarMap> {
+  const { grammar } = usePracticeServices();
+  return useSyncExternalStore(grammar.subscribe, grammar.getState, grammar.getState);
+}
+
+export type TopicReading =
+  | { phase: 'loading' }
+  | { phase: 'failed'; code: string }
+  | { phase: 'ready'; page: GrammarTopicPage };
+
+/** Reads one topic of the grammar map; `retry` reads it again after a failure. */
+export function useGrammarTopic(id: string): TopicReading & { retry: () => void } {
+  const { readGrammarTopic } = usePracticeServices();
+  const [reading, setReading] = useState<TopicReading>({ phase: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let current = true;
+    readGrammarTopic(id).then(
+      (page) => current && setReading({ phase: 'ready', page }),
+      (error: unknown) => current && setReading({ phase: 'failed', code: apiErrorCode(error) }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [readGrammarTopic, id, attempt]);
+
+  return {
+    ...reading,
+    retry: () => {
+      setReading({ phase: 'loading' });
+      setAttempt((count) => count + 1);
+    },
+  };
 }
 
 /** The questions asked to the Tutor; re-renders when they change. */

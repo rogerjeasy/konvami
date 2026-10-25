@@ -68,6 +68,8 @@ export const ROUTES = {
   tutor: '/tutor',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
+  /** 5.14 Grammar map: every topic of the language learned, and how well the learner uses it. */
+  grammar: '/grammar',
   /** 6.1 Profile: who the learner is, and the way to everything about their account. */
   account: '/account',
   /** 6.2 Personal: name, photo, app language. */
@@ -98,11 +100,21 @@ export const ROUTES = {
 export const partnerRoute = (id: string) =>
   ({ pathname: '/onboarding/partners/[id]', params: { id } }) as const satisfies Href;
 
-/** 5.3 A live conversation with one of the learner's partners; with `scenario`, a role-play. */
-export const callRoute = (personaId: string, scenario?: string) =>
+/**
+ * 5.3 A live conversation with one of the learner's partners; with `scenario`, a role-play; with
+ * `practise`, one that practises a grammar topic first.
+ */
+export const callRoute = (
+  personaId: string,
+  { scenario, practise }: { scenario?: string; practise?: string } = {},
+) =>
   ({
     pathname: '/call/[personaId]',
-    params: scenario ? { personaId, scenario } : { personaId },
+    params: {
+      personaId,
+      ...(scenario ? { scenario } : {}),
+      ...(practise ? { practise } : {}),
+    },
   }) as const satisfies Href;
 
 /** 5.6 One past conversation, to read again. */
@@ -124,6 +136,14 @@ export const studioRoute = (id: string) =>
 /** 6.11 One thing the learner's partners know, to reword or forget. */
 export const memoryRoute = (id: string) =>
   ({ pathname: '/account/memory/[id]', params: { id } }) as const satisfies Href;
+
+/** 5.15 One topic of the grammar map. */
+export const grammarTopicRoute = (topic: string) =>
+  ({ pathname: '/grammar/[topic]', params: { topic } }) as const satisfies Href;
+
+/** 5.12 Ask the tutor, with `question` written in the field, ready to send. */
+export const askTutorRoute = (question: string) =>
+  ({ pathname: '/tutor', params: { question } }) as const satisfies Href;
 
 /** 5.12 Ask the tutor, asking at once about correction `index` of a conversation's report. */
 export const explainRoute = (conversationId: string, index: number) =>
