@@ -251,6 +251,9 @@ def build_backend(
         clock=_now,
     )
     grammar = GrammarMapService(profiles=profiles, reports=reports)
+    conversation_review = ConversationReview(
+        profiles=profiles, sessions=sessions, conversations=conversations, cards=cards
+    )
     voice_config = voice_settings(environment.get(VOICE_VARIABLE))
     director = DirectorService(
         profiles=profiles,
@@ -374,6 +377,7 @@ def build_backend(
             grammar=grammar,
             levels=levels,
             director=director,
+            review=conversation_review,
             allowance=voice.allowance,
             repository=SqlWeekReviewRepository(sql),
             starter=LambdaWeekReviewStarter(clients.functions, worker),
@@ -388,9 +392,7 @@ def build_backend(
             listener=listener,
             clock=_now,
         ),
-        conversation_review=ConversationReview(
-            profiles=profiles, sessions=sessions, conversations=conversations, cards=cards
-        ),
+        conversation_review=conversation_review,
         voice_review=VoiceReviewService(
             profiles=profiles,
             cards=card_store,

@@ -78,6 +78,7 @@ def test_progress_shows_last_weeks_numbers_before_the_check_in_is_written(
     )
     assert numbers["conversations"] == 1
     assert set(numbers) >= {"topics", "mistakes", "previousMistakes", "levelBefore", "levelAfter"}
+    assert (numbers["wordsPlanned"], numbers["wordsUsed"]) == (0, 0)
 
 
 def test_asking_for_the_check_in_starts_its_writer_and_it_can_then_be_heard(

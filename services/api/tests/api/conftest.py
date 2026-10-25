@@ -393,6 +393,9 @@ def services(
         ),
     )
     grammar = GrammarMapService(profiles=profiles, reports=reports)
+    conversation_review = ConversationReview(
+        profiles=profiles, sessions=calls, conversations=conversations, cards=cards
+    )
     director = DirectorService(
         profiles=profiles,
         onboarding=onboarding,
@@ -464,6 +467,7 @@ def services(
             grammar=grammar,
             levels=levels,
             director=director,
+            review=conversation_review,
             allowance=voice.allowance,
             repository=InMemoryWeekReviewRepository(),
             starter=week_starter,
@@ -493,9 +497,7 @@ def services(
             ),
             clock=clock,
         ),
-        conversation_review=ConversationReview(
-            profiles=profiles, sessions=calls, conversations=conversations, cards=cards
-        ),
+        conversation_review=conversation_review,
         voice_review=VoiceReviewService(
             profiles=profiles,
             cards=card_store,
