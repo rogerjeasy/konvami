@@ -36,6 +36,12 @@ class TextModel(Protocol):
         """The answer as a JSON object matching the task's schema. Raises `TextModelError`."""
 
 
+def familiar_address(language: str) -> str:
+    """How a model is to address the learner in `language` (an English name): as the app does,
+    with the familiar form where the language has one (French "tu", German "du")."""
+    return f"Where {language} has a familiar form of address, use it, as the app does."
+
+
 def answer_object(properties: dict[str, Any]) -> dict[str, Any]:
     """The schema of a JSON object in which every property is required, as a text model's strict
     answers need."""

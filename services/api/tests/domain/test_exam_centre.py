@@ -165,6 +165,7 @@ def test_the_scorer_judges_each_part_by_the_rubric_and_writes_a_model_answer() -
     task = world.text.tasks[-1]
     assert task.model == "gpt-6.1-sol"
     assert "French" in task.instructions
+    assert "familiar form of address" in task.instructions
     assert "task:" in task.instructions
     assert "coherence:" in task.instructions
     content = json.loads(task.content)

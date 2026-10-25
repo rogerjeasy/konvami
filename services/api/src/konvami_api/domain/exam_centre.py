@@ -37,7 +37,14 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.speech import SpeechError, verbatim_prompt
-from konvami_api.domain.text import TextModel, TextModelError, TextTask, answer_list, answer_object
+from konvami_api.domain.text import (
+    TextModel,
+    TextModelError,
+    TextTask,
+    answer_list,
+    answer_object,
+    familiar_address,
+)
 from konvami_api.domain.tools import ToolResult, ToolSet
 from konvami_api.domain.voice import Briefing, FinishedCall, Hearing, VoiceSessionRepository
 
@@ -324,6 +331,7 @@ Give every part 0 to {MAX_MARK} points on each criterion, judged at {level}:
 learner did not do gets 0 on every criterion. Pronunciation is not judged: the transcript cannot
 show it. Be fair and strict, as an examiner is: this is an estimate the learner relies on.
 
+{familiar_address(explanation)}
 For each part write feedback in {explanation}: two or three sentences, specific, quoting the
 learner's own words in {target} where it helps, naming what to do better. Write a model answer
 in {target}: what a strong candidate at {level} would say for this card, 60 to 120 words, as
