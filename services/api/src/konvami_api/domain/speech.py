@@ -30,13 +30,19 @@ class SpeechModel(Protocol):
 @dataclass(frozen=True)
 class TranscriptionTask:
     model: str
-    # A WAV file.
+    # An audio file in `format`.
     audio: bytes
     # The language spoken, as an ISO 639-1 code.
     language: str
     # What the transcription is for and how to write it.
     prompt: str
     charge: Charge | None = None
+    # The audio's file type: "wav" (the recordings), "m4a" (a phone's own recording) or "webm"
+    # (a browser's).
+    format: str = "wav"
+    # How long the audio plays, when the file cannot say (a compressed recording); None to read
+    # it from a WAV file.
+    seconds: float | None = None
 
 
 class TranscriptionError(Exception):

@@ -43,6 +43,8 @@ class Feature(StrEnum):
     VERBATIM = "verbatim"
     # The check of a learner's turn during a call (the Live Error Spotter, spec §8.2).
     LIVE_CORRECTIONS = "live_corrections"
+    # A corrected sentence said again ("Say it better", spec §6.5).
+    RETRY = "retry"
     VOICE_SAMPLE = "voice_sample"
 
 

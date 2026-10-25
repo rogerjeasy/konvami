@@ -34,6 +34,7 @@ from konvami_api.domain.reports import (
     TopicUse,
     Word,
 )
+from konvami_api.domain.retries import RetryService
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.tutor import TutorService
@@ -66,6 +67,7 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     RecordingCallStarter,
@@ -212,6 +214,16 @@ class World:
             new_id=lambda: next(card_ids),
         )
         self.grammar = GrammarMapService(profiles=self.profiles, reports=self.reports)
+        self.retry_transcriber = ScriptedTranscriber()
+        self.retries = RetryService(
+            profiles=self.profiles,
+            reports=self.reports,
+            accounts=self.accounts,
+            repository=InMemoryRetryRepository(),
+            transcriber=self.retry_transcriber,
+            model="gpt-4o-transcribe",
+            clock=self.clock,
+        )
         self.planner = SessionPlanner(
             profiles=self.profiles, reports=self.reports, cards=self.cards
         )
