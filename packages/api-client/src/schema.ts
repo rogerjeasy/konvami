@@ -2207,6 +2207,10 @@ export interface components {
              * Format: date
              */
             week: string;
+            /** Wordsplanned */
+            wordsPlanned: number;
+            /** Wordsused */
+            wordsUsed: number;
         };
         /** WeekOut */
         WeekOut: {

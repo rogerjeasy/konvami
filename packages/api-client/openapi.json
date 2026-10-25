@@ -4061,6 +4061,14 @@
             "format": "date",
             "title": "Week",
             "type": "string"
+          },
+          "wordsPlanned": {
+            "title": "Wordsplanned",
+            "type": "integer"
+          },
+          "wordsUsed": {
+            "title": "Wordsused",
+            "type": "integer"
           }
         },
         "required": [
@@ -4078,7 +4086,9 @@
           "mistakes",
           "previousMistakes",
           "levelBefore",
-          "levelAfter"
+          "levelAfter",
+          "wordsPlanned",
+          "wordsUsed"
         ],
         "title": "WeekNumbersOut",
         "type": "object"

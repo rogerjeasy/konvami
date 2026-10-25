@@ -1,5 +1,6 @@
 """The weekly report (spec §6.12, §6.15): how last week went, in numbers and in a few words."""
 
+import json
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -7,7 +8,8 @@ import pytest
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.costs import Feature
 from konvami_api.domain.grammar_map import Mastery
-from konvami_api.domain.plan import SessionPlan
+from konvami_api.domain.live_call import Turn
+from konvami_api.domain.plan import PlanWord, SessionPlan
 from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.reports import Mistake, TopicUse, Word
 from konvami_api.domain.text import TextModelError
@@ -103,6 +105,25 @@ def test_cards_reviewed_last_week_are_counted() -> None:
     assert numbers.cards_reviewed == 1
 
 
+def test_saved_words_brought_into_the_weeks_conversations_and_used_are_counted() -> None:
+    world = world_with_a_week()
+    words = (
+        PlanWord("der Termin", "le rendez-vous", "card-1"),
+        PlanWord("umsteigen", "changer de train", "card-2"),
+    )
+    lena = world.personas.partners(USER)[0]
+    world.talk(
+        lena,
+        at=at(LAST_WEEK + 5 * DAY),
+        plan=SessionPlan(language="de", words=words),
+        turns=(Turn("persona", "Hast du heute Zeit?"), Turn("learner", "Ich habe einen Termin.")),
+    )
+
+    numbers = world.week_reviews.last_week(USER, ZURICH).numbers  # type: ignore[union-attr]
+
+    assert (numbers.words_used, numbers.words_planned) == (1, 2)
+
+
 def test_a_level_that_changed_during_the_week_is_in_its_numbers() -> None:
     world = world_with_a_week()
     world.clock.now = at(LAST_WEEK + 4 * DAY)
@@ -168,8 +189,18 @@ def test_the_partner_writes_a_few_sentences_in_the_learners_explanation_language
     assert task.model == "gpt-6-luna"
     assert "Lena" in task.instructions
     assert "French" in task.instructions
-    assert '"minutes": 25' in task.content
-    assert "Dative" in task.content
+    content = json.loads(task.content)
+    # Readable to the model: what each number is, and states as words, not ids.
+    assert (content["minutes_spoken"], content["minutes_planned"]) == (25, 40)
+    assert content["grammar_topics"][0] == {
+        "topic": "Dative",
+        "when_the_week_began": "practising",
+        "when_it_ended": "mostly correct",
+    }
+    assert content["confirmed_mistakes"] == 1
+    assert "saved_words_used" in content
+    # Topic names come in English: the model is told to name them in the learner's language.
+    assert "as a learner would in French" in task.instructions
     assert task.charge is not None
     assert task.charge.feature is Feature.WEEK_REVIEW
     review = world.week_reviews.last_week(USER, ZURICH)

@@ -1333,6 +1333,9 @@ class WeekNumbersOut(ApiModel):
     # The level when the week began and when it ended; null before there was one.
     level_before: StartingLevel | None
     level_after: StartingLevel | None
+    # Saved words the week's conversations brought, and of them the ones the learner said.
+    words_planned: int
+    words_used: int
 
 
 class WeekReviewOut(ApiModel):
@@ -1370,6 +1373,8 @@ class WeekReviewOut(ApiModel):
                 previous_mistakes=numbers.previous_mistakes,
                 level_before=cast(StartingLevel | None, numbers.level_before),
                 level_after=cast(StartingLevel | None, numbers.level_after),
+                words_planned=numbers.words_planned,
+                words_used=numbers.words_used,
             ),
         )
 

@@ -407,6 +407,7 @@ class World:
             grammar=self.grammar,
             levels=self.levels,
             director=self.director,
+            review=self.conversation_review,
             allowance=self.voice.allowance,
             repository=self.week_store,
             starter=self.week_starter,

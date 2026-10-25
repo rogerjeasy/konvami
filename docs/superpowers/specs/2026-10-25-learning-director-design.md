@@ -76,12 +76,20 @@ week afterwards.
 
 - **Numbers**, counted from what was done like everything on Progress: minutes against the plan
   and the week before, days, conversations (with role-plays and review conversations), cards
-  reviewed, the week's topics and how each moved on the grammar map, confirmed mistakes against
-  the week before, and the level when the week began and ended.
+  reviewed, the saved words the week's conversations brought and how many of them the learner
+  said (read from each conversation's plan and transcript, as the review inside conversation
+  reads them; no table of its own), the week's topics and how each moved on the grammar map,
+  confirmed mistakes against the week before, and the level when the week began and ended.
 - **Words:** three to five sentences from the partner the learner talked to last, in their
-  explanation language, written by the small text model (the `week` text model, or the memory
-  model when none is set; well under a cent). It is given the numbers and the topics' names, never
-  the learner's words. It ends by asking whether this week's plan suits them and pointing to the
+  explanation language, written by the small text model (`week` in the text models, gpt-6-luna;
+  the memory model when none is set). It is given the numbers, each named for what it is, and the
+  topics' English names with their states as words, never the learner's words.
+- **Tried with the real model** (2026-10-25; French, English and Italian; a busy and a quiet
+  week; about $0.0005 each). The first version read English topic names and state ids back as
+  they were ("Le Dative est passé de « practising » à « mostly_correct »") and praised fewer
+  mistakes after one short conversation. Now the model is told to name topics as a learner would
+  in their language and not to praise fewer mistakes after very little practice; the second run
+  had neither problem, and every number it quoted was right. It ends by asking whether this week's plan suits them and pointing to the
   weekly goal.
 - **No nightly job** (my call): opening Progress in a new week asks for it
   (`POST /v1/weeks/{week}/review`), the worker writes it (`week_review` job), and the screen
@@ -99,8 +107,6 @@ week afterwards.
 - **Reminders and notifications:** there is no push set-up yet (spec §6.18).
 - **Changing the plan by voice:** it belongs to the full live session, like changing the profile
   by voice.
-- **"Saved words you used"** in the check-in: a word used in a conversation is stored as a card
-  review, not as a use of its own; cards reviewed are counted instead.
 - **Pacing towards a level date:** the plan aims at the goal's level but does not yet say whether
   the date is realistic; that needs the full level engine (spec §6.9).
 

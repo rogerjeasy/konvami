@@ -152,6 +152,8 @@ variable "text_models" {
     cards writes a saved word's forms (article, plural, verb forms, comparison; spec §6.7) in
     the worker: the stronger model, as a wrong form on a card is learnt by heart. One request
     for all the cards a learner saved together.
+    week writes last week's check-in from its numbers (spec §6.12): the small model, once per
+    learner and week, about $0.0005 each (tried on 2026-10-25).
   EOT
   type = object({
     assessment = string
@@ -163,6 +165,7 @@ variable "text_models" {
     tutor      = optional(string, "gpt-6.1-sol")
     spotter    = optional(string, "gpt-6-luna")
     cards      = optional(string, "gpt-6.1-sol")
+    week       = optional(string, "gpt-6-luna")
   })
   default = {
     assessment = "gpt-6.1-sol"
@@ -174,6 +177,7 @@ variable "text_models" {
     tutor      = "gpt-6.1-sol"
     spotter    = "gpt-6-luna"
     cards      = "gpt-6.1-sol"
+    week       = "gpt-6-luna"
   }
 }
 

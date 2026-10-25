@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
 from konvami_api.domain.cards import CardService
+from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService, DayActivity
 from konvami_api.domain.costs import Allowance, Charge, Feature
 from konvami_api.domain.director import DirectorService, habit_of, week_target
@@ -82,6 +83,10 @@ class WeekNumbers:
     # The level when the week began and when it ended; None before there was one.
     level_before: str | None
     level_after: str | None
+    # Saved words the week's conversations brought, and of them the ones the learner said. Left
+    # out by check-ins stored before they were counted.
+    words_planned: int = 0
+    words_used: int = 0
 
     def document(self) -> dict[str, Any]:
         return {
@@ -103,6 +108,8 @@ class WeekNumbers:
             "previous_mistakes": self.previous_mistakes,
             "level_before": self.level_before,
             "level_after": self.level_after,
+            "words_planned": self.words_planned,
+            "words_used": self.words_used,
         }
 
     @classmethod
@@ -188,9 +195,43 @@ check-in: what you would say to them about last week, three to five short senten
 The content is last week's numbers. Use only them and never invent any: say how long they
 spoke, against the week's plan and the week before; name one thing that went well (a topic that
 moved on, fewer mistakes, cards reviewed, a level reached); name one thing to keep at. A quiet
-week is fine: say so kindly and never make them feel guilty. Last, ask whether this week's plan
-suits them, and say they can change their weekly goal in their profile.
-Plain sentences only: no lists, headings or emoji. Grammar topics go by the names given."""
+week is fine: say so kindly and never make them feel guilty. Mistakes are the ones their
+conversation reports confirmed: after one or two short conversations, fewer of them says little,
+so do not praise it then. Last, ask whether this week's plan suits them, and say they can change
+their weekly goal in their profile.
+Plain sentences only: no lists, headings or emoji. The names of grammar topics and how well
+they are known come in English: say them as a learner would in {explanation}, never in quotes."""
+
+
+def _for_model(numbers: WeekNumbers, titles: dict[str, str]) -> dict[str, Any]:
+    """The week's numbers as the model reads them: each named for what it is, states as words.
+    Ids and bare names were read back to the learner as they were ("mostly_correct")."""
+    state = {mastery: mastery.value.replace("_", " ") for mastery in Mastery}
+    return {
+        "minutes_spoken": numbers.minutes,
+        "minutes_planned": numbers.planned_minutes,
+        "minutes_spoken_the_week_before": numbers.previous_minutes,
+        "days_practised": numbers.days,
+        "days_planned": numbers.planned_days,
+        "conversations": numbers.conversations,
+        "of_them_role_plays": numbers.role_plays,
+        "of_them_review_conversations": numbers.reviews,
+        "cards_reviewed": numbers.cards_reviewed,
+        "grammar_topics": [
+            {
+                "topic": titles.get(move.topic, move.topic),
+                "when_the_week_began": state[move.before],
+                "when_it_ended": state[move.after],
+            }
+            for move in numbers.topics
+        ],
+        "confirmed_mistakes": numbers.mistakes,
+        "confirmed_mistakes_the_week_before": numbers.previous_mistakes,
+        "level_when_the_week_began": numbers.level_before,
+        "level_when_it_ended": numbers.level_after,
+        "saved_words_brought_into_conversations": numbers.words_planned,
+        "saved_words_used": numbers.words_used,
+    }
 
 
 def _monday(day: dt.date) -> dt.date:
@@ -220,6 +261,7 @@ class WeekReviewService:
         grammar: GrammarMapService,
         levels: LevelService,
         director: DirectorService,
+        review: ConversationReview,
         allowance: Callable[[UUID], Allowance],
         repository: WeekReviewRepository,
         starter: WeekReviewStarter,
@@ -237,6 +279,7 @@ class WeekReviewService:
         self._grammar = grammar
         self._levels = levels
         self._director = director
+        self._review = review
         self._allowance = allowance
         self._repository = repository
         self._starter = starter
@@ -306,9 +349,6 @@ class WeekReviewService:
         explanation = profile.value(language, "explanation_language") or "en"
         pack = catalog.available_pack(language)
         titles = {topic.id: topic.title for topic in pack.grammar_map} if pack else {}
-        content = stored.numbers.document()
-        for move in content["topics"]:
-            move["topic"] = titles.get(move["topic"], move["topic"])
         task = TextTask(
             model=self._model,
             instructions=_instructions(
@@ -316,7 +356,7 @@ class WeekReviewService:
                 catalog.english_name(language),
                 catalog.english_name(explanation),
             ),
-            content=json.dumps(content, ensure_ascii=False),
+            content=json.dumps(_for_model(stored.numbers, titles), ensure_ascii=False),
             answer_name="weekly_check_in",
             answer_schema=_SCHEMA,
             charge=Charge(user_id, Feature.WEEK_REVIEW),
@@ -404,6 +444,9 @@ class WeekReviewService:
             s.topic.id: s.mastery.state for s in self._grammar.states(user_id, _utc(next_monday))
         }
         history = self._levels.history(user_id, language)
+        # A word is the same word in every conversation that brought it.
+        planned = {w.text.casefold() for c in held for w in self._review.planned_words(c.id)}
+        used = {w.text.casefold() for c in held for w in self._review.words_used(c.id)}
         return WeekNumbers(
             week=week,
             minutes=minutes,
@@ -424,6 +467,8 @@ class WeekReviewService:
             previous_mistakes=mistakes[week - _WEEK],
             level_before=_level_at(history, _utc(week)),
             level_after=_level_at(history, _utc(next_monday)),
+            words_planned=len(planned),
+            words_used=len(used),
         )
 
 
