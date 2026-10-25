@@ -68,6 +68,8 @@ export const ROUTES = {
   tutor: '/tutor',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
+  /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
+  exams: '/exams',
   /** 5.14 Grammar map: every topic of the language learned, and how well the learner uses it. */
   grammar: '/grammar',
   /** 6.1 Profile: who the learner is, and the way to everything about their account. */
@@ -162,3 +164,15 @@ export const explainRoute = (conversationId: string, index: number) =>
     pathname: '/tutor',
     params: { conversation: conversationId, correction: String(index) },
   }) as const satisfies Href;
+
+/** 5.17 Preparing a simulation of a speaking test: its cards and the preparation time. */
+export const examPrepRoute = (exam: string) =>
+  ({ pathname: '/exams/[exam]', params: { exam } }) as const satisfies Href;
+
+/** 5.17 The simulation itself: a call with the examiner. */
+export const examTalkRoute = (exam: string) =>
+  ({ pathname: '/exams/[exam]/talk', params: { exam } }) as const satisfies Href;
+
+/** 5.18 One simulation's estimated score. */
+export const simulationRoute = (id: string) =>
+  ({ pathname: '/exams/simulations/[id]', params: { id } }) as const satisfies Href;

@@ -31,6 +31,10 @@ import {
   type TurnAudio,
   type TutorAnswer,
   type TutorQuestion,
+  type ExamCard,
+  type ExamCentre,
+  type Simulation,
+  type SpeakingExam,
   type WeekPlan,
   type WeekReview,
   type WordDetails,
@@ -166,6 +170,76 @@ export const FAKE_WEEK_REVIEW: WeekReview = {
 /** What the partner's worker writes for `FAKE_WEEK_REVIEW`. */
 export const FAKE_WEEK_TEXT =
   'You spoke for 34 minutes last week, nine more than the week before. The dative is coming along nicely. Does this week’s plan suit you? You can change your weekly goal in your profile.';
+
+/** Two of the server's speaking tests (services/api: domain/exams.py), as the centre lists them. */
+export const FAKE_SPEAKING_EXAMS: SpeakingExam[] = [
+  {
+    id: 'goethe_b1',
+    exam: 'goethe',
+    levels: ['B1'],
+    name: 'Goethe-Zertifikat B1',
+    prepSeconds: 900,
+    passShare: 0.6,
+    parts: [
+      { id: 'teil_1', kind: 'plan_together', seconds: 180 },
+      { id: 'teil_2', kind: 'present_topic', seconds: 180 },
+      { id: 'teil_3', kind: 'feedback_questions', seconds: 120 },
+    ],
+  },
+  {
+    id: 'dtz',
+    exam: 'dtz',
+    levels: ['A2', 'B1'],
+    name: 'Deutsch-Test für Zuwanderer',
+    prepSeconds: 0,
+    passShare: 0.6,
+    parts: [
+      { id: 'teil_1', kind: 'introduce', seconds: 120 },
+      { id: 'teil_2', kind: 'picture_experience', seconds: 180 },
+      { id: 'teil_3', kind: 'plan_together', seconds: 180 },
+    ],
+  },
+];
+
+/** The cards of the next Goethe B1 simulation. */
+export const FAKE_EXAM_CARDS: ExamCard[] = [
+  {
+    id: 'b1_1a',
+    title: 'Eine Kollegin hört auf zu arbeiten. Planen Sie eine Abschiedsfeier.',
+    prompts: ['Wann?', 'Wo?', 'Essen und Getränke?', 'Geschenk?'],
+  },
+  {
+    id: 'b1_2a',
+    title: 'Sollen Kinder ein eigenes Handy haben?',
+    prompts: [
+      'Thema vorstellen',
+      'Eigene Erfahrung',
+      'Situation in Ihrem Heimatland',
+      'Vor- und Nachteile, Ihre Meinung',
+      'Abschluss und Dank',
+    ],
+  },
+  {
+    id: 'b1_3',
+    title: 'Über die Präsentation sprechen',
+    prompts: ['Auf die Rückmeldung reagieren', 'Fragen beantworten'],
+  },
+];
+
+/** What the scorer writes for a Goethe B1 simulation: 62.5 %, just past the pass mark. */
+export const FAKE_SIMULATION_RESULT: NonNullable<Simulation['result']> = {
+  total: 0.625,
+  passed: true,
+  passShare: 0.6,
+  summary: 'Work on the verb’s place after “weil” and on a longer presentation.',
+  parts: ['teil_1', 'teil_2', 'teil_3'].map((part) => ({
+    part,
+    marks: { task: 3, coherence: 3, vocabulary: 2, grammar: 2 },
+    share: 0.625,
+    feedback: 'You suggested a date and a place and reacted to the objection.',
+    modelAnswer: 'Ich schlage vor, dass wir am Freitag nach der Arbeit feiern.',
+  })),
+};
 
 /** A month of spending as the owner sees it: past the target, two learners, a few features. */
 export const FAKE_COSTS: Costs = {
@@ -686,6 +760,20 @@ export interface FakeApi extends ApiClient {
    * `writes` says the worker fails or takes longer.
    */
   practisedLastWeek(review?: Partial<WeekReview>, writes?: 'ready' | 'pending' | 'failed'): void;
+  /**
+   * An exam simulation done earlier (`FAKE_SIMULATION_RESULT` when scored), or the one a call
+   * has just made: its score is written by the time it is next read, unless `scores` says the
+   * worker fails, finds too little or takes longer.
+   */
+  simulated(
+    callId: string,
+    options?: {
+      status?: Simulation['status'];
+      result?: Simulation['result'];
+      daysAgo?: number;
+      scores?: 'ready' | 'pending' | 'failed' | 'too_short';
+    },
+  ): void;
   /** What the owner sees for a month (`FAKE_COSTS` for October 2026 unless set). */
   spent(costs: Costs): void;
 }
@@ -748,6 +836,8 @@ export function createFakeApi(): FakeApi {
   let planChanges: Partial<WeekPlan> = {};
   let lastWeek: WeekReview | null = null;
   let weekWrites: 'ready' | 'pending' | 'failed' = 'ready';
+  const simulations = new Map<string, Simulation>();
+  const scoring = new Map<string, 'ready' | 'pending' | 'failed' | 'too_short'>();
   const months = new Map<string, Costs>([[FAKE_COSTS.month, FAKE_COSTS]]);
   const uploads: string[] = [];
   let deleted = false;
@@ -1116,6 +1206,17 @@ export function createFakeApi(): FakeApi {
     planned(changes) {
       planChanges = { ...planChanges, ...changes };
     },
+    simulated(callId, { status = 'ready', result, daysAgo = 0, scores = 'ready' } = {}) {
+      simulations.set(callId, {
+        callId,
+        exam: 'goethe_b1',
+        cards: FAKE_EXAM_CARDS,
+        startedAt: new Date(Date.parse(FAKE_NOW) - daysAgo * DAY_MS).toISOString(),
+        status,
+        result: status === 'ready' ? (result ?? FAKE_SIMULATION_RESULT) : null,
+      });
+      scoring.set(callId, scores);
+    },
     practisedLastWeek(review = {}, writes = 'ready') {
       lastWeek = { ...FAKE_WEEK_REVIEW, ...review };
       weekWrites = writes;
@@ -1266,15 +1367,18 @@ export function createFakeApi(): FakeApi {
       essentialsConfirmed = true;
       return onboarding();
     },
-    async startVoiceCall(purpose, sdp, { personaId, practise } = {}) {
+    async startVoiceCall(purpose, sdp, { personaId, practise, scenario } = {}) {
       await record('startVoiceCall', purpose, sdp, personaId);
       if (purpose === 'placement') placement = 'in_progress';
+      if (purpose === 'exam' && !FAKE_SPEAKING_EXAMS.some(({ id }) => id === scenario)) {
+        throw new ApiError('not_found', 404);
+      }
       if (purpose === 'practice' && !personas?.some(({ id }) => id === personaId)) {
         throw new ApiError('not_found', 404);
       }
       const left = FAKE_WEEKLY_SECONDS - usedSeconds;
       if (left < MIN_CALL_SECONDS) throw new ApiError('minutes_used_up', 429);
-      const maxSeconds = Math.min(purpose === 'practice' ? 600 : 480, left);
+      const maxSeconds = Math.min(['practice', 'exam'].includes(purpose) ? 600 : 480, left);
       usedSeconds += maxSeconds;
       // Nothing to plan from yet: no reports in the fake. A review brings the due words.
       const review = practise === 'words';
@@ -1297,6 +1401,82 @@ export function createFakeApi(): FakeApi {
     async getProgress(timeZone) {
       await record('getProgress', timeZone);
       return progress();
+    },
+    async getExamCentre(): Promise<ExamCentre> {
+      await record('getExamCentre');
+      const language = target() ?? '';
+      const exam = fields.get(`${language}/exam`) as
+        { type: string; target_level: string | null; date: string | null } | null | undefined;
+      const suggested = exam
+        ? FAKE_SPEAKING_EXAMS.find(
+            (format) =>
+              format.exam === exam.type &&
+              (format.levels.length > 1 || format.levels.includes(exam.target_level ?? '')),
+          )
+        : undefined;
+      const done = [...simulations.values()].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+      const scored = done.filter((simulation) => simulation.result);
+      const latest = scored[0]?.result;
+      return {
+        language,
+        exam: exam ? { type: exam.type, targetLevel: exam.target_level, date: exam.date } : null,
+        suggested: suggested?.id ?? null,
+        formats: FAKE_SPEAKING_EXAMS,
+        simulations: done.map(({ callId, exam: id, startedAt, status, result }) => ({
+          callId,
+          exam: id,
+          startedAt,
+          status,
+          total: result?.total ?? null,
+          passed: result?.passed ?? null,
+        })),
+        readiness: latest
+          ? {
+              goethe_b1: {
+                latest: latest.total,
+                change: scored[1]?.result ? latest.total - scored[1].result.total : null,
+                passing: latest.passed,
+                weakest: 'teil_2',
+                readyOn: null,
+              },
+            }
+          : {},
+      };
+    },
+    async getNextSimulation(exam) {
+      await record('getNextSimulation', exam);
+      const found = FAKE_SPEAKING_EXAMS.find(({ id }) => id === exam);
+      if (!found) throw new ApiError('not_found', 404);
+      return { exam: found, cards: FAKE_EXAM_CARDS };
+    },
+    async getSimulation(callId) {
+      await record('getSimulation', callId);
+      const found = simulations.get(callId);
+      if (!found) throw new ApiError('not_found', 404);
+      // The worker finishes between two reads.
+      const outcome = scoring.get(callId) ?? 'ready';
+      if (found.status === 'pending' && outcome !== 'pending') {
+        simulations.set(callId, {
+          ...found,
+          status: outcome,
+          result: outcome === 'ready' ? FAKE_SIMULATION_RESULT : null,
+        });
+      }
+      return found;
+    },
+    async rescoreSimulation(callId) {
+      await record('rescoreSimulation', callId);
+      const found = simulations.get(callId);
+      if (!found) throw new ApiError('not_found', 404);
+      const asked: Simulation = found.status === 'failed' ? { ...found, status: 'pending' } : found;
+      simulations.set(callId, asked);
+      scoring.set(callId, 'ready');
+      return asked;
+    },
+    async getModelAnswerAudio(callId, part) {
+      await record('getModelAnswerAudio', callId, part);
+      if (simulations.get(callId)?.status !== 'ready') throw new ApiError('not_found', 404);
+      return { url: `https://files.test/exams/${callId}/${part}.mp3` };
     },
     async requestWeekReview(week, timeZone) {
       await record('requestWeekReview', week, timeZone);
