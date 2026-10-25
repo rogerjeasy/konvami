@@ -71,6 +71,9 @@ class TextModels:
     # Writes a word card's forms (spec §6.7): accuracy matters, a wrong form is learnt by heart.
     # Empty: cards keep only their word, meaning and sentence.
     cards: str = ""
+    # Writes the weekly check-in from last week's numbers (spec §6.12): a small model is
+    # enough. Empty: the memory model writes it.
+    week: str = ""
 
 
 class _TextModels(BaseModel):
@@ -87,6 +90,7 @@ class _TextModels(BaseModel):
     tutor: str = ""
     spotter: str = ""
     cards: str = ""
+    week: str = ""
 
 
 def text_models(raw: str | None) -> TextModels:
@@ -107,6 +111,7 @@ def text_models(raw: str | None) -> TextModels:
         tutor=models.tutor,
         spotter=models.spotter,
         cards=models.cards,
+        week=models.week,
     )
 
 

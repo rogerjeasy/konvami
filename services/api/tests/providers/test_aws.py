@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterator
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from konvami_api.providers.aws import (
     LambdaCallStarter,
     LambdaDetailsStarter,
     LambdaReportStarter,
+    LambdaWeekReviewStarter,
     SnsNotifier,
     cached_secret,
 )
@@ -84,6 +86,20 @@ def test_new_cards_are_handed_to_the_worker_to_be_filled_in(functions: Stubber) 
     )
 
     LambdaDetailsStarter(functions.client, "kv-dev-call-worker").start(USER)
+
+
+def test_a_weekly_check_in_is_handed_to_the_worker_to_be_written(functions: Stubber) -> None:
+    functions.add_response(
+        "invoke",
+        {"StatusCode": 202},
+        {
+            "FunctionName": "kv-dev-call-worker",
+            "InvocationType": "Event",
+            "Payload": json.dumps({"week_review": str(USER), "week": "2026-10-05"}).encode(),
+        },
+    )
+
+    LambdaWeekReviewStarter(functions.client, "kv-dev-call-worker").start(USER, date(2026, 10, 5))
 
 
 def test_a_secret_is_fetched_once_and_then_remembered(secrets: Stubber) -> None:

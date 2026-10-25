@@ -172,3 +172,11 @@ def test_the_live_checks_model_is_read_with_the_text_models() -> None:
     assert models.spotter == "gpt-6-luna"
     # Settings from before the Live Error Spotter: no live checks.
     assert text_models('{"assessment": "a", "personas": "p"}').spotter == ""
+
+
+def test_the_weekly_check_in_model_is_read_with_the_text_models() -> None:
+    models = text_models('{"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna", "week": "m"}')
+
+    assert models.week == "m"
+    # Written before weekly check-ins: none is set, and the memory model writes them.
+    assert text_models('{"assessment": "a", "personas": "p"}').week == ""
