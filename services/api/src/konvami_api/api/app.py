@@ -3,7 +3,7 @@
 import base64
 import binascii
 import datetime as dt
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Annotated, Any
 from uuid import UUID
@@ -17,6 +17,7 @@ from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
     AllowanceOut,
+    AnsweredOut,
     CardAudioOut,
     CardIn,
     CardOut,
@@ -48,12 +49,12 @@ from konvami_api.api.schemas import (
     ProfilePatch,
     ProgressOut,
     QueueOut,
+    RecordingIn,
     RecordingsOut,
     RecordingsPatch,
     ReportOut,
     RetriedOut,
     RetriesOut,
-    RetryIn,
     RetryOut,
     ReviewIn,
     TranscriptOut,
@@ -68,8 +69,9 @@ from konvami_api.api.schemas import (
 from konvami_api.domain.accounts import AccountService, AccountView
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
-from konvami_api.domain.cards import QUEUE_DEFAULT, CardService
+from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService
 from konvami_api.domain.catalog import Catalog
+from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -87,6 +89,7 @@ from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import VoiceCallService
+from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 
 
@@ -115,6 +118,8 @@ class Services:
     grammar: GrammarMapService
     card_details: CardDetailsService
     retries: RetryService
+    voice_review: VoiceReviewService
+    conversation_review: ConversationReview
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -126,6 +131,7 @@ NOT_FOUND: Responses = {404: {"model": ErrorBody}}
 TUTOR_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 429, 503)}
 CALL_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 429, 503)}
 RETRY_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 422, 429, 503)}
+ANSWER_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 422, 429, 503)}
 LIMITED: Responses = {429: {"model": ErrorBody}}
 UNAVAILABLE: Responses = {503: {"model": ErrorBody}}
 # An IANA time zone name is at most a few dozen characters ("America/Argentina/ComodRivadavia").
@@ -133,6 +139,19 @@ MAX_TIME_ZONE_LENGTH = 64
 
 
 FORBIDDEN: Responses = {403: {"model": ErrorBody}}
+
+
+def recorded(
+    recording: RecordingIn, error: Callable[[str], Exception]
+) -> tuple[bytes, float | None]:
+    """A recording's audio, and how long it plays in seconds as the device measured it. Audio
+    that is not base64 raises `error("invalid_value")`."""
+    try:
+        audio = base64.b64decode(recording.audio, validate=True)
+    except (binascii.Error, ValueError) as invalid:
+        raise error("invalid_value") from invalid
+    seconds = recording.duration_ms / 1000 if recording.duration_ms is not None else None
+    return audio, seconds
 
 
 def _router(services: Services) -> APIRouter:
@@ -360,6 +379,15 @@ def _router(services: Services) -> APIRouter:
     def review_card(user: CurrentUser, card_id: UUID, review: ReviewIn) -> CardOut:
         return CardOut.of(services.cards.review(user, card_id, review.rating))
 
+    @router.post("/cards/{card_id}/answers", operation_id="answerCard", responses=ANSWER_REFUSED)
+    def answer_card(user: CurrentUser, card_id: UUID, answer: RecordingIn) -> AnsweredOut:
+        """Hears a card answered out loud (voice review) and says how close it came. The card
+        is rated as before, by the learner."""
+        audio, seconds = recorded(answer, CardError)
+        return AnsweredOut.of(
+            services.voice_review.answer(user, card_id, audio, answer.format, seconds)
+        )
+
     @router.get(
         "/cards/{card_id}/audio", operation_id="getCardAudio", responses=NOT_FOUND | UNAVAILABLE
     )
@@ -390,14 +418,10 @@ def _router(services: Services) -> APIRouter:
         responses=RETRY_REFUSED,
     )
     def retry_correction(
-        user: CurrentUser, call_id: str, index: int, attempt: RetryIn
+        user: CurrentUser, call_id: str, index: int, attempt: RecordingIn
     ) -> RetriedOut:
         """Says correction `index` of a conversation's report again ("Say it better")."""
-        try:
-            audio = base64.b64decode(attempt.audio, validate=True)
-        except (binascii.Error, ValueError) as error:
-            raise RetryError("invalid_value") from error
-        seconds = attempt.duration_ms / 1000 if attempt.duration_ms is not None else None
+        audio, seconds = recorded(attempt, RetryError)
         return RetriedOut.of(
             services.retries.retry(user, call_id, index, audio, attempt.format, seconds)
         )

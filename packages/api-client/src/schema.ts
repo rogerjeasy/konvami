@@ -4,4540 +4,4650 @@
  */
 
 export interface paths {
-  '/v1/account': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Account */
+        get: operations["getAccount"];
+        put?: never;
+        post?: never;
+        /** Delete Account */
+        delete: operations["deleteAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Account */
-    get: operations['getAccount'];
-    put?: never;
-    post?: never;
-    /** Delete Account */
-    delete: operations['deleteAccount'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/account/picture': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/account/picture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Picture */
+        post: operations["confirmPicture"];
+        /** Remove Picture */
+        delete: operations["removePicture"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Confirm Picture */
-    post: operations['confirmPicture'];
-    /** Remove Picture */
-    delete: operations['removePicture'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/account/picture/upload': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/account/picture/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Picture Upload */
+        post: operations["startPictureUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Start Picture Upload */
-    post: operations['startPictureUpload'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/cards': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Cards */
+        get: operations["getCards"];
+        put?: never;
+        /**
+         * Save Card
+         * @description Makes a flashcard of a word or a correction in a conversation's report. Saving one
+         *     that is a card already answers with that card.
+         */
+        post: operations["saveCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Cards */
-    get: operations['getCards'];
-    put?: never;
-    /**
-     * Save Card
-     * @description Makes a flashcard of a word or a correction in a conversation's report. Saving one
-     *     that is a card already answers with that card.
-     */
-    post: operations['saveCard'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/cards/due': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/cards/due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Due Cards */
+        get: operations["getDueCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Due Cards */
-    get: operations['getDueCards'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/cards/{card_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/cards/{card_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Card */
+        delete: operations["removeCard"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Remove Card */
-    delete: operations['removeCard'];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/cards/{card_id}/audio': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/cards/{card_id}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer Card
+         * @description Hears a card answered out loud (voice review) and says how close it came. The card
+         *     is rated as before, by the learner.
+         */
+        post: operations["answerCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Card Audio
-     * @description Where the card's sound plays from: the word with its sentence, or a correction as it
-     *     is right, in the learner's partner's voice. Made the first time it is asked for.
-     */
-    get: operations['getCardAudio'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/cards/{card_id}/review': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/cards/{card_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Card Audio
+         * @description Where the card's sound plays from: the word with its sentence, or a correction as it
+         *     is right, in the learner's partner's voice. Made the first time it is asked for.
+         */
+        get: operations["getCardAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Review Card */
-    post: operations['reviewCard'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/catalog': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/cards/{card_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Card */
+        post: operations["reviewCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Catalog */
-    get: operations['getCatalog'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/conversations': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Catalog */
+        get: operations["getCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Conversations */
-    get: operations['getConversations'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/conversations/{call_id}/report/mistakes/{index}/retries': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversations */
+        get: operations["getConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Retry Correction
-     * @description Says correction `index` of a conversation's report again ("Say it better").
-     */
-    post: operations['retryCorrection'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/conversations/{call_id}/retries': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/conversations/{call_id}/report/mistakes/{index}/retries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Correction
+         * @description Says correction `index` of a conversation's report again ("Say it better").
+         */
+        post: operations["retryCorrection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Retries
-     * @description The corrections of a conversation's report the learner said again.
-     */
-    get: operations['getRetries'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/conversations/{conversation_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/conversations/{call_id}/retries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Retries
+         * @description The corrections of a conversation's report the learner said again.
+         */
+        get: operations["getRetries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Conversation */
-    get: operations['getConversation'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/conversations/{conversation_id}/report': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Conversation Report */
-    get: operations['getConversationReport'];
-    put?: never;
-    /**
-     * Request Conversation Report
-     * @description Asks for a report that is not there: for an earlier conversation, or again after one
-     *     failed. Answers at once; the report is written in the background.
-     */
-    post: operations['requestConversationReport'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/grammar': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/conversations/{conversation_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation Report */
+        get: operations["getConversationReport"];
+        put?: never;
+        /**
+         * Request Conversation Report
+         * @description Asks for a report that is not there: for an earlier conversation, or again after one
+         *     failed. Answers at once; the report is written in the background.
+         */
+        post: operations["requestConversationReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Grammar Map
-     * @description Every grammar topic of the language learned, with how well the learner has it.
-     */
-    get: operations['getGrammarMap'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/grammar/{topic_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/grammar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Grammar Map
+         * @description Every grammar topic of the language learned, with how well the learner has it.
+         */
+        get: operations["getGrammarMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Grammar Topic
-     * @description One topic of the map, with the learner's own mistakes on it.
-     */
-    get: operations['getGrammarTopic'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/home': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/grammar/{topic_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Grammar Topic
+         * @description One topic of the map, with the learner's own mistakes on it.
+         */
+        get: operations["getGrammarTopic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Home */
-    get: operations['getHome'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/memories': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Home */
+        get: operations["getHome"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Memories
-     * @description What the learner's partners know about them from earlier conversations.
-     */
-    get: operations['getMemories'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /**
-     * Configure Memories
-     * @description Turns memory on or off, or names the topics partners leave alone.
-     */
-    patch: operations['configureMemories'];
-    trace?: never;
-  };
-  '/v1/memories/{memory_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Memories
+         * @description What the learner's partners know about them from earlier conversations.
+         */
+        get: operations["getMemories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Configure Memories
+         * @description Turns memory on or off, or names the topics partners leave alone.
+         */
+        patch: operations["configureMemories"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /**
-     * Remove Memory
-     * @description Forgets one memory for good.
-     */
-    delete: operations['removeMemory'];
-    options?: never;
-    head?: never;
-    /** Change Memory */
-    patch: operations['changeMemory'];
-    trace?: never;
-  };
-  '/v1/onboarding': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/memories/{memory_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Memory
+         * @description Forgets one memory for good.
+         */
+        delete: operations["removeMemory"];
+        options?: never;
+        head?: never;
+        /** Change Memory */
+        patch: operations["changeMemory"];
+        trace?: never;
     };
-    /** Get Onboarding */
-    get: operations['getOnboarding'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/onboarding/complete': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Onboarding */
+        get: operations["getOnboarding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Complete Onboarding */
-    post: operations['completeOnboarding'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/onboarding/essentials/confirm': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/onboarding/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Onboarding */
+        post: operations["completeOnboarding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Confirm Essentials */
-    post: operations['confirmEssentials'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/onboarding/partners/confirm': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/onboarding/essentials/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Essentials */
+        post: operations["confirmEssentials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Confirm Partners */
-    post: operations['confirmPartners'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/owner/costs': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/onboarding/partners/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Partners */
+        post: operations["confirmPartners"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Costs
-     * @description A month's estimated spending (this month unless `month` names its first day).
-     */
-    get: operations['getCosts'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/personas': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/owner/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Costs
+         * @description A month's estimated spending (this month unless `month` names its first day).
+         */
+        get: operations["getCosts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Personas */
-    get: operations['getPersonas'];
-    put?: never;
-    /** Create Persona */
-    post: operations['createPersona'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/personas/draft': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/personas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Personas */
+        get: operations["getPersonas"];
+        put?: never;
+        /** Create Persona */
+        post: operations["createPersona"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Draft Persona */
-    post: operations['draftPersona'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/personas/starter': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/personas/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft Persona */
+        post: operations["draftPersona"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Propose Starter Personas */
-    post: operations['proposeStarterPersonas'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/personas/templates': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/personas/starter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Propose Starter Personas */
+        post: operations["proposeStarterPersonas"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Persona Templates */
-    get: operations['getPersonaTemplates'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/personas/{persona_id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/personas/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Persona Templates */
+        get: operations["getPersonaTemplates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Remove Persona */
-    delete: operations['removePersona'];
-    options?: never;
-    head?: never;
-    /** Change Persona */
-    patch: operations['changePersona'];
-    trace?: never;
-  };
-  '/v1/personas/{persona_id}/duplicate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/personas/{persona_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Persona */
+        delete: operations["removePersona"];
+        options?: never;
+        head?: never;
+        /** Change Persona */
+        patch: operations["changePersona"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Duplicate Persona */
-    post: operations['duplicatePersona'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/placement': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/personas/{persona_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Persona */
+        post: operations["duplicatePersona"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Placement */
-    get: operations['getPlacement'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/placement/decision': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/placement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Placement */
+        get: operations["getPlacement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Decide Placement */
-    post: operations['decidePlacement'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/placement/skip': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/placement/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Placement */
+        post: operations["decidePlacement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Skip Placement */
-    post: operations['skipPlacement'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/profile': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/placement/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Skip Placement */
+        post: operations["skipPlacement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Profile */
-    get: operations['getProfile'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Update Profile */
-    patch: operations['updateProfile'];
-    trace?: never;
-  };
-  '/v1/progress': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["getProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Profile */
+        patch: operations["updateProfile"];
+        trace?: never;
     };
-    /** Get Progress */
-    get: operations['getProgress'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/recordings': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Progress */
+        get: operations["getProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Recordings
-     * @description Whether the audio of the learner's conversations is kept (spec §6.6).
-     */
-    get: operations['getRecordings'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /**
-     * Configure Recordings
-     * @description Keeps recordings, or stops: stopping deletes every recording kept so far.
-     */
-    patch: operations['configureRecordings'];
-    trace?: never;
-  };
-  '/v1/tutor/corrections': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/recordings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recordings
+         * @description Whether the audio of the learner's conversations is kept (spec §6.6).
+         */
+        get: operations["getRecordings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Configure Recordings
+         * @description Keeps recordings, or stops: stopping deletes every recording kept so far.
+         */
+        patch: operations["configureRecordings"];
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Explain Correction
-     * @description Asks the Tutor about one correction of a conversation's report (spec §6.5).
-     */
-    post: operations['explainCorrection'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/tutor/questions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/tutor/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Explain Correction
+         * @description Asks the Tutor about one correction of a conversation's report (spec §6.5).
+         */
+        post: operations["explainCorrection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Get Tutor Questions
-     * @description The questions the learner asked the Tutor, newest first.
-     */
-    get: operations['getTutorQuestions'];
-    put?: never;
-    /**
-     * Ask Tutor
-     * @description Asks the Tutor a question about the language learned (spec §6.8).
-     */
-    post: operations['askTutor'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/voice/allowance': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/tutor/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tutor Questions
+         * @description The questions the learner asked the Tutor, newest first.
+         */
+        get: operations["getTutorQuestions"];
+        put?: never;
+        /**
+         * Ask Tutor
+         * @description Asks the Tutor a question about the language learned (spec §6.8).
+         */
+        post: operations["askTutor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Voice Allowance */
-    get: operations['getVoiceAllowance'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/voice/calls': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/voice/allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Voice Allowance */
+        get: operations["getVoiceAllowance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Start Voice Call */
-    post: operations['startVoiceCall'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/voices/{voice}/sample': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/v1/voice/calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Voice Call */
+        post: operations["startVoiceCall"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get Voice Sample */
-    get: operations['getVoiceSample'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
+    "/v1/voices/{voice}/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Voice Sample */
+        get: operations["getVoiceSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /** AccountDeletedOut */
-    AccountDeletedOut: {
-      /**
-       * Deleted
-       * @default true
-       * @constant
-       */
-      deleted: true;
-    };
-    /**
-     * AccountOut
-     * @description What the backend keeps for an account. Name and email live with the identity provider.
-     */
-    AccountOut: {
-      /** Owner */
-      owner: boolean;
-      picture: components['schemas']['PictureOut'] | null;
-    };
-    /** ActivityOut */
-    ActivityOut: {
-      /** Conversations */
-      conversations: number;
-      /** Practisedtoday */
-      practisedToday: boolean;
-      /** Seconds */
-      seconds: number;
-      /** Streakdays */
-      streakDays: number;
-      /**
-       * Today
-       * Format: date
-       */
-      today: string;
-      /** Todayseconds */
-      todaySeconds: number;
-      /** Week */
-      week: components['schemas']['DayOut'][];
-      /** Weekseconds */
-      weekSeconds: number;
-    };
-    /**
-     * AllowanceOut
-     * @description The learner's voice minutes this week, in seconds (spec §6.19).
-     */
-    AllowanceOut: {
-      /** Remainingseconds */
-      remainingSeconds: number;
-      /**
-       * Resetsat
-       * Format: date-time
-       */
-      resetsAt: string;
-      /** Usedseconds */
-      usedSeconds: number;
-      /** Weeklyseconds */
-      weeklySeconds: number;
-    };
-    /**
-     * CallPlanOut
-     * @description What a practice conversation sets out to practise, as the learner sees it: the kinds of
-     *     mistake (a language pack's categories) and the words to use. How the partner is told to
-     *     bring them up stays on the server.
-     */
-    CallPlanOut: {
-      /** Focus */
-      focus: string[];
-      /** Language */
-      language: string;
-      /** Words */
-      words: components['schemas']['PlanWordOut'][];
-    };
-    /**
-     * CallPurpose
-     * @enum {string}
-     */
-    CallPurpose: 'onboarding' | 'placement' | 'practice';
-    /** CardAudioOut */
-    CardAudioOut: {
-      /** Url */
-      url: string;
-    };
-    /**
-     * CardIn
-     * @description Which word or correction of a conversation's report to make a card of. The server reads
-     *     its content from the report; the app sends none.
-     */
-    CardIn: {
-      /** Conversationid */
-      conversationId: string;
-      /** Index */
-      index: number;
-      /**
-       * Kind
-       * @enum {string}
-       */
-      kind: 'word' | 'correction';
-    };
-    /** CardOut */
-    CardOut: {
-      /** Back */
-      back: string;
-      /** Conversationid */
-      conversationId: string | null;
-      /**
-       * Createdat
-       * Format: date-time
-       */
-      createdAt: string;
-      details: components['schemas']['WordDetailsOut'] | null;
-      /**
-       * Dueat
-       * Format: date-time
-       */
-      dueAt: string;
-      /** Explainedin */
-      explainedIn: string;
-      /** Front */
-      front: string;
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /**
-       * Kind
-       * @enum {string}
-       */
-      kind: 'word' | 'correction';
-      /** Lapses */
-      lapses: number;
-      /** Note */
-      note: string | null;
-      /** Reviewedat */
-      reviewedAt: string | null;
-      /** Reviews */
-      reviews: number;
-    };
-    /** CardProgressOut */
-    CardProgressOut: {
-      /** Due */
-      due: number;
-      /** Learned */
-      learned: number;
-      /** Remembered */
-      remembered: number;
-      /** Reviews */
-      reviews: number;
-      /** Total */
-      total: number;
-    };
-    /** CatalogOut */
-    CatalogOut: {
-      /** Examlevels */
-      examLevels: ('A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2')[];
-      /** Explanationlanguages */
-      explanationLanguages: components['schemas']['NamedLanguageOut'][];
-      /** Explanationusages */
-      explanationUsages: ('never' | 'when_stuck' | 'for_grammar' | 'freely')[];
-      /** Goalreasons */
-      goalReasons: (
-        | 'travel'
-        | 'work'
-        | 'study'
-        | 'exam'
-        | 'living_abroad'
-        | 'family_friends'
-        | 'culture'
-        | 'other'
-      )[];
-      /** Languages */
-      languages: components['schemas']['LanguageOut'][];
-      /** Startinglevels */
-      startingLevels: ('A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2')[];
-    };
-    /** ChangeIn */
-    ChangeIn: {
-      /** Field */
-      field: string;
-      /** Scope */
-      scope?: string | null;
-      /** Value */
-      value?: unknown;
-    };
-    /** ConversationOut */
-    ConversationOut: {
-      /** Endedat */
-      endedAt: string | null;
-      /** Goalsreached */
-      goalsReached: string[];
-      /** Id */
-      id: string;
-      /** Learnerturns */
-      learnerTurns: number;
-      partner: components['schemas']['PersonaOut'] | null;
-      /** Scenario */
-      scenario: string | null;
-      /** Seconds */
-      seconds: number;
-      /**
-       * Startedat
-       * Format: date-time
-       */
-      startedAt: string;
-    };
-    /** ConversationsOut */
-    ConversationsOut: {
-      /** Conversations */
-      conversations: components['schemas']['ConversationOut'][];
-      /** Next */
-      next: string | null;
-    };
-    /**
-     * CostsOut
-     * @description A month's estimated spending, for the owner (spec §6.19). Estimates from usage counts and
-     *     the configured prices, not the providers' invoices.
-     */
-    CostsOut: {
-      /** Ceilingusd */
-      ceilingUsd: number;
-      /** Days */
-      days: components['schemas']['DaySpendOut'][];
-      /** Features */
-      features: components['schemas']['ShareOut'][];
-      /** Learners */
-      learners: components['schemas']['LearnerSpendOut'][];
-      level: components['schemas']['Level'];
-      /**
-       * Month
-       * Format: date
-       */
-      month: string;
-      /** Providers */
-      providers: components['schemas']['ShareOut'][];
-      /** Targetusd */
-      targetUsd: number;
-      /** Totalusd */
-      totalUsd: number;
-      /** Unpriced */
-      unpriced: number;
-    };
-    /** DayOut */
-    DayOut: {
-      /**
-       * Day
-       * Format: date
-       */
-      day: string;
-      /** Seconds */
-      seconds: number;
-    };
-    /** DaySpendOut */
-    DaySpendOut: {
-      /**
-       * Day
-       * Format: date
-       */
-      day: string;
-      /** Usd */
-      usd: number;
-    };
-    /** DeckOut */
-    DeckOut: {
-      /** Cards */
-      cards: components['schemas']['CardOut'][];
-      /** Due */
-      due: number;
-      /** Next */
-      next: string | null;
-      /** Total */
-      total: number;
-    };
-    /** DeckSummaryOut */
-    DeckSummaryOut: {
-      /** Due */
-      due: number;
-      /** Total */
-      total: number;
-    };
-    /** ErrorBody */
-    ErrorBody: {
-      error: components['schemas']['ErrorDetail'];
-    };
-    /** ErrorDetail */
-    ErrorDetail: {
-      /** Code */
-      code: string;
-      /** Field */
-      field?: string | null;
-    };
-    /** ExamOut */
-    ExamOut: {
-      /** Id */
-      id: string;
-      /** Levels */
-      levels: ('A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2')[];
-      /** Name */
-      name: string;
-    };
-    /** ExampleOut */
-    ExampleOut: {
-      /** Text */
-      text: string;
-      /** Translation */
-      translation: string;
-    };
-    /** FieldOut */
-    FieldOut: {
-      source: components['schemas']['Source'];
-      /**
-       * Updatedat
-       * Format: date-time
-       */
-      updatedAt: string;
-      /** Value */
-      value: unknown;
-    };
-    /** GrammarMapOut */
-    GrammarMapOut: {
-      /** Language */
-      language: string;
-      /** Level */
-      level: string;
-      /** Topics */
-      topics: components['schemas']['GrammarTopicOut'][];
-    };
-    /**
-     * GrammarTopicOut
-     * @description A topic of the grammar map and how well the learner has it. The app names it in the
-     *     interface language.
-     */
-    GrammarTopicOut: {
-      /** Conversations */
-      conversations: number;
-      /** Correct */
-      correct: number;
-      /** Id */
-      id: string;
-      /** Lastusedat */
-      lastUsedAt: string | null;
-      /** Level */
-      level: string;
-      mastery: components['schemas']['Mastery'];
-      trend: components['schemas']['Trend'] | null;
-      /** Uses */
-      uses: number;
-    };
-    /** GrammarTopicPageOut */
-    GrammarTopicPageOut: {
-      /** Examples */
-      examples: string[];
-      /** Mistakes */
-      mistakes: components['schemas']['TopicMistakeOut'][];
-      topic: components['schemas']['GrammarTopicOut'];
-      /** Typicalmistakes */
-      typicalMistakes: string[];
-    };
-    /** HTTPValidationError */
-    HTTPValidationError: {
-      /** Detail */
-      detail?: components['schemas']['ValidationError'][];
-    };
-    /** HomeExamOut */
-    HomeExamOut: {
-      /** Date */
-      date: string | null;
-      /** Daysleft */
-      daysLeft: number | null;
-      /** Name */
-      name: string | null;
-      /** Targetlevel */
-      targetLevel: ('A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2') | null;
-      /** Type */
-      type: string;
-    };
-    /** HomeLevelOut */
-    HomeLevelOut: {
-      /**
-       * Level
-       * @enum {string}
-       */
-      level: 'A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-      /** Skills */
-      skills: {
-        [key: string]: 'A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-      } | null;
-      source: components['schemas']['Source'];
-    };
-    /**
-     * HomeOut
-     * @description The Today screen in one answer.
-     */
-    HomeOut: {
-      activity: components['schemas']['ActivityOut'];
-      /** Cardsdue */
-      cardsDue: number;
-      exam: components['schemas']['HomeExamOut'] | null;
-      /** Focus */
-      focus: string[];
-      /** Focussource */
-      focusSource: ('report' | 'placement') | null;
-      /** Language */
-      language: string;
-      level: components['schemas']['HomeLevelOut'] | null;
-      /** Partners */
-      partners: components['schemas']['HomePartnerOut'][];
-      /** Recent */
-      recent: components['schemas']['ConversationOut'][];
-      /** Suggestedpartnerid */
-      suggestedPartnerId: string | null;
-    };
-    /** HomePartnerOut */
-    HomePartnerOut: {
-      /** Conversations */
-      conversations: number;
-      /** Lasttalkedat */
-      lastTalkedAt: string | null;
-      persona: components['schemas']['PersonaOut'];
-    };
-    /** LanguageOut */
-    LanguageOut: {
-      /** Available */
-      available: boolean;
-      /** Code */
-      code: string;
-      /** Exams */
-      exams: components['schemas']['ExamOut'][];
-      /** Scenarios */
-      scenarios: components['schemas']['ScenarioOut'][];
-    };
-    /** LearnerSpendOut */
-    LearnerSpendOut: {
-      /** Name */
-      name: string | null;
-      /** Requests */
-      requests: number;
-      /** Usd */
-      usd: number;
-      /**
-       * Userid
-       * Format: uuid
-       */
-      userId: string;
-      /** Voiceseconds */
-      voiceSeconds: number;
-    };
-    /**
-     * Level
-     * @enum {string}
-     */
-    Level: 'normal' | 'economy' | 'paused';
-    /** LevelPointOut */
-    LevelPointOut: {
-      /**
-       * At
-       * Format: date-time
-       */
-      at: string;
-      /**
-       * Level
-       * @enum {string}
-       */
-      level: 'A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-      source: components['schemas']['Source'];
-    };
-    /**
-     * LevelStepOut
-     * @description The level the conversation's evidence moved the learner to (spec §6.9).
-     */
-    LevelStepOut: {
-      /**
-       * After
-       * @enum {string}
-       */
-      after: 'A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-      /**
-       * Before
-       * @enum {string}
-       */
-      before: 'A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-      /** Rose */
-      rose: boolean;
-    };
-    /**
-     * LookModel
-     * @description A portrait's parts and colors. The app draws exactly these names.
-     */
-    LookModel: {
-      /**
-       * Backdrop
-       * @enum {string}
-       */
-      backdrop: 'stone' | 'mist' | 'sand' | 'slate';
-      /** Beard */
-      beard: boolean;
-      /** Glasses */
-      glasses: boolean;
-      /**
-       * Hair
-       * @enum {string}
-       */
-      hair: 'short' | 'parted' | 'bob' | 'long' | 'bun' | 'curls' | 'bald';
-      /**
-       * Haircolor
-       * @enum {string}
-       */
-      hairColor: 'black' | 'espresso' | 'chestnut' | 'auburn' | 'blond' | 'silver';
-      /**
-       * Skin
-       * @enum {string}
-       */
-      skin: 'porcelain' | 'sand' | 'honey' | 'chestnut' | 'umber';
-      /**
-       * Top
-       * @enum {string}
-       */
-      top: 'teal' | 'graphite' | 'stone' | 'amber';
-    };
-    /**
-     * Mastery
-     * @enum {string}
-     */
-    Mastery: 'not_started' | 'introduced' | 'practising' | 'mostly_correct' | 'mastered';
-    /**
-     * MemoriesOut
-     * @description What the learner's partners know about them, and what the learner set (spec §6.11).
-     */
-    MemoriesOut: {
-      /** Avoidtopics */
-      avoidTopics: string[];
-      /** Enabled */
-      enabled: boolean;
-      /** Memories */
-      memories: components['schemas']['MemoryOut'][];
-    };
-    /** MemoryOut */
-    MemoryOut: {
-      /**
-       * Createdat
-       * Format: date-time
-       */
-      createdAt: string;
-      /** Day */
-      day: string | null;
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /**
-       * Kind
-       * @enum {string}
-       */
-      kind: 'fact' | 'event' | 'preference' | 'relationship';
-      /** Partnerid */
-      partnerId: string | null;
-      /** Partnername */
-      partnerName: string | null;
-      /** Text */
-      text: string;
-      /**
-       * Updatedat
-       * Format: date-time
-       */
-      updatedAt: string;
-    };
-    /**
-     * MemoryPatch
-     * @description What to change about one memory. A key left out is not a change; `day: null` takes an
-     *     event's day away.
-     */
-    MemoryPatch: {
-      /** Day */
-      day?: string | null;
-      /**
-       * Text
-       * @default
-       */
-      text: string;
-    };
-    /**
-     * MemorySettingsPatch
-     * @description A setting left out stays as it is.
-     */
-    MemorySettingsPatch: {
-      /** Avoidtopics */
-      avoidTopics?: string[] | null;
-      /** Enabled */
-      enabled?: boolean | null;
-    };
-    /** MilestoneOut */
-    MilestoneOut: {
-      /** Current */
-      current: number;
-      /** Id */
-      id: string;
-      /** Reached */
-      reached: boolean;
-      /** Target */
-      target: number;
-    };
-    /** MistakeKindOut */
-    MistakeKindOut: {
-      /** Category */
-      category: string;
-      /** Counts */
-      counts: number[];
-    };
-    /** MistakeTrendsOut */
-    MistakeTrendsOut: {
-      /** Kinds */
-      kinds: components['schemas']['MistakeKindOut'][];
-      /** Weeks */
-      weeks: string[];
-    };
-    /** NamedLanguageOut */
-    NamedLanguageOut: {
-      /** Code */
-      code: string;
-      /** Name */
-      name: string;
-    };
-    /** OnboardingOut */
-    OnboardingOut: {
-      /** Missing */
-      missing: string[];
-      placement: components['schemas']['PlacementStatus'];
-      stage: components['schemas']['Stage'];
-    };
-    /** PersonaDescription */
-    PersonaDescription: {
-      /** Description */
-      description: string;
-    };
-    /**
-     * PersonaDraftOut
-     * @description A persona that is not saved: a template, or one written from a description.
-     */
-    PersonaDraftOut: {
-      /** Age */
-      age: number;
-      /** Backstory */
-      backstory: string;
-      /**
-       * Gender
-       * @enum {string}
-       */
-      gender: 'female' | 'male';
-      look: components['schemas']['LookModel'];
-      /** Name */
-      name: string;
-      /** Occupation */
-      occupation: string;
-      /** Origin */
-      origin: string;
-      personality: components['schemas']['PersonalityModel'];
-      /**
-       * Role
-       * @enum {string}
-       */
-      role: 'buddy' | 'teacher' | 'exam_coach';
-      /** Tagline */
-      tagline: string | null;
-      teaching: components['schemas']['TeachingModel'];
-      /**
-       * Voice
-       * @enum {string}
-       */
-      voice: 'marin' | 'cedar' | 'coral' | 'sage' | 'shimmer' | 'ash' | 'echo' | 'verse';
-    };
-    /**
-     * PersonaIn
-     * @description A new persona. Personality and teaching left out (or null): as their role does.
-     */
-    PersonaIn: {
-      /** Age */
-      age: number;
-      /** Backstory */
-      backstory: string;
-      /**
-       * Gender
-       * @enum {string}
-       */
-      gender: 'female' | 'male';
-      look: components['schemas']['LookModel'];
-      /** Name */
-      name: string;
-      /**
-       * Occupation
-       * @default
-       */
-      occupation: string;
-      /** Origin */
-      origin: string;
-      personality?: components['schemas']['PersonalityModel'] | null;
-      /**
-       * Role
-       * @enum {string}
-       */
-      role: 'buddy' | 'teacher' | 'exam_coach';
-      /** Tagline */
-      tagline?: string | null;
-      teaching?: components['schemas']['TeachingModel'] | null;
-      /**
-       * Voice
-       * @enum {string}
-       */
-      voice: 'marin' | 'cedar' | 'coral' | 'sage' | 'shimmer' | 'ash' | 'echo' | 'verse';
-    };
-    /** PersonaOut */
-    PersonaOut: {
-      /** Age */
-      age: number;
-      /** Backstory */
-      backstory: string;
-      /**
-       * Gender
-       * @enum {string}
-       */
-      gender: 'female' | 'male';
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      look: components['schemas']['LookModel'];
-      /** Name */
-      name: string;
-      /** Occupation */
-      occupation: string;
-      /** Origin */
-      origin: string;
-      personality: components['schemas']['PersonalityModel'];
-      /**
-       * Role
-       * @enum {string}
-       */
-      role: 'buddy' | 'teacher' | 'exam_coach';
-      /** Tagline */
-      tagline: string | null;
-      teaching: components['schemas']['TeachingModel'];
-      /**
-       * Voice
-       * @enum {string}
-       */
-      voice: 'marin' | 'cedar' | 'coral' | 'sage' | 'shimmer' | 'ash' | 'echo' | 'verse';
-    };
-    /**
-     * PersonaPatch
-     * @description The parts of a persona to change; the ones left out stay. Personality or teaching set
-     *     to null go back to what the persona's role does.
-     */
-    PersonaPatch: {
-      /** Age */
-      age?: number | null;
-      /** Backstory */
-      backstory?: string | null;
-      /** Gender */
-      gender?: ('female' | 'male') | null;
-      look?: components['schemas']['LookModel'] | null;
-      /** Name */
-      name?: string | null;
-      /** Occupation */
-      occupation?: string | null;
-      /** Origin */
-      origin?: string | null;
-      personality?: components['schemas']['PersonalityModel'] | null;
-      /** Role */
-      role?: ('buddy' | 'teacher' | 'exam_coach') | null;
-      /** Tagline */
-      tagline?: string | null;
-      teaching?: components['schemas']['TeachingModel'] | null;
-      /** Voice */
-      voice?: ('marin' | 'cedar' | 'coral' | 'sage' | 'shimmer' | 'ash' | 'echo' | 'verse') | null;
-    };
-    /** PersonaTemplatesOut */
-    PersonaTemplatesOut: {
-      /** Templates */
-      templates: components['schemas']['PersonaDraftOut'][];
-    };
-    /**
-     * PersonalityModel
-     * @description How a persona comes across. Each trait is a point from 1 to 5 between two poles.
-     */
-    PersonalityModel: {
-      /** Curiosity */
-      curiosity: number;
-      /**
-       * Formofaddress
-       * @enum {string}
-       */
-      formOfAddress: 'informal' | 'formal' | 'auto';
-      /** Humour */
-      humour: number;
-      /** Playfulness */
-      playfulness: number;
-      /**
-       * Style
-       * @enum {string}
-       */
-      style: 'questions' | 'stories' | 'debate';
-      /** Talkativeness */
-      talkativeness: number;
-      /** Warmth */
-      warmth: number;
-    };
-    /** PersonasOut */
-    PersonasOut: {
-      /** Personas */
-      personas: components['schemas']['PersonaOut'][];
-    };
-    /** PictureConfirm */
-    PictureConfirm: {
-      /**
-       * Uploadid
-       * Format: uuid
-       */
-      uploadId: string;
-    };
-    /** PictureOut */
-    PictureOut: {
-      /** Url */
-      url: string;
-    };
-    /**
-     * PictureUploadOut
-     * @description How to send a photo: a form POST to `url` with `fields`, then the JPEG as `file`.
-     */
-    PictureUploadOut: {
-      /** Fields */
-      fields: {
-        [key: string]: string;
-      };
-      /**
-       * Uploadid
-       * Format: uuid
-       */
-      uploadId: string;
-      /** Url */
-      url: string;
-    };
-    /** PlacementDecision */
-    PlacementDecision: {
-      /**
-       * Use
-       * @enum {string}
-       */
-      use: 'measured' | 'self';
-    };
-    /** PlacementOut */
-    PlacementOut: {
-      /** Differs */
-      differs: boolean;
-      result: components['schemas']['PlacementResultOut'] | null;
-      /** Selfassessed */
-      selfAssessed: ('A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2') | null;
-      status: components['schemas']['PlacementStatus'];
-    };
-    /** PlacementResultOut */
-    PlacementResultOut: {
-      /** Levels */
-      levels: {
-        [key: string]: 'A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-      };
-      /**
-       * Measuredat
-       * Format: date-time
-       */
-      measuredAt: string;
-      /**
-       * Overall
-       * @enum {string}
-       */
-      overall: 'A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-      /** Weakareas */
-      weakAreas: string[];
-    };
-    /**
-     * PlacementStatus
-     * @enum {string}
-     */
-    PlacementStatus:
-      | 'not_started'
-      | 'in_progress'
-      | 'assessing'
-      | 'measured'
-      | 'inconclusive'
-      | 'decided'
-      | 'skipped';
-    /** PlanWordOut */
-    PlanWordOut: {
-      /** Meaning */
-      meaning: string;
-      /** Text */
-      text: string;
-    };
-    /** ProfileOut */
-    ProfileOut: {
-      /** Global */
-      global: {
-        [key: string]: components['schemas']['FieldOut'];
-      };
-      /** Languages */
-      languages: {
-        [key: string]: {
-          [key: string]: components['schemas']['FieldOut'];
+    schemas: {
+        /** AccountDeletedOut */
+        AccountDeletedOut: {
+            /**
+             * Deleted
+             * @default true
+             * @constant
+             */
+            deleted: true;
         };
-      };
-      /** Targetlanguage */
-      targetLanguage: string | null;
+        /**
+         * AccountOut
+         * @description What the backend keeps for an account. Name and email live with the identity provider.
+         */
+        AccountOut: {
+            /** Owner */
+            owner: boolean;
+            picture: components["schemas"]["PictureOut"] | null;
+        };
+        /** ActivityOut */
+        ActivityOut: {
+            /** Conversations */
+            conversations: number;
+            /** Practisedtoday */
+            practisedToday: boolean;
+            /** Seconds */
+            seconds: number;
+            /** Streakdays */
+            streakDays: number;
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Todayseconds */
+            todaySeconds: number;
+            /** Week */
+            week: components["schemas"]["DayOut"][];
+            /** Weekseconds */
+            weekSeconds: number;
+        };
+        /**
+         * AllowanceOut
+         * @description The learner's voice minutes this week, in seconds (spec §6.19).
+         */
+        AllowanceOut: {
+            /** Remainingseconds */
+            remainingSeconds: number;
+            /**
+             * Resetsat
+             * Format: date-time
+             */
+            resetsAt: string;
+            /** Usedseconds */
+            usedSeconds: number;
+            /** Weeklyseconds */
+            weeklySeconds: number;
+        };
+        /**
+         * AnsweredOut
+         * @description A card answered out loud: what was heard, how close it came, and the rating that points
+         *     to. The card is not rated yet.
+         */
+        AnsweredOut: {
+            /** Expected */
+            expected: string;
+            /** Heard */
+            heard: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "right" | "article" | "wrong";
+            /**
+             * Suggested
+             * @enum {string}
+             */
+            suggested: "again" | "hard" | "good" | "easy";
+        };
+        /**
+         * CallPlanOut
+         * @description What a practice conversation sets out to practise, as the learner sees it: the kinds of
+         *     mistake (a language pack's categories) and the words to use. How the partner is told to
+         *     bring them up stays on the server.
+         */
+        CallPlanOut: {
+            /** Focus */
+            focus: string[];
+            /** Language */
+            language: string;
+            /** Review */
+            review: boolean;
+            /** Words */
+            words: components["schemas"]["PlanWordOut"][];
+        };
+        /**
+         * CallPurpose
+         * @enum {string}
+         */
+        CallPurpose: "onboarding" | "placement" | "practice";
+        /** CardAudioOut */
+        CardAudioOut: {
+            /** Url */
+            url: string;
+        };
+        /**
+         * CardIn
+         * @description Which word or correction of a conversation's report to make a card of. The server reads
+         *     its content from the report; the app sends none.
+         */
+        CardIn: {
+            /** Conversationid */
+            conversationId: string;
+            /** Index */
+            index: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "word" | "correction";
+        };
+        /** CardOut */
+        CardOut: {
+            /** Back */
+            back: string;
+            /** Conversationid */
+            conversationId: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            details: components["schemas"]["WordDetailsOut"] | null;
+            /**
+             * Dueat
+             * Format: date-time
+             */
+            dueAt: string;
+            /** Explainedin */
+            explainedIn: string;
+            /** Front */
+            front: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "word" | "correction";
+            /** Lapses */
+            lapses: number;
+            /** Note */
+            note: string | null;
+            /** Reviewedat */
+            reviewedAt: string | null;
+            /** Reviews */
+            reviews: number;
+        };
+        /** CardProgressOut */
+        CardProgressOut: {
+            /** Due */
+            due: number;
+            /** Learned */
+            learned: number;
+            /** Remembered */
+            remembered: number;
+            /** Reviews */
+            reviews: number;
+            /** Total */
+            total: number;
+        };
+        /** CatalogOut */
+        CatalogOut: {
+            /** Examlevels */
+            examLevels: ("A1" | "A2" | "B1" | "B2" | "C1" | "C2")[];
+            /** Explanationlanguages */
+            explanationLanguages: components["schemas"]["NamedLanguageOut"][];
+            /** Explanationusages */
+            explanationUsages: ("never" | "when_stuck" | "for_grammar" | "freely")[];
+            /** Goalreasons */
+            goalReasons: ("travel" | "work" | "study" | "exam" | "living_abroad" | "family_friends" | "culture" | "other")[];
+            /** Languages */
+            languages: components["schemas"]["LanguageOut"][];
+            /** Startinglevels */
+            startingLevels: ("A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2")[];
+        };
+        /** ChangeIn */
+        ChangeIn: {
+            /** Field */
+            field: string;
+            /** Scope */
+            scope?: string | null;
+            /** Value */
+            value?: unknown;
+        };
+        /** ConversationOut */
+        ConversationOut: {
+            /** Endedat */
+            endedAt: string | null;
+            /** Goalsreached */
+            goalsReached: string[];
+            /** Id */
+            id: string;
+            /** Learnerturns */
+            learnerTurns: number;
+            partner: components["schemas"]["PersonaOut"] | null;
+            /** Scenario */
+            scenario: string | null;
+            /** Seconds */
+            seconds: number;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+        };
+        /** ConversationsOut */
+        ConversationsOut: {
+            /** Conversations */
+            conversations: components["schemas"]["ConversationOut"][];
+            /** Next */
+            next: string | null;
+        };
+        /**
+         * CostsOut
+         * @description A month's estimated spending, for the owner (spec §6.19). Estimates from usage counts and
+         *     the configured prices, not the providers' invoices.
+         */
+        CostsOut: {
+            /** Ceilingusd */
+            ceilingUsd: number;
+            /** Days */
+            days: components["schemas"]["DaySpendOut"][];
+            /** Features */
+            features: components["schemas"]["ShareOut"][];
+            /** Learners */
+            learners: components["schemas"]["LearnerSpendOut"][];
+            level: components["schemas"]["Level"];
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            /** Providers */
+            providers: components["schemas"]["ShareOut"][];
+            /** Targetusd */
+            targetUsd: number;
+            /** Totalusd */
+            totalUsd: number;
+            /** Unpriced */
+            unpriced: number;
+        };
+        /** DayOut */
+        DayOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Seconds */
+            seconds: number;
+        };
+        /** DaySpendOut */
+        DaySpendOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Usd */
+            usd: number;
+        };
+        /** DeckOut */
+        DeckOut: {
+            /** Cards */
+            cards: components["schemas"]["CardOut"][];
+            /** Due */
+            due: number;
+            /** Next */
+            next: string | null;
+            /** Total */
+            total: number;
+        };
+        /** DeckSummaryOut */
+        DeckSummaryOut: {
+            /** Due */
+            due: number;
+            /** Total */
+            total: number;
+        };
+        /** ErrorBody */
+        ErrorBody: {
+            error: components["schemas"]["ErrorDetail"];
+        };
+        /** ErrorDetail */
+        ErrorDetail: {
+            /** Code */
+            code: string;
+            /** Field */
+            field?: string | null;
+        };
+        /** ExamOut */
+        ExamOut: {
+            /** Id */
+            id: string;
+            /** Levels */
+            levels: ("A1" | "A2" | "B1" | "B2" | "C1" | "C2")[];
+            /** Name */
+            name: string;
+        };
+        /** ExampleOut */
+        ExampleOut: {
+            /** Text */
+            text: string;
+            /** Translation */
+            translation: string;
+        };
+        /** FieldOut */
+        FieldOut: {
+            source: components["schemas"]["Source"];
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+            /** Value */
+            value: unknown;
+        };
+        /** GrammarMapOut */
+        GrammarMapOut: {
+            /** Language */
+            language: string;
+            /** Level */
+            level: string;
+            /** Topics */
+            topics: components["schemas"]["GrammarTopicOut"][];
+        };
+        /**
+         * GrammarTopicOut
+         * @description A topic of the grammar map and how well the learner has it. The app names it in the
+         *     interface language.
+         */
+        GrammarTopicOut: {
+            /** Conversations */
+            conversations: number;
+            /** Correct */
+            correct: number;
+            /** Id */
+            id: string;
+            /** Lastusedat */
+            lastUsedAt: string | null;
+            /** Level */
+            level: string;
+            mastery: components["schemas"]["Mastery"];
+            trend: components["schemas"]["Trend"] | null;
+            /** Uses */
+            uses: number;
+        };
+        /** GrammarTopicPageOut */
+        GrammarTopicPageOut: {
+            /** Examples */
+            examples: string[];
+            /** Mistakes */
+            mistakes: components["schemas"]["TopicMistakeOut"][];
+            topic: components["schemas"]["GrammarTopicOut"];
+            /** Typicalmistakes */
+            typicalMistakes: string[];
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HomeExamOut */
+        HomeExamOut: {
+            /** Date */
+            date: string | null;
+            /** Daysleft */
+            daysLeft: number | null;
+            /** Name */
+            name: string | null;
+            /** Targetlevel */
+            targetLevel: ("A1" | "A2" | "B1" | "B2" | "C1" | "C2") | null;
+            /** Type */
+            type: string;
+        };
+        /** HomeLevelOut */
+        HomeLevelOut: {
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Skills */
+            skills: {
+                [key: string]: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            } | null;
+            source: components["schemas"]["Source"];
+        };
+        /**
+         * HomeOut
+         * @description The Today screen in one answer.
+         */
+        HomeOut: {
+            activity: components["schemas"]["ActivityOut"];
+            /** Cardsdue */
+            cardsDue: number;
+            exam: components["schemas"]["HomeExamOut"] | null;
+            /** Focus */
+            focus: string[];
+            /** Focussource */
+            focusSource: ("report" | "placement") | null;
+            /** Language */
+            language: string;
+            level: components["schemas"]["HomeLevelOut"] | null;
+            /** Partners */
+            partners: components["schemas"]["HomePartnerOut"][];
+            /** Recent */
+            recent: components["schemas"]["ConversationOut"][];
+            /** Suggestedpartnerid */
+            suggestedPartnerId: string | null;
+        };
+        /** HomePartnerOut */
+        HomePartnerOut: {
+            /** Conversations */
+            conversations: number;
+            /** Lasttalkedat */
+            lastTalkedAt: string | null;
+            persona: components["schemas"]["PersonaOut"];
+        };
+        /** LanguageOut */
+        LanguageOut: {
+            /** Available */
+            available: boolean;
+            /** Code */
+            code: string;
+            /** Exams */
+            exams: components["schemas"]["ExamOut"][];
+            /** Scenarios */
+            scenarios: components["schemas"]["ScenarioOut"][];
+        };
+        /** LearnerSpendOut */
+        LearnerSpendOut: {
+            /** Name */
+            name: string | null;
+            /** Requests */
+            requests: number;
+            /** Usd */
+            usd: number;
+            /**
+             * Userid
+             * Format: uuid
+             */
+            userId: string;
+            /** Voiceseconds */
+            voiceSeconds: number;
+        };
+        /**
+         * Level
+         * @enum {string}
+         */
+        Level: "normal" | "economy" | "paused";
+        /** LevelPointOut */
+        LevelPointOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            source: components["schemas"]["Source"];
+        };
+        /**
+         * LevelStepOut
+         * @description The level the conversation's evidence moved the learner to (spec §6.9).
+         */
+        LevelStepOut: {
+            /**
+             * After
+             * @enum {string}
+             */
+            after: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /**
+             * Before
+             * @enum {string}
+             */
+            before: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Rose */
+            rose: boolean;
+        };
+        /**
+         * LookModel
+         * @description A portrait's parts and colors. The app draws exactly these names.
+         */
+        LookModel: {
+            /**
+             * Backdrop
+             * @enum {string}
+             */
+            backdrop: "stone" | "mist" | "sand" | "slate";
+            /** Beard */
+            beard: boolean;
+            /** Glasses */
+            glasses: boolean;
+            /**
+             * Hair
+             * @enum {string}
+             */
+            hair: "short" | "parted" | "bob" | "long" | "bun" | "curls" | "bald";
+            /**
+             * Haircolor
+             * @enum {string}
+             */
+            hairColor: "black" | "espresso" | "chestnut" | "auburn" | "blond" | "silver";
+            /**
+             * Skin
+             * @enum {string}
+             */
+            skin: "porcelain" | "sand" | "honey" | "chestnut" | "umber";
+            /**
+             * Top
+             * @enum {string}
+             */
+            top: "teal" | "graphite" | "stone" | "amber";
+        };
+        /**
+         * Mastery
+         * @enum {string}
+         */
+        Mastery: "not_started" | "introduced" | "practising" | "mostly_correct" | "mastered";
+        /**
+         * MemoriesOut
+         * @description What the learner's partners know about them, and what the learner set (spec §6.11).
+         */
+        MemoriesOut: {
+            /** Avoidtopics */
+            avoidTopics: string[];
+            /** Enabled */
+            enabled: boolean;
+            /** Memories */
+            memories: components["schemas"]["MemoryOut"][];
+        };
+        /** MemoryOut */
+        MemoryOut: {
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Day */
+            day: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "fact" | "event" | "preference" | "relationship";
+            /** Partnerid */
+            partnerId: string | null;
+            /** Partnername */
+            partnerName: string | null;
+            /** Text */
+            text: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /**
+         * MemoryPatch
+         * @description What to change about one memory. A key left out is not a change; `day: null` takes an
+         *     event's day away.
+         */
+        MemoryPatch: {
+            /** Day */
+            day?: string | null;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+        };
+        /**
+         * MemorySettingsPatch
+         * @description A setting left out stays as it is.
+         */
+        MemorySettingsPatch: {
+            /** Avoidtopics */
+            avoidTopics?: string[] | null;
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** MilestoneOut */
+        MilestoneOut: {
+            /** Current */
+            current: number;
+            /** Id */
+            id: string;
+            /** Reached */
+            reached: boolean;
+            /** Target */
+            target: number;
+        };
+        /** MistakeKindOut */
+        MistakeKindOut: {
+            /** Category */
+            category: string;
+            /** Counts */
+            counts: number[];
+        };
+        /** MistakeTrendsOut */
+        MistakeTrendsOut: {
+            /** Kinds */
+            kinds: components["schemas"]["MistakeKindOut"][];
+            /** Weeks */
+            weeks: string[];
+        };
+        /** NamedLanguageOut */
+        NamedLanguageOut: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+        };
+        /** OnboardingOut */
+        OnboardingOut: {
+            /** Missing */
+            missing: string[];
+            placement: components["schemas"]["PlacementStatus"];
+            stage: components["schemas"]["Stage"];
+        };
+        /** PersonaDescription */
+        PersonaDescription: {
+            /** Description */
+            description: string;
+        };
+        /**
+         * PersonaDraftOut
+         * @description A persona that is not saved: a template, or one written from a description.
+         */
+        PersonaDraftOut: {
+            /** Age */
+            age: number;
+            /** Backstory */
+            backstory: string;
+            /**
+             * Gender
+             * @enum {string}
+             */
+            gender: "female" | "male";
+            look: components["schemas"]["LookModel"];
+            /** Name */
+            name: string;
+            /** Occupation */
+            occupation: string;
+            /** Origin */
+            origin: string;
+            personality: components["schemas"]["PersonalityModel"];
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "buddy" | "teacher" | "exam_coach";
+            /** Tagline */
+            tagline: string | null;
+            teaching: components["schemas"]["TeachingModel"];
+            /**
+             * Voice
+             * @enum {string}
+             */
+            voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
+        };
+        /**
+         * PersonaIn
+         * @description A new persona. Personality and teaching left out (or null): as their role does.
+         */
+        PersonaIn: {
+            /** Age */
+            age: number;
+            /** Backstory */
+            backstory: string;
+            /**
+             * Gender
+             * @enum {string}
+             */
+            gender: "female" | "male";
+            look: components["schemas"]["LookModel"];
+            /** Name */
+            name: string;
+            /**
+             * Occupation
+             * @default
+             */
+            occupation: string;
+            /** Origin */
+            origin: string;
+            personality?: components["schemas"]["PersonalityModel"] | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "buddy" | "teacher" | "exam_coach";
+            /** Tagline */
+            tagline?: string | null;
+            teaching?: components["schemas"]["TeachingModel"] | null;
+            /**
+             * Voice
+             * @enum {string}
+             */
+            voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
+        };
+        /** PersonaOut */
+        PersonaOut: {
+            /** Age */
+            age: number;
+            /** Backstory */
+            backstory: string;
+            /**
+             * Gender
+             * @enum {string}
+             */
+            gender: "female" | "male";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            look: components["schemas"]["LookModel"];
+            /** Name */
+            name: string;
+            /** Occupation */
+            occupation: string;
+            /** Origin */
+            origin: string;
+            personality: components["schemas"]["PersonalityModel"];
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "buddy" | "teacher" | "exam_coach";
+            /** Tagline */
+            tagline: string | null;
+            teaching: components["schemas"]["TeachingModel"];
+            /**
+             * Voice
+             * @enum {string}
+             */
+            voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
+        };
+        /**
+         * PersonaPatch
+         * @description The parts of a persona to change; the ones left out stay. Personality or teaching set
+         *     to null go back to what the persona's role does.
+         */
+        PersonaPatch: {
+            /** Age */
+            age?: number | null;
+            /** Backstory */
+            backstory?: string | null;
+            /** Gender */
+            gender?: ("female" | "male") | null;
+            look?: components["schemas"]["LookModel"] | null;
+            /** Name */
+            name?: string | null;
+            /** Occupation */
+            occupation?: string | null;
+            /** Origin */
+            origin?: string | null;
+            personality?: components["schemas"]["PersonalityModel"] | null;
+            /** Role */
+            role?: ("buddy" | "teacher" | "exam_coach") | null;
+            /** Tagline */
+            tagline?: string | null;
+            teaching?: components["schemas"]["TeachingModel"] | null;
+            /** Voice */
+            voice?: ("marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse") | null;
+        };
+        /** PersonaTemplatesOut */
+        PersonaTemplatesOut: {
+            /** Templates */
+            templates: components["schemas"]["PersonaDraftOut"][];
+        };
+        /**
+         * PersonalityModel
+         * @description How a persona comes across. Each trait is a point from 1 to 5 between two poles.
+         */
+        PersonalityModel: {
+            /** Curiosity */
+            curiosity: number;
+            /**
+             * Formofaddress
+             * @enum {string}
+             */
+            formOfAddress: "informal" | "formal" | "auto";
+            /** Humour */
+            humour: number;
+            /** Playfulness */
+            playfulness: number;
+            /**
+             * Style
+             * @enum {string}
+             */
+            style: "questions" | "stories" | "debate";
+            /** Talkativeness */
+            talkativeness: number;
+            /** Warmth */
+            warmth: number;
+        };
+        /** PersonasOut */
+        PersonasOut: {
+            /** Personas */
+            personas: components["schemas"]["PersonaOut"][];
+        };
+        /** PictureConfirm */
+        PictureConfirm: {
+            /**
+             * Uploadid
+             * Format: uuid
+             */
+            uploadId: string;
+        };
+        /** PictureOut */
+        PictureOut: {
+            /** Url */
+            url: string;
+        };
+        /**
+         * PictureUploadOut
+         * @description How to send a photo: a form POST to `url` with `fields`, then the JPEG as `file`.
+         */
+        PictureUploadOut: {
+            /** Fields */
+            fields: {
+                [key: string]: string;
+            };
+            /**
+             * Uploadid
+             * Format: uuid
+             */
+            uploadId: string;
+            /** Url */
+            url: string;
+        };
+        /** PlacementDecision */
+        PlacementDecision: {
+            /**
+             * Use
+             * @enum {string}
+             */
+            use: "measured" | "self";
+        };
+        /** PlacementOut */
+        PlacementOut: {
+            /** Differs */
+            differs: boolean;
+            result: components["schemas"]["PlacementResultOut"] | null;
+            /** Selfassessed */
+            selfAssessed: ("A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2") | null;
+            status: components["schemas"]["PlacementStatus"];
+        };
+        /** PlacementResultOut */
+        PlacementResultOut: {
+            /** Levels */
+            levels: {
+                [key: string]: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            };
+            /**
+             * Measuredat
+             * Format: date-time
+             */
+            measuredAt: string;
+            /**
+             * Overall
+             * @enum {string}
+             */
+            overall: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Weakareas */
+            weakAreas: string[];
+        };
+        /**
+         * PlacementStatus
+         * @enum {string}
+         */
+        PlacementStatus: "not_started" | "in_progress" | "assessing" | "measured" | "inconclusive" | "decided" | "skipped";
+        /** PlanWordOut */
+        PlanWordOut: {
+            /** Meaning */
+            meaning: string;
+            /** Text */
+            text: string;
+        };
+        /** ProfileOut */
+        ProfileOut: {
+            /** Global */
+            global: {
+                [key: string]: components["schemas"]["FieldOut"];
+            };
+            /** Languages */
+            languages: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["FieldOut"];
+                };
+            };
+            /** Targetlanguage */
+            targetLanguage: string | null;
+        };
+        /** ProfilePatch */
+        ProfilePatch: {
+            /** Changes */
+            changes: components["schemas"]["ChangeIn"][];
+        };
+        /**
+         * ProgressOut
+         * @description The Progress screen in one answer.
+         */
+        ProgressOut: {
+            activity: components["schemas"]["ActivityOut"];
+            cards: components["schemas"]["CardProgressOut"];
+            /** Language */
+            language: string;
+            level: components["schemas"]["HomeLevelOut"] | null;
+            /** Levelhistory */
+            levelHistory: components["schemas"]["LevelPointOut"][];
+            /** Longeststreakdays */
+            longestStreakDays: number;
+            /** Milestones */
+            milestones: components["schemas"]["MilestoneOut"][];
+            mistakes: components["schemas"]["MistakeTrendsOut"];
+            talk: components["schemas"]["TalkShareOut"] | null;
+            /** Weeks */
+            weeks: components["schemas"]["WeekOut"][];
+        };
+        /** QueueCardOut */
+        QueueCardOut: {
+            card: components["schemas"]["CardOut"];
+            /** Duein */
+            dueIn: {
+                [key: string]: number;
+            };
+        };
+        /** QueueOut */
+        QueueOut: {
+            /** Cards */
+            cards: components["schemas"]["QueueCardOut"][];
+            /** Due */
+            due: number;
+            /** Language */
+            language: string;
+        };
+        /**
+         * RecordingIn
+         * @description A sentence recorded on the device: a correction said again, or a card's answer.
+         */
+        RecordingIn: {
+            /** Audio */
+            audio: string;
+            /** Durationms */
+            durationMs?: number | null;
+            /** Format */
+            format: string;
+        };
+        /** RecordingsOut */
+        RecordingsOut: {
+            /** Kept */
+            kept: boolean;
+        };
+        /** RecordingsPatch */
+        RecordingsPatch: {
+            /** Kept */
+            kept: boolean;
+        };
+        /** ReportMistakeOut */
+        ReportMistakeOut: {
+            /** Category */
+            category: string;
+            /** Certain */
+            certain: boolean;
+            /** Corrected */
+            corrected: string;
+            /** Explanation */
+            explanation: string;
+            /** Original */
+            original: string;
+            /** Saved */
+            saved: boolean;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "blocks_meaning" | "noticeable" | "minor";
+            /** Turn */
+            turn: number;
+        };
+        /** ReportOut */
+        ReportOut: {
+            report: components["schemas"]["SessionReportOut"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "none" | "pending" | "ready" | "failed" | "too_short";
+        };
+        /** ReportRewriteOut */
+        ReportRewriteOut: {
+            /** Natural */
+            natural: string;
+            /** Note */
+            note: string;
+            /** Original */
+            original: string;
+            /** Turn */
+            turn: number;
+        };
+        /** ReportStatsOut */
+        ReportStatsOut: {
+            /** Learnerturns */
+            learnerTurns: number;
+            /** Learnerwords */
+            learnerWords: number;
+            /** Longestturnwords */
+            longestTurnWords: number;
+            /** Partnerwords */
+            partnerWords: number;
+        };
+        /** ReportWordOut */
+        ReportWordOut: {
+            /** Example */
+            example: string | null;
+            /** Meaning */
+            meaning: string;
+            /** Saved */
+            saved: boolean;
+            /** Text */
+            text: string;
+        };
+        /** RetriedOut */
+        RetriedOut: {
+            /** Better */
+            better: string;
+            /** Heard */
+            heard: string;
+            /** Right */
+            right: boolean;
+            /** Said */
+            said: string;
+        };
+        /** RetriesOut */
+        RetriesOut: {
+            /** Retries */
+            retries: components["schemas"]["RetryOut"][];
+        };
+        /** RetryOut */
+        RetryOut: {
+            /** Index */
+            index: number;
+            /** Right */
+            right: boolean;
+        };
+        /** ReviewIn */
+        ReviewIn: {
+            /**
+             * Rating
+             * @enum {string}
+             */
+            rating: "again" | "hard" | "good" | "easy";
+        };
+        /** ScenarioOut */
+        ScenarioOut: {
+            /** Goals */
+            goals: string[];
+            /** Id */
+            id: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+        };
+        /** SessionReportOut */
+        SessionReportOut: {
+            /** Language */
+            language: string;
+            levelStep: components["schemas"]["LevelStepOut"] | null;
+            /** Mistakes */
+            mistakes: components["schemas"]["ReportMistakeOut"][];
+            /** Nextsteps */
+            nextSteps: string[];
+            /** Rewrites */
+            rewrites: components["schemas"]["ReportRewriteOut"][];
+            stats: components["schemas"]["ReportStatsOut"];
+            /** Summary */
+            summary: string;
+            /** Wins */
+            wins: string[];
+            /** Words */
+            words: components["schemas"]["ReportWordOut"][];
+        };
+        /** ShareOut */
+        ShareOut: {
+            /** Key */
+            key: string;
+            /** Requests */
+            requests: number;
+            /** Usd */
+            usd: number;
+        };
+        /**
+         * Source
+         * @description Where a value came from (spec §11.2).
+         * @enum {string}
+         */
+        Source: "asked" | "measured" | "inferred_confirmed";
+        /**
+         * Stage
+         * @enum {string}
+         */
+        Stage: "essentials" | "review" | "placement" | "partners" | "ready" | "done";
+        /** TalkShareOut */
+        TalkShareOut: {
+            /** Learnerwords */
+            learnerWords: number;
+            /** Partnerwords */
+            partnerWords: number;
+        };
+        /**
+         * TeachingModel
+         * @description How a persona treats mistakes and adapts to the learner. Every key is always present;
+         *     null means "as the learner's profile says" (or, for speed, the voice's own pace).
+         */
+        TeachingModel: {
+            /**
+             * Correctiontiming
+             * @enum {string}
+             */
+            correctionTiming: "recast" | "immediate" | "end" | "off";
+            /** Explanationusage */
+            explanationUsage: ("never" | "when_stuck" | "for_grammar" | "freely") | null;
+            /** Focus */
+            focus: string | null;
+            /** Level */
+            level: ("A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2") | null;
+            /** Speed */
+            speed: number | null;
+            /**
+             * Strictness
+             * @enum {string}
+             */
+            strictness: "meaning" | "important" | "everything";
+        };
+        /** TopicMistakeOut */
+        TopicMistakeOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Certain */
+            certain: boolean;
+            /** Conversationid */
+            conversationId: string;
+            /** Corrected */
+            corrected: string;
+            /** Explanation */
+            explanation: string;
+            /** Original */
+            original: string;
+        };
+        /** TranscriptOut */
+        TranscriptOut: {
+            conversation: components["schemas"]["ConversationOut"];
+            /** Turns */
+            turns: components["schemas"]["TurnOut"][];
+        };
+        /**
+         * Trend
+         * @enum {string}
+         */
+        Trend: "improving" | "steady" | "slipping";
+        /** TurnAudioOut */
+        TurnAudioOut: {
+            /** Milliseconds */
+            milliseconds: number;
+            /** Url */
+            url: string;
+        };
+        /** TurnOut */
+        TurnOut: {
+            audio: components["schemas"]["TurnAudioOut"] | null;
+            /**
+             * Speaker
+             * @enum {string}
+             */
+            speaker: "learner" | "persona";
+            /** Text */
+            text: string;
+            /** Verbatim */
+            verbatim: string | null;
+        };
+        /** TutorAnswerOut */
+        TutorAnswerOut: {
+            /** Examples */
+            examples: components["schemas"]["ExampleOut"][];
+            /** Explanation */
+            explanation: string;
+            /** Topic */
+            topic: string | null;
+            /** Unsure */
+            unsure: boolean;
+        };
+        /** TutorCorrectionIn */
+        TutorCorrectionIn: {
+            /** Conversationid */
+            conversationId: string;
+            /** Index */
+            index: number;
+        };
+        /** TutorQuestionIn */
+        TutorQuestionIn: {
+            /** Question */
+            question: string;
+        };
+        /** TutorQuestionOut */
+        TutorQuestionOut: {
+            answer: components["schemas"]["TutorAnswerOut"];
+            /**
+             * Askedat
+             * Format: date-time
+             */
+            askedAt: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Question */
+            question: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "text" | "report" | "call";
+        };
+        /** TutorQuestionsOut */
+        TutorQuestionsOut: {
+            /** Questions */
+            questions: components["schemas"]["TutorQuestionOut"][];
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
+        /** VoiceCallIn */
+        VoiceCallIn: {
+            /** Localdate */
+            localDate?: string | null;
+            /** Personaid */
+            personaId?: string | null;
+            /** Practise */
+            practise?: string | null;
+            purpose: components["schemas"]["CallPurpose"];
+            /** Scenario */
+            scenario?: string | null;
+            /** Sdp */
+            sdp: string;
+        };
+        /** VoiceCallOut */
+        VoiceCallOut: {
+            /** Callid */
+            callId: string;
+            /** Maxseconds */
+            maxSeconds: number;
+            plan: components["schemas"]["CallPlanOut"] | null;
+            /** Sdp */
+            sdp: string;
+        };
+        /** VoiceSampleOut */
+        VoiceSampleOut: {
+            /** Url */
+            url: string;
+        };
+        /** WeekOut */
+        WeekOut: {
+            /** Conversations */
+            conversations: number;
+            /** Seconds */
+            seconds: number;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
+        /**
+         * WordDetailsOut
+         * @description A word's forms (spec §6.7); a form the word does not have is null.
+         */
+        WordDetailsOut: {
+            /** Article */
+            article: ("der" | "die" | "das") | null;
+            /** Case */
+            case: string | null;
+            /** Comparative */
+            comparative: string | null;
+            /**
+             * Part
+             * @enum {string}
+             */
+            part: "noun" | "verb" | "adjective" | "phrase" | "other";
+            /** Perfect */
+            perfect: string | null;
+            /** Plural */
+            plural: string | null;
+            /** Present */
+            present: string | null;
+            /** Preterite */
+            preterite: string | null;
+            /** Separable */
+            separable: boolean | null;
+            /** Superlative */
+            superlative: string | null;
+        };
     };
-    /** ProfilePatch */
-    ProfilePatch: {
-      /** Changes */
-      changes: components['schemas']['ChangeIn'][];
-    };
-    /**
-     * ProgressOut
-     * @description The Progress screen in one answer.
-     */
-    ProgressOut: {
-      activity: components['schemas']['ActivityOut'];
-      cards: components['schemas']['CardProgressOut'];
-      /** Language */
-      language: string;
-      level: components['schemas']['HomeLevelOut'] | null;
-      /** Levelhistory */
-      levelHistory: components['schemas']['LevelPointOut'][];
-      /** Longeststreakdays */
-      longestStreakDays: number;
-      /** Milestones */
-      milestones: components['schemas']['MilestoneOut'][];
-      mistakes: components['schemas']['MistakeTrendsOut'];
-      talk: components['schemas']['TalkShareOut'] | null;
-      /** Weeks */
-      weeks: components['schemas']['WeekOut'][];
-    };
-    /** QueueCardOut */
-    QueueCardOut: {
-      card: components['schemas']['CardOut'];
-      /** Duein */
-      dueIn: {
-        [key: string]: number;
-      };
-    };
-    /** QueueOut */
-    QueueOut: {
-      /** Cards */
-      cards: components['schemas']['QueueCardOut'][];
-      /** Due */
-      due: number;
-    };
-    /** RecordingsOut */
-    RecordingsOut: {
-      /** Kept */
-      kept: boolean;
-    };
-    /** RecordingsPatch */
-    RecordingsPatch: {
-      /** Kept */
-      kept: boolean;
-    };
-    /** ReportMistakeOut */
-    ReportMistakeOut: {
-      /** Category */
-      category: string;
-      /** Certain */
-      certain: boolean;
-      /** Corrected */
-      corrected: string;
-      /** Explanation */
-      explanation: string;
-      /** Original */
-      original: string;
-      /** Saved */
-      saved: boolean;
-      /**
-       * Severity
-       * @enum {string}
-       */
-      severity: 'blocks_meaning' | 'noticeable' | 'minor';
-      /** Turn */
-      turn: number;
-    };
-    /** ReportOut */
-    ReportOut: {
-      report: components['schemas']['SessionReportOut'] | null;
-      /**
-       * Status
-       * @enum {string}
-       */
-      status: 'none' | 'pending' | 'ready' | 'failed' | 'too_short';
-    };
-    /** ReportRewriteOut */
-    ReportRewriteOut: {
-      /** Natural */
-      natural: string;
-      /** Note */
-      note: string;
-      /** Original */
-      original: string;
-      /** Turn */
-      turn: number;
-    };
-    /** ReportStatsOut */
-    ReportStatsOut: {
-      /** Learnerturns */
-      learnerTurns: number;
-      /** Learnerwords */
-      learnerWords: number;
-      /** Longestturnwords */
-      longestTurnWords: number;
-      /** Partnerwords */
-      partnerWords: number;
-    };
-    /** ReportWordOut */
-    ReportWordOut: {
-      /** Example */
-      example: string | null;
-      /** Meaning */
-      meaning: string;
-      /** Saved */
-      saved: boolean;
-      /** Text */
-      text: string;
-    };
-    /** RetriedOut */
-    RetriedOut: {
-      /** Better */
-      better: string;
-      /** Heard */
-      heard: string;
-      /** Right */
-      right: boolean;
-      /** Said */
-      said: string;
-    };
-    /** RetriesOut */
-    RetriesOut: {
-      /** Retries */
-      retries: components['schemas']['RetryOut'][];
-    };
-    /**
-     * RetryIn
-     * @description One attempt at saying a correction again, recorded on the device.
-     */
-    RetryIn: {
-      /** Audio */
-      audio: string;
-      /** Durationms */
-      durationMs?: number | null;
-      /** Format */
-      format: string;
-    };
-    /** RetryOut */
-    RetryOut: {
-      /** Index */
-      index: number;
-      /** Right */
-      right: boolean;
-    };
-    /** ReviewIn */
-    ReviewIn: {
-      /**
-       * Rating
-       * @enum {string}
-       */
-      rating: 'again' | 'hard' | 'good' | 'easy';
-    };
-    /** ScenarioOut */
-    ScenarioOut: {
-      /** Goals */
-      goals: string[];
-      /** Id */
-      id: string;
-      /**
-       * Level
-       * @enum {string}
-       */
-      level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
-    };
-    /** SessionReportOut */
-    SessionReportOut: {
-      /** Language */
-      language: string;
-      levelStep: components['schemas']['LevelStepOut'] | null;
-      /** Mistakes */
-      mistakes: components['schemas']['ReportMistakeOut'][];
-      /** Nextsteps */
-      nextSteps: string[];
-      /** Rewrites */
-      rewrites: components['schemas']['ReportRewriteOut'][];
-      stats: components['schemas']['ReportStatsOut'];
-      /** Summary */
-      summary: string;
-      /** Wins */
-      wins: string[];
-      /** Words */
-      words: components['schemas']['ReportWordOut'][];
-    };
-    /** ShareOut */
-    ShareOut: {
-      /** Key */
-      key: string;
-      /** Requests */
-      requests: number;
-      /** Usd */
-      usd: number;
-    };
-    /**
-     * Source
-     * @description Where a value came from (spec §11.2).
-     * @enum {string}
-     */
-    Source: 'asked' | 'measured' | 'inferred_confirmed';
-    /**
-     * Stage
-     * @enum {string}
-     */
-    Stage: 'essentials' | 'review' | 'placement' | 'partners' | 'ready' | 'done';
-    /** TalkShareOut */
-    TalkShareOut: {
-      /** Learnerwords */
-      learnerWords: number;
-      /** Partnerwords */
-      partnerWords: number;
-    };
-    /**
-     * TeachingModel
-     * @description How a persona treats mistakes and adapts to the learner. Every key is always present;
-     *     null means "as the learner's profile says" (or, for speed, the voice's own pace).
-     */
-    TeachingModel: {
-      /**
-       * Correctiontiming
-       * @enum {string}
-       */
-      correctionTiming: 'recast' | 'immediate' | 'end' | 'off';
-      /** Explanationusage */
-      explanationUsage: ('never' | 'when_stuck' | 'for_grammar' | 'freely') | null;
-      /** Focus */
-      focus: string | null;
-      /** Level */
-      level: ('A0' | 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2') | null;
-      /** Speed */
-      speed: number | null;
-      /**
-       * Strictness
-       * @enum {string}
-       */
-      strictness: 'meaning' | 'important' | 'everything';
-    };
-    /** TopicMistakeOut */
-    TopicMistakeOut: {
-      /**
-       * At
-       * Format: date-time
-       */
-      at: string;
-      /** Certain */
-      certain: boolean;
-      /** Conversationid */
-      conversationId: string;
-      /** Corrected */
-      corrected: string;
-      /** Explanation */
-      explanation: string;
-      /** Original */
-      original: string;
-    };
-    /** TranscriptOut */
-    TranscriptOut: {
-      conversation: components['schemas']['ConversationOut'];
-      /** Turns */
-      turns: components['schemas']['TurnOut'][];
-    };
-    /**
-     * Trend
-     * @enum {string}
-     */
-    Trend: 'improving' | 'steady' | 'slipping';
-    /** TurnAudioOut */
-    TurnAudioOut: {
-      /** Milliseconds */
-      milliseconds: number;
-      /** Url */
-      url: string;
-    };
-    /** TurnOut */
-    TurnOut: {
-      audio: components['schemas']['TurnAudioOut'] | null;
-      /**
-       * Speaker
-       * @enum {string}
-       */
-      speaker: 'learner' | 'persona';
-      /** Text */
-      text: string;
-      /** Verbatim */
-      verbatim: string | null;
-    };
-    /** TutorAnswerOut */
-    TutorAnswerOut: {
-      /** Examples */
-      examples: components['schemas']['ExampleOut'][];
-      /** Explanation */
-      explanation: string;
-      /** Topic */
-      topic: string | null;
-      /** Unsure */
-      unsure: boolean;
-    };
-    /** TutorCorrectionIn */
-    TutorCorrectionIn: {
-      /** Conversationid */
-      conversationId: string;
-      /** Index */
-      index: number;
-    };
-    /** TutorQuestionIn */
-    TutorQuestionIn: {
-      /** Question */
-      question: string;
-    };
-    /** TutorQuestionOut */
-    TutorQuestionOut: {
-      answer: components['schemas']['TutorAnswerOut'];
-      /**
-       * Askedat
-       * Format: date-time
-       */
-      askedAt: string;
-      /**
-       * Id
-       * Format: uuid
-       */
-      id: string;
-      /** Question */
-      question: string;
-      /**
-       * Source
-       * @enum {string}
-       */
-      source: 'text' | 'report' | 'call';
-    };
-    /** TutorQuestionsOut */
-    TutorQuestionsOut: {
-      /** Questions */
-      questions: components['schemas']['TutorQuestionOut'][];
-    };
-    /** ValidationError */
-    ValidationError: {
-      /** Context */
-      ctx?: Record<string, never>;
-      /** Input */
-      input?: unknown;
-      /** Location */
-      loc: (string | number)[];
-      /** Message */
-      msg: string;
-      /** Error Type */
-      type: string;
-    };
-    /** VoiceCallIn */
-    VoiceCallIn: {
-      /** Localdate */
-      localDate?: string | null;
-      /** Personaid */
-      personaId?: string | null;
-      /** Practise */
-      practise?: string | null;
-      purpose: components['schemas']['CallPurpose'];
-      /** Scenario */
-      scenario?: string | null;
-      /** Sdp */
-      sdp: string;
-    };
-    /** VoiceCallOut */
-    VoiceCallOut: {
-      /** Callid */
-      callId: string;
-      /** Maxseconds */
-      maxSeconds: number;
-      plan: components['schemas']['CallPlanOut'] | null;
-      /** Sdp */
-      sdp: string;
-    };
-    /** VoiceSampleOut */
-    VoiceSampleOut: {
-      /** Url */
-      url: string;
-    };
-    /** WeekOut */
-    WeekOut: {
-      /** Conversations */
-      conversations: number;
-      /** Seconds */
-      seconds: number;
-      /**
-       * Start
-       * Format: date
-       */
-      start: string;
-    };
-    /**
-     * WordDetailsOut
-     * @description A word's forms (spec §6.7); a form the word does not have is null.
-     */
-    WordDetailsOut: {
-      /** Article */
-      article: ('der' | 'die' | 'das') | null;
-      /** Case */
-      case: string | null;
-      /** Comparative */
-      comparative: string | null;
-      /**
-       * Part
-       * @enum {string}
-       */
-      part: 'noun' | 'verb' | 'adjective' | 'phrase' | 'other';
-      /** Perfect */
-      perfect: string | null;
-      /** Plural */
-      plural: string | null;
-      /** Present */
-      present: string | null;
-      /** Preterite */
-      preterite: string | null;
-      /** Separable */
-      separable: boolean | null;
-      /** Superlative */
-      superlative: string | null;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  getAccount: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AccountOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  deleteAccount: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AccountDeletedOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  confirmPicture: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PictureConfirm'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AccountOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
+    getAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    deleteAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeletedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    confirmPicture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PictureConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removePicture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    startPictureUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PictureUploadOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getCards: {
+        parameters: {
+            query?: {
+                limit?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeckOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    saveCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getDueCards: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removeCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeckSummaryOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    answerCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnsweredOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getCardAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardAudioOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    reviewCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getConversations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                before?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    retryCorrection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriedOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getRetries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getConversationReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    requestConversationReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getGrammarMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrammarMapOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getGrammarTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                topic_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrammarTopicPageOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getHome: {
+        parameters: {
+            query?: {
+                tz?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getMemories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    configureMemories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemorySettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removeMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoriesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    changeMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemoryPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoryOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    completeOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    confirmEssentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    confirmPartners: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getCosts: {
+        parameters: {
+            query?: {
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getPersonas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonasOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    createPersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonaIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    draftPersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonaDescription"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaDraftOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    proposeStarterPersonas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonasOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getPersonaTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaTemplatesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removePersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                persona_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonasOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    changePersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                persona_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonaPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    duplicatePersona: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                persona_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getPlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacementOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    decidePlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    skipPlacement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfilePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getProgress: {
+        parameters: {
+            query?: {
+                tz?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getRecordings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    configureRecordings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    explainCorrection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TutorCorrectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorQuestionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getTutorQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorQuestionsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    askTutor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TutorQuestionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorQuestionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getVoiceAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllowanceOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    startVoiceCall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceCallIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceCallOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getVoiceSample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                voice: "marin" | "cedar" | "coral" | "sage" | "shimmer" | "ash" | "echo" | "verse";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceSampleOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
         };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  removePicture: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AccountOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  startPictureUpload: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PictureUploadOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getCards: {
-    parameters: {
-      query?: {
-        limit?: number;
-        before?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['DeckOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  saveCard: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CardIn'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CardOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getDueCards: {
-    parameters: {
-      query?: {
-        limit?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['QueueOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  removeCard: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        card_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['DeckSummaryOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getCardAudio: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        card_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CardAudioOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  reviewCard: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        card_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ReviewIn'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CardOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getCatalog: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CatalogOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getConversations: {
-    parameters: {
-      query?: {
-        limit?: number;
-        before?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ConversationsOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  retryCorrection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        call_id: string;
-        index: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RetryIn'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RetriedOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getRetries: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        call_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RetriesOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  getConversation: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        conversation_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TranscriptOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  getConversationReport: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        conversation_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ReportOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  requestConversationReport: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        conversation_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ReportOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getGrammarMap: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['GrammarMapOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getGrammarTopic: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        topic_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['GrammarTopicPageOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  getHome: {
-    parameters: {
-      query?: {
-        tz?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HomeOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  getMemories: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MemoriesOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  configureMemories: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['MemorySettingsPatch'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MemoriesOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  removeMemory: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        memory_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MemoriesOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  changeMemory: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        memory_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['MemoryPatch'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MemoryOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getOnboarding: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OnboardingOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  completeOnboarding: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OnboardingOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  confirmEssentials: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OnboardingOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  confirmPartners: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OnboardingOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getCosts: {
-    parameters: {
-      query?: {
-        month?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CostsOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  getPersonas: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonasOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  createPersona: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PersonaIn'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonaOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  draftPersona: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PersonaDescription'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonaDraftOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  proposeStarterPersonas: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonasOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getPersonaTemplates: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonaTemplatesOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  removePersona: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        persona_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonasOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  changePersona: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        persona_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PersonaPatch'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonaOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  duplicatePersona: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        persona_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PersonaOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  getPlacement: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PlacementOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  decidePlacement: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PlacementDecision'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OnboardingOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  skipPlacement: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['OnboardingOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getProfile: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProfileOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  updateProfile: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ProfilePatch'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProfileOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getProgress: {
-    parameters: {
-      query?: {
-        tz?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProgressOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-    };
-  };
-  getRecordings: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RecordingsOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  configureRecordings: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RecordingsPatch'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['RecordingsOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  explainCorrection: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['TutorCorrectionIn'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TutorQuestionOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getTutorQuestions: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TutorQuestionsOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  askTutor: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['TutorQuestionIn'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TutorQuestionOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getVoiceAllowance: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['AllowanceOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  startVoiceCall: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['VoiceCallIn'];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['VoiceCallOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['HTTPValidationError'];
-        };
-      };
-      /** @description Too Many Requests */
-      429: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  getVoiceSample: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        voice: 'marin' | 'cedar' | 'coral' | 'sage' | 'shimmer' | 'ash' | 'echo' | 'verse';
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['VoiceSampleOut'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Unprocessable Entity */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description Service Unavailable */
-      503: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
     };
-  };
 }

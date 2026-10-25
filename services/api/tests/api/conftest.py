@@ -13,6 +13,7 @@ from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -30,8 +31,10 @@ from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
+from konvami_api.domain.spoken import Listener
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
+from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from tests.fakes import (
     FakeAccountDirectory,
@@ -44,6 +47,7 @@ from tests.fakes import (
     InMemoryCardRepository,
     InMemoryChargeRepository,
     InMemoryConversationRepository,
+    InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryFileStore,
     InMemoryLevelRepository,
@@ -190,6 +194,12 @@ def retry_transcriber() -> ScriptedTranscriber:
 
 
 @pytest.fixture
+def answer_transcriber() -> ScriptedTranscriber:
+    """Writes down the cards answered out loud."""
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
 def calls() -> InMemoryVoiceSessionRepository:
     """The recorded voice calls, for tests that need one to have taken place."""
     return InMemoryVoiceSessionRepository()
@@ -255,6 +265,7 @@ def services(
     charges: InMemoryChargeRepository,
     level_store: InMemoryLevelRepository,
     retry_transcriber: ScriptedTranscriber,
+    answer_transcriber: ScriptedTranscriber,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -427,12 +438,29 @@ def services(
             clock=clock,
         ),
         retries=RetryService(
-            profiles=profiles,
             reports=reports,
-            accounts=directory,
             repository=InMemoryRetryRepository(),
-            transcriber=retry_transcriber,
-            model="gpt-4o-transcribe",
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=retry_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            clock=clock,
+        ),
+        conversation_review=ConversationReview(
+            profiles=profiles, sessions=calls, conversations=conversations, cards=cards
+        ),
+        voice_review=VoiceReviewService(
+            profiles=profiles,
+            cards=card_store,
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=answer_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            allowance=InMemoryDailyAllowance(),
             clock=clock,
         ),
         costs=CostService(

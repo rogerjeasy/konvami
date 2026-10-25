@@ -503,7 +503,7 @@ def test_a_practice_call_starts_with_the_chosen_partner(
         "sdp": "v=0 answer",
         "maxSeconds": 600,
         # Nothing to plan from before the first report.
-        "plan": {"language": "de", "focus": [], "words": []},
+        "plan": {"language": "de", "focus": [], "words": [], "review": False},
     }
     session = voice_provider.created[0][1]
     assert "You are Jonas" in session["instructions"]

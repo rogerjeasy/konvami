@@ -30,8 +30,11 @@ export interface VoiceCallDetails {
 export type WordDetails = Schemas['WordDetailsOut'];
 /** One attempt at saying a report's correction again ("Say it better"), as the server heard it. */
 export type Retried = Schemas['RetriedOut'];
-/** A recording of the attempt, made on the device. */
-export type RetryAttempt = Schemas['RetryIn'];
+/** A sentence recorded on the device: a correction said again, or a card's answer. */
+export type SpokenRecording = Schemas['RecordingIn'];
+/** A card answered out loud (voice review): what was heard, how close, the rating it points to. */
+export type AnsweredCard = Schemas['AnsweredOut'];
+export type AnswerOutcome = AnsweredCard['outcome'];
 /** The corrections of a report the learner said again, and whether they got one right. */
 export type Retries = Schemas['RetriesOut'];
 /** Every grammar topic of the language learned, with how well the learner has it (spec §6.8). */
@@ -271,11 +274,20 @@ export interface ApiClient {
    * Says correction `index` of a conversation's report again. Fails with `unsure`, `not_found`,
    * `invalid_value`, `retry_limit`, `consent_required` or `unavailable`.
    */
-  retryCorrection(conversationId: string, index: number, attempt: RetryAttempt): Promise<Retried>;
+  retryCorrection(
+    conversationId: string,
+    index: number,
+    attempt: SpokenRecording,
+  ): Promise<Retried>;
   /** The corrections of a conversation's report the learner said again. */
   getRetries(conversationId: string): Promise<Retries>;
   /** Where a card's sound plays from (made the first time). Fails with `not_found`, `unavailable`. */
   getCardAudio(id: string): Promise<{ url: string }>;
+  /**
+   * Answers a card out loud; the card is not rated. Fails with `not_found`, `invalid_value`,
+   * `answer_limit`, `consent_required` or `unavailable`.
+   */
+  answerCard(id: string, answer: SpokenRecording): Promise<AnsweredCard>;
   /** The grammar map of the language learned. */
   getGrammarMap(): Promise<GrammarMap>;
   /** One topic of the map. Fails with `not_found` for a topic the language does not have. */
@@ -438,6 +450,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getRetries: (conversationId) =>
       request('GET', `/v1/conversations/${encodeURIComponent(conversationId)}/retries`),
     getCardAudio: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}/audio`),
+    answerCard: (id, answer) =>
+      request('POST', `/v1/cards/${encodeURIComponent(id)}/answers`, answer),
     getGrammarMap: () => request('GET', '/v1/grammar'),
     getGrammarTopic: (id) => request('GET', `/v1/grammar/${encodeURIComponent(id)}`),
     askTutor: (question) => request('POST', '/v1/tutor/questions', { question }),

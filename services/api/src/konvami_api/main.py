@@ -19,6 +19,7 @@ from konvami_api.domain.accounts import AccountService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -36,15 +37,18 @@ from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
+from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
+from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
     SqlAlertLog,
+    SqlAnswerAllowance,
     SqlCardRepository,
     SqlChargeRepository,
     SqlConversationRepository,
@@ -218,6 +222,10 @@ def build_backend(
     )
     files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
     transcriber = OpenAiTranscription(openai_key, meter=meter)
+    # Hears what the learner says on purpose outside a call, mistakes kept (the verbatim pass).
+    listener = Listener(
+        profiles=profiles, accounts=directory, transcriber=transcriber, model=models.verbatim
+    )
     recordings = RecordingService(
         profiles=profiles,
         conversations=conversations,
@@ -333,12 +341,19 @@ def build_backend(
         ),
         grammar=GrammarMapService(profiles=profiles, reports=reports),
         retries=RetryService(
-            profiles=profiles,
             reports=reports,
-            accounts=directory,
             repository=SqlRetryRepository(sql),
-            transcriber=transcriber,
-            model=models.verbatim,
+            listener=listener,
+            clock=_now,
+        ),
+        conversation_review=ConversationReview(
+            profiles=profiles, sessions=sessions, conversations=conversations, cards=cards
+        ),
+        voice_review=VoiceReviewService(
+            profiles=profiles,
+            cards=card_store,
+            listener=listener,
+            allowance=SqlAnswerAllowance(sql),
             clock=_now,
         ),
         costs=CostService(
@@ -397,8 +412,9 @@ def migrate_handler(event: dict[str, Any], context: Any) -> dict[str, list[str]]
 def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     """The worker's jobs, all too long for an API request: following a live call to its end
     (`call_id`); what follows a conversation (`report`): writing its learner turns down a second
-    time from their recordings, writing its report, moving the level if the reports say so, then
-    writing down what it told about the learner; and filling in a learner's new word cards with
+    time from their recordings, counting the due words the learner used as reviewed, writing
+    its report, moving the level if the reports say so, then writing down what it told about
+    the learner; and filling in a learner's new word cards with
     their forms (`card_details`)."""
     if "card_details" in event:
         backend.services.card_details.fill_in(UUID(event["card_details"]))
@@ -411,12 +427,15 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
             services.recordings.transcribe(call_id)
         finally:
             try:
-                services.reports.write(call_id)
+                services.conversation_review.after_conversation(call_id)
             finally:
                 try:
-                    services.levels.after_report(call_id)
+                    services.reports.write(call_id)
                 finally:
-                    services.memories.write(call_id)
+                    try:
+                        services.levels.after_report(call_id)
+                    finally:
+                        services.memories.write(call_id)
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
 
