@@ -24,7 +24,16 @@ from konvami_api.domain.costs import (
     SpendGuard,
     week_start,
 )
-from konvami_api.domain.live_call import KeepAudio, LiveCall, Outcome, Turn, TurnAudio
+from konvami_api.domain.live_call import (
+    KeepAudio,
+    LiveCall,
+    Outcome,
+    Spot,
+    Spotted,
+    Turn,
+    TurnAudio,
+)
+from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.tools import ToolSet
 
 # Seconds before the limit at which the persona is told to wrap up.
@@ -92,6 +101,8 @@ class CallStarted:
     call_id: str
     sdp_answer: str
     max_seconds: int
+    # What a practice conversation sets out to practise (for the app to show); None otherwise.
+    plan: SessionPlan | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +119,19 @@ class VoiceSession:
     # The longest the call may last, as granted when it started (the learner's minutes left
     # could make it shorter than the purpose's own limit). None for calls from before then.
     max_seconds: int | None = None
+    # What a practice conversation set out to practise; None for the guide's calls and for
+    # calls from before plans.
+    plan: SessionPlan | None = None
+
+
+@dataclass(frozen=True)
+class Hearing:
+    """How the live transcription is to write down the learner: the language they speak (an
+    ISO 639-1 code) and to keep their mistakes. Told both, it keeps more of them
+    (docs/evals/2026-10-25-verbatim-fidelity.md)."""
+
+    language: str
+    prompt: str
 
 
 @dataclass(frozen=True)
@@ -119,6 +143,10 @@ class Briefing:
     voice: str | None = None
     # How fast they speak, as a multiple of the voice's own pace; None for that pace.
     speed: float | None = None
+    # What a practice conversation sets out to practise; None for the guide's calls.
+    plan: SessionPlan | None = None
+    # None: the learner speaks their own language (the setup), written down as it comes.
+    hearing: Hearing | None = None
 
 
 @dataclass(frozen=True)
@@ -189,6 +217,13 @@ class AudioStore(Protocol):
     def keep(self, user_id: UUID, call_id: str, audio: KeepAudio) -> TurnAudio: ...
 
 
+class TurnChecker(Protocol):
+    """Checks the learner's turns during a call (the Live Error Spotter, `spotter.py`)."""
+
+    def for_call(self, session: VoiceSession) -> Callable[[Spot], Spotted] | None:
+        """The check for each turn of this call; None when its turns are not checked."""
+
+
 # Which calls are recorded (spec §6.6): the conversations the learner finds in the library.
 _RECORDED = frozenset({CallPurpose.PRACTICE})
 
@@ -243,6 +278,12 @@ def voice_units(usage: Mapping[str, int], seconds: int) -> dict[str, int]:
     }
 
 
+def _transcription(model: str, hearing: Hearing | None) -> dict[str, str]:
+    if hearing is None:
+        return {"model": model}
+    return {"model": model, "language": hearing.language, "prompt": hearing.prompt}
+
+
 def _today(now: dt.datetime, local_date: dt.date | None) -> dt.date:
     """The date a persona is told. The learner's own, when the app names one that some time
     zone can have right now (at most a day from the date in UTC); otherwise the date in UTC."""
@@ -266,10 +307,12 @@ class VoiceCallService:
         recordings: AudioStore | None = None,
         guard: SpendGuard | None = None,
         meter: Meter | None = None,
+        checker: TurnChecker | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
-        `meter` they are not metered."""
+        `meter` they are not metered; without a `checker` no turn is checked live."""
         self._settings = settings
+        self._checker = checker
         self._guard = guard
         self._meter = meter
         self._recordings = recordings
@@ -322,7 +365,9 @@ class VoiceCallService:
             "tool_choice": "auto",
             "audio": {
                 "input": {
-                    "transcription": {"model": self._settings.transcription_model},
+                    "transcription": _transcription(
+                        self._settings.transcription_model, briefing.hearing
+                    ),
                     "turn_detection": _TURN_DETECTION[purpose],
                 },
                 "output": output,
@@ -340,7 +385,9 @@ class VoiceCallService:
             raise VoiceError("minutes_used_up")
         try:
             created = self._create(
-                VoiceSession("", user_id, purpose, model, now, persona_id, scenario, granted),
+                VoiceSession(
+                    "", user_id, purpose, model, now, persona_id, scenario, granted, briefing.plan
+                ),
                 sdp_offer,
                 session,
             )
@@ -349,7 +396,7 @@ class VoiceCallService:
             self._sessions.release_seconds(user_id, week, granted)
             raise
         script.started(user_id)
-        return CallStarted(created.call_id, created.sdp_answer, granted)
+        return CallStarted(created.call_id, created.sdp_answer, granted, briefing.plan)
 
     def _create(self, call: VoiceSession, sdp_offer: str, session: dict[str, Any]) -> CreatedCall:
         """Creates the call at the provider, records it and starts its server side; a call
@@ -390,7 +437,15 @@ class VoiceCallService:
             wrap_up_seconds=WRAP_UP_SECONDS,
             goodbye_grace_seconds=GOODBYE_GRACE_SECONDS,
             record=self._recordings is not None and session.purpose in _RECORDED,
+            spot=self._checker is not None and self._checker.for_call(session) is not None,
         )
+
+    def spotter(self, call_id: str) -> Callable[[Spot], Spotted] | None:
+        """Checks one of the learner's turns of a call; None for a call whose turns are not."""
+        session = self._sessions.get(call_id)
+        if session is None or self._checker is None:
+            return None
+        return self._checker.for_call(session)
 
     def audio_keeper(self, call_id: str) -> Callable[[KeepAudio], TurnAudio] | None:
         """Stores the audio of one turn of a recorded call; None for a call that is not."""

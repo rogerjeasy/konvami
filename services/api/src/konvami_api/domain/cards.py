@@ -30,6 +30,8 @@ PAGE_MAX = 100
 # How many cards one review session holds.
 QUEUE_DEFAULT = 20
 QUEUE_MAX = 50
+# Far enough ahead that every card is due by then: past FSRS's longest interval.
+BRING_BACK_HORIZON = dt.timedelta(days=fsrs.MAX_INTERVAL_DAYS + 1)
 
 
 @dataclass(frozen=True)
@@ -296,6 +298,14 @@ class CardService:
             ),
             due=self._repository.counts(user_id, language, now)[1],
         )
+
+    def words_to_bring_back(self, user_id: UUID, limit: int) -> list[Card]:
+        """Word cards for a conversation to use (spec §7 "review inside conversation"): the due
+        ones first, the longest waiting first, then the ones coming up soonest."""
+        # Every card is due by then, so the store hands them over in the order of their dates.
+        horizon = self._clock() + BRING_BACK_HORIZON
+        cards = self._repository.due(user_id, self._language(user_id), horizon, QUEUE_MAX)
+        return [card for card in cards if card.kind == "word"][:limit]
 
     def review(self, user_id: UUID, card_id: UUID, rating: Rating) -> Card:
         card = self._repository.get(user_id, card_id)

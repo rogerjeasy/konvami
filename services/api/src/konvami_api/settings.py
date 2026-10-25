@@ -65,6 +65,9 @@ class TextModels:
     verbatim: str = ""
     # Answers the learner's questions about the language (spec §6.8): accuracy matters.
     tutor: str = ""
+    # Checks each of the learner's turns during a call (the Live Error Spotter, spec §8.2):
+    # speed matters, and the report checks every mistake again. Empty: no live checks.
+    spotter: str = ""
 
 
 class _TextModels(BaseModel):
@@ -72,13 +75,14 @@ class _TextModels(BaseModel):
 
     assessment: str
     personas: str
-    # Left out by settings written before voice samples, reports, memory, recordings or the
-    # Tutor existed.
+    # Left out by settings written before voice samples, reports, memory, recordings, the Tutor
+    # or the Live Error Spotter existed.
     speech: str = ""
     report: str = ""
     memory: str = ""
     verbatim: str = ""
     tutor: str = ""
+    spotter: str = ""
 
 
 def text_models(raw: str | None) -> TextModels:
@@ -97,6 +101,7 @@ def text_models(raw: str | None) -> TextModels:
         memory=models.memory,
         verbatim=models.verbatim,
         tutor=models.tutor,
+        spotter=models.spotter,
     )
 
 

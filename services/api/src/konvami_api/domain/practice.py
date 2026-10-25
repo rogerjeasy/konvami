@@ -1,19 +1,21 @@
 """A practice conversation with one of the learner's partners (spec §6.3 "free conversation").
 
 Two things live here: what the partner is told (built for every call from who they are and what
-is known about the learner, in the layers of spec §8.5) and what they can do (end the
-conversation). When it ends, its report is written (`domain/reports.py`) and what it told about
-the learner is remembered (`domain/memories.py`). Live corrections on screen build on this
-later.
+is known about the learner, in the layers of spec §8.5, with the plan the Session Planner
+made for it) and what they can do (end the conversation). While it goes on, the Live Error
+Spotter's notes tell the partner what the learner got wrong (`domain/spotter.py`). When it ends,
+its report is written (`domain/reports.py`) and what it told about the learner is remembered
+(`domain/memories.py`).
 """
 
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.conversations import ConversationService, PartnerHistory
+from konvami_api.domain.live_call import LIVE_CORRECTION_NOTE
 from konvami_api.domain.memories import Memory, MemoryService, Recall
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.persona_parts import FormOfAddress, Role, Strictness, Style
@@ -27,6 +29,8 @@ from konvami_api.domain.personas import (
     teaching_of,
 )
 from konvami_api.domain.placement import PlacementService
+from konvami_api.domain.plan import FocusPoint, SessionPlan
+from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import Focus, ReportService, what_to_practise
@@ -37,9 +41,10 @@ from konvami_api.domain.scenarios import (
     ScenarioError,
     role_play_instructions,
 )
+from konvami_api.domain.speech import verbatim_prompt
 from konvami_api.domain.tools import ToolResult, ToolSet
 from konvami_api.domain.tutor import TutorService
-from konvami_api.domain.voice import Briefing, FinishedCall, VoiceSessionRepository
+from konvami_api.domain.voice import Briefing, FinishedCall, Hearing, VoiceSessionRepository
 
 END = "end_conversation"
 ASK_TUTOR = "ask_tutor"
@@ -76,6 +81,8 @@ class Learner:
     memories: Recall | None = None
     # What the learner asked every partner to leave alone, in their own words.
     avoid_topics: tuple[str, ...] = ()
+    # What this conversation sets out to practise (the Session Planner).
+    plan: SessionPlan = field(default_factory=SessionPlan)
 
 
 class PracticeTools:
@@ -324,6 +331,44 @@ def _corrections(role: Role, teaching: Teaching) -> str:
     )
 
 
+# What the partner does with a note of the Live Error Spotter, by how they correct.
+_NOTE_USE: dict[str, str] = {
+    "recast": (
+        "In your next reply, use the right form yourself in passing, where it fits naturally. "
+        "When `focus` is true, a little later ask something that gives them a reason to use the "
+        "same structure again."
+    ),
+    "immediate": (
+        "Correct as described under Your role, but correct only what a note names: the checker "
+        "is more reliable than your ear. When `focus` is true, a little later ask something that "
+        "gives them a reason to use the same structure again."
+    ),
+    "end": (
+        "Keep them for your goodbye: name the one or two that mattered most, those with `focus` "
+        "first."
+    ),
+}
+
+
+def _checker_notes(role: Role, timing: str) -> str:
+    """How the partner uses the notes of the Live Error Spotter; empty for a partner who does
+    not correct at all, whose calls get none."""
+    if timing == "off":
+        return ""
+    if role == "exam_coach" and timing == "end":
+        use = "Use them for what to improve, after each task."
+    else:
+        use = _NOTE_USE.get(timing, _NOTE_USE["recast"])
+    return f"""
+# Notes from Konvami's checker
+Konvami checks each of their turns while you talk. When it finds a mistake you get a system
+note, which they did not say: "{LIVE_CORRECTION_NOTE}" with JSON in which `said` is their words,
+`better` the same words put right, `why` the rule, and `focus` true for one of today's
+structures. They may see it on their screen as a small note, so there is no need to repeat it.
+{use} Never read a note out, never quote it, and never mention the checker.
+"""
+
+
 # A trait away from the middle of its scale, as a sentence. The middle (3) says nothing.
 _TRAITS: dict[str, dict[int, str]] = {
     "warmth": {
@@ -482,6 +527,46 @@ honestly that you do not recall it and ask them to tell you again.
 """
 
 
+def _focus_point(point: FocusPoint) -> str:
+    said = "; ".join(f'"{original}" (right: "{better}")' for original, better in point.examples)
+    example = f" They said, for example: {said}." if said else ""
+    return f"- {point.title}: {point.elicit}{example}"
+
+
+def _plan(plan: SessionPlan, role_play: bool) -> str:
+    """The section on what this conversation sets out to practise; empty when that is nothing.
+    A role-play has a situation of its own, so it is not told what to talk about."""
+    topics = () if role_play else plan.recent_topics
+    if not (plan.focus or plan.words or topics):
+        return ""
+    parts: list[str] = []
+    if plan.focus:
+        parts.append(
+            "Structures to practise. One at a time, steer the talk so that they need it: ask "
+            "the kind of question given, then react to their answer as usual. Never drill, never "
+            "name the structure or the rule, and never mention this plan."
+        )
+        parts += [_focus_point(point) for point in plan.focus]
+    if plan.words:
+        parts.append(
+            "Words they saved and are learning. Use each once or twice where it fits, so they "
+            "hear it, and now and then ask something that gives them a reason to use it:"
+        )
+        parts += [f"- {word.text} ({word.meaning})" for word in plan.words]
+    if topics:
+        parts.append(
+            "What their last conversations were about (summaries written to the learner, maybe "
+            "in another language). Talk about something else unless they bring it up or you ask "
+            "how something went:"
+        )
+        parts += [f"- {topic}" for topic in topics]
+    return f"""
+# Today's plan
+Konvami planned this conversation from their last ones.
+{chr(10).join(parts)}
+"""
+
+
 # How the things to practise are introduced, and what must not be mentioned, per source.
 _FOCUS_SOURCE = {
     "placement": ("Their placement test showed these.", "test"),
@@ -543,6 +628,7 @@ def practice_instructions(
 # Worth practising
 {chr(10).join(practise)}
 """
+    plan = _plan(learner.plan, scenario is not None)
     usage = teaching.explanation_usage or learner.explanation_usage
     use = _EXPLANATION_USE.get(usage, _EXPLANATION_USE["when_stuck"])
 
@@ -557,6 +643,7 @@ You are an AI and say so if asked; you never claim to be human. Today is
 # Your role
 {_ROLE[persona.role].format(exam=exam)}
 {_corrections(persona.role, teaching)}
+{_checker_notes(persona.role, teaching.correction_timing)}
 {role_play_instructions(scenario) if scenario else ""}
 # The learner
 {chr(10).join(line for line in about if line)}
@@ -568,7 +655,7 @@ continue. Do not translate it into another language.
 
 # How to speak
 Their level is {level}. {_SPEAKING.get(level, _SPEAKING[DEFAULT_LEVEL])}
-{weak}
+{weak}{plan}
 # Rules
 - Keep it short. Each time you speak: {_TURN.get(level, _SHORT)}, the last of them
   exactly one question or prompt. Do not list possible answers or examples: ask, then wait.
@@ -627,7 +714,9 @@ class PracticeScript:
         recordings: RecordingService,
         tutor: TutorService,
         sessions: VoiceSessionRepository,
+        planner: SessionPlanner,
     ) -> None:
+        self._planner = planner
         self._tutor = tutor
         self._sessions = sessions
         self._reports = reports
@@ -658,6 +747,8 @@ class PracticeScript:
             practice_instructions(persona, learner, today, role_play),
             voice=persona.voice,
             speed=teaching_of(persona).speed,
+            plan=learner.plan,
+            hearing=Hearing(learner.plan.language, verbatim_prompt(learner.target)),
         )
 
     def _learner(
@@ -687,6 +778,7 @@ class PracticeScript:
                 user_id, persona.id, today, history.last_at.date() if history else None
             ),
             avoid_topics=profile.avoid_topics,
+            plan=self._planner.plan(user_id),
         )
 
     def _exam(self, language: str, exam: dict[str, Any] | None) -> str | None:

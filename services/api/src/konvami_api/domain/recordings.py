@@ -18,7 +18,12 @@ from konvami_api.domain.conversations import ConversationError, ConversationServ
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import AUDIO_RATE, KeepAudio, TurnAudio
 from konvami_api.domain.profile import RECORDINGS_KEPT, Change, Origin, ProfileService, Source
-from konvami_api.domain.speech import Transcriber, TranscriptionError, TranscriptionTask
+from konvami_api.domain.speech import (
+    Transcriber,
+    TranscriptionError,
+    TranscriptionTask,
+    verbatim_prompt,
+)
 from konvami_api.domain.storage import FileStore
 from konvami_api.domain.voice import VoiceSessionRepository
 
@@ -26,15 +31,6 @@ from konvami_api.domain.voice import VoiceSessionRepository
 ADDRESS_SECONDS = 15 * 60
 CONTENT_TYPE = "audio/wav"
 _SAMPLE_BYTES = 2
-
-
-def _verbatim_prompt(target: str) -> str:
-    return (
-        f"A learner of {target} speaking {target}. Write down exactly what they say, word for "
-        "word, as they say it. Keep every mistake: wrong endings, articles, word order, verb "
-        "forms and wrong words. Do not correct anything and do not complete what they leave "
-        "unfinished. Keep repeated words and false starts."
-    )
 
 
 def _folder(user_id: UUID) -> str:
@@ -135,7 +131,7 @@ class RecordingService:
                 model=self._model,
                 audio=self._files.read(turn.audio.key),
                 language=language,
-                prompt=_verbatim_prompt(target),
+                prompt=verbatim_prompt(target),
                 charge=Charge(user_id, Feature.VERBATIM),
             )
             try:

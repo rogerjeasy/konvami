@@ -578,6 +578,10 @@ class InMemoryReportRepository:
         ready = self._ready(user_id)
         return max(ready, key=lambda found: found[0])[1] if ready else None
 
+    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
+        ready = [found for found in self._ready(user_id) if found[1].target == language]
+        return [report for _, report in sorted(ready, key=lambda f: f[0], reverse=True)][:limit]
+
     def mistakes_by_week(
         self, user_id: UUID, language: str, timezone: str | None, since: date
     ) -> list[WeekMistakes]:
@@ -860,3 +864,21 @@ class RecordingNotifier:
         if self.broken:
             raise RuntimeError("the email service did not answer")
         self.sent.append((subject, message))
+
+
+class ScriptedTranscriber:
+    """Answers each transcription from a queue (a text, or an error to raise) and records the
+    tasks."""
+
+    def __init__(self, *answers: str | Exception) -> None:
+        self.answers = list(answers)
+        self.tasks: list[TranscriptionTask] = []
+
+    def transcribe(self, task: TranscriptionTask) -> str:
+        self.tasks.append(task)
+        if not self.answers:
+            raise AssertionError("the transcriber was asked more often than the test expected")
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer

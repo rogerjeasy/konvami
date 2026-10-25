@@ -8,10 +8,14 @@ import pytest
 
 from konvami_api.domain.live_call import (
     AUDIO_DRAIN_SECONDS,
+    LIVE_CORRECTION_NOTE,
     HangUp,
     KeepAudio,
     LiveCall,
+    LiveCorrection,
     Send,
+    Spot,
+    Spotted,
     Turn,
     TurnAudio,
 )
@@ -473,3 +477,139 @@ def test_while_waiting_for_audio_nothing_else_is_done(
 
 def test_with_no_audio_on_its_way_the_call_ends_at_once(recorded: LiveCall) -> None:
     assert recorded.tick(MAX) == [HangUp()]
+
+
+# --- The Live Error Spotter (spec §8.2, §6.4 correction chips) -----------------------------------
+
+
+@pytest.fixture
+def spotting(tools: ScriptedTools) -> LiveCall:
+    return LiveCall(
+        tools,
+        max_seconds=MAX,
+        wrap_up_seconds=WRAP_UP,
+        goodbye_grace_seconds=GRACE,
+        record=True,
+        spot=True,
+    )
+
+
+PCM = b"\x01\x00\x02\x00"
+PERFEKT = LiveCorrection(
+    said="Ich habe nach Berlin gefahren",
+    better="Ich bin nach Berlin gefahren",
+    why="Avec « fahren », le Perfekt se forme avec « sein ».",
+    topic="perfekt_auxiliary",
+    focus=True,
+)
+
+
+def test_a_learners_turn_is_checked_once_its_audio_is_back(spotting: LiveCall) -> None:
+    spotting.handle(PERSONA_SAID, 2)
+    spotting.handle(LEARNER_SAID, 6)
+
+    actions = spotting.handle(retrieved("item_2", "user", PCM), 7)
+
+    assert actions == [
+        KeepAudio("item_2", "learner", PCM),
+        Spot("item_2", "Ich möchte Deutsch lernen.", PCM, "Hallo Amara! Schön, dass du da bist."),
+    ]
+
+
+def test_the_partners_lines_are_not_checked(spotting: LiveCall) -> None:
+    spotting.handle(PERSONA_SAID, 8)
+    spotting.handle(persona_reply(), 9)
+
+    assert spotting.handle(retrieved("item_3", "assistant", PCM), 10) == [
+        KeepAudio("item_3", "persona", PCM)
+    ]
+
+
+def test_a_turn_whose_audio_does_not_come_back_is_checked_from_its_text(
+    spotting: LiveCall,
+) -> None:
+    spotting.handle(LEARNER_SAID, 6)
+
+    assert spotting.handle(retrieve_failed("item_2"), 7) == [
+        Spot("item_2", "Ich möchte Deutsch lernen.", b"", None)
+    ]
+
+
+def test_a_call_that_is_not_recorded_checks_a_turn_once_it_is_written_down(
+    tools: ScriptedTools,
+) -> None:
+    call = LiveCall(
+        tools, max_seconds=MAX, wrap_up_seconds=WRAP_UP, goodbye_grace_seconds=GRACE, spot=True
+    )
+
+    assert call.handle(LEARNER_SAID, 6) == [Spot("item_2", "Ich möchte Deutsch lernen.", b"", None)]
+
+
+def test_a_recorded_call_without_the_spotter_checks_nothing(recorded: LiveCall) -> None:
+    recorded.handle(LEARNER_SAID, 6)
+
+    assert recorded.handle(retrieved("item_2", "user", PCM), 7) == [
+        KeepAudio("item_2", "learner", PCM)
+    ]
+
+
+def test_what_was_found_reaches_the_partner_and_the_app_as_a_note(spotting: LiveCall) -> None:
+    spotting.handle(LEARNER_SAID, 6)
+
+    actions = spotting.spotted(Spotted("item_2", "Ich habe nach Berlin gefahren.", (PERFEKT,)))
+
+    note = {
+        "turn": "item_2",
+        "corrections": [
+            {
+                "said": "Ich habe nach Berlin gefahren",
+                "better": "Ich bin nach Berlin gefahren",
+                "why": "Avec « fahren », le Perfekt se forme avec « sein ».",
+                "topic": "perfekt_auxiliary",
+                "focus": True,
+            }
+        ],
+    }
+    text = LIVE_CORRECTION_NOTE + json.dumps(note, ensure_ascii=False)
+    assert actions == [
+        Send(
+            {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "message",
+                    "role": "system",
+                    "content": [{"type": "input_text", "text": text}],
+                },
+            }
+        )
+    ]
+
+
+def test_the_verbatim_text_becomes_part_of_the_turn(spotting: LiveCall) -> None:
+    spotting.handle(LEARNER_SAID, 6)
+
+    assert spotting.spotted(Spotted("item_2", "Ich möchte Deutsch lerne.", ())) == []
+    assert spotting.turns == [
+        Turn("learner", "Ich möchte Deutsch lernen.", verbatim="Ich möchte Deutsch lerne.")
+    ]
+
+
+def test_after_the_call_a_check_still_keeps_its_verbatim_text_but_says_nothing(
+    spotting: LiveCall,
+) -> None:
+    spotting.handle(LEARNER_SAID, 6)
+    spotting.closed()
+
+    assert spotting.spotted(Spotted("item_2", "Ich habe nach Berlin gefahren.", (PERFEKT,))) == []
+    assert spotting.turns[0].verbatim == "Ich habe nach Berlin gefahren."
+
+
+def test_while_the_call_is_ending_nothing_more_is_said(spotting: LiveCall) -> None:
+    spotting.handle(LEARNER_SAID, MAX - 2)
+    spotting.tick(MAX)
+
+    assert spotting.spotted(Spotted("item_2", None, (PERFEKT,))) == []
+
+
+def test_a_check_of_an_unknown_turn_is_ignored(spotting: LiveCall) -> None:
+    assert spotting.spotted(Spotted("item_9", "Hallo.", (PERFEKT,))) == []

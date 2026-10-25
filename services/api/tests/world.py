@@ -19,6 +19,7 @@ from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
+from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
@@ -31,6 +32,7 @@ from konvami_api.domain.reports import (
     Stats,
     Word,
 )
+from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import (
@@ -68,6 +70,7 @@ from tests.fakes import (
     RecordingNotifier,
     RecordingReportStarter,
     ScriptedTextModel,
+    ScriptedTranscriber,
 )
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
@@ -206,6 +209,9 @@ class World:
             clock=self.clock,
             new_id=lambda: next(card_ids),
         )
+        self.planner = SessionPlanner(
+            profiles=self.profiles, reports=self.reports, cards=self.cards
+        )
         self.memory_store = InMemoryMemoryRepository(self.sessions)
         # Memory ids in the order they are handed out: ...0001, ...0002, and so on.
         memory_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{number:012d}") for number in range(1, 10_000))
@@ -256,6 +262,19 @@ class World:
             recordings=self.recordings,
             tutor=self.tutor,
             sessions=self.sessions,
+            planner=self.planner,
+        )
+        # The live checks write turns down from audio that is never stored as a file.
+        self.live_transcriber = ScriptedTranscriber()
+        self.spotter = LiveSpotter(
+            profiles=self.profiles,
+            personas=self.personas,
+            check=LiveCheck(
+                transcriber=self.live_transcriber,
+                text_model=self.text,
+                transcription_model="gpt-transcribe",
+                model="gpt-6-luna",
+            ),
         )
         self.voice = VoiceCallService(
             settings=VOICE,
@@ -272,6 +291,7 @@ class World:
             recordings=self.recordings,
             guard=self.guard,
             meter=self.meter,
+            checker=self.spotter,
         )
         self.costs = CostService(
             owners=frozenset({OWNER}),

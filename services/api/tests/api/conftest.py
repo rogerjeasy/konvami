@@ -21,6 +21,7 @@ from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
+from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
@@ -335,6 +336,7 @@ def services(
                 recordings=recordings,
                 tutor=tutor,
                 sessions=calls,
+                planner=SessionPlanner(profiles=profiles, reports=reports, cards=cards),
             ),
         },
         accounts=directory,
