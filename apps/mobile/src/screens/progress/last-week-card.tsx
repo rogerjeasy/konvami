@@ -34,7 +34,7 @@ function Words({ review }: { review: WeekReview }) {
     return (
       <View className="flex-row items-start gap-3">
         <Text variant="callout" className="flex-1">
-          {view.text}
+          {view.value}
         </Text>
         <PlayButton
           label={
