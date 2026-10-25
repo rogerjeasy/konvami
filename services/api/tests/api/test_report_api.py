@@ -287,3 +287,26 @@ def test_a_report_that_keeps_failing_cannot_be_asked_for_without_end(
     assert len(report_starter.started) == MAX_REQUESTS
     refused = call("POST", "/v1/conversations/rtc_1/report")
     assert refused.body == {"error": {"code": "report_limit", "field": None}}
+
+
+def test_the_next_conversation_is_planned_from_the_report(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    talked(call, text_model, calls)
+    call("POST", "/v1/conversations/rtc_1/report")
+    text_model.answers += [ANALYSIS, REVIEW]
+    services.reports.write("rtc_1")
+    lena = calls.sessions["rtc_1"].persona_id
+
+    response = call(
+        "POST",
+        "/v1/voice/calls",
+        {"purpose": "practice", "sdp": "v=0 offer", "personaId": str(lena)},
+    )
+
+    # Only the confirmed mistake is practised; the app gets the kinds and the words, nothing of
+    # what the partner is told.
+    assert response.body["plan"] == {"language": "de", "focus": ["perfekt_auxiliary"], "words": []}

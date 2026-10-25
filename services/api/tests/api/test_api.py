@@ -183,7 +183,13 @@ def test_a_voice_call_returns_the_providers_answer_and_its_time_limit(
     response = call("POST", "/v1/voice/calls", OFFER)
 
     assert response.status == 200
-    assert response.body == {"callId": "rtc_1", "sdp": "v=0 answer", "maxSeconds": 480}
+    assert response.body == {
+        "callId": "rtc_1",
+        "sdp": "v=0 answer",
+        "maxSeconds": 480,
+        # Only a practice conversation has a plan.
+        "plan": None,
+    }
     assert voice_provider.created[0][0] == "v=0 offer"
 
 
@@ -492,7 +498,13 @@ def test_a_practice_call_starts_with_the_chosen_partner(
     )
 
     assert response.status == 200
-    assert response.body == {"callId": "rtc_1", "sdp": "v=0 answer", "maxSeconds": 600}
+    assert response.body == {
+        "callId": "rtc_1",
+        "sdp": "v=0 answer",
+        "maxSeconds": 600,
+        # Nothing to plan from before the first report.
+        "plan": {"language": "de", "focus": [], "words": []},
+    }
     session = voice_provider.created[0][1]
     assert "You are Jonas" in session["instructions"]
     assert session["audio"]["output"] == {"voice": "cedar"}

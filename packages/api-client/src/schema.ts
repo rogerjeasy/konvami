@@ -724,6 +724,20 @@ export interface components {
             weeklySeconds: number;
         };
         /**
+         * CallPlanOut
+         * @description What a practice conversation sets out to practise, as the learner sees it: the kinds of
+         *     mistake (a language pack's categories) and the words to use. How the partner is told to
+         *     bring them up stays on the server.
+         */
+        CallPlanOut: {
+            /** Focus */
+            focus: string[];
+            /** Language */
+            language: string;
+            /** Words */
+            words: components["schemas"]["PlanWordOut"][];
+        };
+        /**
          * CallPurpose
          * @enum {string}
          */
@@ -1473,6 +1487,13 @@ export interface components {
          * @enum {string}
          */
         PlacementStatus: "not_started" | "in_progress" | "assessing" | "measured" | "inconclusive" | "decided" | "skipped";
+        /** PlanWordOut */
+        PlanWordOut: {
+            /** Meaning */
+            meaning: string;
+            /** Text */
+            text: string;
+        };
         /** ProfileOut */
         ProfileOut: {
             /** Global */
@@ -1800,6 +1821,7 @@ export interface components {
             callId: string;
             /** Maxseconds */
             maxSeconds: number;
+            plan: components["schemas"]["CallPlanOut"] | null;
             /** Sdp */
             sdp: string;
         };

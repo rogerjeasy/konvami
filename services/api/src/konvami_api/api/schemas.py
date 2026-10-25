@@ -67,6 +67,7 @@ from konvami_api.domain.personas import (
     teaching_of,
 )
 from konvami_api.domain.placement import PlacementView
+from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.profile import (
     AVOID_TOPIC_MAX,
     GLOBAL_SCOPE,
@@ -267,16 +268,47 @@ class VoiceCallIn(ApiModel):
     scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
 
 
+class PlanWordOut(ApiModel):
+    text: str
+    meaning: str
+
+
+class CallPlanOut(ApiModel):
+    """What a practice conversation sets out to practise, as the learner sees it: the kinds of
+    mistake (a language pack's categories) and the words to use. How the partner is told to
+    bring them up stays on the server."""
+
+    # The language practised (an ISO 639-1 code), which the words are in.
+    language: str
+    focus: list[str]
+    words: list[PlanWordOut]
+
+    @classmethod
+    def of(cls, plan: SessionPlan) -> "CallPlanOut":
+        return cls(
+            language=plan.language,
+            focus=[point.topic for point in plan.focus],
+            words=[PlanWordOut(text=word.text, meaning=word.meaning) for word in plan.words],
+        )
+
+
 class VoiceCallOut(ApiModel):
     call_id: str
     # The provider's answer (SDP) for the app's peer connection.
     sdp: str
     # The call is ended by the server after this many seconds.
     max_seconds: int
+    # A practice conversation's plan; null for the guide's calls.
+    plan: CallPlanOut | None
 
     @classmethod
     def of(cls, started: CallStarted) -> "VoiceCallOut":
-        return cls(call_id=started.call_id, sdp=started.sdp_answer, max_seconds=started.max_seconds)
+        return cls(
+            call_id=started.call_id,
+            sdp=started.sdp_answer,
+            max_seconds=started.max_seconds,
+            plan=CallPlanOut.of(started.plan) if started.plan else None,
+        )
 
 
 class LookModel(ApiModel):
