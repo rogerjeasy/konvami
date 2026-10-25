@@ -37,8 +37,9 @@ to re-record the sentence correctly, then hear your before and after side by sid
 - Errors: `unsure` 409 (a doubted correction), `not_found` 404, `invalid_value` 422 (not base64,
   unknown type), `retry_limit` 429 (100 attempts a day), `consent_required` 403, `unavailable` 503.
 - The recording itself is not kept. Each attempt is (migration 0019: `retry_attempt`, and
-  `retry_day` for the daily limit). Metered as `retry`, by the length the recorder measured
-  (a compressed file cannot be measured on the server).
+  `retry_day` for the daily limit). Metered as `retry`, by the length the recorder measured but
+  never less than the file's size at 32 kbit/s, the lowest rate a recording of the app has: the
+  length is the app's word, and a modified app must not make attempts look free.
 - In the app a `SentenceRecorder` (`voice/sentence-recorder.tsx`) records through expo-audio
   (`voice/app-recorder.ts`); tests use a fake. The microphone permission is the one the calls use.
 

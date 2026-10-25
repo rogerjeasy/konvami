@@ -29,6 +29,10 @@ from konvami_api.domain.speech import (
 MAX_RETRIES_PER_DAY = 100
 # The audio types the app records in, and the transcription model takes.
 FORMATS = frozenset({"m4a", "webm", "wav", "mp3"})
+# The fewest bits per second a recording of the app has. An attempt is metered at least as long
+# as its size at this rate: the length the app reports is a hint, and a modified app must not be
+# able to make attempts look free and slip past the spending limits.
+LOWEST_BITS_PER_SECOND = 32_000
 
 
 @dataclass(frozen=True)
@@ -99,7 +103,7 @@ class RetryService:
         seconds: float | None = None,
     ) -> Retried:
         """One attempt at correction `index` of a conversation's report; `seconds` is how long
-        the recording plays (for metering). Raises `ConversationError` for a conversation that is
+        the recording plays, as the app measured it (a hint for metering). Raises `ConversationError` for a conversation that is
         not the learner's, and `RetryError`."""
         state = self._reports.view(user_id, call_id)
         mistakes = state.report.mistakes if state.report else ()
@@ -131,7 +135,7 @@ class RetryService:
             prompt=verbatim_prompt(self._profiles.catalog.english_name(language)),
             charge=Charge(user_id, Feature.RETRY),
             format=audio_format,
-            seconds=seconds,
+            seconds=max(seconds or 0.0, len(audio) * 8 / LOWEST_BITS_PER_SECOND),
         )
         try:
             heard = self._transcriber.transcribe(task).strip()

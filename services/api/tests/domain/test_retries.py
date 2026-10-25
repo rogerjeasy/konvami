@@ -95,6 +95,17 @@ def test_the_attempt_is_written_down_as_said_keeping_mistakes() -> None:
     assert task.charge.feature is Feature.RETRY
 
 
+def test_an_attempt_is_metered_at_least_by_its_size_whatever_the_app_says() -> None:
+    world = World()
+    call_id = reported(world)
+    big = b"\x00" * 40_000  # 10 seconds at the lowest bitrate a recording has
+    world.retry_transcriber.answers.append("Ich bin nach Berlin gefahren.")
+
+    world.retries.retry(USER, call_id, 0, big, "m4a", seconds=0.5)
+
+    assert world.retry_transcriber.tasks[0].seconds == 10.0
+
+
 def test_attempts_are_remembered_with_whether_one_was_right() -> None:
     world = World()
     call_id = reported(world)
