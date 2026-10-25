@@ -37,11 +37,13 @@ from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile
 from konvami_api.domain.reports import (
     Mistake,
     Report,
+    ReportEntry,
     ReportTotals,
     Rewrite,
     Stats,
     Status,
     StoredReport,
+    TopicUse,
     WeekMistakes,
     Word,
 )
@@ -573,8 +575,9 @@ _READY_REPORTS = """
     AND r.content ->> 'target' = :language
 """
 
-_RECENT_REPORTS = f"""
-    SELECT CAST(r.content AS text) AS content
+_REPORT_HISTORY = f"""
+    SELECT r.call_id, {epoch_micros("s.started_at")} AS started_at,
+           CAST(r.content AS text) AS content
     FROM {_REPORT_CALLS}
     WHERE {_READY_REPORTS}
     ORDER BY s.started_at DESC, s.call_id DESC
@@ -1215,6 +1218,7 @@ def _report(document: dict[str, Any]) -> Report:
         next_steps=tuple(document["next_steps"]),
         stats=Stats(**document["stats"]),
         level_fit=LevelFit(**document["level_fit"]) if document.get("level_fit") else None,
+        usage=tuple(TopicUse(**use) for use in document.get("usage", [])),
     )
 
 
@@ -1260,11 +1264,18 @@ class SqlReportRepository:
         rows = self._client.execute(_LATEST_REPORT, {"user_id": str(user_id)})
         return _report(json.loads(rows[0]["content"])) if rows else None
 
-    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
+    def history(self, user_id: UUID, language: str, limit: int) -> list[ReportEntry]:
         rows = self._client.execute(
-            _RECENT_REPORTS, {"user_id": str(user_id), "language": language, "limit": limit}
+            _REPORT_HISTORY, {"user_id": str(user_id), "language": language, "limit": limit}
         )
-        return [_report(json.loads(row["content"])) for row in rows]
+        return [
+            ReportEntry(
+                row["call_id"],
+                from_epoch_micros(row["started_at"]),
+                _report(json.loads(row["content"])),
+            )
+            for row in rows
+        ]
 
     def mistakes_by_week(
         self, user_id: UUID, language: str, timezone: str | None, since: dt.date
