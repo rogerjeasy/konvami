@@ -203,6 +203,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/grammar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Grammar Map
+         * @description Every grammar topic of the language learned, with how well the learner has it.
+         */
+        get: operations["getGrammarMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/grammar/{topic_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Grammar Topic
+         * @description One topic of the map, with the learner's own mistakes on it.
+         */
+        get: operations["getGrammarTopic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/home": {
         parameters: {
             query?: never;
@@ -967,6 +1007,46 @@ export interface components {
             /** Value */
             value: unknown;
         };
+        /** GrammarMapOut */
+        GrammarMapOut: {
+            /** Language */
+            language: string;
+            /** Level */
+            level: string;
+            /** Topics */
+            topics: components["schemas"]["GrammarTopicOut"][];
+        };
+        /**
+         * GrammarTopicOut
+         * @description A topic of the grammar map and how well the learner has it. The app names it in the
+         *     interface language.
+         */
+        GrammarTopicOut: {
+            /** Conversations */
+            conversations: number;
+            /** Correct */
+            correct: number;
+            /** Id */
+            id: string;
+            /** Lastusedat */
+            lastUsedAt: string | null;
+            /** Level */
+            level: string;
+            mastery: components["schemas"]["Mastery"];
+            trend: components["schemas"]["Trend"] | null;
+            /** Uses */
+            uses: number;
+        };
+        /** GrammarTopicPageOut */
+        GrammarTopicPageOut: {
+            /** Examples */
+            examples: string[];
+            /** Mistakes */
+            mistakes: components["schemas"]["TopicMistakeOut"][];
+            topic: components["schemas"]["GrammarTopicOut"];
+            /** Typicalmistakes */
+            typicalMistakes: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1128,6 +1208,11 @@ export interface components {
              */
             top: "teal" | "graphite" | "stone" | "amber";
         };
+        /**
+         * Mastery
+         * @enum {string}
+         */
+        Mastery: "not_started" | "introduced" | "practising" | "mostly_correct" | "mastered";
         /**
          * MemoriesOut
          * @description What the learner's partners know about them, and what the learner set (spec §6.11).
@@ -1715,12 +1800,35 @@ export interface components {
              */
             strictness: "meaning" | "important" | "everything";
         };
+        /** TopicMistakeOut */
+        TopicMistakeOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Certain */
+            certain: boolean;
+            /** Conversationid */
+            conversationId: string;
+            /** Corrected */
+            corrected: string;
+            /** Explanation */
+            explanation: string;
+            /** Original */
+            original: string;
+        };
         /** TranscriptOut */
         TranscriptOut: {
             conversation: components["schemas"]["ConversationOut"];
             /** Turns */
             turns: components["schemas"]["TurnOut"][];
         };
+        /**
+         * Trend
+         * @enum {string}
+         */
+        Trend: "improving" | "steady" | "slipping";
         /** TurnAudioOut */
         TurnAudioOut: {
             /** Milliseconds */
@@ -1809,6 +1917,8 @@ export interface components {
             localDate?: string | null;
             /** Personaid */
             personaId?: string | null;
+            /** Practise */
+            practise?: string | null;
             purpose: components["schemas"]["CallPurpose"];
             /** Scenario */
             scenario?: string | null;
@@ -2528,6 +2638,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getGrammarMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrammarMapOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getGrammarTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                topic_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrammarTopicPageOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

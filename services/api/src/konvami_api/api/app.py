@@ -22,6 +22,8 @@ from konvami_api.api.schemas import (
     CostsOut,
     DeckOut,
     DeckSummaryOut,
+    GrammarMapOut,
+    GrammarTopicPageOut,
     HomeOut,
     MemoriesOut,
     MemoryOut,
@@ -62,6 +64,7 @@ from konvami_api.domain.cards import QUEUE_DEFAULT, CardService
 from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
@@ -100,6 +103,7 @@ class Services:
     tutor: TutorService
     voices: VoiceSampleService
     costs: CostService
+    grammar: GrammarMapService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -241,7 +245,13 @@ def _router(services: Services) -> APIRouter:
     @router.post("/voice/calls", operation_id="startVoiceCall", responses=CALL_REFUSED)
     def start_voice_call(user: CurrentUser, offer: VoiceCallIn) -> VoiceCallOut:
         started = services.voice.start(
-            user, offer.purpose, offer.sdp, offer.persona_id, offer.local_date, offer.scenario
+            user,
+            offer.purpose,
+            offer.sdp,
+            offer.persona_id,
+            offer.local_date,
+            offer.scenario,
+            offer.practise,
         )
         return VoiceCallOut.of(started)
 
@@ -352,6 +362,16 @@ def _router(services: Services) -> APIRouter:
 
     def memories_of(user: UUID, book: MemoryBook) -> MemoriesOut:
         return MemoriesOut.of(book, partners_named(user, book.memories))
+
+    @router.get("/grammar", operation_id="getGrammarMap")
+    def get_grammar_map(user: CurrentUser) -> GrammarMapOut:
+        """Every grammar topic of the language learned, with how well the learner has it."""
+        return GrammarMapOut.of(services.grammar.map(user))
+
+    @router.get("/grammar/{topic_id}", operation_id="getGrammarTopic", responses=NOT_FOUND)
+    def get_grammar_topic(user: CurrentUser, topic_id: str) -> GrammarTopicPageOut:
+        """One topic of the map, with the learner's own mistakes on it."""
+        return GrammarTopicPageOut.of(services.grammar.topic(user, topic_id))
 
     @router.get("/tutor/questions", operation_id="getTutorQuestions")
     def get_tutor_questions(user: CurrentUser) -> TutorQuestionsOut:

@@ -838,6 +838,133 @@
         "title": "FieldOut",
         "type": "object"
       },
+      "GrammarMapOut": {
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/GrammarTopicOut"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "language",
+          "level",
+          "topics"
+        ],
+        "title": "GrammarMapOut",
+        "type": "object"
+      },
+      "GrammarTopicOut": {
+        "additionalProperties": false,
+        "description": "A topic of the grammar map and how well the learner has it. The app names it in the\ninterface language.",
+        "properties": {
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "correct": {
+            "title": "Correct",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastusedat"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "mastery": {
+            "$ref": "#/components/schemas/Mastery"
+          },
+          "trend": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Trend"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "uses": {
+            "title": "Uses",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "level",
+          "mastery",
+          "uses",
+          "correct",
+          "conversations",
+          "trend",
+          "lastUsedAt"
+        ],
+        "title": "GrammarTopicOut",
+        "type": "object"
+      },
+      "GrammarTopicPageOut": {
+        "additionalProperties": false,
+        "properties": {
+          "examples": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Examples",
+            "type": "array"
+          },
+          "mistakes": {
+            "items": {
+              "$ref": "#/components/schemas/TopicMistakeOut"
+            },
+            "title": "Mistakes",
+            "type": "array"
+          },
+          "topic": {
+            "$ref": "#/components/schemas/GrammarTopicOut"
+          },
+          "typicalMistakes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Typicalmistakes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "topic",
+          "examples",
+          "typicalMistakes",
+          "mistakes"
+        ],
+        "title": "GrammarTopicPageOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1345,6 +1472,17 @@
         ],
         "title": "LookModel",
         "type": "object"
+      },
+      "Mastery": {
+        "enum": [
+          "not_started",
+          "introduced",
+          "practising",
+          "mostly_correct",
+          "mastered"
+        ],
+        "title": "Mastery",
+        "type": "string"
       },
       "MemoriesOut": {
         "additionalProperties": false,
@@ -3101,6 +3239,46 @@
         "title": "TeachingModel",
         "type": "object"
       },
+      "TopicMistakeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "certain": {
+            "title": "Certain",
+            "type": "boolean"
+          },
+          "conversationId": {
+            "title": "Conversationid",
+            "type": "string"
+          },
+          "corrected": {
+            "title": "Corrected",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversationId",
+          "at",
+          "original",
+          "corrected",
+          "explanation",
+          "certain"
+        ],
+        "title": "TopicMistakeOut",
+        "type": "object"
+      },
       "TranscriptOut": {
         "additionalProperties": false,
         "properties": {
@@ -3121,6 +3299,15 @@
         ],
         "title": "TranscriptOut",
         "type": "object"
+      },
+      "Trend": {
+        "enum": [
+          "improving",
+          "steady",
+          "slipping"
+        ],
+        "title": "Trend",
+        "type": "string"
       },
       "TurnAudioOut": {
         "additionalProperties": false,
@@ -3386,6 +3573,18 @@
               }
             ],
             "title": "Personaid"
+          },
+          "practise": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Practise"
           },
           "purpose": {
             "$ref": "#/components/schemas/CallPurpose"
@@ -4307,6 +4506,95 @@
           }
         },
         "summary": "Request Conversation Report"
+      }
+    },
+    "/v1/grammar": {
+      "get": {
+        "description": "Every grammar topic of the language learned, with how well the learner has it.",
+        "operationId": "getGrammarMap",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrammarMapOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Grammar Map"
+      }
+    },
+    "/v1/grammar/{topic_id}": {
+      "get": {
+        "description": "One topic of the map, with the learner's own mistakes on it.",
+        "operationId": "getGrammarTopic",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": {
+              "title": "Topic Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrammarTopicPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Grammar Topic"
       }
     },
     "/v1/home": {

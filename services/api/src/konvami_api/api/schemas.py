@@ -33,6 +33,7 @@ from konvami_api.domain.conversations import (
 )
 from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.fsrs import Rating
+from konvami_api.domain.grammar_map import GrammarMap, Mastery, TopicPage, TopicState, Trend
 from konvami_api.domain.home import HomeView, LevelView
 from konvami_api.domain.levels import LevelStep
 from konvami_api.domain.live_call import Speaker, TurnAudio
@@ -266,6 +267,8 @@ class VoiceCallIn(ApiModel):
     local_date: dt.date | None = None
     # A practice call that rehearses a role-play (a scenario id from the catalog).
     scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
+    # A practice call that practises a grammar topic first (a topic id from the grammar map).
+    practise: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
 
 
 class PlanWordOut(ApiModel):
@@ -308,6 +311,87 @@ class VoiceCallOut(ApiModel):
             sdp=started.sdp_answer,
             max_seconds=started.max_seconds,
             plan=CallPlanOut.of(started.plan) if started.plan else None,
+        )
+
+
+class GrammarTopicOut(ApiModel):
+    """A topic of the grammar map and how well the learner has it. The app names it in the
+    interface language."""
+
+    id: str
+    level: str
+    mastery: Mastery
+    # Over the conversations that count: how often it was used, how often right, in how many.
+    uses: int
+    correct: int
+    conversations: int
+    trend: Trend | None
+    last_used_at: dt.datetime | None
+
+    @classmethod
+    def of(cls, state: TopicState) -> "GrammarTopicOut":
+        found = state.mastery
+        return cls(
+            id=state.topic.id,
+            level=state.topic.level,
+            mastery=found.state,
+            uses=found.uses,
+            correct=found.correct,
+            conversations=found.conversations,
+            trend=found.trend,
+            last_used_at=found.last_used_at,
+        )
+
+
+class GrammarMapOut(ApiModel):
+    language: str
+    # The learner's level, for the map to show where they are.
+    level: str
+    topics: list[GrammarTopicOut]
+
+    @classmethod
+    def of(cls, found: GrammarMap) -> "GrammarMapOut":
+        return cls(
+            language=found.language,
+            level=found.level,
+            topics=[GrammarTopicOut.of(state) for state in found.topics],
+        )
+
+
+class TopicMistakeOut(ApiModel):
+    conversation_id: str
+    at: dt.datetime
+    original: str
+    corrected: str
+    explanation: str
+    certain: bool
+
+
+class GrammarTopicPageOut(ApiModel):
+    topic: GrammarTopicOut
+    # Sentences that use it well, and typical learner sentences that break it.
+    examples: list[str]
+    typical_mistakes: list[str]
+    # The learner's own, newest first.
+    mistakes: list[TopicMistakeOut]
+
+    @classmethod
+    def of(cls, page: TopicPage) -> "GrammarTopicPageOut":
+        return cls(
+            topic=GrammarTopicOut.of(page.state),
+            examples=list(page.state.topic.examples),
+            typical_mistakes=list(page.typical_mistakes),
+            mistakes=[
+                TopicMistakeOut(
+                    conversation_id=m.call_id,
+                    at=m.at,
+                    original=m.original,
+                    corrected=m.corrected,
+                    explanation=m.explanation,
+                    certain=m.certain,
+                )
+                for m in page.mistakes
+            ],
         )
 
 

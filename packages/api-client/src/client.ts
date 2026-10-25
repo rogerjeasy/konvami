@@ -23,7 +23,15 @@ export interface VoiceCallDetails {
   localDate?: string;
   /** A practice call that rehearses a role-play: a scenario id from the catalog. */
   scenario?: string;
+  /** A practice call that practises a grammar topic first: a topic id of the grammar map. */
+  practise?: string;
 }
+/** Every grammar topic of the language learned, with how well the learner has it (spec §6.8). */
+export type GrammarMap = Schemas['GrammarMapOut'];
+export type GrammarTopic = Schemas['GrammarTopicOut'];
+export type GrammarMastery = GrammarTopic['mastery'];
+/** One topic of the map, with examples and the learner's own mistakes on it. */
+export type GrammarTopicPage = Schemas['GrammarTopicPageOut'];
 export type Placement = Schemas['PlacementOut'];
 /** A role-play a language offers: its id, level and goal ids (the app names them). */
 export type Scenario = Schemas['ScenarioOut'];
@@ -251,6 +259,10 @@ export interface ApiClient {
   removeMemory(id: string): Promise<Memories>;
   /** The questions asked to the Tutor, newest first. */
   getTutorQuestions(): Promise<{ questions: TutorQuestion[] }>;
+  /** The grammar map of the language learned. */
+  getGrammarMap(): Promise<GrammarMap>;
+  /** One topic of the map. Fails with `not_found` for a topic the language does not have. */
+  getGrammarTopic(id: string): Promise<GrammarTopicPage>;
   /**
    * Asks the Tutor a question. Fails with `invalid_value`, `tutor_limit`, `consent_required` or
    * `unavailable`.
@@ -400,6 +412,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getMemories: () => request('GET', '/v1/memories'),
     configureMemories: (settings) => request('PATCH', '/v1/memories', settings),
     getTutorQuestions: () => request('GET', '/v1/tutor/questions'),
+    getGrammarMap: () => request('GET', '/v1/grammar'),
+    getGrammarTopic: (id) => request('GET', `/v1/grammar/${encodeURIComponent(id)}`),
     askTutor: (question) => request('POST', '/v1/tutor/questions', { question }),
     explainCorrection: (conversationId, index) =>
       request('POST', '/v1/tutor/corrections', { conversationId, index }),

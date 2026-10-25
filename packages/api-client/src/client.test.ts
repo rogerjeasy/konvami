@@ -477,6 +477,38 @@ describe('api client', () => {
     expect(calls[1]?.body).toEqual({ conversationId: 'rtc/1', index: 2 });
   });
 
+  it('reads the grammar map and one of its topics', async () => {
+    const map = { language: 'de', level: 'A2', topics: [] };
+    const page = { topic: { id: 'dative' }, examples: [], typicalMistakes: [], mistakes: [] };
+    const { fetch, calls } = fakeFetch(json(200, map), json(200, page));
+    const { api } = client(fetch);
+
+    expect(await api.getGrammarMap()).toEqual(map);
+    expect(await api.getGrammarTopic('two way/x')).toEqual(page);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/grammar',
+      'GET https://api.example.test/v1/grammar/two%20way%2Fx',
+    ]);
+  });
+
+  it('starts a practice call that practises a grammar topic', async () => {
+    const answer = { callId: 'rtc_3', sdp: 'v=0 answer', maxSeconds: 600, plan: null };
+    const { fetch, calls } = fakeFetch(json(200, answer));
+
+    await client(fetch).api.startVoiceCall('practice', 'v=0 offer', {
+      personaId: 'persona-1',
+      practise: 'dative',
+    });
+
+    expect(calls[0]?.body).toEqual({
+      purpose: 'practice',
+      sdp: 'v=0 offer',
+      personaId: 'persona-1',
+      practise: 'dative',
+    });
+  });
+
   it('reads and sets whether recordings are kept', async () => {
     const { fetch, calls } = fakeFetch(json(200, { kept: true }), json(200, { kept: false }));
     const { api } = client(fetch);
