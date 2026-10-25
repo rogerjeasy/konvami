@@ -114,7 +114,8 @@ variable "text_models" {
     §9.4); tutor answers the learner's questions about the language, as text, about a report's
     correction, and for a partner during a call (spec §6.8); spotter checks each learner turn
     during a practice call, so that mistakes show as correction chips and the partner hears of
-    them (spec §8.2); cards writes a saved word card's forms (spec §6.7). An empty name turns the job off: it then uses its fallback (the examiner's own
+    them (spec §8.2); cards writes a saved word card's forms (spec §6.7); week writes last week's
+    check-in from its numbers (spec §6.12; the memory model when empty). An empty name turns the job off: it then uses its fallback (the examiner's own
     impression, the language pack's built-in partners, the live transcript) or, for drafts,
     samples and reports, says it is unavailable; without a memory model nothing is remembered.
   EOT
@@ -128,6 +129,7 @@ variable "text_models" {
     tutor      = optional(string, "")
     spotter    = optional(string, "")
     cards      = optional(string, "")
+    week       = optional(string, "")
   })
 }
 
