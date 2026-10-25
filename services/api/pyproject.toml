@@ -36,7 +36,7 @@ filterwarnings = ["error"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "tests", "tools"]
+src = ["src", "tests", "tools", "evals"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF", "PT", "DTZ", "T20"]
@@ -51,7 +51,7 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF", "PT", "DT
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["src", "tests", "tools"]
+files = ["src", "tests", "tools", "evals"]
 mypy_path = "src"
 
 # The AWS SDK ships no type information.

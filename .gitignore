@@ -51,3 +51,6 @@ infra/**/.build/
 *.log
 .playwright-mcp/
 .superpowers/
+
+# The speech of the accuracy test (services/api/evals/verbatim): made again on demand.
+services/api/evals/verbatim/.audio/
