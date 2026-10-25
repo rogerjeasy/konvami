@@ -1,5 +1,7 @@
+import base64
 import hashlib
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -15,11 +17,13 @@ from konvami_api.domain.costs import (
     week_start,
 )
 from konvami_api.domain.host import HostScript
-from konvami_api.domain.live_call import KeepAudio, Send, TurnAudio
+from konvami_api.domain.live_call import KeepAudio, Send, Spot, Spotted, TurnAudio
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, PlacementStatus
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.placement import MIN_TASKS, PlacementScript, PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.reports import Mistake
+from konvami_api.domain.speech import verbatim_prompt
 from konvami_api.domain.voice import (
     MIN_CALL_SECONDS,
     CallPurpose,
@@ -48,6 +52,7 @@ USER = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_USER = UUID("22222222-2222-4222-8222-222222222222")
 NOON = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
 OFFER = "v=0 offer"
+DATIVE = Mistake(1, "mit der Bus", "mit dem Bus", "Datif.", "case_dative", "noticeable", True)
 SETTINGS = VoiceSettings(
     models={
         CallPurpose.ONBOARDING: "gpt-realtime-2.1-mini",
@@ -486,6 +491,12 @@ def test_a_placement_call_gets_the_examiners_instructions_tools_and_patience(
     # Learners pause to think in a language they are learning.
     assert session["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
     assert setup.onboarding.placement(USER) is PlacementStatus.IN_PROGRESS
+    # What the learner says is written down in German, mistakes kept: the assessment reads it.
+    assert session["audio"]["input"]["transcription"] == {
+        "model": "gpt-transcribe",
+        "language": "de",
+        "prompt": verbatim_prompt("German"),
+    }
 
 
 def test_a_placement_call_cannot_start_before_the_essentials_are_confirmed(
@@ -580,6 +591,39 @@ def test_a_practice_call_has_the_partners_voice_instructions_and_time_limit() ->
     assert [tool["name"] for tool in session["tools"]] == ["end_conversation", "ask_tutor"]
     # Learners pause to think in a language they are learning.
     assert session["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
+    # Told the language and to keep mistakes, the live transcription keeps more of them
+    # (docs/evals/2026-10-25-verbatim-fidelity.md).
+    assert session["audio"]["input"]["transcription"] == {
+        "model": "gpt-transcribe",
+        "language": "de",
+        "prompt": verbatim_prompt("German"),
+    }
+
+
+def test_a_practice_call_keeps_its_plan_and_hands_it_back() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    called = world.talk(lena, at=NOON - timedelta(days=1))
+    world.reported(called, mistakes=(DATIVE,))
+
+    started = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id)
+
+    recorded = world.sessions.get(started.call_id)
+    assert started.plan is not None
+    assert [point.topic for point in started.plan.focus] == ["case_dative"]
+    assert recorded is not None
+    assert recorded.plan == started.plan
+
+
+def test_the_guides_calls_have_no_plan() -> None:
+    world = World()
+    world.profiles.apply(
+        USER, [Change("target_language", "de")], source=Source.ASKED, origin=Origin.FORM
+    )
+
+    started = world.voice.start(USER, CallPurpose.ONBOARDING, OFFER)
+
+    assert started.plan is None
 
 
 def test_a_partner_given_a_pace_speaks_at_it() -> None:
@@ -676,6 +720,12 @@ LEARNER_SAID = {
 }
 
 
+def retrieved_audio(item_id: str, pcm: bytes) -> dict[str, Any]:
+    part = {"type": "input_audio", "audio": base64.b64encode(pcm).decode()}
+    item = {"id": item_id, "type": "message", "role": "user", "content": [part]}
+    return {"type": "conversation.item.retrieved", "item": item}
+
+
 def test_a_practice_call_is_recorded_turn_by_turn() -> None:
     world = World()
     lena, _ = world.onboard()
@@ -720,6 +770,46 @@ def test_a_practice_call_in_which_the_learner_said_nothing_keeps_no_audio() -> N
 
     assert world.files.keys() == []
     assert world.sessions.finished[call_id].turns[0].audio is None
+
+
+def test_a_practice_calls_turns_are_checked_while_it_goes_on() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id).call_id
+    live = world.voice.live_call(call_id)
+    check = world.voice.spotter(call_id)
+    assert live is not None
+    assert check is not None
+    world.live_transcriber.answers.append("Hallo Lena, wie geht es dich?")
+    world.text.answers.append({"mistakes": []})
+
+    live.handle({**LEARNER_SAID, "transcript": "Hallo Lena, wie geht es dir?"}, 5)
+    actions = live.handle(retrieved_audio("item_2", b"\x01\x00" * 2_400), 6)
+    spot = next(action for action in actions if isinstance(action, Spot))
+
+    assert check(spot) == Spotted("item_2", "Hallo Lena, wie geht es dich?", ())
+
+
+def test_the_guides_calls_are_not_checked() -> None:
+    world = World()
+    call_id = world.voice.start(USER, CallPurpose.ONBOARDING, OFFER).call_id
+
+    assert world.voice.spotter(call_id) is None
+
+
+def test_a_checked_turn_keeps_its_verbatim_text() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.voice.start(USER, CallPurpose.PRACTICE, OFFER, lena.id).call_id
+    live = world.voice.live_call(call_id)
+    assert live is not None
+    live.handle(LEARNER_SAID, 5)
+    live.spotted(Spotted("item_2", "Hallo Lena.", ()))
+    live.closed()
+
+    world.voice.finished(call_id, live)
+
+    assert world.sessions.finished[call_id].turns[0].verbatim == "Hallo Lena."
 
 
 def test_the_guides_calls_have_no_partner() -> None:

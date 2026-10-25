@@ -3,6 +3,10 @@
 `run_call` is the loop: it feeds the provider's events and the passing seconds to a `LiveCall`
 and carries out what it decides. `WebSocketConnection` is the connection it runs on. A call of
 this kind lasts minutes, so the worker runs in its own Lambda invocation (onboarding design O2).
+
+Checking a learner's turn (the Live Error Spotter) takes seconds: it runs beside the loop, so
+the conversation and the partner's tools never wait for it, and what it finds is handed back to
+the call as soon as it is there.
 """
 
 import asyncio
@@ -14,7 +18,15 @@ from typing import Any, Protocol
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import ConnectionClosed
 
-from konvami_api.domain.live_call import HangUp, KeepAudio, LiveCall, TurnAudio
+from konvami_api.domain.live_call import (
+    Action,
+    HangUp,
+    KeepAudio,
+    LiveCall,
+    Spot,
+    Spotted,
+    TurnAudio,
+)
 from konvami_api.domain.voice import VoiceCallService
 
 # How often the call's clock is checked when no event arrives.
@@ -24,8 +36,14 @@ OPEN_TIMEOUT_SECONDS = 10.0
 # default (1 MiB) holds about 15 seconds of it, this about eight minutes.
 MAX_MESSAGE_BYTES = 32 * 1024 * 1024
 
+# How long a call that has ended waits for the checks still running: what they write down
+# saves the pass after the call from doing it again.
+CHECK_DRAIN_SECONDS = 5.0
+
 # Stores one turn's audio and says where it is (see `VoiceCallService.audio_keeper`).
 Keeper = Callable[[KeepAudio], TurnAudio]
+# Checks one of the learner's turns (see `VoiceCallService.spotter`).
+Checker = Callable[[Spot], Spotted]
 
 
 class CallClosed(Exception):  # noqa: N818 - an expected end, not a fault
@@ -45,28 +63,50 @@ async def run_call(
     hang_up: Callable[[], object],
     monotonic: Callable[[], float],
     keep: Keeper | None = None,
+    spot: Checker | None = None,
 ) -> None:
     """Follows one call until it ends. `call.outcome` says how it ended."""
     started = monotonic()
+    checks: set[asyncio.Task[Spotted]] = set()
     actions = call.start()
-    while True:
-        try:
-            for action in actions:
-                if isinstance(action, HangUp):
-                    hang_up()
-                elif isinstance(action, KeepAudio):
-                    await _keep(call, action, keep)
-                else:
-                    await connection.send(action.event)
-            if call.ended:
+    try:
+        while True:
+            try:
+                for action in actions:
+                    if isinstance(action, HangUp):
+                        hang_up()
+                    elif isinstance(action, KeepAudio):
+                        await _keep(call, action, keep)
+                    elif isinstance(action, Spot):
+                        if spot is not None:
+                            checks.add(asyncio.create_task(asyncio.to_thread(spot, action)))
+                    else:
+                        await connection.send(action.event)
+                if call.ended:
+                    return
+                event = await connection.receive(TICK_SECONDS)
+            except CallClosed:
+                call.closed()
                 return
-            event = await connection.receive(TICK_SECONDS)
-        except CallClosed:
-            call.closed()
-            return
-        elapsed = monotonic() - started
-        actions = call.handle(event, elapsed) if event is not None else []
-        actions += call.tick(elapsed)
+            elapsed = monotonic() - started
+            actions = call.handle(event, elapsed) if event is not None else []
+            actions += _checked(call, checks)
+            actions += call.tick(elapsed)
+    finally:
+        if checks:
+            await asyncio.wait(checks, timeout=CHECK_DRAIN_SECONDS)
+            _checked(call, checks)
+
+
+def _checked(call: LiveCall, checks: set[asyncio.Task[Spotted]]) -> list[Action]:
+    """Hands the checks that are done back to the call, and what it makes of them."""
+    actions: list[Action] = []
+    for task in [task for task in checks if task.done()]:
+        checks.discard(task)
+        # A check that failed leaves the turn as the live transcription wrote it.
+        if not task.cancelled() and task.exception() is None:
+            actions += call.spotted(task.result())
+    return actions
 
 
 async def _keep(call: LiveCall, audio: KeepAudio, keep: Keeper | None) -> None:
@@ -147,6 +187,7 @@ async def follow_call(voice: VoiceCallService, provider: Sideband, call_id: str)
             lambda: provider.hang_up(call_id),
             time.monotonic,
             voice.audio_keeper(call_id),
+            voice.spotter(call_id),
         )
     finally:
         await connection.close()

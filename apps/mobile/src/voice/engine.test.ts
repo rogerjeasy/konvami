@@ -19,15 +19,20 @@ function fakeSession(overrides: Partial<RtcSession> = {}) {
   return { session, emit: (event: unknown) => listener(event), drop: () => closedListener() };
 }
 
-const answer = { callId: 'rtc_1', sdp: 'v=0 answer', maxSeconds: 480 };
+const PLAN = {
+  language: 'de',
+  focus: ['case_dative'],
+  words: [{ text: 'der Termin', meaning: 'appointment' }],
+};
+const answer = { callId: 'rtc_1', sdp: 'v=0 answer', maxSeconds: 480, plan: PLAN };
 
 describe('starting', () => {
-  it('trades the offer for the server’s answer and reports the call and its time limit', async () => {
+  it('trades the offer for the server’s answer and reports the call, its time limit and plan', async () => {
     const { session } = fakeSession();
     const startCall = jest.fn(async () => answer);
     const engine = createVoiceEngine({ createSession: () => session, startCall });
 
-    expect(await engine.start()).toEqual({ callId: 'rtc_1', maxSeconds: 480 });
+    expect(await engine.start()).toEqual({ callId: 'rtc_1', maxSeconds: 480, plan: PLAN });
     expect(startCall).toHaveBeenCalledWith('v=0 offer');
     expect(session.accept).toHaveBeenCalledWith('v=0 answer');
   });

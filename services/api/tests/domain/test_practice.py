@@ -3,12 +3,13 @@ from uuid import UUID
 
 import pytest
 
-from konvami_api.domain.live_call import Turn
+from konvami_api.domain.live_call import LIVE_CORRECTION_NOTE, Turn
 from konvami_api.domain.memories import MAX_MEMORIES, Memory
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.practice import HELP_NOTE
 from konvami_api.domain.profile import Change, Origin, Source
+from konvami_api.domain.reports import Mistake, Word
 from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.voice import FinishedCall
 from tests.world import NOON, OTHER_USER, USER, World
@@ -401,6 +402,48 @@ def test_a_partner_can_leave_mistakes_alone_entirely() -> None:
 
     assert "Do not correct mistakes at all" in text
     assert "say the correct form" not in text
+
+
+def test_a_recasting_partner_uses_the_checkers_notes_in_passing() -> None:
+    text = designed(World(), teaching=USUAL).instructions
+
+    assert "# Notes from Konvami's checker" in text
+    assert f'"{LIVE_CORRECTION_NOTE}' in text
+    assert "use the right form yourself in passing" in text
+    # Pushed output: the structure comes back, so they get to use it right.
+    assert "reason to use the same structure again" in text
+    assert "never quote it" in text
+
+
+def test_a_partner_who_corrects_at_once_corrects_only_what_a_note_names() -> None:
+    teaching = {**USUAL, "correction_timing": "immediate", "strictness": "important"}
+
+    text = designed(World(), teaching=teaching).instructions
+
+    assert "correct only what a note names" in text
+
+
+def test_a_partner_who_corrects_at_the_end_keeps_the_notes_for_the_goodbye() -> None:
+    teaching = {**USUAL, "correction_timing": "end", "strictness": "important"}
+
+    text = designed(World(), teaching=teaching).instructions
+
+    assert "Keep them for your goodbye" in text
+
+
+def test_an_exam_coach_uses_the_notes_after_each_task() -> None:
+    teaching = {**USUAL, "correction_timing": "end", "strictness": "important"}
+
+    text = designed(World(), role="exam_coach", teaching=teaching).instructions
+
+    assert "after each task" in text
+    assert "Keep them for your goodbye" not in text
+
+
+def test_a_partner_who_leaves_mistakes_alone_gets_no_notes() -> None:
+    text = designed(World(), teaching={**USUAL, "correction_timing": "off"}).instructions
+
+    assert "live_correction" not in text
 
 
 def test_a_teacher_can_be_made_to_recast_like_a_friend() -> None:
@@ -821,3 +864,64 @@ def test_the_goals_reached_are_kept_with_the_conversation() -> None:
     world.practice.concluded(USER, call_id, tools, world.sessions.finished[call_id])
 
     assert world.sessions.goals[call_id] == ("order", "price")
+
+
+# --- Today's plan (the Session Planner, spec §8.2, §8.6) -----------------------------------------
+
+
+def planned(world: World, *mistakes: Mistake) -> str:
+    """Instructions after one reported conversation with `mistakes`."""
+    lena, _ = world.onboard()
+    world.reported(world.talk(lena, at=NOON - timedelta(days=1)), mistakes=mistakes)
+    return world.practice.prepare(USER, world.accounts.get(USER), TODAY, lena.id).instructions
+
+
+DATIVE = Mistake(
+    1, "mit der Bus", "mit dem Bus", "« mit » + datif.", "case_dative", "noticeable", True
+)
+
+
+def test_the_partner_steers_towards_what_the_learner_gets_wrong_most() -> None:
+    text = planned(World(), DATIVE)
+
+    assert "# Today's plan" in text
+    assert "Dative" in text
+    assert "Mit wem warst du da?" in text
+    # The learner's own sentence, so the partner sees the pattern.
+    assert '"mit der Bus" (right: "mit dem Bus")' in text
+
+
+def test_the_partner_works_in_the_learners_saved_words() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    call_id = world.talk(lena, at=NOON - timedelta(days=1))
+    world.reported(call_id, words=(Word("der Termin", "le rendez-vous", "Ich habe einen Termin."),))
+    world.cards.save(USER, call_id, "word", 0)
+
+    text = world.practice.prepare(USER, world.accounts.get(USER), TODAY, lena.id).instructions
+
+    assert "- der Termin (le rendez-vous)" in text
+
+
+def test_the_partner_hears_what_was_talked_about_lately() -> None:
+    text = planned(World())
+
+    assert "Vous avez parlé de votre week-end." in text
+    assert "something else" in text
+
+
+def test_a_first_conversation_has_no_plan_to_speak_of() -> None:
+    text = instructions(World())
+
+    assert "# Today's plan" not in text
+
+
+def test_the_plan_travels_with_the_briefing() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.reported(world.talk(lena, at=NOON - timedelta(days=1)), mistakes=(DATIVE,))
+
+    briefing = world.practice.prepare(USER, world.accounts.get(USER), TODAY, lena.id)
+
+    assert briefing.plan is not None
+    assert [point.topic for point in briefing.plan.focus] == ["case_dative"]

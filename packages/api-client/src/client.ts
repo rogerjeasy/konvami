@@ -13,6 +13,8 @@ export type Onboarding = Schemas['OnboardingOut'];
 export type OnboardingStage = Schemas['Stage'];
 export type CallPurpose = Schemas['CallPurpose'];
 export type VoiceCall = Schemas['VoiceCallOut'];
+/** What a practice conversation sets out to practise: kinds of mistake and words to use. */
+export type CallPlan = Schemas['CallPlanOut'];
 /** What a call may say about itself beyond its purpose and offer. */
 export interface VoiceCallDetails {
   /** The partner of a practice call. */

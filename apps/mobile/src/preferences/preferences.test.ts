@@ -6,6 +6,7 @@ import {
   getPreferences,
   loadPreferences,
   setLanguage,
+  setLiveCorrections,
   setPartnerCaptions,
 } from '.';
 
@@ -86,5 +87,22 @@ describe('the partner’s captions', () => {
     await loadPreferences();
 
     expect(getPreferences().partnerCaptions).toBe(false);
+  });
+});
+
+describe('live corrections', () => {
+  afterEach(async () => {
+    await setLiveCorrections(true);
+  });
+
+  it('show until the learner hides them, and that is remembered across launches', async () => {
+    await loadPreferences();
+    expect(getPreferences().liveCorrections).toBe(true);
+
+    await setLiveCorrections(false);
+    await loadPreferences();
+
+    expect(getPreferences().liveCorrections).toBe(false);
+    expect(getPreferences().partnerCaptions).toBe(true);
   });
 });

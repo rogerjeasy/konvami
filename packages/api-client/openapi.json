@@ -124,6 +124,37 @@
         "title": "AllowanceOut",
         "type": "object"
       },
+      "CallPlanOut": {
+        "additionalProperties": false,
+        "description": "What a practice conversation sets out to practise, as the learner sees it: the kinds of\nmistake (a language pack's categories) and the words to use. How the partner is told to\nbring them up stays on the server.",
+        "properties": {
+          "focus": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Focus",
+            "type": "array"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/PlanWordOut"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "language",
+          "focus",
+          "words"
+        ],
+        "title": "CallPlanOut",
+        "type": "object"
+      },
       "CallPurpose": {
         "enum": [
           "onboarding",
@@ -2367,6 +2398,25 @@
         "title": "PlacementStatus",
         "type": "string"
       },
+      "PlanWordOut": {
+        "additionalProperties": false,
+        "properties": {
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "meaning"
+        ],
+        "title": "PlanWordOut",
+        "type": "object"
+      },
       "ProfileOut": {
         "additionalProperties": false,
         "properties": {
@@ -3377,6 +3427,16 @@
             "title": "Maxseconds",
             "type": "integer"
           },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CallPlanOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sdp": {
             "title": "Sdp",
             "type": "string"
@@ -3385,7 +3445,8 @@
         "required": [
           "callId",
           "sdp",
-          "maxSeconds"
+          "maxSeconds",
+          "plan"
         ],
         "title": "VoiceCallOut",
         "type": "object"

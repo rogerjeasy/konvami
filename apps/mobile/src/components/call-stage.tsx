@@ -89,6 +89,7 @@ export function CallStage({
   mainAction,
   sideAction,
   hiddenPersonaText = null,
+  belowLearner,
   problem,
   failedActions,
 }: {
@@ -115,6 +116,8 @@ export function CallStage({
    * null shows the words.
    */
   hiddenPersonaText?: string | null;
+  /** Shown right under the learner's latest line (the mistakes found in it). */
+  belowLearner?: ReactNode;
   /** The message for the call's failure, when it has failed. */
   problem: string | null;
   /** What the learner can do after a failure. */
@@ -207,9 +210,10 @@ export function CallStage({
                 </Text>
               )
             ) : (
-              <ChatBubble key={line.id} from="learner">
-                {line.text}
-              </ChatBubble>
+              <View key={line.id} className="gap-2">
+                <ChatBubble from="learner">{line.text}</ChatBubble>
+                {belowLearner}
+              </View>
             ),
           )}
           {progress}

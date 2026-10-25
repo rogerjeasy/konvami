@@ -1,4 +1,4 @@
-import { ApiError, type VoiceCall } from '@konvami/api-client';
+import { ApiError, type CallPlan, type VoiceCall } from '@konvami/api-client';
 import { VoiceError, type VoiceErrorCode } from './errors';
 import type { AudioLevels, RtcSession } from './rtc-session';
 import { helpNote, type HelpKind } from './help';
@@ -13,10 +13,11 @@ export type { AudioLevels } from './rtc-session';
  */
 export interface VoiceEngine {
   /**
-   * Sets the call up and returns its id and the time after which the server ends it. Rejects
-   * with a `VoiceError`; nothing is left open when it does.
+   * Sets the call up and returns its id, the time after which the server ends it and, for a
+   * practice conversation, its plan. Rejects with a `VoiceError`; nothing is left open when it
+   * does.
    */
-  start(): Promise<{ callId: string; maxSeconds: number }>;
+  start(): Promise<StartedCall>;
   /** Ends the call and frees the microphone. Safe to call at any time, any number of times. */
   stop(): void;
   setMuted(muted: boolean): void;
@@ -37,6 +38,13 @@ export interface VoiceEngine {
    */
   subscribe(listener: (event: unknown) => void): () => void;
   levels(): Promise<AudioLevels>;
+}
+
+export interface StartedCall {
+  callId: string;
+  maxSeconds: number;
+  /** What a practice conversation sets out to practise; null for the guide's calls. */
+  plan: CallPlan | null;
 }
 
 /** Failures of the call-creating request that mean the same on the voice screen. */
@@ -86,7 +94,7 @@ export function createVoiceEngine({
         const call = await startCall(offer);
         if (stopped) throw new VoiceError('stopped');
         await next.accept(call.sdp);
-        return { callId: call.callId, maxSeconds: call.maxSeconds };
+        return { callId: call.callId, maxSeconds: call.maxSeconds, plan: call.plan };
       } catch (error) {
         next.close();
         if (session === next) session = null;

@@ -11,7 +11,7 @@ import {
 import { renderScreen } from '@/test/render';
 import { ConversationDoneScreen } from './done';
 import { LiveConversationScreen } from './live';
-import { getPreferences, setPartnerCaptions } from '@/preferences';
+import { getPreferences, setLiveCorrections, setPartnerCaptions } from '@/preferences';
 
 jest.mock('expo-router', () => ({
   router: {
@@ -37,6 +37,7 @@ beforeEach(() => {
 afterEach(async () => {
   jest.useRealTimers();
   await setPartnerCaptions(true);
+  await setLiveCorrections(true);
 });
 
 const LENA = FAKE_PERSONAS[0]!;
@@ -71,6 +72,26 @@ const ENDED_BY_PARTNER = {
     output: JSON.stringify({ done: true }),
   },
 };
+
+const PERFEKT = {
+  said: 'Ich habe nach Berlin gefahren',
+  better: 'Ich bin nach Berlin gefahren',
+  why: 'With fahren, the Perfekt takes sein.',
+  topic: 'perfekt_auxiliary',
+  focus: false,
+};
+/** A note of the server's Live Error Spotter, as the call's data channel delivers it. */
+const liveCorrection = (turn: string, ...corrections: unknown[]) => ({
+  type: 'conversation.item.done',
+  item: {
+    id: `item_note_${turn}`,
+    type: 'message',
+    role: 'system',
+    content: [
+      { type: 'input_text', text: `live_correction: ${JSON.stringify({ turn, corrections })}` },
+    ],
+  },
+});
 
 const play = (voice: FakeVoiceEngine, ...events: unknown[]) =>
   act(async () => events.forEach((event) => voice.emit(event)));
@@ -213,6 +234,87 @@ describe('5.3 Conversation', () => {
 
     expect(voice.openedScenarios).toEqual([undefined]);
     expect(screen.queryByLabelText(/still to do$/)).toBeNull();
+  });
+
+  it('shows a mistake found while the learner speaks, and why when it is tapped', async () => {
+    const { voice } = await live();
+    await play(voice, SESSION_CREATED, learnerSaid('Ich habe nach Berlin gefahren.'));
+
+    await play(voice, liveCorrection('item_u', PERFEKT));
+
+    const chip = await screen.findByRole('button', {
+      name: 'You said “Ich habe nach Berlin gefahren”. Better: “Ich bin nach Berlin gefahren”.',
+    });
+    await fireEvent.press(chip);
+
+    expect(await screen.findByRole('header', { name: 'Let’s polish this' })).toBeTruthy();
+    expect(screen.getByText('With fahren, the Perfekt takes sein.')).toBeTruthy();
+    expect(screen.getByText('Perfekt: haben or sein')).toBeTruthy();
+    expect(screen.getByText('Your report checks this again after the conversation.')).toBeTruthy();
+  });
+
+  it('keeps showing the latest corrections when the learner speaks again', async () => {
+    const { voice } = await live();
+    await play(
+      voice,
+      learnerSaid('Ich habe nach Berlin gefahren.'),
+      liveCorrection('item_u', PERFEKT),
+    );
+
+    await play(voice, { ...learnerSaid('Und dann?'), item_id: 'item_v' });
+
+    expect(
+      screen.getByRole('button', { name: /^You said “Ich habe nach Berlin gefahren”/ }),
+    ).toBeTruthy();
+  });
+
+  it('keeps corrections for the report when the learner hid them', async () => {
+    const { voice } = await live();
+    await fireEvent.press(screen.getByRole('button', { name: 'Help' }));
+    await fireEvent.press(
+      await screen.findByRole('switch', { name: 'Show corrections as I speak' }),
+    );
+    expect(getPreferences().liveCorrections).toBe(false);
+
+    await play(
+      voice,
+      learnerSaid('Ich habe nach Berlin gefahren.'),
+      liveCorrection('item_u', PERFEKT),
+    );
+
+    expect(screen.queryByRole('button', { name: /^You said/ })).toBeNull();
+  });
+
+  it('shows what the conversation practises and ticks off each word once it is used', async () => {
+    const voice = createFakeVoiceEngine();
+    voice.plan = {
+      language: 'de',
+      focus: ['case_dative'],
+      words: [
+        { text: 'der Termin', meaning: 'appointment' },
+        { text: 'umsteigen', meaning: 'to change trains' },
+      ],
+    };
+    await live({ voice });
+
+    expect(screen.getByText('Practising today: Dative')).toBeTruthy();
+    expect(screen.getByText('Words to use: 0 of 2')).toBeTruthy();
+    expect(screen.getByLabelText('der Termin: not used yet')).toBeTruthy();
+
+    await play(voice, learnerSaid('Ich habe morgen einen Termin.'));
+
+    expect(screen.getByLabelText('der Termin: used')).toBeTruthy();
+    expect(screen.getByLabelText('umsteigen: not used yet')).toBeTruthy();
+    expect(screen.getByText('Words to use: 1 of 2')).toBeTruthy();
+  });
+
+  it('shows no plan when there is nothing to practise yet', async () => {
+    const voice = createFakeVoiceEngine();
+    voice.plan = { language: 'de', focus: [], words: [] };
+    await live({ voice });
+
+    expect(screen.queryByText(/^Practising today/)).toBeNull();
+    expect(screen.queryByText(/^Words to use/)).toBeNull();
   });
 
   it('ends the call when the learner ends it and shows what it added up to', async () => {

@@ -18,6 +18,10 @@ class GrammarNote:
     # Sentences that follow the rule, and typical learner sentences that break it.
     right: tuple[str, ...]
     wrong: tuple[str, ...]
+    # How a conversation partner gets the learner to use the structure without naming it
+    # (spec §7 "targeted elicitation"), with questions in the language learned. Empty for a
+    # topic that is a matter of single words rather than a structure.
+    elicit: str = ""
 
 
 GERMAN_NOTES: tuple[GrammarNote, ...] = (
@@ -32,6 +36,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("die Zeitung", "das Mädchen", "die Haustür"),
         wrong=("der Zeitung liegt dort", "der Mädchen", "das Haustür"),
+        elicit=(
+            "Get them to name and describe everyday things: what is in their bag, their flat or "
+            "their fridge, what they bought lately (Was ist in deiner Tasche? Wie sieht deine "
+            "Küche aus?)."
+        ),
     ),
     GrammarNote(
         topic="case_accusative",
@@ -43,6 +52,10 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Ich habe einen Bruder.", "Das Geschenk ist für meinen Vater."),
         wrong=("Ich habe ein Bruder.", "Das Geschenk ist für mein Vater."),
+        elicit=(
+            "Ask what they have, need, want or bought, and whom they visit or call (Was hast du "
+            "heute gekauft? Brauchst du einen neuen Laptop? Wen besuchst du am Wochenende?)."
+        ),
     ),
     GrammarNote(
         topic="case_dative",
@@ -56,6 +69,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Ich fahre mit dem Bus.", "Ich helfe meiner Mutter.", "mit den Kindern"),
         wrong=("Ich fahre mit der Bus.", "Ich helfe meine Mutter.", "mit den Kinder"),
+        elicit=(
+            "Ask how they get to places, whom they do things with, whom they help or give "
+            "presents to (Wie fährst du zur Arbeit? Mit wem warst du da? Was schenkst du deiner "
+            "Mutter?)."
+        ),
     ),
     GrammarNote(
         topic="case_genitive",
@@ -69,6 +87,10 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("das Auto meines Vaters", "wegen des Wetters", "die Tasche meiner Schwester"),
         wrong=("das Auto meines Vater", "die Tasche meines Schwester"),
+        elicit=(
+            "Ask whose things or ideas something was, and for reasons with wegen or während "
+            "(Wessen Idee war das? Warum war der Flug so spät?)."
+        ),
     ),
     GrammarNote(
         topic="adjective_ending",
@@ -83,6 +105,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("der neue Job", "ein neuer Job", "mit dem neuen Job", "Der Job ist neu."),
         wrong=("ein neue Job", "mit dem neue Job", "Der Job ist neue."),
+        elicit=(
+            "Ask them to describe people, places and things in some detail (Was für eine "
+            "Wohnung suchst du? Beschreib mal deinen besten Freund. Welches Restaurant magst "
+            "du?)."
+        ),
     ),
     GrammarNote(
         topic="word_order_v2",
@@ -95,6 +122,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Gestern habe ich lange gearbeitet.", "Am Wochenende fahre ich nach Berlin."),
         wrong=("Gestern ich habe lange gearbeitet.", "Am Wochenende ich fahre nach Berlin."),
+        elicit=(
+            "Ask about routines and plans, so their answers start with a time or a place (Was "
+            "machst du am Wochenende? Was hast du gestern Abend gemacht? Was machst du nach der "
+            "Arbeit?)."
+        ),
     ),
     GrammarNote(
         topic="word_order_subordinate",
@@ -108,6 +140,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Ich bleibe zu Hause, weil ich keine Zeit habe.", "Wenn ich Zeit habe, komme ich."),
         wrong=("Ich bleibe zu Hause, weil ich habe keine Zeit.", "Wenn ich Zeit habe, ich komme."),
+        elicit=(
+            "Ask why, what they think and what they would do if, so they answer with weil, dass "
+            "or wenn (Warum lernst du Deutsch? Was machst du, wenn es regnet? Glaubst du, dass "
+            "das stimmt?)."
+        ),
     ),
     GrammarNote(
         topic="separable_verb",
@@ -122,6 +159,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Ich stehe um sieben Uhr auf.", "Ich habe ihn gestern angerufen."),
         wrong=("Ich aufstehe um sieben Uhr.", "Ich habe ihn gestern geanrufen."),
+        elicit=(
+            "Ask about their day from getting up to going to bed, and about calls and plans "
+            "(Wann stehst du auf? Rufst du sie heute noch an? Wann kommst du heute nach "
+            "Hause?)."
+        ),
     ),
     GrammarNote(
         topic="perfekt_auxiliary",
@@ -139,6 +181,10 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
             "Ich habe Deutsch gelernt.",
         ),
         wrong=("Ich habe nach Berlin gefahren.", "Ich habe zu Hause geblieben."),
+        elicit=(
+            "Ask what they did and where they went: yesterday, at the weekend, on holiday "
+            "(Wohin bist du gefahren? Was ist dann passiert? Wann bist du heute aufgestanden?)."
+        ),
     ),
     GrammarNote(
         topic="participle_form",
@@ -160,6 +206,10 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
             "Ich habe Medizin gestudiert.",
             "Wir haben das Museum gebesucht.",
         ),
+        elicit=(
+            "Ask about past events that need many different verbs (Was hast du am Wochenende "
+            "gegessen? Hast du etwas Gutes gelesen? Was hast du gekauft?)."
+        ),
     ),
     GrammarNote(
         topic="conjugation",
@@ -173,6 +223,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Er spricht Deutsch.", "Du fährst zu schnell.", "Sie kann gut kochen."),
         wrong=("Er sprecht Deutsch.", "Du fahrst zu schnell.", "Sie kannt gut kochen."),
+        elicit=(
+            "Ask about other people, so they speak about he, she and they as well as I (Was "
+            "macht deine Schwester beruflich? Was machen deine Freunde am Wochenende? Fährt "
+            "dein Partner gern Rad?)."
+        ),
     ),
     GrammarNote(
         topic="preposition_choice",
@@ -187,6 +242,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Ich fahre nach Italien.", "Ich gehe zum Arzt.", "Ich warte auf den Bus."),
         wrong=("Ich fahre zu Italien.", "Ich gehe nach dem Arzt.", "Ich warte für den Bus."),
+        elicit=(
+            "Ask where they go, where they are and how long they have done things (Wohin gehst "
+            "du heute noch? Wo warst du im Urlaub? Seit wann wohnst du hier? Worauf freust du "
+            "dich?)."
+        ),
     ),
     GrammarNote(
         topic="two_way_preposition",
@@ -207,6 +267,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
             "Das Buch liegt auf den Tisch.",
             "Ich bin in die Stadt.",
         ),
+        elicit=(
+            "Ask where things are and where they put them: in their room, on their desk, in "
+            "their fridge (Wo liegt dein Handy gerade? Wohin stellst du deine Pflanzen? Was "
+            "hängt an deiner Wand?)."
+        ),
     ),
     GrammarNote(
         topic="plural_form",
@@ -220,6 +285,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("zwei Bücher", "mit meinen Freunden", "die Autos"),
         wrong=("zwei Buchs", "mit meinen Freunde", "die Autoen"),
+        elicit=(
+            "Ask how many and which things and people: family, pets, things they own or collect "
+            "(Hast du Geschwister? Wie viele Bücher liest du im Jahr? Welche Länder kennst du "
+            "schon?)."
+        ),
     ),
     GrammarNote(
         topic="negation",
@@ -233,6 +303,10 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Ich habe keine Zeit.", "Ich komme heute nicht.", "Das ist nicht mein Auto."),
         wrong=("Ich habe nicht Zeit.", "Ich nicht komme heute.", "Das ist kein mein Auto."),
+        elicit=(
+            "Ask things they are likely to answer with no: what they do not like, do not have "
+            "or never do (Isst du Fleisch? Hast du ein Auto? Warst du schon mal in Wien?)."
+        ),
     ),
     GrammarNote(
         topic="register_du_sie",
@@ -246,6 +320,11 @@ GERMAN_NOTES: tuple[GrammarNote, ...] = (
         ),
         right=("Kannst du mir helfen?", "Können Sie mir helfen?", "Wie geht es Ihnen?"),
         wrong=("Kann Sie mir helfen?", "Können Sie mir helfen? Wie geht es dir?"),
+        elicit=(
+            "Now and then ask how they would ask someone they do not know for something, such "
+            "as a neighbour or someone at an office (Wie würdest du deine Nachbarin um Hilfe "
+            "bitten? Was sagst du am Schalter?)."
+        ),
     ),
     GrammarNote(
         topic="vocabulary_false_friend",

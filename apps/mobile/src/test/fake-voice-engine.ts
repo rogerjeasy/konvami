@@ -1,4 +1,4 @@
-import type { CallPurpose } from '@konvami/api-client';
+import type { CallPlan, CallPurpose } from '@konvami/api-client';
 import { VoiceError, type VoiceEngine, type VoiceErrorCode } from '@/voice/engine';
 import type { HelpKind } from '@/voice/help';
 
@@ -11,6 +11,8 @@ export interface FakeVoiceEngine extends VoiceEngine {
   failNextStart(code: VoiceErrorCode): void;
   /** Makes the next start wait until the returned function is called. */
   holdStart(): () => void;
+  /** The plan the next calls report (none by default, as for the guide's calls). */
+  plan: CallPlan | null;
   readonly starts: number;
   readonly stops: number;
   readonly muted: boolean;
@@ -50,6 +52,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
     },
     said,
     helped,
+    plan: null,
     openedFor: [],
     openedWith: [],
     openedScenarios: [],
@@ -68,7 +71,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
         failure = null;
         throw new VoiceError(code);
       }
-      return { callId: FAKE_CALL_ID, maxSeconds: FAKE_MAX_SECONDS };
+      return { callId: FAKE_CALL_ID, maxSeconds: FAKE_MAX_SECONDS, plan: this.plan };
     },
     stop() {
       state.stops += 1;

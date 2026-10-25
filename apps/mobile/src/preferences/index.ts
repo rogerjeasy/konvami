@@ -19,16 +19,22 @@ export interface Preferences {
    * only (spec §6.4 captions). Shown by default.
    */
   partnerCaptions: boolean;
+  /**
+   * Whether a conversation shows the mistakes the server finds in the learner's turns as they
+   * speak (spec §6.4 correction chips). Shown by default; hidden, they wait for the report.
+   */
+  liveCorrections: boolean;
 }
 
 const KEY = {
   language: 'konvami.pref.language',
   partnerCaptions: 'konvami.pref.partnerCaptions',
+  liveCorrections: 'konvami.pref.liveCorrections',
 } as const;
-// What `partnerCaptions` is stored as when the learner hid the captions.
+// What a shown-by-default preference is stored as when the learner hid it.
 const HIDDEN = 'hidden';
 
-let current: Preferences = { language: null, partnerCaptions: true };
+let current: Preferences = { language: null, partnerCaptions: true, liveCorrections: true };
 const listeners = new Set<() => void>();
 
 /** The language the UI shows for a preference: the picked one, else the phone's. */
@@ -45,13 +51,15 @@ function update(next: Preferences) {
 
 /** Loads saved preferences once at launch. Falls back to the defaults. */
 export async function loadPreferences(): Promise<void> {
-  const [language, captions] = await Promise.all([
+  const [language, captions, corrections] = await Promise.all([
     readItem(KEY.language),
     readItem(KEY.partnerCaptions),
+    readItem(KEY.liveCorrections),
   ]);
   update({
     language: isLanguage(language) ? language : null,
     partnerCaptions: captions !== HIDDEN,
+    liveCorrections: corrections !== HIDDEN,
   });
 }
 
@@ -65,6 +73,12 @@ export async function setLanguage(language: Language | null): Promise<void> {
 export async function setPartnerCaptions(shown: boolean): Promise<void> {
   update({ ...current, partnerCaptions: shown });
   await (shown ? removeItem(KEY.partnerCaptions) : writeItem(KEY.partnerCaptions, HIDDEN));
+}
+
+/** Shows or hides the mistakes found while the learner speaks. */
+export async function setLiveCorrections(shown: boolean): Promise<void> {
+  update({ ...current, liveCorrections: shown });
+  await (shown ? removeItem(KEY.liveCorrections) : writeItem(KEY.liveCorrections, HIDDEN));
 }
 
 /**

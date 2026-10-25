@@ -26,11 +26,13 @@ from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.placement import PlacementScript, PlacementService
+from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
+from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voices import VoiceSampleService
@@ -204,13 +206,14 @@ def build_backend(
         clock=_now,
     )
     files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
+    transcriber = OpenAiTranscription(openai_key, meter=meter)
     recordings = RecordingService(
         profiles=profiles,
         conversations=conversations,
         sessions=sessions,
         repository=SqlRecordingRepository(sql),
         files=files,
-        transcriber=OpenAiTranscription(openai_key, meter=meter),
+        transcriber=transcriber,
         model=models.verbatim,
     )
     tutor = TutorService(
@@ -239,6 +242,7 @@ def build_backend(
                 recordings=recordings,
                 tutor=tutor,
                 sessions=sessions,
+                planner=SessionPlanner(profiles=profiles, reports=reports, cards=cards),
             ),
         },
         accounts=directory,
@@ -249,6 +253,17 @@ def build_backend(
         recordings=recordings,
         guard=guard,
         meter=meter,
+        # The same verbatim pass as after the call, so a turn written down live is not again.
+        checker=LiveSpotter(
+            profiles=profiles,
+            personas=personas,
+            check=LiveCheck(
+                transcriber=transcriber,
+                text_model=text,
+                transcription_model=models.verbatim,
+                model=models.spotter,
+            ),
+        ),
     )
     home = HomeService(
         profiles=profiles,

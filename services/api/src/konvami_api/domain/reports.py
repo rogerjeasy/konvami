@@ -213,6 +213,10 @@ class ReportRepository(Protocol):
     def latest(self, user_id: UUID) -> Report | None:
         """The ready report of the learner's most recent conversation that has one."""
 
+    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
+        """The ready reports of the learner's last `limit` conversations in `language` that
+        have one, the newest first."""
+
     def mistakes_by_week(
         self, user_id: UUID, language: str, timezone: str | None, since: dt.date
     ) -> list[WeekMistakes]:
@@ -472,7 +476,8 @@ def wording(text: str) -> str:
     return " ".join(words_in(text))
 
 
-def _within(part: tuple[str, ...], whole: tuple[str, ...]) -> bool:
+def within(part: tuple[str, ...], whole: tuple[str, ...]) -> bool:
+    """Whether the words `part` occur together, in order, in `whole` (both from `words_in`)."""
     size = len(part)
     return any(whole[start : start + size] == part for start in range(len(whole) - size + 1))
 
@@ -507,7 +512,7 @@ class _Said:
         return (
             0 <= turn < len(self._turns)
             and self._turns[turn].speaker == "learner"
-            and any(_within(quote, text) for text in self._tokens[turn])
+            and any(within(quote, text) for text in self._tokens[turn])
         )
 
     def learner_turn(self, quote: str, named: int) -> int | None:
@@ -522,7 +527,7 @@ class _Said:
     def anyone(self, sentence: str) -> bool:
         tokens = words_in(sentence)
         return bool(tokens) and any(
-            _within(tokens, text) for texts in self._tokens for text in texts
+            within(tokens, text) for texts in self._tokens for text in texts
         )
 
 
@@ -683,6 +688,12 @@ class ReportService:
         if latest is None or latest.target != self._profiles.get(user_id).target_language:
             return ()
         return latest.next_steps
+
+    def recent(self, user_id: UUID, limit: int) -> list[Report]:
+        """The reports of the learner's last conversations in the language they are learning
+        now, the newest first."""
+        language = self._profiles.get(user_id).target_language or ""
+        return self._repository.recent(user_id, language, limit)
 
     def mistakes_by_week(
         self, user_id: UUID, timezone: str | None, since: dt.date

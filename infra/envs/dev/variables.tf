@@ -90,6 +90,9 @@ variable "voice" {
     Each learner has 60 voice minutes a week during testing (decided 2026-10-22). Once the
     month's estimated spend passes the budget's target, the setup and the placement test also
     run on the efficient model (economy_models), trading the quality above for cost.
+    The live transcription writes down what the learner says, told the language and to keep
+    mistakes in the placement test and in practice. gpt-4o-transcribe kept 89 % of planted
+    learner mistakes that way, gpt-transcribe 70 % (docs/evals/2026-10-25-verbatim-fidelity*.md).
   EOT
   type = object({
     models              = map(string)
@@ -107,7 +110,7 @@ variable "voice" {
     }
     max_seconds         = { onboarding = 480, placement = 720, practice = 600 }
     voice               = "marin"
-    transcription_model = "gpt-transcribe"
+    transcription_model = "gpt-4o-transcribe"
     weekly_minutes      = 60
     economy_models = {
       onboarding = "gpt-realtime-2.1-mini"
@@ -133,12 +136,19 @@ variable "text_models" {
     about the learner whatever the model answers.
     verbatim writes each recorded learner turn down a second time after the conversation, told
     to keep their mistakes (spec §9.4), a fraction of a cent per minute of the learner's speech.
-    It is the same model as the live transcription, given the language and that instruction;
-    which model keeps learner German most faithfully is still to be measured (spec §18 phase 0,
-    spike d).
+    It is the same model as the live transcription, given the language and that instruction:
+    of the four measured, gpt-4o-transcribe kept the most learner mistakes (86-89 %, against
+    67 % for gpt-transcribe; docs/evals/2026-10-25-verbatim-fidelity*.md). During a practice
+    call the Live Error Spotter runs it for each turn, and the pass after the call skips those.
     tutor answers the learner's questions (spec §6.8). It is the stronger model, as for the
     report: a wrong rule costs the learner's trust (spec §16.1). A learner may ask 40 questions
     a day; each is one short request.
+    spotter checks each learner turn during a practice call (the Live Error Spotter, spec §8.2),
+    after the turn is written down by the verbatim model: the small model, as an answer must
+    come back while the partner is still replying, and the report checks every mistake again.
+    One short request per learner turn of three words or more. On the measured sentences it
+    caught as many mistakes as the strong model (74-83 % in a call, 94 % of exact sentences),
+    with 98-100 % precision.
   EOT
   type = object({
     assessment = string
@@ -146,8 +156,9 @@ variable "text_models" {
     speech     = optional(string, "gpt-4o-mini-tts")
     report     = optional(string, "gpt-6.1-sol")
     memory     = optional(string, "gpt-6-luna")
-    verbatim   = optional(string, "gpt-transcribe")
+    verbatim   = optional(string, "gpt-4o-transcribe")
     tutor      = optional(string, "gpt-6.1-sol")
+    spotter    = optional(string, "gpt-6-luna")
   })
   default = {
     assessment = "gpt-6.1-sol"
@@ -155,8 +166,9 @@ variable "text_models" {
     speech     = "gpt-4o-mini-tts"
     report     = "gpt-6.1-sol"
     memory     = "gpt-6-luna"
-    verbatim   = "gpt-transcribe"
+    verbatim   = "gpt-4o-transcribe"
     tutor      = "gpt-6.1-sol"
+    spotter    = "gpt-6-luna"
   }
 }
 
@@ -165,7 +177,8 @@ variable "prices" {
     What each model costs, in US dollars per million units (see modules/api, var.costs). From
     OpenAI's pricing page on 2026-10-22. Speech is billed per audio token, which the API cannot
     see: 17 per million characters is about $0.015 per spoken minute (900 characters).
-    Transcription is $0.0045 a minute, 75 per million seconds.
+    Transcription is $0.0045 a minute, 75 per million seconds; gpt-4o-transcribe $0.006 a
+    minute, 100 per million seconds (its last published price: check it on the pricing page).
   EOT
   type        = map(map(number))
   default = {
@@ -195,8 +208,9 @@ variable "prices" {
       cached_input_tokens = 0.01
       output_tokens       = 0.50
     }
-    "gpt-transcribe"  = { audio_seconds = 75 }
-    "gpt-4o-mini-tts" = { characters = 17 }
+    "gpt-transcribe"    = { audio_seconds = 75 }
+    "gpt-4o-transcribe" = { audio_seconds = 100 }
+    "gpt-4o-mini-tts"   = { characters = 17 }
   }
 }
 

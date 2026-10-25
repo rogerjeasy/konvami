@@ -31,9 +31,10 @@ from konvami_api.domain.onboarding import (
     Stage,
 )
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.speech import verbatim_prompt
 from konvami_api.domain.text import TextModel, TextModelError, TextTask
 from konvami_api.domain.tools import ToolResult, ToolSet
-from konvami_api.domain.voice import Briefing, FinishedCall
+from konvami_api.domain.voice import Briefing, FinishedCall, Hearing
 
 Skill = Literal["speaking", "listening", "grammar", "vocabulary", "pronunciation"]
 SKILLS: tuple[Skill, ...] = get_args(Skill)
@@ -323,6 +324,12 @@ class PlacementService:
             self_assessed=self_assessed,
         )
 
+    def hearing(self, user_id: UUID) -> Hearing:
+        """The test is taken in the language learned, and the assessment reads the learner's
+        mistakes: the live transcription is told both."""
+        target = self._learning(user_id)[0]
+        return Hearing(target, verbatim_prompt(self._profiles.catalog.english_name(target)))
+
     def conclude(self, user_id: UUID, tools: PlacementTools, turns: Sequence[Turn]) -> None:
         """The test call is over: work out the result, or mark the test as inconclusive."""
         spoken = sum(1 for turn in turns if turn.speaker == "learner")
@@ -441,7 +448,10 @@ class PlacementScript:
         scenario: str | None = None,
     ) -> Briefing:
         self._placement.check(user_id)
-        return Briefing(self._placement.instructions(user_id, first_name=account.first_name))
+        return Briefing(
+            self._placement.instructions(user_id, first_name=account.first_name),
+            hearing=self._placement.hearing(user_id),
+        )
 
     def tools(self, user_id: UUID, scenario: str | None = None) -> PlacementTools:
         return PlacementTools()

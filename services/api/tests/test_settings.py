@@ -164,3 +164,11 @@ def test_without_cost_settings_nothing_is_priced_and_nothing_is_spent(missing: s
 def test_a_broken_cost_setting_is_named_at_start_up() -> None:
     with pytest.raises(RuntimeError, match="KONVAMI_COSTS"):
         cost_settings('{"prices": {}, "target_usd": 150, "ceiling_usd": 100, "owners": []}')
+
+
+def test_the_live_checks_model_is_read_with_the_text_models() -> None:
+    models = text_models('{"assessment": "a", "personas": "p", "spotter": "gpt-6-luna"}')
+
+    assert models.spotter == "gpt-6-luna"
+    # Settings from before the Live Error Spotter: no live checks.
+    assert text_models('{"assessment": "a", "personas": "p"}').spotter == ""

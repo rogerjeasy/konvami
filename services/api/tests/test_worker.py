@@ -3,12 +3,22 @@
 import asyncio
 import base64
 import json
+import threading
+import time
 from typing import Any
 
 import pytest
 from websockets.asyncio.server import ServerConnection, serve
 
-from konvami_api.domain.live_call import KeepAudio, LiveCall, TurnAudio
+from konvami_api.domain.live_call import (
+    LIVE_CORRECTION_NOTE,
+    KeepAudio,
+    LiveCall,
+    LiveCorrection,
+    Spot,
+    Spotted,
+    TurnAudio,
+)
 from konvami_api.domain.tools import ToolResult
 from konvami_api.worker import CallClosed, WebSocketConnection, run_call
 
@@ -202,6 +212,114 @@ def test_audio_that_cannot_be_stored_leaves_the_turn_without_it_and_the_call_goe
     assert tools.calls == [("save_level", {})]
 
 
+# --- Checking the learner's turns while the call goes on (the Live Error Spotter) --------------
+
+
+def spotting(tools: OneTool) -> LiveCall:
+    return LiveCall(
+        tools,
+        max_seconds=MAX,
+        wrap_up_seconds=5,
+        goodbye_grace_seconds=3,
+        record=True,
+        spot=True,
+    )
+
+
+PERFEKT = LiveCorrection(
+    "Ich habe nach Berlin gefahren",
+    "Ich bin nach Berlin gefahren",
+    "Avec « fahren » : « sein ».",
+    "perfekt_auxiliary",
+    False,
+)
+
+
+class Pauses(ScriptedConnection):
+    """A quiet second takes a moment of real time, as a check running beside the call does."""
+
+    async def receive(self, timeout: float) -> dict[str, Any] | None:
+        if self.script and self.script[0] is None:
+            await asyncio.sleep(0.05)
+        return await super().receive(timeout)
+
+
+def test_a_turn_is_checked_and_what_was_found_is_told() -> None:
+    checked: list[Spot] = []
+
+    def check(spot: Spot) -> Spotted:
+        checked.append(spot)
+        return Spotted(spot.item_id, "Ich habe nach Berlin gefahren.", (PERFEKT,))
+
+    call = spotting(OneTool())
+    connection = Pauses([LEARNER_SAID, learner_audio(b"\x01\x00"), None, None], then_close=True)
+
+    asyncio.run(run_call(call, connection, lambda: None, lambda: connection.seconds, spot=check))
+
+    assert [spot.item_id for spot in checked] == ["item_2"]
+    [note] = [event for event in connection.sent if event["type"] == "conversation.item.create"]
+    assert note["item"]["role"] == "system"
+    assert note["item"]["content"][0]["text"].startswith(LIVE_CORRECTION_NOTE)
+    assert call.turns[0].verbatim == "Ich habe nach Berlin gefahren."
+
+
+def test_a_slow_check_does_not_hold_up_the_call() -> None:
+    answered = threading.Event()
+    order: list[str] = []
+
+    class Answers(ScriptedConnection):
+        async def send(self, event: dict[str, Any]) -> None:
+            await super().send(event)
+            if event.get("item", {}).get("type") == "function_call_output":
+                order.append("tool answered")
+                answered.set()
+
+    def check(spot: Spot) -> Spotted:
+        answered.wait(timeout=2)
+        order.append("checked")
+        return Spotted(spot.item_id, None, ())
+
+    tools = OneTool()
+    connection = Answers(
+        [LEARNER_SAID, learner_audio(b"\x01\x00"), tool_reply("save_level")], then_close=True
+    )
+
+    asyncio.run(run_call(spotting(tools), connection, lambda: None, lambda: 0.0, spot=check))
+
+    assert order == ["tool answered", "checked"]
+
+
+def test_a_check_that_fails_changes_nothing_and_the_call_goes_on() -> None:
+    def check(spot: Spot) -> Spotted:
+        raise RuntimeError("model unreachable")
+
+    tools = OneTool()
+    call = spotting(tools)
+    connection = ScriptedConnection(
+        [LEARNER_SAID, learner_audio(b"\x01\x00"), None, tool_reply("save_level")],
+        then_close=True,
+    )
+
+    asyncio.run(run_call(call, connection, lambda: None, lambda: connection.seconds, spot=check))
+
+    assert tools.calls == [("save_level", {})]
+    assert call.turns[0].verbatim is None
+
+
+def test_a_check_still_running_when_the_call_ends_keeps_its_verbatim_text() -> None:
+    def check(spot: Spot) -> Spotted:
+        time.sleep(0.1)
+        return Spotted(spot.item_id, "Ich habe nach Berlin gefahren.", (PERFEKT,))
+
+    call = spotting(OneTool())
+    connection = ScriptedConnection([LEARNER_SAID, learner_audio(b"\x01\x00")], then_close=True)
+
+    asyncio.run(run_call(call, connection, lambda: None, lambda: connection.seconds, spot=check))
+
+    assert call.outcome == "closed"
+    assert call.turns[0].verbatim == "Ich habe nach Berlin gefahren."
+
+
 # --- The real WebSocket connection, against a local server ------------------------------------
 
 
@@ -393,6 +511,9 @@ def test_a_practice_calls_audio_is_stored_as_the_call_goes() -> None:
     lena, _ = world.onboard()
     call_id = world.voice.start(USER, CallPurpose.PRACTICE, "v=0 offer", lena.id).call_id
     asked: list[dict[str, Any]] = []
+    # The turn is checked as well, from its audio.
+    world.live_transcriber.answers.append("Ich habe nach Berlin gefahren.")
+    world.text.answers.append({"mistakes": []})
 
     async def provider_side(websocket: ServerConnection) -> None:
         await websocket.recv()  # the persona is started
@@ -427,3 +548,4 @@ def test_a_practice_calls_audio_is_stored_as_the_call_goes() -> None:
     assert turn.audio is not None
     assert turn.audio.milliseconds == 100
     assert world.files.keys() == [turn.audio.key]
+    assert turn.verbatim == "Ich habe nach Berlin gefahren."

@@ -159,6 +159,23 @@ describe('captions', () => {
   });
 });
 
+describe('what the learner said', () => {
+  it('is kept in full, final lines only, though captions keep only the latest', () => {
+    const lines = Array.from({ length: 10 }, (_, i) => learnerDone(`Satz ${i}`, `item_${i}`));
+
+    const state = after(learnerDelta('Halb'), ...lines, {
+      type: 'learner.typed',
+      id: 'typed_1',
+      text: 'Ich weiß nicht.',
+    });
+
+    expect(state.learnerLines).toEqual([
+      ...Array.from({ length: 10 }, (_, i) => `Satz ${i}`),
+      'Ich weiß nicht.',
+    ]);
+  });
+});
+
 describe('progress', () => {
   it('is unknown until the server has saved something', () => {
     expect(after(SESSION_CREATED).stillOpen).toBeNull();
@@ -277,5 +294,71 @@ describe('help', () => {
     expect(conversationReducer(listening, { type: 'learner.help', kind: 'stuck' }).phase).toBe(
       'thinking',
     );
+  });
+});
+
+describe('live corrections', () => {
+  /** A note of the server's Live Error Spotter, as the call's data channel delivers it. */
+  const note = (text: string, id = 'item_note') => ({
+    type: 'conversation.item.done',
+    event_id: 'event_10',
+    previous_item_id: 'item_u',
+    item: {
+      id,
+      object: 'realtime.item',
+      type: 'message',
+      status: 'completed',
+      role: 'system',
+      content: [{ type: 'input_text', text }],
+    },
+  });
+  const PERFEKT = {
+    said: 'Ich habe nach Berlin gefahren',
+    better: 'Ich bin nach Berlin gefahren',
+    why: 'Mit „fahren“ bildest du das Perfekt mit „sein“.',
+    topic: 'perfekt_auxiliary',
+    focus: true,
+  };
+  const correction = (turn: string, ...corrections: unknown[]) =>
+    note(`live_correction: ${JSON.stringify({ turn, corrections })}`);
+
+  it('are none at the start', () => {
+    expect(INITIAL_CONVERSATION.corrections).toEqual([]);
+  });
+
+  it('arrive for the learner’s turn they are about', () => {
+    const state = after(
+      learnerDone('Ich habe nach Berlin gefahren.'),
+      correction('item_u', PERFEKT),
+    );
+
+    expect(state.corrections).toEqual([{ turn: 'item_u', ...PERFEKT }]);
+  });
+
+  it('keep the order in which they were found', () => {
+    const dative = { ...PERFEKT, said: 'mit der Bus', better: 'mit dem Bus', topic: 'case_dative' };
+
+    const state = after(correction('item_u', PERFEKT), correction('item_v', dative));
+
+    expect(state.corrections.map(({ turn, topic }) => [turn, topic])).toEqual([
+      ['item_u', 'perfekt_auxiliary'],
+      ['item_v', 'case_dative'],
+    ]);
+  });
+
+  it('skip a correction that is not complete', () => {
+    const state = after(correction('item_u', { ...PERFEKT, better: '' }, { said: 'x' }, PERFEKT));
+
+    expect(state.corrections).toHaveLength(1);
+  });
+
+  it('ignore other notes and notes they cannot read', () => {
+    const state = after(
+      note('learner_help: slower'),
+      note('live_correction: {not json'),
+      note('live_correction: {"turn": 3, "corrections": []}'),
+    );
+
+    expect(state).toEqual(INITIAL_CONVERSATION);
   });
 });

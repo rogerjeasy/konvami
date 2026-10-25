@@ -25,6 +25,7 @@ from konvami_api.domain.memories import MemoryRepository, memory_key
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
+from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
 from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
 from konvami_api.domain.recordings import RecordingRepository
 from konvami_api.domain.reports import (
@@ -342,6 +343,22 @@ def test_a_session_keeps_the_time_it_was_granted(sessions: Sessions) -> None:
     sessions.repository.started(granted)
 
     assert sessions.repository.get("rtc_1") == granted
+
+
+def test_a_session_keeps_its_plan(sessions: Sessions) -> None:
+    plan = SessionPlan(
+        focus=(
+            FocusPoint(
+                "case_dative", "Dative", "Ask how they travel.", (("mit der Bus", "mit dem Bus"),)
+            ),
+        ),
+        words=(PlanWord("der Termin", "le rendez-vous"),),
+        recent_topics=("Vous avez parlé de votre week-end.",),
+    )
+    planned = replace(session("rtc_1"), plan=plan)
+    sessions.repository.started(planned)
+
+    assert sessions.repository.get("rtc_1") == planned
 
 
 WEEK = date(2026, 10, 5)
@@ -882,6 +899,18 @@ def test_a_turn_keeps_what_the_verbatim_pass_wrote(partners: Practice) -> None:
     assert [turn.verbatim for turn in partners.conversations.turns("rtc_1")] == [
         None,
         "Ich habe Berlin.",
+    ]
+
+
+def test_a_turn_checked_during_the_call_keeps_its_verbatim_text(partners: Practice) -> None:
+    partners.calls.started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "m", NOON, persona_id=LENA.id)
+    )
+    turns = (Turn("learner", "Ich bin in Berlin.", verbatim="Ich habe in Berlin."),)
+    partners.calls.finish("rtc_1", FinishedCall(NOON + HOUR, "closed", USAGE, turns))
+
+    assert [turn.verbatim for turn in partners.conversations.turns("rtc_1")] == [
+        "Ich habe in Berlin."
     ]
 
 
@@ -1474,6 +1503,31 @@ def test_the_latest_report_is_the_ready_one_of_the_learners_newest_conversation(
     reports.reports.written("rtc_theirs", "ready", replace(REPORT, summary="Le leur."))
 
     assert reports.reports.latest(USER) == newer
+
+
+def test_recent_reports_are_the_ready_ones_of_the_learners_last_conversations_in_a_language(
+    reports: Reports,
+) -> None:
+    def call(call_id: str, at: datetime, user: UUID = USER) -> None:
+        reports.calls.started(
+            VoiceSession(call_id, user, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", at)
+        )
+        ask(reports.reports, call_id, at)
+
+    first, second, third = (replace(REPORT, summary=text) for text in ("Un.", "Deux.", "Trois."))
+    for number in range(1, 7):
+        call(f"rtc_r{number}", NOON + number * HOUR)
+    call("rtc_theirs", NOON + 9 * HOUR, user=OTHER_USER)
+    reports.reports.written("rtc_r1", "ready", first)
+    reports.reports.written("rtc_r2", "ready", second)
+    reports.reports.written("rtc_r3", "failed", None)
+    reports.reports.written("rtc_r4", "ready", replace(REPORT, target="it"))
+    reports.reports.written("rtc_r5", "ready", third)
+    reports.reports.written("rtc_theirs", "ready", replace(REPORT, summary="Le leur."))
+
+    assert reports.reports.recent(USER, "de", 2) == [third, second]
+    assert reports.reports.recent(USER, "de", 5) == [third, second, first]
+    assert reports.reports.recent(USER, "fr", 5) == []
 
 
 def test_a_learner_without_a_ready_report_has_no_latest_one(reports: Reports) -> None:

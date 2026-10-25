@@ -46,3 +46,13 @@ class TranscriptionError(Exception):
 class Transcriber(Protocol):
     def transcribe(self, task: TranscriptionTask) -> str:
         """What was said in the audio. Raises `TranscriptionError`."""
+
+
+def verbatim_prompt(target: str) -> str:
+    """How a learner's speech is to be written down: word for word, mistakes kept (spec §9.4)."""
+    return (
+        f"A learner of {target} speaking {target}. Write down exactly what they say, word for "
+        "word, as they say it. Keep every mistake: wrong endings, articles, word order, verb "
+        "forms and wrong words. Do not correct anything and do not complete what they leave "
+        "unfinished. Keep repeated words and false starts."
+    )
