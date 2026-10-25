@@ -31,6 +31,7 @@ class Feature(StrEnum):
     VOICE_ONBOARDING = "voice_onboarding"
     VOICE_PLACEMENT = "voice_placement"
     VOICE_PRACTICE = "voice_practice"
+    VOICE_EXAM = "voice_exam"
     PLACEMENT_ASSESSMENT = "placement_assessment"
     # The starter partners, and a partner drafted from a description.
     PARTNERS = "partners"
@@ -53,6 +54,9 @@ class Feature(StrEnum):
     # The weekly check-in (spec §6.12): its text, and its sound.
     WEEK_REVIEW = "week_review"
     WEEK_AUDIO = "week_audio"
+    # An exam simulation's scoring, and the sound of a model answer (spec §6.13).
+    EXAM_SCORE = "exam_score"
+    EXAM_AUDIO = "exam_audio"
     VOICE_SAMPLE = "voice_sample"
 
 

@@ -31,13 +31,20 @@ def voice_settings(raw: str | None) -> VoiceSettings:
         return VoiceSettings({}, {}, voice="", transcription_model="", weekly_seconds=0)
     try:
         voice = _Voice.model_validate(json.loads(raw))
+        models = {CallPurpose(purpose): model for purpose, model in voice.models.items()}
+        max_seconds = {CallPurpose(p): seconds for p, seconds in voice.max_seconds.items()}
+        economy = {CallPurpose(p): m for p, m in voice.economy_models.items()}
+        # Settings written before exam simulations: an exam is timed and voiced as practice.
+        for settings in (models, max_seconds, economy):
+            if CallPurpose.EXAM not in settings and CallPurpose.PRACTICE in settings:
+                settings[CallPurpose.EXAM] = settings[CallPurpose.PRACTICE]  # type: ignore[assignment]
         return VoiceSettings(
-            models={CallPurpose(purpose): model for purpose, model in voice.models.items()},
-            max_seconds={CallPurpose(p): seconds for p, seconds in voice.max_seconds.items()},
+            models=models,
+            max_seconds=max_seconds,
             voice=voice.voice,
             transcription_model=voice.transcription_model,
             weekly_seconds=voice.weekly_minutes * 60,
-            economy_models={CallPurpose(p): m for p, m in voice.economy_models.items()},
+            economy_models=economy,
         )
     except (ValueError, ValidationError) as error:
         raise RuntimeError(f"{VOICE_VARIABLE} is not valid") from error

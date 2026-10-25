@@ -195,6 +195,11 @@ class ConversationService:
         conversation = self.get(user_id, call_id)
         return Transcript(conversation, tuple(self._repository.turns(call_id)))
 
+    def turns(self, call_id: str) -> tuple[Turn, ...]:
+        """What was said in any call, for a worker that already knows whose call it is (an exam
+        simulation's scorer); a learner reads a transcript through `transcript`."""
+        return tuple(self._repository.turns(call_id))
+
     def partner_history(self, user_id: UUID) -> Mapping[UUID, PartnerHistory]:
         return self._repository.partner_history(user_id)
 
