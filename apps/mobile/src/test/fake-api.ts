@@ -516,6 +516,8 @@ export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
 
 export interface FakeApi extends ApiClient {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
+  /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
+  hearsNextRetry(heard: string): void;
   /** Every call so far, as `[method, ...arguments]`, in order. */
   readonly calls: readonly unknown[][];
   /** Stores answers directly, as if they had been given earlier. */
@@ -638,6 +640,10 @@ export function createFakeApi(): FakeApi {
   let memoryEnabled = true;
   // Newest first, as the server lists them.
   let tutorQuestions: TutorQuestion[] = [];
+  // "Say it better": what the next attempt is heard as, and each conversation's corrections
+  // said again, with whether one attempt was right.
+  let nextRetryHeard: string | null = null;
+  const retried = new Map<string, Map<number, boolean>>();
   let tutorAnswer: TutorAnswer = FAKE_TUTOR_ANSWER;
   const keepQuestion = (question: string, source: TutorQuestion['source'], at: number) => {
     const kept: TutorQuestion = {
@@ -1342,6 +1348,27 @@ export function createFakeApi(): FakeApi {
     async getTutorQuestions() {
       await record('getTutorQuestions');
       return { questions: tutorQuestions };
+    },
+    hearsNextRetry(heard) {
+      nextRetryHeard = heard;
+    },
+    async retryCorrection(conversationId, index, attempt) {
+      await record('retryCorrection', conversationId, index, attempt);
+      const mistake = FAKE_REPORT.mistakes[index];
+      if (!mistake) throw new ApiError('not_found', 404);
+      if (!mistake.certain) throw new ApiError('unsure', 409);
+      const heard = nextRetryHeard ?? mistake.corrected;
+      nextRetryHeard = null;
+      const right = heard.includes(mistake.corrected) && !heard.includes(mistake.original);
+      const tried = retried.get(conversationId) ?? new Map<number, boolean>();
+      tried.set(index, (tried.get(index) ?? false) || right);
+      retried.set(conversationId, tried);
+      return { heard, right, said: mistake.original, better: mistake.corrected };
+    },
+    async getRetries(conversationId) {
+      await record('getRetries', conversationId);
+      const tried = retried.get(conversationId) ?? new Map<number, boolean>();
+      return { retries: [...tried].map(([index, right]) => ({ index, right })) };
     },
     async getGrammarMap() {
       await record('getGrammarMap');

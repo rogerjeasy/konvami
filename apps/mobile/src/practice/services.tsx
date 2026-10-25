@@ -13,6 +13,8 @@ import type {
   Catalog,
   GrammarMap,
   GrammarTopicPage,
+  Retried,
+  Retries,
   Scenario,
   CardSource,
   Progress,
@@ -22,6 +24,7 @@ import type {
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
 import type { ClipPlayer } from '@/lib/clip-player';
+import type { SentenceRecording } from '@/voice/sentence-recorder';
 import { createDeckStore, type DeckState, type DeckStore } from './deck-store';
 import { createHomeStore, type HomeState, type HomeStore } from './home-store';
 import { createLibraryStore, type LibraryState, type LibraryStore } from './library-store';
@@ -64,6 +67,17 @@ export interface PracticeServices {
   catalog: ResourceStore<Catalog>;
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
+  /**
+   * Says correction `index` of a conversation's report again, from a recording ("Say it better").
+   * Rejects with an `ApiError` (`unsure`, `retry_limit`, …).
+   */
+  retryCorrection: (
+    conversationId: string,
+    index: number,
+    recording: SentenceRecording,
+  ) => Promise<Retried>;
+  /** The corrections of a conversation's report the learner said again, and whether right. */
+  readRetries: (conversationId: string) => Promise<Retries>;
   /** The grammar map (5.14). */
   grammar: ResourceStore<GrammarMap>;
   /** One topic of the map (5.15). Rejects with an `ApiError` (`not_found`, …). */
@@ -100,6 +114,8 @@ export function createPracticeServices(
     | 'explainCorrection'
     | 'getGrammarMap'
     | 'getGrammarTopic'
+    | 'retryCorrection'
+    | 'getRetries'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -126,6 +142,13 @@ export function createPracticeServices(
     tutor,
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
     readGrammarTopic: (id) => api.getGrammarTopic(id),
+    retryCorrection: (conversationId, index, recording) =>
+      api.retryCorrection(conversationId, index, {
+        audio: recording.base64,
+        format: recording.format,
+        durationMs: recording.durationMs,
+      }),
+    readRetries: (conversationId) => api.getRetries(conversationId),
     askTutor: (asked) =>
       tutor.mutate(
         () =>

@@ -16,6 +16,8 @@ import { createFakeApi, FAKE_NOW, type FakeApi } from '@/test/fake-api';
 import { createFakeVoiceEngine, type FakeVoiceEngine } from '@/test/fake-voice-engine';
 import { ThemeProvider } from '@/theme';
 import { VoiceProvider } from '@/voice/services';
+import { RecorderProvider } from '@/voice/sentence-recorder';
+import { createFakeRecorder, type FakeRecorder } from '@/test/fake-recorder';
 
 const TEST_ACCOUNT = { email: 'amara.diallo@mail.com', password: 'Sommer2026!' };
 
@@ -31,7 +33,7 @@ export async function createTestAuth(): Promise<AuthServices & { provider: FakeA
  * Renders a screen the way the app does: inside the theme, with i18n loaded, auth services, the
  * flow drafts and the onboarding store. Pass `auth` to prepare accounts or inspect calls, `draft`
  * (sign-up) or `access` (sign-in and password reset) to start mid-flow, `api` to prepare or
- * inspect what the backend holds, `voice` to play a live call, `device` to decide what the photo
+ * inspect what the backend holds, `voice` to play a live call, `recorder` to record a sentence, `device` to decide what the photo
  * picker answers and to hear what is played (samples and recordings), `now` to set the device's clock (it stands at the
  * fake server's time otherwise), `studioStart` to open Persona Studio on a draft, and `signedIn`
  * to start as a signed-in learner (Amara). The result also carries the profile services, for
@@ -45,6 +47,7 @@ export async function renderScreen(
     access,
     api,
     voice,
+    recorder,
     device,
     now,
     studioStart,
@@ -55,6 +58,7 @@ export async function renderScreen(
     access?: Partial<AccessDraft>;
     api?: FakeApi;
     voice?: FakeVoiceEngine;
+    recorder?: FakeRecorder;
     device?: FakeProfileDevice;
     studioStart?: PersonaDraft;
     /** The device's clock: a fixed moment, or a function for a clock that a test moves. */
@@ -82,6 +86,7 @@ export async function renderScreen(
     profileDevice.samples,
   );
   const engine = voice ?? createFakeVoiceEngine();
+  const sentences = recorder ?? createFakeRecorder();
   const profile = createProfileServices(backend, {
     pictures: profileDevice.pictures,
     samples: profileDevice.samples,
@@ -95,19 +100,21 @@ export async function renderScreen(
         <OnboardingProvider store={onboarding}>
           <PracticeProvider services={practice}>
             <ProfileProvider services={profile}>
-              <VoiceProvider
-                createEngine={(purpose, personaId, scenario, practise) => {
-                  engine.openedFor.push(purpose);
-                  engine.openedWith.push(personaId);
-                  engine.openedScenarios.push(scenario);
-                  engine.openedPractise.push(practise);
-                  return engine;
-                }}
-              >
-                <SignUpDraftProvider initial={draft}>
-                  <AccessDraftProvider initial={access}>{ui}</AccessDraftProvider>
-                </SignUpDraftProvider>
-              </VoiceProvider>
+              <RecorderProvider useRecorder={() => sentences}>
+                <VoiceProvider
+                  createEngine={(purpose, personaId, scenario, practise) => {
+                    engine.openedFor.push(purpose);
+                    engine.openedWith.push(personaId);
+                    engine.openedScenarios.push(scenario);
+                    engine.openedPractise.push(practise);
+                    return engine;
+                  }}
+                >
+                  <SignUpDraftProvider initial={draft}>
+                    <AccessDraftProvider initial={access}>{ui}</AccessDraftProvider>
+                  </SignUpDraftProvider>
+                </VoiceProvider>
+              </RecorderProvider>
             </ProfileProvider>
           </PracticeProvider>
         </OnboardingProvider>
