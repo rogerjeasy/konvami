@@ -4,10 +4,14 @@ import pytest
 
 from konvami_api.domain.conversations import DayActivity
 from konvami_api.domain.director import (
+    ExamInputs,
+    ExamPace,
     Habit,
     Lean,
     Reason,
+    Session,
     SessionKind,
+    WeakestPart,
     WeekInputs,
     WeekSoFar,
     choose_scenario,
@@ -34,6 +38,7 @@ def so_far(*days: tuple[dt.date, int], **counts: int) -> WeekSoFar:
         role_plays=counts.get("role_plays", 0),
         reviews=counts.get("reviews", 0),
         cards_reviewed=counts.get("cards", 0),
+        simulations=counts.get("simulations", 0),
     )
 
 
@@ -64,7 +69,13 @@ def test_a_week_is_the_habit_in_calls_of_at_most_ten_minutes() -> None:
 
     assert plan.week == MONDAY
     assert (plan.minutes, plan.days) == (40, 4)
-    assert plan.sessions == {SessionKind.REVIEW: 1, SessionKind.ROLE_PLAY: 1, SessionKind.FREE: 2}
+    assert plan.sessions == {
+        SessionKind.EXAM: 0,
+        SessionKind.REVIEW: 1,
+        SessionKind.ROLE_PLAY: 1,
+        SessionKind.FREE: 2,
+    }
+    assert plan.exam is None
     assert plan.topics == TOPICS
     assert plan.cards == 12
 
@@ -323,3 +334,127 @@ def test_once_every_role_play_was_played_the_longest_ago_comes_back() -> None:
 
 def test_a_beginner_has_no_role_play() -> None:
     assert choose_scenario(GERMAN_SCENARIOS, level="A0", played=()) is None
+
+
+# --- Exam simulations ----------------------------------------------------------------------------
+
+
+def preparing(**changes: object) -> ExamInputs:
+    """A learner five weeks from the Goethe B1, with one simulation behind them."""
+    base = ExamInputs(
+        test="goethe_b1",
+        name="Goethe-Zertifikat B1",
+        date=MONDAY + dt.timedelta(weeks=5),
+        before=1,
+        last_week=0,
+        weakest=None,
+    )
+    return base.__class__(**{**base.__dict__, **changes})
+
+
+def for_exam(exam: ExamInputs, **changes: object) -> WeekInputs:
+    return inputs(lean=Lean.EXAM, exam=exam, **changes)
+
+
+@pytest.mark.parametrize(
+    ("exam", "pace", "simulations"),
+    [
+        # No simulation yet: a first one, however far the exam.
+        (preparing(before=0, date=MONDAY + dt.timedelta(weeks=20)), ExamPace.FIRST, 1),
+        # More than eight weeks away, or no date: one every second week.
+        (preparing(date=MONDAY + dt.timedelta(weeks=20)), ExamPace.FORTNIGHTLY, 1),
+        (preparing(date=MONDAY + dt.timedelta(weeks=20), last_week=1), ExamPace.FORTNIGHTLY, 0),
+        (preparing(date=None, last_week=1), ExamPace.FORTNIGHTLY, 0),
+        # The last eight weeks: one a week.
+        (preparing(), ExamPace.WEEKLY, 1),
+        (preparing(date=MONDAY + dt.timedelta(weeks=8, days=-1)), ExamPace.WEEKLY, 1),
+        # The last two weeks: two, also before any simulation.
+        (preparing(date=MONDAY + dt.timedelta(days=13), before=0), ExamPace.FINAL, 2),
+    ],
+)
+def test_simulations_come_more_often_as_the_exam_comes_closer(
+    exam: ExamInputs, pace: ExamPace, simulations: int
+) -> None:
+    plan = plan_week(for_exam(exam))
+
+    assert plan.exam is not None
+    assert (plan.exam.pace, plan.exam.simulations) == (pace, simulations)
+    assert plan.sessions[SessionKind.EXAM] == simulations
+    # The other calls share what is left.
+    assert sum(plan.sessions.values()) == 4
+
+
+def test_simulations_take_at_most_half_the_weeks_speaking() -> None:
+    close = preparing(date=MONDAY + dt.timedelta(days=10))
+
+    twenty = plan_week(for_exam(close, habit=Habit(days=2, minutes=20)))
+    ten = plan_week(for_exam(close, habit=Habit(days=1, minutes=10)))
+
+    assert twenty.exam is not None
+    assert ten.exam is not None
+    assert (twenty.exam.wanted, twenty.exam.simulations) == (2, 1)
+    # A simulation takes a whole call: a ten-minute week has no room for one.
+    assert (ten.exam.wanted, ten.exam.simulations) == (2, 0)
+    assert ten.exam.minutes == 10
+    assert ten.sessions[SessionKind.EXAM] == 0
+
+
+def test_the_weeks_simulation_comes_first_and_takes_a_whole_call() -> None:
+    plan = plan_week(for_exam(preparing()))
+
+    assert plan.today == (Session(SessionKind.EXAM, 10, None, exam="goethe_b1"),)
+
+
+def test_a_short_day_is_made_as_long_as_a_simulation() -> None:
+    # Five minutes a day, every day: the simulation's day has ten, the days after a little less.
+    plan = plan_week(for_exam(preparing(), habit=Habit(days=7, minutes=35)))
+
+    assert plan.today == (Session(SessionKind.EXAM, 10, None, exam="goethe_b1"),)
+    assert plan.reason is Reason.ON_TRACK
+
+
+def test_a_simulation_done_moves_the_week_on() -> None:
+    tuesday = MONDAY + dt.timedelta(days=1)
+    plan = plan_week(
+        for_exam(
+            preparing(),
+            today=tuesday,
+            so_far=so_far((MONDAY, 10), simulations=1),
+        )
+    )
+
+    assert plan.exam is not None
+    assert plan.exam.done == 1
+    assert [session.kind for session in plan.today] != [SessionKind.EXAM]
+    assert all(session.exam is None for session in plan.today)
+
+
+def test_a_day_of_two_calls_gives_the_simulation_the_whole_one() -> None:
+    plan = plan_week(for_exam(preparing(), habit=Habit(days=4, minutes=60)))
+
+    assert [(s.kind, s.minutes) for s in plan.today] == [
+        (SessionKind.REVIEW, 5),
+        (SessionKind.EXAM, 10),
+    ]
+
+
+def test_there_is_no_simulation_on_the_exams_own_day() -> None:
+    plan = plan_week(
+        for_exam(
+            preparing(date=THURSDAY), today=THURSDAY, so_far=so_far((MONDAY, 10), simulations=1)
+        )
+    )
+
+    assert plan.exam is not None
+    assert plan.exam.simulations == 1
+    assert all(session.kind is not SessionKind.EXAM for session in plan.today)
+
+
+def test_the_weakest_part_is_carried_to_today() -> None:
+    weakest = WeakestPart(number=2, kind="present_topic")
+
+    plan = plan_week(for_exam(preparing(weakest=weakest)))
+
+    assert plan.exam is not None
+    assert plan.exam.weakest == weakest
+    assert plan.exam.name == "Goethe-Zertifikat B1"

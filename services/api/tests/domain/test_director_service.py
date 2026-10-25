@@ -1,9 +1,11 @@
 """The Learning Director on a whole backend: the week from what the learner set and did."""
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from konvami_api.domain.director import Reason, SessionKind
+from konvami_api.domain.director import ExamPace, Reason, SessionKind, WeakestPart
 from konvami_api.domain.grammar_topics import GERMAN_MAP
+from konvami_api.domain.live_call import Turn
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.reports import TopicUse, Word
@@ -91,8 +93,10 @@ def test_an_exam_leans_the_week_on_role_plays_and_the_exams_level() -> None:
 
     plan = world.director.week(USER, ZURICH)
 
-    # No cards are due, so no review conversation: three of the five calls are role-plays.
-    assert plan.sessions[SessionKind.ROLE_PLAY] == 3
+    # One call is a first simulation; no cards are due, so no review conversation: two of the
+    # other four are role-plays.
+    assert plan.sessions[SessionKind.EXAM] == 1
+    assert plan.sessions[SessionKind.ROLE_PLAY] == 2
     levels = {t.id: t.level for t in GERMAN_MAP}
     assert levels[plan.topics[-1]] == "B1"
 
@@ -165,3 +169,100 @@ def test_a_learner_who_joined_on_friday_has_a_short_first_week() -> None:
     # Of Monday, Tuesday, Thursday and Saturday, only Saturday was left; today counts too.
     assert (plan.minutes, plan.days) == (10, 1)
     assert plan.missed == ()
+
+
+# --- Exam simulations ----------------------------------------------------------------------------
+
+GOETHE_B1 = {"type": "goethe", "target_level": "B1", "date": "2027-04-15"}
+
+
+def preparing(world: World, exam: dict[str, Any] = GOETHE_B1) -> None:
+    world.onboard(exam=exam)
+    world.clock.now = NOON
+
+
+def scores(*shares: int) -> dict[str, Any]:
+    """A score of the Goethe B1's three parts, each with the same mark on every criterion."""
+    return {
+        "parts": [
+            {
+                "part": part,
+                "marks": {"task": mark, "coherence": mark, "vocabulary": mark, "grammar": mark},
+                "feedback": "Bien.",
+                "model_answer": "Ich schlage vor …",
+            }
+            for part, mark in zip(("teil_1", "teil_2", "teil_3"), shares, strict=True)
+        ],
+        "summary": "Continue.",
+    }
+
+
+def test_an_exam_plans_a_first_simulation_of_its_speaking_test() -> None:
+    world = a_world()
+    preparing(world)
+
+    plan = world.director.week(USER, ZURICH)
+
+    assert plan.exam is not None
+    assert (plan.exam.test, plan.exam.name) == ("goethe_b1", "Goethe-Zertifikat B1")
+    assert (plan.exam.pace, plan.exam.simulations, plan.exam.done) == (ExamPace.FIRST, 1, 0)
+    simulations = [s for s in plan.today if s.kind is SessionKind.EXAM]
+    assert [(s.minutes, s.exam) for s in simulations] == [(10, "goethe_b1")]
+
+
+def test_a_simulation_this_week_counts_with_its_minutes_and_day() -> None:
+    world = a_world()
+    preparing(world)
+    world.simulate(at=MONDAY + DAY, minutes=8)
+    # One with almost nothing said is not scored, and is not one.
+    short = world.simulate(
+        (Turn("persona", "Guten Tag."), Turn("learner", "Hallo.")), at=MONDAY + 2 * DAY
+    )
+    world.exams.score(short)
+    world.clock.now = NOON
+
+    plan = world.director.week(USER, ZURICH)
+
+    assert plan.exam is not None
+    assert plan.exam.done == 1
+    assert (plan.done_minutes, plan.done_days) == (8, 1)
+    assert SessionKind.EXAM not in {s.kind for s in plan.today}
+
+
+def test_far_from_the_exam_a_week_after_a_simulation_has_none() -> None:
+    world = a_world()
+    preparing(world)
+    world.simulate(at=MONDAY - 3 * DAY)
+    world.clock.now = NOON
+
+    plan = world.director.week(USER, ZURICH)
+
+    assert plan.exam is not None
+    assert (plan.exam.pace, plan.exam.simulations) == (ExamPace.FORTNIGHTLY, 0)
+    assert plan.sessions[SessionKind.EXAM] == 0
+
+
+def test_the_weakest_part_of_the_scored_simulations_is_named() -> None:
+    world = a_world()
+    preparing(world)
+    call_id = world.simulate(at=MONDAY - 10 * DAY)
+    world.text.answers.append(scores(3, 1, 3))
+    world.exams.score(call_id)
+    world.clock.now = NOON
+
+    plan = world.director.week(USER, ZURICH)
+
+    assert plan.exam is not None
+    assert plan.exam.weakest == WeakestPart(number=2, kind="present_topic")
+
+
+def test_an_exam_without_a_speaking_test_or_already_over_plans_no_simulation() -> None:
+    testdaf = a_world()
+    preparing(testdaf, {"type": "testdaf", "target_level": "B2", "date": "2027-04-15"})
+    over = a_world()
+    preparing(over, {**GOETHE_B1, "date": "2026-10-01"})
+
+    for world in (testdaf, over):
+        plan = world.director.week(USER, ZURICH)
+        assert plan.exam is None
+        assert plan.sessions[SessionKind.EXAM] == 0

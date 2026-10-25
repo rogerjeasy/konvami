@@ -98,6 +98,7 @@ class Simulation:
     # The speaking test (`SpeakingExam.id`), and the card of each part in their order.
     exam: str
     cards: tuple[str, ...]
+    # When the call ended (the worker keeps a simulation then), which places it in the list.
     started_at: dt.datetime
     status: Status
     requested_at: dt.datetime
@@ -158,6 +159,27 @@ class NextSimulation:
     exam: SpeakingExam
     # One per part, in order.
     cards: tuple[ExamCard, ...]
+
+
+@dataclass(frozen=True)
+class HeldSimulation:
+    """A simulation the learner did, as their week counts it."""
+
+    ended_at: dt.datetime
+    # How long the call ran.
+    seconds: int
+
+
+@dataclass(frozen=True)
+class Preparation:
+    """The learner's speaking test and what they did of it, for the week's plan."""
+
+    exam: SpeakingExam
+    date: dt.date | None
+    # Its simulations, newest first (the centre's latest few); none too short to score.
+    held: tuple[HeldSimulation, ...]
+    # The part with the lowest share lately (`ExamPart.id`); None before a score.
+    weakest: str | None
 
 
 # --- The examiner --------------------------------------------------------------------------------
@@ -415,6 +437,23 @@ class ExamService:
             simulations=simulations,
             readiness=ready,
         )
+
+    def preparation(self, user_id: UUID) -> Preparation | None:
+        """The speaking test of the learner's exam, with the simulations they did of it; None
+        without an exam, or for one the language pack has no speaking test of."""
+        centre = self.centre(user_id)
+        test = next((exam for exam in centre.formats if exam.id == centre.suggested), None)
+        if test is None or centre.exam is None:
+            return None
+        held = []
+        for simulation in centre.simulations:
+            if simulation.exam != test.id or simulation.status == "too_short":
+                continue
+            session = self._sessions.get(simulation.call_id)
+            ran = simulation.started_at - session.started_at if session else dt.timedelta()
+            held.append(HeldSimulation(simulation.started_at, max(0, int(ran.total_seconds()))))
+        ready = centre.readiness.get(test.id)
+        return Preparation(test, centre.exam.date, tuple(held), ready.weakest if ready else None)
 
     def next(self, user_id: UUID, exam_id: str) -> NextSimulation:
         """The cards of the learner's next simulation of a speaking test: they take turns."""

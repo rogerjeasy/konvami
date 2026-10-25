@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Protocol
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.personas import Persona, PersonaService
@@ -17,6 +18,14 @@ from konvami_api.domain.personas import Persona, PersonaService
 PAGE_DEFAULT = 20
 PAGE_MAX = 50
 _WEEK = 7
+
+
+def zone_of(timezone: str | None) -> dt.tzinfo:
+    """The time zone a name stands for; an unknown or missing one means UTC, as in the database."""
+    try:
+        return ZoneInfo(timezone) if timezone else dt.UTC
+    except (ZoneInfoNotFoundError, ValueError):
+        return dt.UTC
 
 
 @dataclass(frozen=True)
