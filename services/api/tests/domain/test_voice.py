@@ -610,7 +610,7 @@ def test_a_practice_call_keeps_its_plan_and_hands_it_back() -> None:
 
     recorded = world.sessions.get(started.call_id)
     assert started.plan is not None
-    assert [point.topic for point in started.plan.focus] == ["case_dative"]
+    assert [point.topic for point in started.plan.focus] == ["dative"]
     assert recorded is not None
     assert recorded.plan == started.plan
 

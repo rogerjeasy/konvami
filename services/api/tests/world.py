@@ -11,6 +11,7 @@ from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelFit, LevelService
@@ -30,6 +31,7 @@ from konvami_api.domain.reports import (
     Report,
     ReportService,
     Stats,
+    TopicUse,
     Word,
 )
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
@@ -209,6 +211,7 @@ class World:
             clock=self.clock,
             new_id=lambda: next(card_ids),
         )
+        self.grammar = GrammarMapService(profiles=self.profiles, reports=self.reports)
         self.planner = SessionPlanner(
             profiles=self.profiles, reports=self.reports, cards=self.cards
         )
@@ -427,6 +430,7 @@ class World:
         mistakes: tuple[Mistake, ...] = (),
         stats: Stats | None = None,
         level_fit: LevelFit | None = None,
+        usage: tuple[TopicUse, ...] = (),
     ) -> None:
         """Stores a ready report for a conversation, as the worker would after writing it."""
         now = self.clock()
@@ -445,5 +449,6 @@ class World:
                 next_steps=next_steps,
                 stats=stats or Stats(20, 15, 3, 9),
                 level_fit=level_fit,
+                usage=usage,
             ),
         )

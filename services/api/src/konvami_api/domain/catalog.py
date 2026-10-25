@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Literal, get_args
 
 from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
+from konvami_api.domain.grammar_topics import GERMAN_MAP, GrammarTopic
 from konvami_api.domain.persona_parts import PersonaTemplate
 from konvami_api.domain.scenarios import GERMAN_SCENARIOS, Scenario
 
@@ -55,12 +56,17 @@ class LanguagePack:
     grammar: tuple[GrammarNote, ...] = ()
     # The role-plays it offers (spec §6.3), easiest first.
     scenarios: tuple[Scenario, ...] = ()
+    # Its grammar topics from A1 up, easiest first (spec §6.8, §13.2).
+    grammar_map: tuple[GrammarTopic, ...] = ()
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
 
     def note(self, topic: str) -> GrammarNote | None:
         return next((note for note in self.grammar if note.topic == topic), None)
+
+    def topic(self, topic_id: str) -> GrammarTopic | None:
+        return next((topic for topic in self.grammar_map if topic.id == topic_id), None)
 
     def scenario(self, scenario_id: str) -> Scenario | None:
         return next((s for s in self.scenarios if s.id == scenario_id), None)
@@ -116,6 +122,7 @@ GERMAN = LanguagePack(
         "lexical_choice",
     ),
     grammar=GERMAN_NOTES,
+    grammar_map=GERMAN_MAP,
     scenarios=GERMAN_SCENARIOS,
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),

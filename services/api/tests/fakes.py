@@ -30,7 +30,14 @@ from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
-from konvami_api.domain.reports import Report, ReportTotals, Status, StoredReport, WeekMistakes
+from konvami_api.domain.reports import (
+    Report,
+    ReportEntry,
+    ReportTotals,
+    Status,
+    StoredReport,
+    WeekMistakes,
+)
 from konvami_api.domain.speech import SpeechTask, TranscriptionTask
 from konvami_api.domain.storage import StoredFile, UploadForm
 from konvami_api.domain.text import TextTask
@@ -578,9 +585,15 @@ class InMemoryReportRepository:
         ready = self._ready(user_id)
         return max(ready, key=lambda found: found[0])[1] if ready else None
 
-    def recent(self, user_id: UUID, language: str, limit: int) -> list[Report]:
-        ready = [found for found in self._ready(user_id) if found[1].target == language]
-        return [report for _, report in sorted(ready, key=lambda f: f[0], reverse=True)][:limit]
+    def history(self, user_id: UUID, language: str, limit: int) -> list[ReportEntry]:
+        ready = [
+            ReportEntry(call_id, self._calls.sessions[call_id].started_at, stored.report)
+            for call_id, stored in self.reports.items()
+            if stored.report is not None
+            and stored.report.target == language
+            and self._calls.sessions[call_id].user_id == user_id
+        ]
+        return sorted(ready, key=lambda entry: entry.started_at, reverse=True)[:limit]
 
     def mistakes_by_week(
         self, user_id: UUID, language: str, timezone: str | None, since: date

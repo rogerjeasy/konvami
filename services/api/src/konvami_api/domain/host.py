@@ -400,6 +400,7 @@ class HostScript:
         today: dt.date,
         persona_id: UUID | None,
         scenario: str | None = None,
+        practise: str | None = None,
     ) -> Briefing:
         return Briefing(
             host_instructions(account, self._catalog, self._profiles.get(user_id), today)

@@ -446,6 +446,7 @@ class PlacementScript:
         today: dt.date,
         persona_id: UUID | None,
         scenario: str | None = None,
+        practise: str | None = None,
     ) -> Briefing:
         self._placement.check(user_id)
         return Briefing(

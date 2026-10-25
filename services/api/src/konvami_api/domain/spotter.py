@@ -65,7 +65,7 @@ class SpotContext:
     explanation: str
     level: str
     categories: tuple[str, ...]
-    # The kinds of mistake the conversation's plan practises.
+    # The kinds of mistake that are mistakes in the topics the conversation's plan practises.
     focus: tuple[str, ...]
 
 
@@ -229,7 +229,11 @@ class LiveSpotter:
             ),
             level=teaching.level or profile.level(language) or DEFAULT_LEVEL,
             categories=pack.error_categories,
-            focus=tuple(point.topic for point in session.plan.focus) if session.plan else (),
+            focus=tuple(
+                category
+                for point in (session.plan.focus if session.plan else ())
+                for category in point.categories
+            ),
         )
         return lambda spot: self._check.check(context, spot)
 

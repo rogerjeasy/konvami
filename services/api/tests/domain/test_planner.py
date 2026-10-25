@@ -1,7 +1,10 @@
 from datetime import timedelta
 from uuid import uuid4
 
+import pytest
+
 from konvami_api.domain.cards import Card
+from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.plan import FocusPoint, PlanWord
 from konvami_api.domain.planner import MAX_FOCUS, MAX_PLAN_WORDS
 from konvami_api.domain.reports import Mistake, Severity, Word
@@ -58,7 +61,7 @@ def test_the_kind_of_mistake_made_most_is_practised_first() -> None:
     report(world, mistake("case_dative"), mistake("case_dative", "mit meine Mutter"))
     report(world, mistake("perfekt_auxiliary", "ich habe gefahren", "ich bin gefahren"))
 
-    assert topics(world) == ["case_dative", "perfekt_auxiliary"]
+    assert topics(world) == ["dative", "perfekt"]
 
 
 def test_a_mistake_the_second_check_could_not_confirm_does_not_count() -> None:
@@ -77,7 +80,7 @@ def test_a_recent_mistake_counts_more_than_an_old_one() -> None:
         report(world, days_ago=days_ago)
     report(world, mistake("case_dative"), days_ago=1)
 
-    assert topics(world)[0] == "case_dative"
+    assert topics(world)[0] == "dative"
 
 
 def test_a_mistake_that_hid_the_meaning_counts_more() -> None:
@@ -138,10 +141,11 @@ def test_a_focus_names_its_rule_how_to_bring_it_up_and_the_learners_own_sentence
     (point,) = world.planner.plan(USER).focus
 
     assert point == FocusPoint(
-        topic="case_dative",
+        topic="dative",
         title="Dative",
         elicit=point.elicit,
         examples=(("mit der Bus", "mit dem Bus"), ("mit meine Mutter", "mit meiner Mutter")),
+        categories=("case_dative",),
     )
     assert "Mit wem" in point.elicit
 
@@ -232,3 +236,54 @@ def test_words_from_a_report_are_not_plan_words_until_saved() -> None:
     world.reported(call_id, words=(Word("der Termin", "le rendez-vous", None),))
 
     assert world.planner.plan(USER).words == ()
+
+
+def test_both_kinds_of_perfekt_mistake_count_for_the_perfekt() -> None:
+    world = World()
+    world.onboard()
+    report(
+        world,
+        mistake("perfekt_auxiliary", "habe gefahren", "bin gefahren"),
+        mistake("participle_form", "gelest", "gelesen"),
+        mistake("case_dative"),
+    )
+
+    (perfekt, dative) = world.planner.plan(USER).focus
+
+    assert (perfekt.topic, dative.topic) == ("perfekt", "dative")
+    assert perfekt.categories == ("perfekt_auxiliary", "participle_form")
+
+
+def test_a_topic_the_learner_chose_to_practise_comes_first() -> None:
+    world = World()
+    world.onboard()
+    report(
+        world,
+        mistake("case_dative"),
+        mistake("case_dative", "mit meine Mutter", "mit meiner Mutter"),
+        mistake("plural_form", "zwei Kind", "zwei Kinder"),
+    )
+
+    focus = world.planner.plan(USER, practise="konjunktiv_2").focus
+
+    assert [point.topic for point in focus] == ["konjunktiv_2", "dative"]
+    assert "Was würdest du" in focus[0].elicit
+
+
+def test_a_topic_chosen_to_practise_brings_the_learners_own_mistakes_on_it() -> None:
+    world = World()
+    world.onboard()
+    report(world, mistake("plural_form", "zwei Kind", "zwei Kinder"), mistake("case_dative"))
+
+    (plural, dative) = world.planner.plan(USER, practise="plural").focus
+
+    assert plural.examples == (("zwei Kind", "zwei Kinder"),)
+    assert dative.topic == "dative"
+
+
+def test_a_topic_the_language_does_not_have_cannot_be_practised() -> None:
+    world = World()
+    world.onboard()
+
+    with pytest.raises(GrammarMapError):
+        world.planner.plan(USER, practise="klingon")

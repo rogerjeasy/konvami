@@ -23,6 +23,7 @@ from konvami_api.domain.reports import (
     ReportState,
     Rewrite,
     Stats,
+    TopicUse,
     Word,
     measure,
     what_to_practise,
@@ -225,6 +226,47 @@ def test_level_fits_are_the_newest_first_since_a_moment_in_one_language() -> Non
 
     assert found == [fits[2], fits[1]]
     assert world.reports.level_fits(OTHER_USER, "de", since=NOON) == []
+
+
+def test_a_report_counts_how_often_the_learner_used_each_grammar_topic() -> None:
+    usage = [
+        {"topic": "perfekt", "uses": 2, "wrong": 1},
+        {"topic": "dative", "uses": 1, "wrong": 1},
+    ]
+    world = written({**ANALYSIS, "usage": usage}, CONFIRMED)
+
+    assert report_of(world).usage == (TopicUse("perfekt", 2, 1), TopicUse("dative", 1, 1))
+
+
+def test_the_analyst_is_given_the_grammar_map_to_count_uses_by() -> None:
+    world = written(ANALYSIS, CONFIRMED)
+
+    task = world.text.tasks[-2]
+
+    topics = json.loads(task.content)["topics"]
+    assert {"id": "perfekt", "title": "Perfekt", "level": "A2"} in topics
+    usage = task.answer_schema["properties"]["usage"]
+    assert "perfekt" in usage["items"]["properties"]["topic"]["enum"]
+    # Right uses count as much as wrong ones: mastery needs both.
+    assert "right ones too" in task.instructions
+
+
+def test_counted_uses_are_kept_only_when_they_make_sense() -> None:
+    usage = [
+        {"topic": "klingon", "uses": 3, "wrong": 0},
+        {"topic": "perfekt", "uses": 2, "wrong": 5},
+        {"topic": "dative", "uses": 0, "wrong": 0},
+        {"topic": "perfekt", "uses": 9, "wrong": 0},
+    ]
+    world = written({**ANALYSIS, "usage": usage}, CONFIRMED)
+
+    assert report_of(world).usage == (TopicUse("perfekt", 2, 2),)
+
+
+def test_a_report_written_without_counting_uses_has_none() -> None:
+    world = written(ANALYSIS, CONFIRMED)
+
+    assert report_of(world).usage == ()
 
 
 def test_the_analyst_reads_the_numbered_transcript_knowing_the_learner() -> None:
