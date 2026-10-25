@@ -334,6 +334,15 @@ def _router(services: Services) -> APIRouter:
         """Has last week's check-in written (once); `week` is its Monday."""
         return WeekReviewOut.of(services.week_reviews.request(user, tz, week))
 
+    @router.get("/weeks/{week}/review", operation_id="getWeekReview", responses=NOT_FOUND)
+    def get_week_review(
+        user: CurrentUser,
+        week: dt.date,
+        tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
+    ) -> WeekReviewOut:
+        """Last week's check-in, to follow one being written; `week` is its Monday."""
+        return WeekReviewOut.of(services.week_reviews.get(user, tz, week))
+
     @router.get(
         "/weeks/{week}/review/audio",
         operation_id="getWeekReviewAudio",

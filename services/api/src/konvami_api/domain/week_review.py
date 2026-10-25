@@ -249,23 +249,31 @@ class WeekReviewService:
     def last_week(self, user_id: UUID, timezone: str | None) -> WeekReview | None:
         """Last week's review: as it was asked for, or else its numbers now. None when the
         learner did not practise last week."""
-        language, week, numbers = self._last_week(user_id, timezone)
+        language, week, days = self._last(user_id, timezone)
         stored = self._repository.load(user_id, language, week)
         if stored is not None:
             return WeekReview(stored.numbers, stored.status, stored.text)
-        if numbers is None:
-            return None
-        return WeekReview(numbers, "none", None)
+        numbers = self._numbers(user_id, timezone, language, week, days)
+        return WeekReview(numbers, "none", None) if numbers else None
+
+    def get(self, user_id: UUID, timezone: str | None, week: dt.date) -> WeekReview:
+        """Last week's review, for following one being written. Raises `WeekReviewError`
+        (`not_found` for another week, or a week without practice)."""
+        review = self.last_week(user_id, timezone)
+        if review is None or review.numbers.week != week:
+            raise WeekReviewError("not_found")
+        return review
 
     def request(self, user_id: UUID, timezone: str | None, week: dt.date) -> WeekReview:
         """Has last week's review written, once. Raises `WeekReviewError` (`not_found` for
         another week, `nothing_to_report`, `consent_required`, `unavailable`)."""
-        language, last, numbers = self._last_week(user_id, timezone)
+        language, last, days = self._last(user_id, timezone)
         if week != last:
             raise WeekReviewError("not_found")
         stored = self._repository.load(user_id, language, week)
         if stored is not None and stored.status == "ready":
             return WeekReview(stored.numbers, stored.status, stored.text)
+        numbers = self._numbers(user_id, timezone, language, week, days)
         if numbers is None:
             raise WeekReviewError("nothing_to_report")
         if not self._model:
@@ -352,22 +360,33 @@ class WeekReviewService:
             return DEFAULT_PARTNER, DEFAULT_VOICE
         return partner.name, partner.voice
 
-    def _last_week(
+    def _last(
         self, user_id: UUID, timezone: str | None
-    ) -> tuple[str, dt.date, WeekNumbers | None]:
-        now = self._clock()
+    ) -> tuple[str, dt.date, Sequence[DayActivity]]:
+        """The language learned, last week's Monday on the learner's calendar, and the days
+        they practised on."""
+        language = self._profiles.get(user_id).target_language or ""
+        days = self._conversations.days(user_id, timezone, self._clock())
+        return language, _monday(days.today) - _WEEK, days.days
+
+    def _numbers(
+        self,
+        user_id: UUID,
+        timezone: str | None,
+        language: str,
+        week: dt.date,
+        days: Sequence[DayActivity],
+    ) -> WeekNumbers | None:
+        """The numbers of the week from `week`; None when the learner did not practise."""
         profile = self._profiles.get(user_id)
-        language = profile.target_language or ""
-        days = self._conversations.days(user_id, timezone, now)
-        this_monday = _monday(days.today)
-        week = this_monday - _WEEK
-        minutes, practised = _minutes(days.days, week)
+        next_monday = week + _WEEK
+        minutes, practised = _minutes(days, week)
         # Cards are reviewed at a moment: their week is counted in UTC, as voice minutes are.
         reviewed = self._cards.reviews_since(user_id, _utc(week)) - self._cards.reviews_since(
-            user_id, _utc(this_monday)
+            user_id, _utc(next_monday)
         )
         if minutes == 0 and reviewed == 0:
-            return language, week, None
+            return None
         held = self._conversations.week(user_id, timezone, week)
         target = week_target(
             habit_of(profile, language),
@@ -382,33 +401,29 @@ class WeekReviewService:
         }
         before = {s.topic.id: s.mastery.state for s in self._grammar.states(user_id, _utc(week))}
         after = {
-            s.topic.id: s.mastery.state for s in self._grammar.states(user_id, _utc(this_monday))
+            s.topic.id: s.mastery.state for s in self._grammar.states(user_id, _utc(next_monday))
         }
         history = self._levels.history(user_id, language)
-        return (
-            language,
-            week,
-            WeekNumbers(
-                week=week,
-                minutes=minutes,
-                planned_minutes=target.minutes,
-                previous_minutes=_minutes(days.days, week - _WEEK)[0],
-                days=practised,
-                planned_days=target.days,
-                conversations=len(held),
-                role_plays=sum(1 for c in held if c.scenario),
-                reviews=sum(1 for c in held if c.review and not c.scenario),
-                cards_reviewed=reviewed,
-                topics=tuple(
-                    TopicMove(topic, before[topic], after[topic])
-                    for topic in self._director.topics(user_id, week)
-                    if topic in before and topic in after
-                ),
-                mistakes=mistakes[week],
-                previous_mistakes=mistakes[week - _WEEK],
-                level_before=_level_at(history, _utc(week)),
-                level_after=_level_at(history, _utc(this_monday)),
+        return WeekNumbers(
+            week=week,
+            minutes=minutes,
+            planned_minutes=target.minutes,
+            previous_minutes=_minutes(days, week - _WEEK)[0],
+            days=practised,
+            planned_days=target.days,
+            conversations=len(held),
+            role_plays=sum(1 for c in held if c.scenario),
+            reviews=sum(1 for c in held if c.review and not c.scenario),
+            cards_reviewed=reviewed,
+            topics=tuple(
+                TopicMove(topic, before[topic], after[topic])
+                for topic in self._director.topics(user_id, week)
+                if topic in before and topic in after
             ),
+            mistakes=mistakes[week],
+            previous_mistakes=mistakes[week - _WEEK],
+            level_before=_level_at(history, _utc(week)),
+            level_after=_level_at(history, _utc(next_monday)),
         )
 
 

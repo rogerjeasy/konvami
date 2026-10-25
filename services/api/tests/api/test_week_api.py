@@ -92,12 +92,14 @@ def test_asking_for_the_check_in_starts_its_writer_and_it_can_then_be_heard(
     last_week(call, text_model, calls, clock)
 
     asked = call("POST", "/v1/weeks/2026-10-05/review?tz=Europe/Zurich")
+    followed = call("GET", "/v1/weeks/2026-10-05/review?tz=Europe/Zurich")
     early = call("GET", "/v1/weeks/2026-10-05/review/audio")
     text_model.answers.append({"text": "Tu as parlé 8 minutes cette semaine."})
     services.week_reviews.write(UUID(USER), week_starter.started[0][1])
     heard = call("GET", "/v1/weeks/2026-10-05/review/audio")
 
     assert (asked.status, asked.body["status"]) == (200, "pending")
+    assert (followed.status, followed.body["status"]) == (200, "pending")
     assert early.status == 404
     review = call("GET", "/v1/progress?tz=Europe/Zurich").body["lastWeek"]
     assert (review["status"], review["text"]) == ("ready", "Tu as parlé 8 minutes cette semaine.")
@@ -115,9 +117,11 @@ def test_only_last_weeks_check_in_can_be_asked_for(
     last_week(call, text_model, calls, clock)
 
     response = call("POST", "/v1/weeks/2026-09-28/review")
+    read = call("GET", "/v1/weeks/2026-09-28/review")
 
     assert response.status == 404
     assert response.body["error"]["code"] == "not_found"
+    assert read.status == 404
 
 
 def test_a_week_without_practice_has_nothing_to_report(
