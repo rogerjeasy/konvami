@@ -149,6 +149,9 @@ variable "text_models" {
     One short request per learner turn of three words or more. On the measured sentences it
     caught as many mistakes as the strong model (74-83 % in a call, 94 % of exact sentences),
     with 98-100 % precision.
+    cards writes a saved word's forms (article, plural, verb forms, comparison; spec §6.7) in
+    the worker: the stronger model, as a wrong form on a card is learnt by heart. One request
+    for all the cards a learner saved together.
   EOT
   type = object({
     assessment = string
@@ -159,6 +162,7 @@ variable "text_models" {
     verbatim   = optional(string, "gpt-4o-transcribe")
     tutor      = optional(string, "gpt-6.1-sol")
     spotter    = optional(string, "gpt-6-luna")
+    cards      = optional(string, "gpt-6.1-sol")
   })
   default = {
     assessment = "gpt-6.1-sol"
@@ -169,6 +173,7 @@ variable "text_models" {
     verbatim   = "gpt-4o-transcribe"
     tutor      = "gpt-6.1-sol"
     spotter    = "gpt-6-luna"
+    cards      = "gpt-6.1-sol"
   }
 }
 
