@@ -18,6 +18,7 @@ import { formatDayLine } from '@/lib/format';
 import { dayPart } from '@/lib/greeting';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
+import { sessionRoute } from '@/lib/plan';
 import { callRoute, conversationRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
 import { useAccount } from '@/profile/services';
@@ -62,11 +63,16 @@ function Day({ home, now }: { home: Home; now: Date }) {
       <TalkCard
         key="talk"
         partner={partner}
+        plan={home.plan}
         now={now}
         hasOthers={home.partners.length > 1}
         onTalk={() => {
           commitFeedback();
           router.push(callRoute(partner.persona.id));
+        }}
+        onPlanned={(session) => {
+          commitFeedback();
+          router.push(sessionRoute(session, partner.persona.id));
         }}
         onOthers={() => router.navigate(ROUTES.talk)}
       />
@@ -82,7 +88,12 @@ function Day({ home, now }: { home: Home; now: Date }) {
         />
       </ListGroup>
     ) : null,
-    <WeekCard key="week" activity={home.activity} />,
+    <WeekCard
+      key="week"
+      activity={home.activity}
+      plan={home.plan}
+      onChangeGoal={() => router.push(ROUTES.accountGoals)}
+    />,
   ];
   const about = [
     home.level ? <LevelCard key="level" level={home.level} /> : null,
