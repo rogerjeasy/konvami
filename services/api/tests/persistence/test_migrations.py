@@ -48,6 +48,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0016_costs",
         "0017_level_step",
         "0018_session_plan",
+        "0019_retries",
     ]
     assert {
         "app_user",

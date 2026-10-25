@@ -220,6 +220,28 @@ _RESERVE_QUESTION = f"""
     RETURNING questions
 """
 
+_RESERVE_RETRY = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO retry_day (user_id, day, attempts)
+    VALUES (CAST(:user_id AS uuid), CAST(:day AS date), 1)
+    ON CONFLICT (user_id, day) DO UPDATE SET attempts = retry_day.attempts + 1
+        WHERE retry_day.attempts < :limit
+    RETURNING attempts
+"""
+
+_RETRY_ATTEMPTED = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO retry_attempt (user_id, call_id, mistake_index, attempted_at, was_right)
+    VALUES (CAST(:user_id AS uuid), :call_id, :index, CAST(:at AS timestamptz), :right)
+"""
+
+_RETRIES_OF_CALL = """
+    SELECT mistake_index, bool_or(was_right) AS right
+    FROM retry_attempt
+    WHERE user_id = CAST(:user_id AS uuid) AND call_id = :call_id
+    GROUP BY mistake_index
+"""
+
 _SAVE_QUESTION = f"""
     WITH {_ENSURE_USER}
     INSERT INTO tutor_question (id, user_id, asked_at, question, answer, source)
@@ -964,6 +986,37 @@ class SqlRecordingRepository:
 
     def forget_all(self, user_id: UUID) -> None:
         self._client.execute(_FORGET_ALL_RECORDINGS, {"user_id": str(user_id)})
+
+
+class SqlRetryRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def reserve(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        if limit < 1:
+            return False
+        rows = self._client.execute(
+            _RESERVE_RETRY, {"user_id": str(user_id), "day": day.isoformat(), "limit": limit}
+        )
+        return bool(rows)
+
+    def attempted(
+        self, user_id: UUID, call_id: str, index: int, at: dt.datetime, right: bool
+    ) -> None:
+        self._client.execute(
+            _RETRY_ATTEMPTED,
+            {
+                "user_id": str(user_id),
+                "call_id": call_id,
+                "index": index,
+                "at": at.isoformat(),
+                "right": right,
+            },
+        )
+
+    def of_conversation(self, user_id: UUID, call_id: str) -> dict[int, bool]:
+        rows = self._client.execute(_RETRIES_OF_CALL, {"user_id": str(user_id), "call_id": call_id})
+        return {int(row["mistake_index"]): bool(row["right"]) for row in rows}
 
 
 class SqlTutorRepository:
