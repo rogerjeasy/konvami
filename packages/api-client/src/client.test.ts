@@ -375,6 +375,25 @@ describe('api client', () => {
     ]);
   });
 
+  it('asks for, follows and plays last week’s check-in', async () => {
+    const review = { status: 'pending', text: null, numbers: { week: '2026-10-05' } };
+    const { fetch, calls } = fakeFetch(
+      json(200, review),
+      json(200, review),
+      json(200, { url: 'https://files/week.mp3' }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.requestWeekReview('2026-10-05', 'Europe/Zurich')).toEqual(review);
+    expect(await api.getWeekReview('2026-10-05')).toEqual(review);
+    expect(await api.getWeekReviewAudio('2026-10-05')).toEqual({ url: 'https://files/week.mp3' });
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/weeks/2026-10-05/review?tz=Europe%2FZurich',
+      'GET https://api.example.test/v1/weeks/2026-10-05/review',
+      'GET https://api.example.test/v1/weeks/2026-10-05/review/audio',
+    ]);
+  });
+
   it('reads the library page by page and one transcript', async () => {
     const page = { conversations: [], next: '2026-10-09T10:00:00Z' };
     const transcript = { conversation: { id: 'rtc/1' }, turns: [] };

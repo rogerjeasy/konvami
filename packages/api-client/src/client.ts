@@ -82,6 +82,15 @@ export type Progress = Schemas['ProgressOut'];
 /** One level on the way, from when it was set and by whom. */
 export type LevelPoint = Schemas['LevelPointOut'];
 export type ProgressWeek = Schemas['WeekOut'];
+/** This week's plan (the Learning Director, spec §6.12), on Today. */
+export type WeekPlan = Schemas['WeekPlanOut'];
+/** One conversation of today's part of the plan. */
+export type PlanSession = Schemas['PlanSessionOut'];
+export type PlanReason = WeekPlan['reason'];
+/** Last week's check-in on Progress: its numbers, and the partner's few sentences once written. */
+export type WeekReview = Schemas['WeekReviewOut'];
+export type WeekNumbers = Schemas['WeekNumbersOut'];
+export type TopicMove = Schemas['TopicMoveOut'];
 export type MistakeKind = Schemas['MistakeKindOut'];
 export type Milestone = Schemas['MilestoneOut'];
 export type Conversation = Schemas['ConversationOut'];
@@ -230,6 +239,16 @@ export interface ApiClient {
    * weeks follow the learner's calendar.
    */
   getProgress(timeZone?: string): Promise<Progress>;
+  /**
+   * Has last week's check-in written (`week` is its Monday); answers at once with its status.
+   * Fails with `not_found` (not last week), `nothing_to_report`, `consent_required` or
+   * `unavailable`.
+   */
+  requestWeekReview(week: string, timeZone?: string): Promise<WeekReview>;
+  /** Last week's check-in, to follow one being written. Fails with `not_found`. */
+  getWeekReview(week: string, timeZone?: string): Promise<WeekReview>;
+  /** Where the check-in plays from, in the partner's voice. Fails with `not_found`, `unavailable`. */
+  getWeekReviewAudio(week: string): Promise<{ url: string }>;
   /** Past conversations, newest first. `before` is the `next` of the page read before. */
   getConversations(page?: { before?: string; limit?: number }): Promise<ConversationPage>;
   /** One conversation and what was said in it. Fails with `not_found`. */
@@ -424,6 +443,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('POST', '/v1/voice/calls', { purpose, sdp, ...details }),
     getHome: (timeZone) => request('GET', withQuery('/v1/home', { tz: timeZone })),
     getProgress: (timeZone) => request('GET', withQuery('/v1/progress', { tz: timeZone })),
+    requestWeekReview: (week, timeZone) =>
+      request('POST', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
+    getWeekReview: (week, timeZone) =>
+      request('GET', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
+    getWeekReviewAudio: (week) =>
+      request('GET', `/v1/weeks/${encodeURIComponent(week)}/review/audio`),
     getConversations: (page = {}) =>
       request('GET', withQuery('/v1/conversations', { before: page.before, limit: page.limit })),
     getConversation: (id) => request('GET', `/v1/conversations/${encodeURIComponent(id)}`),
