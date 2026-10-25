@@ -16,6 +16,9 @@ import { OnboardingProvider, onboardingStore } from '@/onboarding';
 import { PracticeProvider, practiceServices } from '@/practice';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
 import { ProfileProvider, profileServices } from '@/profile';
+import { appReminderDevice } from '@/reminders/app-device';
+import { RemindersProvider } from '@/reminders/services';
+import { ReminderKeeper } from '@/reminders/use-reminders';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
 import { ScreenBoundary } from '@/screens/error';
 import { ExamNotesProvider } from '@/screens/exams/notes';
@@ -65,18 +68,21 @@ export default function RootLayout() {
         <OnboardingProvider store={onboardingStore}>
           <PracticeProvider services={practiceServices}>
             <ProfileProvider services={profileServices}>
-              <RecorderProvider useRecorder={useAppSentenceRecorder}>
-                <VoiceProvider createEngine={createAppVoiceEngine}>
-                  <SignUpDraftProvider>
-                    <AccessDraftProvider>
-                      <ExamNotesProvider>
-                        <StatusBar style="auto" />
-                        <RootStack />
-                      </ExamNotesProvider>
-                    </AccessDraftProvider>
-                  </SignUpDraftProvider>
-                </VoiceProvider>
-              </RecorderProvider>
+              <RemindersProvider device={appReminderDevice}>
+                <RecorderProvider useRecorder={useAppSentenceRecorder}>
+                  <VoiceProvider createEngine={createAppVoiceEngine}>
+                    <SignUpDraftProvider>
+                      <AccessDraftProvider>
+                        <ExamNotesProvider>
+                          <StatusBar style="auto" />
+                          <ReminderKeeper />
+                          <RootStack />
+                        </ExamNotesProvider>
+                      </AccessDraftProvider>
+                    </SignUpDraftProvider>
+                  </VoiceProvider>
+                </RecorderProvider>
+              </RemindersProvider>
             </ProfileProvider>
           </PracticeProvider>
         </OnboardingProvider>

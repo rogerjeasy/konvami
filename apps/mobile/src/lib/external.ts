@@ -23,6 +23,11 @@ export function openLegal(page: keyof typeof LEGAL_URL, language: string): void 
 }
 
 /** Whether this platform has a mail app the app can bring to the front. */
+/** Opens Konvami's page in the phone's settings (to allow notifications again). */
+export function openAppSettings(): void {
+  void Linking.openSettings().catch(() => {});
+}
+
 export const canOpenMailApp = Platform.OS === 'ios' || Platform.OS === 'android';
 
 /** Brings the phone's mail app (its inbox, not a new message) to the front. */

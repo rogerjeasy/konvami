@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import i18n, { deviceLanguage, isLanguage, type Language } from '@/i18n';
 import { readItem, removeItem, writeItem } from '@/lib/storage';
+import { REMINDER_TIMES, type ReminderSettings } from '@/reminders/schedule';
 
 /**
  * Device preferences: the app language, which applies before sign-in, and how a conversation
@@ -24,17 +25,42 @@ export interface Preferences {
    * speak (spec §6.4 correction chips). Shown by default; hidden, they wait for the report.
    */
   liveCorrections: boolean;
+  /**
+   * Practice reminders on this device (spec §6.18), which schedules them; `null` until the
+   * learner chose, when Today offers them once.
+   */
+  reminders: ReminderSettings | null;
 }
 
 const KEY = {
   language: 'konvami.pref.language',
   partnerCaptions: 'konvami.pref.partnerCaptions',
   liveCorrections: 'konvami.pref.liveCorrections',
+  reminders: 'konvami.pref.reminders',
 } as const;
 // What a shown-by-default preference is stored as when the learner hid it.
 const HIDDEN = 'hidden';
 
-let current: Preferences = { language: null, partnerCaptions: true, liveCorrections: true };
+let current: Preferences = {
+  language: null,
+  partnerCaptions: true,
+  liveCorrections: true,
+  reminders: null,
+};
+
+/** Stored reminder settings, or `null` for none or for something this version cannot read. */
+function remindersOf(text: string | null): ReminderSettings | null {
+  try {
+    const value: unknown = text ? JSON.parse(text) : null;
+    if (typeof value !== 'object' || value === null) return null;
+    const { on, time, cards } = value as Record<string, unknown>;
+    if (typeof on !== 'boolean' || typeof cards !== 'boolean') return null;
+    if (typeof time !== 'string' || !REMINDER_TIMES.includes(time)) return null;
+    return { on, time, cards };
+  } catch {
+    return null;
+  }
+}
 const listeners = new Set<() => void>();
 
 /** The language the UI shows for a preference: the picked one, else the phone's. */
@@ -51,15 +77,17 @@ function update(next: Preferences) {
 
 /** Loads saved preferences once at launch. Falls back to the defaults. */
 export async function loadPreferences(): Promise<void> {
-  const [language, captions, corrections] = await Promise.all([
+  const [language, captions, corrections, reminders] = await Promise.all([
     readItem(KEY.language),
     readItem(KEY.partnerCaptions),
     readItem(KEY.liveCorrections),
+    readItem(KEY.reminders),
   ]);
   update({
     language: isLanguage(language) ? language : null,
     partnerCaptions: captions !== HIDDEN,
     liveCorrections: corrections !== HIDDEN,
+    reminders: remindersOf(reminders),
   });
 }
 
@@ -79,6 +107,14 @@ export async function setPartnerCaptions(shown: boolean): Promise<void> {
 export async function setLiveCorrections(shown: boolean): Promise<void> {
   update({ ...current, liveCorrections: shown });
   await (shown ? removeItem(KEY.liveCorrections) : writeItem(KEY.liveCorrections, HIDDEN));
+}
+
+/** Keeps what the learner chose about reminders; `null` forgets it, so Today offers them again. */
+export async function setReminders(reminders: ReminderSettings | null): Promise<void> {
+  update({ ...current, reminders });
+  await (reminders
+    ? writeItem(KEY.reminders, JSON.stringify(reminders))
+    : removeItem(KEY.reminders));
 }
 
 /**

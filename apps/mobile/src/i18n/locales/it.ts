@@ -600,7 +600,22 @@ export const it: Translation = {
     minutes_one: '{{count}} min',
     minutes_other: '{{count}} min',
   },
+  reminders: {
+    channel: 'Promemoria di pratica',
+    body: {
+      today: 'Hai {{minutes}}? Il piano di oggi è pronto.',
+      practice: 'Hai qualche minuto? Il tuo piano di oggi è pronto.',
+      simulation: 'La tua simulazione del {{name}} è prevista questa settimana. Quando vuoi.',
+      cards: 'Le tue carte ti aspettano, prima che tu le dimentichi.',
+    },
+  },
   today: {
+    reminders: {
+      title: 'Un promemoria nei giorni di pratica?',
+      body: '{{name}} può mandarti un breve messaggio alle {{time}} nei giorni previsti. Al massimo uno al giorno, e puoi cambiarlo quando vuoi.',
+      yes: 'Ricordamelo',
+      no: 'Non ora',
+    },
     greeting: {
       morning: 'Buongiorno, {{name}}',
       afternoon: 'Buon pomeriggio, {{name}}',
@@ -1626,6 +1641,9 @@ export const it: Translation = {
       personalHint: 'Nome, foto e lingua dell’app',
       learning: 'Apprendimento',
       learningHint: 'Lingua, livello, obiettivi ed esame',
+      reminders: 'Promemoria',
+      remindersHint: 'Un breve messaggio nei giorni di pratica',
+      remindersOff: 'Disattivati',
       partners: 'I miei partner',
       partnersCount_one: '{{count}} partner',
       partnersCount_other: '{{count}} partner',
@@ -1661,6 +1679,18 @@ export const it: Translation = {
       changed: 'Modificato il {{date}}',
       edit: 'Modifica: {{item}}',
       goals: 'I tuoi obiettivi',
+    },
+    reminders: {
+      title: 'Promemoria',
+      body: 'Un breve messaggio nei giorni in cui hai previsto di esercitarti, all’ora che scegli. Al massimo uno al giorno, mai di notte.',
+      on: 'Ricordamelo nei giorni di pratica',
+      time: 'Ora',
+      cards: 'Anche quando ci sono carte da ripassare',
+      next: 'Prossimo promemoria: {{when}}',
+      none: 'Nessun promemoria nei prossimi sette giorni.',
+      denied: 'Le notifiche di Konvami sono disattivate nelle impostazioni del telefono.',
+      openSettings: 'Apri impostazioni',
+      unsupported: 'I promemoria arrivano nell’app Konvami per iPhone e Android, non nel browser.',
     },
     goals: {
       title: 'I tuoi obiettivi',

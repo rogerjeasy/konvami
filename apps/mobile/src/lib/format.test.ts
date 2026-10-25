@@ -1,6 +1,7 @@
 import {
   daysAgo,
   formatClock,
+  formatTimeOfDay,
   formatDate,
   formatDayLine,
   formatDayOfYear,
@@ -159,6 +160,13 @@ describe('formatClock', () => {
 
     expect(formatClock('de', afternoon)).toBe('14:05');
     expect(formatClock('en-US', afternoon)).toMatch(/^2:05\sPM$/);
+  });
+});
+
+describe('formatTimeOfDay', () => {
+  it('writes a chosen time the way the language does', () => {
+    expect(formatTimeOfDay('fr', '18:00')).toBe('18:00');
+    expect(formatTimeOfDay('en-US', '07:00')).toMatch(/^7:00\sAM$/);
   });
 });
 

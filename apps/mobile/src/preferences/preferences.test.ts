@@ -8,7 +8,9 @@ import {
   setLanguage,
   setLiveCorrections,
   setPartnerCaptions,
+  setReminders,
 } from '.';
+import { writeItem } from '@/lib/storage';
 
 const phone = (...tags: [string, ...string[]]) =>
   jest
@@ -104,5 +106,28 @@ describe('live corrections', () => {
 
     expect(getPreferences().liveCorrections).toBe(false);
     expect(getPreferences().partnerCaptions).toBe(true);
+  });
+});
+
+describe('reminders', () => {
+  afterEach(async () => {
+    await setReminders(null);
+  });
+
+  it('are not decided until the learner chooses, and the choice is remembered', async () => {
+    await loadPreferences();
+    expect(getPreferences().reminders).toBeNull();
+
+    await setReminders({ on: true, time: '07:00', cards: false });
+    await loadPreferences();
+
+    expect(getPreferences().reminders).toEqual({ on: true, time: '07:00', cards: false });
+  });
+
+  it('read something they cannot understand as not decided', async () => {
+    await writeItem('konvami.pref.reminders', '{"on":"yes"}');
+    await loadPreferences();
+
+    expect(getPreferences().reminders).toBeNull();
   });
 });
