@@ -11,7 +11,7 @@ from uuid import UUID
 
 from konvami_api.domain import memories
 from konvami_api.domain.accounts import DELETION_MEMORY
-from konvami_api.domain.cards import Card, CardTotals, Kind
+from konvami_api.domain.cards import Card, CardTotals, Kind, WordDetails
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -501,14 +501,40 @@ _LATEST_REPORT = """
     LIMIT 1
 """
 
+_CARD_COLUMNS = f"""
+    CAST(id AS text) AS id, kind, front, back, note, explained_in, source_call_id,
+    {epoch_micros("created_at")} AS created_at, {epoch_micros("due_at")} AS due_at,
+    {epoch_micros("reviewed_at")} AS reviewed_at, stability, difficulty, reviews, lapses,
+    CAST(details AS text) AS details
+"""
 _CARD = f"""
-    SELECT CAST(id AS text) AS id, kind, front, back, note, explained_in, source_call_id,
-           {epoch_micros("created_at")} AS created_at, {epoch_micros("due_at")} AS due_at,
-           {epoch_micros("reviewed_at")} AS reviewed_at, stability, difficulty, reviews, lapses
+    SELECT {_CARD_COLUMNS}
     FROM card
 """
+
 # A learner's cards in one language.
 _DECK = "user_id = CAST(:user_id AS uuid) AND language = :language"
+
+# The oldest word cards without their forms, claimed for one worker in the same statement: a
+# card another worker claimed lately is skipped (SKIP LOCKED keeps two at once from waiting).
+_CLAIM_FOR_DETAILS = f"""
+    UPDATE card SET details_claimed_at = CAST(:at AS timestamptz)
+    WHERE id IN (
+        SELECT id FROM card
+        WHERE {_DECK} AND kind = 'word' AND details IS NULL
+          AND (details_claimed_at IS NULL
+               OR details_claimed_at <= CAST(:stale_before AS timestamptz))
+        ORDER BY created_at, id
+        LIMIT :limit
+        FOR UPDATE SKIP LOCKED
+    )
+    RETURNING {_CARD_COLUMNS}
+"""
+
+_SET_DETAILS = """
+    UPDATE card SET details = CAST(:details AS jsonb)
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+"""
 
 # The limit bounds storage, not money: two requests at the same moment could both count one
 # card too few and leave the deck one over, which harms nobody.
@@ -1409,12 +1435,38 @@ def _card(row: dict[str, Any]) -> Card:
         memory=Memory(float(row["stability"]), float(row["difficulty"])) if learned else None,
         reviews=row["reviews"],
         lapses=row["lapses"],
+        details=WordDetails(**json.loads(row["details"])) if row.get("details") else None,
     )
 
 
 class SqlCardRepository:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
+
+    def claim_for_details(
+        self, user_id: UUID, language: str, at: dt.datetime, stale_before: dt.datetime, limit: int
+    ) -> list[Card]:
+        rows = self._client.execute(
+            _CLAIM_FOR_DETAILS,
+            {
+                "user_id": str(user_id),
+                "language": language,
+                "at": at.isoformat(),
+                "stale_before": stale_before.isoformat(),
+                "limit": limit,
+            },
+        )
+        return sorted((_card(row) for row in rows), key=lambda c: (c.created_at, str(c.id)))
+
+    def set_details(self, user_id: UUID, card_id: UUID, details: WordDetails) -> None:
+        self._client.execute(
+            _SET_DETAILS,
+            {
+                "id": str(card_id),
+                "user_id": str(user_id),
+                "details": json.dumps(dataclasses.asdict(details)),
+            },
+        )
 
     def add(self, user_id: UUID, language: str, key: str, card: Card, limit: int) -> bool:
         rows = self._client.execute(

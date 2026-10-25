@@ -15,7 +15,7 @@ import psycopg
 import pytest
 
 from konvami_api.domain.accounts import AccountRepository
-from konvami_api.domain.cards import Card, CardRepository, CardTotals, card_key
+from konvami_api.domain.cards import Card, CardRepository, CardTotals, WordDetails, card_key
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.levels import LevelFit, LevelRepository, LevelStep
@@ -1643,6 +1643,38 @@ def test_a_card_is_read_back_as_it_was_stored(cards: CardRepository) -> None:
     assert stored is True
     assert cards.get(USER, new.id) == card(1, note=None, created_at=NOON, due_at=NOON)
     assert cards.by_key(USER, "de", "word", "das wochenende") == cards.get(USER, new.id)
+
+
+def test_word_cards_without_forms_are_claimed_once_then_kept_with_their_forms(
+    cards: CardRepository,
+) -> None:
+    for number in (1, 2, 3):
+        add(cards, card(number, front=f"das Wort{number}"))
+    add(cards, card(4, front="mit der Bus", kind="correction"))
+    add(cards, card(5, front="la parola"), language="it")
+    stale = NOON - timedelta(minutes=5)
+
+    first = cards.claim_for_details(USER, "de", NOON, stale, 2)
+    second = cards.claim_for_details(USER, "de", NOON, stale, 10)
+    wort = WordDetails(part="noun", article="das", plural="die Wörter")
+    cards.set_details(USER, first[0].id, wort)
+
+    assert [c.front for c in first] == ["das Wort1", "das Wort2"]
+    assert [c.front for c in second] == ["das Wort3"]
+    assert cards.claim_for_details(USER, "de", NOON, stale, 10) == []
+    stored = cards.get(USER, first[0].id)
+    assert stored is not None
+    assert stored.details == wort
+
+
+def test_a_claim_that_was_lost_runs_out(cards: CardRepository) -> None:
+    add(cards, card(1))
+    cards.claim_for_details(USER, "de", NOON, NOON - timedelta(minutes=5), 10)
+
+    later = NOON + timedelta(minutes=6)
+    again = cards.claim_for_details(USER, "de", later, later - timedelta(minutes=5), 10)
+
+    assert [c.front for c in again] == ["das Wochenende"]
 
 
 def test_a_card_is_found_only_by_its_owner_kind_language_and_words(cards: CardRepository) -> None:
