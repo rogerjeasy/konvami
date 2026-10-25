@@ -33,6 +33,7 @@ from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import ReportService
+from konvami_api.domain.retries import RetryService
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
@@ -54,6 +55,7 @@ from konvami_api.persistence.repositories import (
     SqlProfileRepository,
     SqlRecordingRepository,
     SqlReportRepository,
+    SqlRetryRepository,
     SqlTutorRepository,
     SqlVoiceSessionRepository,
 )
@@ -313,6 +315,15 @@ def build_backend(
             model=models.speech,
         ),
         grammar=GrammarMapService(profiles=profiles, reports=reports),
+        retries=RetryService(
+            profiles=profiles,
+            reports=reports,
+            accounts=directory,
+            repository=SqlRetryRepository(sql),
+            transcriber=transcriber,
+            model=models.verbatim,
+            clock=_now,
+        ),
         costs=CostService(
             owners=costs.owners,
             budget=costs.budget,

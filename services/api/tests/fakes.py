@@ -895,3 +895,26 @@ class ScriptedTranscriber:
         if isinstance(answer, Exception):
             raise answer
         return answer
+
+
+class InMemoryRetryRepository:
+    def __init__(self) -> None:
+        self.days: dict[tuple[UUID, date], int] = {}
+        self.attempts: list[tuple[UUID, str, int, datetime, bool]] = []
+
+    def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
+        used = self.days.get((user_id, day), 0)
+        if used >= limit:
+            return False
+        self.days[(user_id, day)] = used + 1
+        return True
+
+    def attempted(self, user_id: UUID, call_id: str, index: int, at: datetime, right: bool) -> None:
+        self.attempts.append((user_id, call_id, index, at, right))
+
+    def of_conversation(self, user_id: UUID, call_id: str) -> dict[int, bool]:
+        tried: dict[int, bool] = {}
+        for owner, call, index, _, right in self.attempts:
+            if (owner, call) == (user_id, call_id):
+                tried[index] = tried.get(index, False) or right
+        return tried

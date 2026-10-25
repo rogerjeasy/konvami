@@ -2951,6 +2951,108 @@
         "title": "ReportWordOut",
         "type": "object"
       },
+      "RetriedOut": {
+        "additionalProperties": false,
+        "properties": {
+          "better": {
+            "title": "Better",
+            "type": "string"
+          },
+          "heard": {
+            "title": "Heard",
+            "type": "string"
+          },
+          "right": {
+            "title": "Right",
+            "type": "boolean"
+          },
+          "said": {
+            "title": "Said",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heard",
+          "right",
+          "said",
+          "better"
+        ],
+        "title": "RetriedOut",
+        "type": "object"
+      },
+      "RetriesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "retries": {
+            "items": {
+              "$ref": "#/components/schemas/RetryOut"
+            },
+            "title": "Retries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "retries"
+        ],
+        "title": "RetriesOut",
+        "type": "object"
+      },
+      "RetryIn": {
+        "additionalProperties": false,
+        "description": "One attempt at saying a correction again, recorded on the device.",
+        "properties": {
+          "audio": {
+            "maxLength": 2000000,
+            "minLength": 1,
+            "title": "Audio",
+            "type": "string"
+          },
+          "durationMs": {
+            "anyOf": [
+              {
+                "maximum": 600000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durationms"
+          },
+          "format": {
+            "maxLength": 8,
+            "minLength": 1,
+            "title": "Format",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audio",
+          "format"
+        ],
+        "title": "RetryIn",
+        "type": "object"
+      },
+      "RetryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "right": {
+            "title": "Right",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "index",
+          "right"
+        ],
+        "title": "RetryOut",
+        "type": "object"
+      },
       "ReviewIn": {
         "additionalProperties": false,
         "properties": {
@@ -4290,6 +4392,185 @@
           }
         },
         "summary": "Get Conversations"
+      }
+    },
+    "/v1/conversations/{call_id}/report/mistakes/{index}/retries": {
+      "post": {
+        "description": "Says correction `index` of a conversation's report again (\"Say it better\").",
+        "operationId": "retryCorrection",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetriedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Retry Correction"
+      }
+    },
+    "/v1/conversations/{call_id}/retries": {
+      "get": {
+        "description": "The corrections of a conversation's report the learner said again.",
+        "operationId": "getRetries",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Retries"
       }
     },
     "/v1/conversations/{conversation_id}": {

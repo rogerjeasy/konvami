@@ -21,6 +21,7 @@ from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.reports import ReportError
+from konvami_api.domain.retries import RetryError
 from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.voice import VoiceError
@@ -75,6 +76,13 @@ _TUTOR_STATUS = {
     "no_language": 409,
     "tutor_limit": 429,
 }
+_RETRY_STATUS = {
+    "not_found": 404,
+    "unsure": 409,
+    "invalid_value": 422,
+    "consent_required": 403,
+    "retry_limit": 429,
+}
 _UNAVAILABLE = 503
 
 
@@ -117,6 +125,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(CardError)
     async def _card_error(_: Request, error: CardError) -> JSONResponse:
         return _response(_CARD_STATUS.get(error.code, 422), error.code)
+
+    @app.exception_handler(RetryError)
+    async def _retry_error(_: Request, error: RetryError) -> JSONResponse:
+        return _response(_RETRY_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(GrammarMapError)
     async def _grammar_error(_: Request, error: GrammarMapError) -> JSONResponse:

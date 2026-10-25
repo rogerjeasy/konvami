@@ -42,6 +42,7 @@ from konvami_api.domain.reports import (
     WeekMistakes,
     Word,
 )
+from konvami_api.domain.retries import RetryRepository
 from konvami_api.domain.tutor import Example, TutorAnswer, TutorQuestion, TutorRepository
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -62,6 +63,7 @@ from konvami_api.persistence.repositories import (
     SqlProfileRepository,
     SqlRecordingRepository,
     SqlReportRepository,
+    SqlRetryRepository,
     SqlTutorRepository,
     SqlVoiceSessionRepository,
 )
@@ -79,6 +81,7 @@ from tests.fakes import (
     InMemoryProfileRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
+    InMemoryRetryRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
 )
@@ -1272,6 +1275,45 @@ def test_questions_are_counted_per_learner_and_day_up_to_the_limit(tutor: TutorR
     assert not tutor.reserve(USER, NOON.date(), 2)
     assert tutor.reserve(OTHER_USER, NOON.date(), 2)
     assert tutor.reserve(USER, NOON.date() + timedelta(days=1), 2)
+
+
+# --- "Say it better" ------------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def retries(request: pytest.FixtureRequest) -> RetryRepository:
+    """Retry storage, with the calls `rtc_1` and `rtc_2` there to retry corrections of."""
+    if request.param == "memory":
+        return InMemoryRetryRepository()
+    db = request.getfixturevalue("db")
+    for call_id in ("rtc_1", "rtc_2"):
+        SqlVoiceSessionRepository(db).started(
+            VoiceSession(call_id, USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+        )
+    return SqlRetryRepository(db)
+
+
+def test_attempts_are_kept_per_correction_with_whether_one_was_right(
+    retries: RetryRepository,
+) -> None:
+    retries.attempted(USER, "rtc_1", 0, NOON, False)
+    retries.attempted(USER, "rtc_1", 0, NOON + HOUR, True)
+    retries.attempted(USER, "rtc_1", 2, NOON + HOUR, False)
+    retries.attempted(USER, "rtc_2", 1, NOON + HOUR, True)
+
+    assert retries.of_conversation(USER, "rtc_1") == {0: True, 2: False}
+    assert retries.of_conversation(USER, "rtc_2") == {1: True}
+    assert retries.of_conversation(OTHER_USER, "rtc_1") == {}
+
+
+def test_attempts_are_counted_per_learner_and_day_up_to_the_limit(
+    retries: RetryRepository,
+) -> None:
+    assert retries.reserve(USER, NOON.date(), 2)
+    assert retries.reserve(USER, NOON.date(), 2)
+    assert not retries.reserve(USER, NOON.date(), 2)
+    assert retries.reserve(OTHER_USER, NOON.date(), 2)
+    assert retries.reserve(USER, NOON.date() + timedelta(days=1), 2)
 
 
 # --- Session reports -------------------------------------------------------------------------

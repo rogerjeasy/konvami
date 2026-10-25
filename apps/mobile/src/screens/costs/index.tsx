@@ -42,6 +42,7 @@ const FEATURE = {
   tutor: 'costs.feature.tutor',
   verbatim: 'costs.feature.verbatim',
   live_corrections: 'costs.feature.live_corrections',
+  retry: 'costs.feature.retry',
   voice_sample: 'costs.feature.voice_sample',
 } as const;
 

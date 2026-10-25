@@ -1,5 +1,6 @@
 import io
 import wave
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -44,6 +45,26 @@ def test_a_recording_is_sent_as_a_wav_file_with_its_language_and_prompt() -> Non
     assert b'name="file"; filename="turn.wav"' in body
     assert b"Content-Type: audio/wav" in body
     assert WAV in body
+
+
+@pytest.mark.parametrize(
+    ("audio_format", "content_type"),
+    [("m4a", b"audio/mp4"), ("webm", b"audio/webm"), ("mp3", b"audio/mpeg")],
+)
+def test_a_phones_or_browsers_recording_is_sent_as_its_own_type(
+    audio_format: str, content_type: bytes
+) -> None:
+    seen: dict[str, httpx.Request] = {}
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        seen["request"] = request
+        return httpx.Response(200, json={"text": "Hallo"})
+
+    model(respond).transcribe(replace(TASK, format=audio_format))
+
+    body = seen["request"].content
+    assert b'filename="turn.' + audio_format.encode() + b'"' in body
+    assert b"Content-Type: " + content_type in body
 
 
 @pytest.mark.parametrize("status", [400, 401, 429, 500])
@@ -104,9 +125,12 @@ def test_a_transcription_is_metered_by_the_seconds_of_audio() -> None:
 
     transcriber.transcribe(TranscriptionTask("gpt-transcribe", wav(2.5), "de", "Keep it."))
     transcriber.transcribe(TASK)
+    transcriber.transcribe(replace(TASK, format="m4a", seconds=4.2))
 
     assert recorded == [
         (None, "openai", "gpt-transcribe", {"audio_seconds": 2.5}),
         # A file that cannot be read as WAV counts as no audio.
         (None, "openai", "gpt-transcribe", {"audio_seconds": 0.0}),
+        # A compressed recording says how long it is.
+        (None, "openai", "gpt-transcribe", {"audio_seconds": 4.2}),
     ]
