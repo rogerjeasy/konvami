@@ -1094,7 +1094,9 @@ export function createFakeApi(): FakeApi {
       if (left < MIN_CALL_SECONDS) throw new ApiError('minutes_used_up', 429);
       const maxSeconds = Math.min(purpose === 'practice' ? 600 : 480, left);
       usedSeconds += maxSeconds;
-      return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds };
+      // Nothing to plan from yet: no reports and no cards in the fake.
+      const plan = purpose === 'practice' ? { language: 'de', focus: [], words: [] } : null;
+      return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds, plan };
     },
     async getHome(timeZone) {
       await record('getHome', timeZone);

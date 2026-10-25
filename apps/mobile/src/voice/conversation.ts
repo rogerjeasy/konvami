@@ -24,6 +24,24 @@ export interface Caption {
   final: boolean;
 }
 
+/**
+ * A mistake the server's Live Error Spotter found in one of the learner's turns (spec §6.4
+ * correction chips). The report after the call checks every mistake again.
+ */
+export interface LiveCorrection {
+  /** The id of the learner's turn it is about. */
+  turn: string;
+  /** The learner's words, and the same words put right. */
+  said: string;
+  better: string;
+  /** Why, in one sentence in the learner's explanation language. */
+  why: string;
+  /** The language pack's kind of mistake (`report.category.*`). */
+  topic: string;
+  /** One of the kinds this conversation's plan practises. */
+  focus: boolean;
+}
+
 export interface ConversationState {
   phase: ConversationPhase;
   /** The most recent lines, oldest first. */
@@ -36,6 +54,10 @@ export interface ConversationState {
   finished: boolean;
   /** Finished, and the persona's goodbye has been heard: the screen can move on. */
   over: boolean;
+  /** What the Live Error Spotter found, in the order it was found. */
+  corrections: LiveCorrection[];
+  /** Everything the learner said in the call, final lines only (captions keep the latest). */
+  learnerLines: string[];
 }
 
 export const INITIAL_CONVERSATION: ConversationState = {
@@ -45,7 +67,16 @@ export const INITIAL_CONVERSATION: ConversationState = {
   tasksDone: [],
   finished: false,
   over: false,
+  corrections: [],
+  learnerLines: [],
 };
+
+/**
+ * How the server tells a live correction: a system note `live_correction: <JSON>` added to the
+ * conversation, which the partner reads too (services/api, `domain/live_call.py`:
+ * `LIVE_CORRECTION_NOTE`).
+ */
+export const LIVE_CORRECTION_NOTE = 'live_correction: ';
 
 // Lines kept for the captions; older ones drop off.
 const MAX_CAPTIONS = 8;
@@ -75,6 +106,10 @@ function withCaption(
   return { ...state, captions };
 }
 
+function withLearnerLine(state: ConversationState, line: string): ConversationState {
+  return line.trim() ? { ...state, learnerLines: [...state.learnerLines, line.trim()] } : state;
+}
+
 /** What a server-side tool reported: progress, or the end of the setup or the test. */
 function withToolResult(state: ConversationState, output: unknown): ConversationState {
   let result: unknown;
@@ -97,6 +132,32 @@ function withToolResult(state: ConversationState, output: unknown): Conversation
     return { ...state, tasksDone: [...state.tasksDone, task] };
   }
   return state;
+}
+
+const isText = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim() !== '';
+
+/** The corrections in a system note of the Live Error Spotter; none for any other note. */
+function noteCorrections(item: { role?: unknown; content?: unknown }): LiveCorrection[] {
+  if (item.role !== 'system' || !Array.isArray(item.content)) return [];
+  const part = item.content[0] as { text?: unknown } | undefined;
+  const note = text(part?.text);
+  if (!note.startsWith(LIVE_CORRECTION_NOTE)) return [];
+  let found: unknown;
+  try {
+    found = JSON.parse(note.slice(LIVE_CORRECTION_NOTE.length));
+  } catch {
+    return [];
+  }
+  const { turn, corrections } = (found ?? {}) as { turn?: unknown; corrections?: unknown };
+  if (!isText(turn) || !Array.isArray(corrections)) return [];
+  return corrections.flatMap((entry: unknown) => {
+    const c = (entry ?? {}) as Record<string, unknown>;
+    if (!isText(c.said) || !isText(c.better) || !isText(c.why) || !isText(c.topic)) return [];
+    return [
+      { turn, said: c.said, better: c.better, why: c.why, topic: c.topic, focus: c.focus === true },
+    ];
+  });
 }
 
 export function conversationReducer(state: ConversationState, event: unknown): ConversationState {
@@ -124,19 +185,28 @@ export function conversationReducer(state: ConversationState, event: unknown): C
     case 'conversation.item.input_audio_transcription.delta':
       return withCaption(state, 'learner', text(e.item_id), (t) => t + text(e.delta), false);
     case 'conversation.item.input_audio_transcription.completed':
-      return withCaption(state, 'learner', text(e.item_id), () => text(e.transcript), true);
+      return withLearnerLine(
+        withCaption(state, 'learner', text(e.item_id), () => text(e.transcript), true),
+        text(e.transcript),
+      );
     case 'learner.typed':
       // Sent by the app itself (`VoiceEngine.say`): the provider does not echo typed text.
       return {
-        ...withCaption(state, 'learner', text(e.id), () => text(e.text), true),
+        ...withLearnerLine(
+          withCaption(state, 'learner', text(e.id), () => text(e.text), true),
+          text(e.text),
+        ),
         phase: 'thinking',
       };
     case 'learner.help':
       // Sent by the app itself (`VoiceEngine.help`): the partner answers it next.
       return { ...state, phase: 'thinking' };
     case 'conversation.item.done': {
-      const item = e.item as { type?: unknown; output?: unknown } | undefined;
-      return item?.type === 'function_call_output' ? withToolResult(state, item.output) : state;
+      const item = e.item as
+        { type?: unknown; output?: unknown; role?: unknown; content?: unknown } | undefined;
+      if (item?.type === 'function_call_output') return withToolResult(state, item.output);
+      const found = item?.type === 'message' ? noteCorrections(item) : [];
+      return found.length ? { ...state, corrections: [...state.corrections, ...found] } : state;
     }
     default:
       return state;

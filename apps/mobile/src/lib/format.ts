@@ -129,3 +129,10 @@ export function formatMonth(locale: string, isoDate: string): string {
     timeZone: 'UTC',
   }).format(new Date(`${isoDate}T00:00:00Z`));
 }
+
+/** A few names as one phrase ("Dative and Plural"), the way the language joins them. */
+export function formatList(locale: string, items: readonly string[]): string {
+  // Not every JavaScript engine of the app's platforms has it; a comma is understood everywhere.
+  if (typeof Intl.ListFormat !== 'function') return items.join(', ');
+  return new Intl.ListFormat(locale, { type: 'conjunction' }).format(items);
+}

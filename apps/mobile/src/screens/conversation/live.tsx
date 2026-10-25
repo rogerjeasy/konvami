@@ -24,9 +24,12 @@ import { conversationDoneRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices, useScenarios } from '@/practice/services';
 import { useMinutesBack } from '@/profile/services';
 import { Goals } from './goals';
-import { setPartnerCaptions, usePreferences } from '@/preferences';
+import { CorrectionSheet, LiveCorrections } from './live-corrections';
+import { CallPlanStrip } from './plan';
+import { setLiveCorrections, setPartnerCaptions, usePreferences } from '@/preferences';
 import { HELP_KINDS, type HelpKind } from '@/voice/help';
 import { withLine } from '@/voice/problems';
+import type { LiveCorrection } from '@/voice/conversation';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
 
 /** Failures with their own explanation; anything else reads as the general message. */
@@ -94,7 +97,7 @@ function HelpSheet({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const { partnerCaptions } = usePreferences();
+  const { partnerCaptions, liveCorrections } = usePreferences();
   return (
     <Sheet visible={visible} title={t('conversation.help.title')} onClose={onClose}>
       <View className="gap-4 pt-1">
@@ -122,6 +125,19 @@ function HelpSheet({
             onValueChange={(shown) => void setPartnerCaptions(shown)}
           />
         </Card>
+        <Card className="flex-row items-center gap-3 p-3.5">
+          <View className="flex-1 gap-1">
+            <Text variant="labelMedium">{t('conversation.help.corrections')}</Text>
+            <Text variant="small" tone="muted">
+              {t('conversation.help.correctionsHint')}
+            </Text>
+          </View>
+          <Switch
+            label={t('conversation.help.corrections')}
+            value={liveCorrections}
+            onValueChange={(shown) => void setLiveCorrections(shown)}
+          />
+        </Card>
       </View>
     </Sheet>
   );
@@ -142,9 +158,10 @@ function Call({
   const call = useVoiceCall('practice', partner.id, scenario);
   const { scenarios } = useScenarios();
   const rolePlay = scenario ? scenarios?.find(({ id }) => id === scenario) : undefined;
-  const { conversation, callId, stop } = call;
-  const { partnerCaptions } = usePreferences();
+  const { conversation, callId, stop, plan } = call;
+  const { partnerCaptions, liveCorrections } = usePreferences();
   const [helping, setHelping] = useState(false);
+  const [explaining, setExplaining] = useState<LiveCorrection | null>(null);
   const canHelp = call.status === 'live' && !conversation.finished;
   const minutesBack = useMinutesBack(call.problem === 'minutes_used_up');
 
@@ -178,7 +195,15 @@ function Call({
       finishedLabel={t('conversation.finished')}
       problem={call.problem && !lost ? withLine(t(problemKey(call.problem)), minutesBack) : null}
       progress={
-        rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : undefined
+        <>
+          {rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : null}
+          {plan ? <CallPlanStrip plan={plan} learnerLines={conversation.learnerLines} /> : null}
+        </>
+      }
+      belowLearner={
+        liveCorrections ? (
+          <LiveCorrections corrections={conversation.corrections} onOpen={setExplaining} />
+        ) : null
       }
       hiddenPersonaText={
         partnerCaptions ? null : t('conversation.help.hidden', { name: partner.name })
@@ -200,7 +225,8 @@ function Call({
               leave();
             }}
           />
-          {/* A modal: where it sits in the tree does not change where it shows. */}
+          {/* Modals: where they sit in the tree does not change where they show. */}
+          <CorrectionSheet correction={explaining} onClose={() => setExplaining(null)} />
           <HelpSheet
             visible={helping && canHelp}
             name={partner.name}
@@ -239,7 +265,8 @@ function Call({
  * 5.3 Conversation: a live practice conversation with one of the learner's partners (spec §6.4).
  * The partner speaks first; the screen shows who is speaking, the latest line of each side (the
  * partner's can be hidden, to practise listening) and how much time is left. Help (stuck,
- * slower, repeat, translate, explain) is a tap away. It ends when the learner ends it, when the partner has said goodbye,
+ * slower, repeat, translate, explain) is a tap away. What the conversation practises shows under
+ * the lines (the plan), and mistakes found in what the learner said show under their line. It ends when the learner ends it, when the partner has said goodbye,
  * or when the time is up, and then shows what it added up to.
  */
 export function LiveConversationScreen() {

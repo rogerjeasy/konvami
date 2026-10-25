@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { motion } from '@konvami/design-tokens';
-import type { CallPurpose } from '@konvami/api-client';
+import type { CallPlan, CallPurpose } from '@konvami/api-client';
 import { mouthOpenness } from '@/lib/lip-sync';
 import { conversationReducer, INITIAL_CONVERSATION, type ConversationState } from './conversation';
-import { VoiceError, type VoiceEngine, type VoiceErrorCode } from './engine';
+import { VoiceError, type StartedCall, type VoiceEngine, type VoiceErrorCode } from './engine';
 import type { HelpKind } from './help';
 import { useVoiceEngineFactory } from './services';
 
@@ -17,6 +17,8 @@ export interface VoiceCall {
   /** The call's id on the server and its time limit (seconds); null until it is live. */
   callId: string | null;
   maxSeconds: number | null;
+  /** What a practice conversation sets out to practise; null until it is live, and for others. */
+  plan: CallPlan | null;
   conversation: ConversationState;
   muted: boolean;
   toggleMute: () => void;
@@ -48,7 +50,7 @@ export function useVoiceCall(
   const createEngine = useVoiceEngineFactory();
   const [status, setStatus] = useState<VoiceCall['status']>('starting');
   const [problem, setProblem] = useState<CallProblem | null>(null);
-  const [started, setStarted] = useState<{ callId: string; maxSeconds: number } | null>(null);
+  const [started, setStarted] = useState<StartedCall | null>(null);
   const [conversation, dispatch] = useReducer(conversationReducer, INITIAL_CONVERSATION);
   const [muted, setMuted] = useState(false);
   const engine = useRef<VoiceEngine | null>(null);
@@ -123,6 +125,7 @@ export function useVoiceCall(
     problem,
     callId: started?.callId ?? null,
     maxSeconds: started?.maxSeconds ?? null,
+    plan: started?.plan ?? null,
     conversation,
     muted,
     toggleMute,
