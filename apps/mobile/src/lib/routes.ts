@@ -76,6 +76,8 @@ export const ROUTES = {
   accountPersonal: '/account/personal',
   /** 6.3 Learning: what the app knows about the learner's learning. */
   accountLearning: '/account/learning',
+  /** 6.3 Your goals: a weekly habit and a level to reach, which the week's plan follows. */
+  accountGoals: '/account/goals',
   /** 6.4 My partners, 6.5 New partner and 6.6 Persona Studio for a partner still to be added. */
   accountPartners: '/account/partners',
   accountNewPartner: '/account/partners/new',

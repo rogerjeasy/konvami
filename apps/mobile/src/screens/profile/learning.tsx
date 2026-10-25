@@ -6,6 +6,7 @@ import { Reveal } from '@/components/motion';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
+import { habitOf, levelGoalOf } from '@/profile/goals';
 import { formatDate } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
@@ -17,6 +18,51 @@ import type { OnboardingData } from '@/onboarding/store';
 
 // The calendar day of a stored moment ("2026-10-09T12:00:00Z" → "2026-10-09").
 const DAY_LENGTH = 'YYYY-MM-DD'.length;
+
+/** The goals the week's plan follows, each opening the goals screen. */
+function Goals({ data }: { data: OnboardingData }) {
+  const { t, i18n } = useTranslation();
+  const habit = habitOf(data.profile);
+  const goal = levelGoalOf(data.profile);
+  const habitTitle = t('profile.goals.habit');
+  const levelTitle = t('profile.goals.level');
+  const open = () => router.push(ROUTES.accountGoals);
+  return (
+    <View className="gap-2.5">
+      <Text variant="overline" tone="subtle" accessibilityRole="header">
+        {t('profile.learningScreen.goals')}
+      </Text>
+      <AnswerCard
+        icon="calendar"
+        title={habitTitle}
+        value={t('profile.goals.habitValue', {
+          days: t('profile.goals.days', { count: habit.days }),
+          minutes: t('time.minutes', { count: habit.minutes }),
+        })}
+        source={habit.suggested ? t('profile.goals.suggested') : t('onboarding.source.asked')}
+        editLabel={t('profile.learningScreen.edit', { item: habitTitle })}
+        onPress={open}
+      />
+      <AnswerCard
+        icon="target"
+        title={levelTitle}
+        value={
+          goal
+            ? goal.by
+              ? t('profile.goals.levelBy', {
+                  level: goal.level,
+                  date: formatDate(i18n.language, goal.by),
+                })
+              : t('profile.goals.levelNoDate', { level: goal.level })
+            : t('profile.goals.noLevel')
+        }
+        source={goal ? t('onboarding.source.asked') : undefined}
+        editLabel={t('profile.learningScreen.edit', { item: levelTitle })}
+        onPress={open}
+      />
+    </View>
+  );
+}
 
 function Answers({ data }: { data: OnboardingData }) {
   const { t, i18n } = useTranslation();
@@ -80,6 +126,9 @@ export function LearningScreen() {
               </Text>
               <Text tone="muted">{t('profile.learningScreen.body')}</Text>
             </View>
+          </Reveal>
+          <Reveal delay={staggerDelay(1)}>
+            <Goals data={data} />
           </Reveal>
           <Answers data={data} />
         </StepLayout>
