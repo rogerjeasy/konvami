@@ -159,3 +159,21 @@ def test_a_removed_card_is_skipped() -> None:
 
 def test_an_unknown_conversation_is_ignored() -> None:
     World().conversation_review.after_conversation("rtc_nope")
+
+
+def test_the_plan_words_the_learner_said_are_named_whether_or_not_they_were_due() -> None:
+    world = World()
+    lena, cards = saved(world)
+    call_id = talked(
+        world,
+        lena,
+        planned(cards),
+        Turn("learner", "Ich muss in Bern umsteigen."),
+        Turn("persona", "Hast du einen Termin?"),
+    )
+
+    used = world.conversation_review.words_used(call_id)
+
+    # Only the learner's own words count: the partner said "Termin".
+    assert [word.text for word in used] == ["umsteigen"]
+    assert world.conversation_review.words_used("rtc_unknown") == ()

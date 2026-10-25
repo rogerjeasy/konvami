@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
 from konvami_api.domain.cards import CardService
+from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService, DayActivity
 from konvami_api.domain.costs import Allowance, Charge, Feature
 from konvami_api.domain.director import DirectorService, habit_of, week_target
@@ -82,6 +83,10 @@ class WeekNumbers:
     # The level when the week began and when it ended; None before there was one.
     level_before: str | None
     level_after: str | None
+    # Saved words the week's conversations brought, and of them the ones the learner said. Left
+    # out by check-ins stored before they were counted.
+    words_planned: int = 0
+    words_used: int = 0
 
     def document(self) -> dict[str, Any]:
         return {
@@ -103,6 +108,8 @@ class WeekNumbers:
             "previous_mistakes": self.previous_mistakes,
             "level_before": self.level_before,
             "level_after": self.level_after,
+            "words_planned": self.words_planned,
+            "words_used": self.words_used,
         }
 
     @classmethod
@@ -222,6 +229,8 @@ def _for_model(numbers: WeekNumbers, titles: dict[str, str]) -> dict[str, Any]:
         "confirmed_mistakes_the_week_before": numbers.previous_mistakes,
         "level_when_the_week_began": numbers.level_before,
         "level_when_it_ended": numbers.level_after,
+        "saved_words_brought_into_conversations": numbers.words_planned,
+        "saved_words_used": numbers.words_used,
     }
 
 
@@ -252,6 +261,7 @@ class WeekReviewService:
         grammar: GrammarMapService,
         levels: LevelService,
         director: DirectorService,
+        review: ConversationReview,
         allowance: Callable[[UUID], Allowance],
         repository: WeekReviewRepository,
         starter: WeekReviewStarter,
@@ -269,6 +279,7 @@ class WeekReviewService:
         self._grammar = grammar
         self._levels = levels
         self._director = director
+        self._review = review
         self._allowance = allowance
         self._repository = repository
         self._starter = starter
@@ -433,6 +444,9 @@ class WeekReviewService:
             s.topic.id: s.mastery.state for s in self._grammar.states(user_id, _utc(next_monday))
         }
         history = self._levels.history(user_id, language)
+        # A word is the same word in every conversation that brought it.
+        planned = {w.text.casefold() for c in held for w in self._review.planned_words(c.id)}
+        used = {w.text.casefold() for c in held for w in self._review.words_used(c.id)}
         return WeekNumbers(
             week=week,
             minutes=minutes,
@@ -453,6 +467,8 @@ class WeekReviewService:
             previous_mistakes=mistakes[week - _WEEK],
             level_before=_level_at(history, _utc(week)),
             level_after=_level_at(history, _utc(next_monday)),
+            words_planned=len(planned),
+            words_used=len(used),
         )
 
 
