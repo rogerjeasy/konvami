@@ -12,7 +12,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool
 from pydantic.alias_generators import to_camel
 
 from konvami_api.domain.accounts import AccountView, PictureUpload
-from konvami_api.domain.cards import Card, Deck, Queue, Saved
+from konvami_api.domain.cards import Article, Card, Deck, Part, Queue, Saved, WordDetails
 from konvami_api.domain.cards import Kind as CardKind
 from konvami_api.domain.catalog import (
     CEFR_LEVELS,
@@ -792,6 +792,30 @@ class CardIn(ApiModel):
     index: int = Field(ge=0, le=MAX_REPORT_INDEX)
 
 
+class WordDetailsOut(ApiModel):
+    """A word's forms (spec §6.7); a form the word does not have is null."""
+
+    part: Part
+    article: Article | None
+    plural: str | None
+    present: str | None
+    preterite: str | None
+    perfect: str | None
+    separable: bool | None
+    case: str | None
+    comparative: str | None
+    superlative: str | None
+
+    @classmethod
+    def of(cls, details: WordDetails) -> "WordDetailsOut":
+        return cls(**dataclasses.asdict(details))
+
+
+class CardAudioOut(ApiModel):
+    # A short-lived address of the card's sound (MP3).
+    url: str
+
+
 class CardOut(ApiModel):
     id: UUID
     kind: CardKind
@@ -810,6 +834,8 @@ class CardOut(ApiModel):
     reviewed_at: dt.datetime | None
     reviews: int
     lapses: int
+    # A word's forms; null until they are written down, and for a correction.
+    details: WordDetailsOut | None
 
     @classmethod
     def of(cls, card: Card) -> "CardOut":
@@ -826,6 +852,7 @@ class CardOut(ApiModel):
             reviewed_at=card.reviewed_at,
             reviews=card.reviews,
             lapses=card.lapses,
+            details=WordDetailsOut.of(card.details) if card.details else None,
         )
 
 

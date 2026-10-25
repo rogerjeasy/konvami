@@ -529,6 +529,15 @@ describe('api client', () => {
     expect(calls[0]?.body).toEqual({ audio: 'AAEC', format: 'm4a', durationMs: 2400 });
   });
 
+  it('reads where a card’s sound plays from', async () => {
+    const { fetch, calls } = fakeFetch(json(200, { url: 'https://files/card.mp3' }));
+
+    expect(await client(fetch).api.getCardAudio('card/1')).toEqual({
+      url: 'https://files/card.mp3',
+    });
+    expect(calls[0]?.url).toBe('https://api.example.test/v1/cards/card%2F1/audio');
+  });
+
   it('reads and sets whether recordings are kept', async () => {
     const { fetch, calls } = fakeFetch(json(200, { kept: true }), json(200, { kept: false }));
     const { api } = client(fetch);

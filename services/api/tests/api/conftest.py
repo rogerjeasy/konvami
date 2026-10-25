@@ -10,6 +10,7 @@ from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import Account, AccountService
+from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
@@ -292,10 +293,11 @@ def services(
     )
     # Card ids in the order they are handed out: ...0001, ...0002, and so on.
     card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
+    card_store = InMemoryCardRepository()
     cards = CardService(
         profiles=profiles,
         reports=reports,
-        repository=InMemoryCardRepository(),
+        repository=card_store,
         clock=clock,
         new_id=lambda: next(card_ids),
     )
@@ -413,6 +415,17 @@ def services(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
         ),
         grammar=GrammarMapService(profiles=profiles, reports=reports),
+        card_details=CardDetailsService(
+            profiles=profiles,
+            personas=personas,
+            repository=card_store,
+            text_model=text_model,
+            model="gpt-6.1-sol",
+            speech=speech,
+            speech_model="gpt-4o-mini-tts",
+            files=files,
+            clock=clock,
+        ),
         retries=RetryService(
             profiles=profiles,
             reports=reports,

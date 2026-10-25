@@ -26,6 +26,8 @@ export interface VoiceCallDetails {
   /** A practice call that practises a grammar topic first: a topic id of the grammar map. */
   practise?: string;
 }
+/** A word card's forms (spec §6.7): article, plural, verb forms, comparison. */
+export type WordDetails = Schemas['WordDetailsOut'];
 /** One attempt at saying a report's correction again ("Say it better"), as the server heard it. */
 export type Retried = Schemas['RetriedOut'];
 /** A recording of the attempt, made on the device. */
@@ -272,6 +274,8 @@ export interface ApiClient {
   retryCorrection(conversationId: string, index: number, attempt: RetryAttempt): Promise<Retried>;
   /** The corrections of a conversation's report the learner said again. */
   getRetries(conversationId: string): Promise<Retries>;
+  /** Where a card's sound plays from (made the first time). Fails with `not_found`, `unavailable`. */
+  getCardAudio(id: string): Promise<{ url: string }>;
   /** The grammar map of the language learned. */
   getGrammarMap(): Promise<GrammarMap>;
   /** One topic of the map. Fails with `not_found` for a topic the language does not have. */
@@ -433,6 +437,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       ),
     getRetries: (conversationId) =>
       request('GET', `/v1/conversations/${encodeURIComponent(conversationId)}/retries`),
+    getCardAudio: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}/audio`),
     getGrammarMap: () => request('GET', '/v1/grammar'),
     getGrammarTopic: (id) => request('GET', `/v1/grammar/${encodeURIComponent(id)}`),
     askTutor: (question) => request('POST', '/v1/tutor/questions', { question }),

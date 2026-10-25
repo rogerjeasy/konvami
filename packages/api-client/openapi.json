@@ -164,6 +164,20 @@
         "title": "CallPurpose",
         "type": "string"
       },
+      "CardAudioOut": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "CardAudioOut",
+        "type": "object"
+      },
       "CardIn": {
         "additionalProperties": false,
         "description": "Which word or correction of a conversation's report to make a card of. The server reads\nits content from the report; the app sends none.",
@@ -219,6 +233,16 @@
             "format": "date-time",
             "title": "Createdat",
             "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WordDetailsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "dueAt": {
             "format": "date-time",
@@ -290,7 +314,8 @@
           "dueAt",
           "reviewedAt",
           "reviews",
-          "lapses"
+          "lapses",
+          "details"
         ],
         "title": "CardOut",
         "type": "object"
@@ -3790,6 +3815,141 @@
         ],
         "title": "WeekOut",
         "type": "object"
+      },
+      "WordDetailsOut": {
+        "additionalProperties": false,
+        "description": "A word's forms (spec \u00a76.7); a form the word does not have is null.",
+        "properties": {
+          "article": {
+            "anyOf": [
+              {
+                "enum": [
+                  "der",
+                  "die",
+                  "das"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article"
+          },
+          "case": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case"
+          },
+          "comparative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparative"
+          },
+          "part": {
+            "enum": [
+              "noun",
+              "verb",
+              "adjective",
+              "phrase",
+              "other"
+            ],
+            "title": "Part",
+            "type": "string"
+          },
+          "perfect": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Perfect"
+          },
+          "plural": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plural"
+          },
+          "present": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Present"
+          },
+          "preterite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preterite"
+          },
+          "separable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Separable"
+          },
+          "superlative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superlative"
+          }
+        },
+        "required": [
+          "part",
+          "article",
+          "plural",
+          "present",
+          "preterite",
+          "perfect",
+          "separable",
+          "case",
+          "comparative",
+          "superlative"
+        ],
+        "title": "WordDetailsOut",
+        "type": "object"
       }
     }
   },
@@ -4217,6 +4377,77 @@
           }
         },
         "summary": "Remove Card"
+      }
+    },
+    "/v1/cards/{card_id}/audio": {
+      "get": {
+        "description": "Where the card's sound plays from: the word with its sentence, or a correction as it\nis right, in the learner's partner's voice. Made the first time it is asked for.",
+        "operationId": "getCardAudio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardAudioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Card Audio"
       }
     },
     "/v1/cards/{card_id}/review": {

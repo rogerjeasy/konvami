@@ -113,6 +113,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/cards/{card_id}/audio': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Card Audio
+     * @description Where the card's sound plays from: the word with its sentence, or a correction as it
+     *     is right, in the learner's partner's voice. Made the first time it is asked for.
+     */
+    get: operations['getCardAudio'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/cards/{card_id}/review': {
     parameters: {
       query?: never;
@@ -822,6 +843,11 @@ export interface components {
      * @enum {string}
      */
     CallPurpose: 'onboarding' | 'placement' | 'practice';
+    /** CardAudioOut */
+    CardAudioOut: {
+      /** Url */
+      url: string;
+    };
     /**
      * CardIn
      * @description Which word or correction of a conversation's report to make a card of. The server reads
@@ -849,6 +875,7 @@ export interface components {
        * Format: date-time
        */
       createdAt: string;
+      details: components['schemas']['WordDetailsOut'] | null;
       /**
        * Dueat
        * Format: date-time
@@ -2043,6 +2070,35 @@ export interface components {
        */
       start: string;
     };
+    /**
+     * WordDetailsOut
+     * @description A word's forms (spec §6.7); a form the word does not have is null.
+     */
+    WordDetailsOut: {
+      /** Article */
+      article: ('der' | 'die' | 'das') | null;
+      /** Case */
+      case: string | null;
+      /** Comparative */
+      comparative: string | null;
+      /**
+       * Part
+       * @enum {string}
+       */
+      part: 'noun' | 'verb' | 'adjective' | 'phrase' | 'other';
+      /** Perfect */
+      perfect: string | null;
+      /** Plural */
+      plural: string | null;
+      /** Present */
+      present: string | null;
+      /** Preterite */
+      preterite: string | null;
+      /** Separable */
+      separable: boolean | null;
+      /** Superlative */
+      superlative: string | null;
+    };
   };
   responses: never;
   parameters: never;
@@ -2409,6 +2465,64 @@ export interface operations {
       };
       /** @description Unprocessable Entity */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  getCardAudio: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        card_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CardAudioOut'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
         headers: {
           [name: string]: unknown;
         };

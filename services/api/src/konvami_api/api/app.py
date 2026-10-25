@@ -17,6 +17,7 @@ from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
     AllowanceOut,
+    CardAudioOut,
     CardIn,
     CardOut,
     CatalogOut,
@@ -65,6 +66,7 @@ from konvami_api.api.schemas import (
     VoiceSampleOut,
 )
 from konvami_api.domain.accounts import AccountService, AccountView
+from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardService
 from konvami_api.domain.catalog import Catalog
@@ -111,6 +113,7 @@ class Services:
     voices: VoiceSampleService
     costs: CostService
     grammar: GrammarMapService
+    card_details: CardDetailsService
     retries: RetryService
 
 
@@ -357,9 +360,18 @@ def _router(services: Services) -> APIRouter:
     def review_card(user: CurrentUser, card_id: UUID, review: ReviewIn) -> CardOut:
         return CardOut.of(services.cards.review(user, card_id, review.rating))
 
+    @router.get(
+        "/cards/{card_id}/audio", operation_id="getCardAudio", responses=NOT_FOUND | UNAVAILABLE
+    )
+    def get_card_audio(user: CurrentUser, card_id: UUID) -> CardAudioOut:
+        """Where the card's sound plays from: the word with its sentence, or a correction as it
+        is right, in the learner's partner's voice. Made the first time it is asked for."""
+        return CardAudioOut(url=services.card_details.audio(user, card_id))
+
     @router.delete("/cards/{card_id}", operation_id="removeCard", responses=NOT_FOUND | REFUSED)
     def remove_card(user: CurrentUser, card_id: UUID) -> DeckSummaryOut:
         services.cards.remove(user, card_id)
+        services.card_details.forget(user, card_id)
         deck = services.cards.deck(user, limit=1)
         return DeckSummaryOut(total=deck.total, due=deck.due)
 
