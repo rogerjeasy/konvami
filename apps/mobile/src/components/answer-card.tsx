@@ -26,8 +26,8 @@ export function AnswerCard({
   value: string;
   /** Further lines under the value. */
   details?: readonly string[];
-  /** Where the value came from ("You told me", "Measured"). */
-  source: string;
+  /** Where the value came from ("You told me", "Measured"); left out for one not set yet. */
+  source?: string;
   /** A quiet line at the end ("Changed October 9, 2026"). */
   note?: string;
   /** What the button does, for screen readers ("Edit: Goals"). */
@@ -60,18 +60,22 @@ export function AnswerCard({
               {line}
             </Text>
           ))}
-          <View className="mt-1 flex-row flex-wrap items-center gap-x-2 gap-y-1">
-            <View className="rounded-sm bg-surface px-1.5 py-1">
-              <Text variant="badge" tone="muted">
-                {source}
-              </Text>
+          {source || note ? (
+            <View className="mt-1 flex-row flex-wrap items-center gap-x-2 gap-y-1">
+              {source ? (
+                <View className="rounded-sm bg-surface px-1.5 py-1">
+                  <Text variant="badge" tone="muted">
+                    {source}
+                  </Text>
+                </View>
+              ) : null}
+              {note ? (
+                <Text variant="caption" tone="subtle">
+                  {note}
+                </Text>
+              ) : null}
             </View>
-            {note ? (
-              <Text variant="caption" tone="subtle">
-                {note}
-              </Text>
-            ) : null}
-          </View>
+          ) : null}
         </View>
         <Icon name="edit" color={color.fgSubtle} size={size.icon} />
       </Card>

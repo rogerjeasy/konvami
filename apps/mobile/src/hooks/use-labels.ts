@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { GrammarMastery, GrammarTopic } from '@konvami/api-client';
 
 /**
- * How the grammar screens name a topic and its state. The server sends ids; one this version of
+ * How the screens name a grammar topic and its state. The server sends ids; one this version of
  * the app has no name for shows as its id, as written.
  */
 export function useTopicLabels() {
@@ -15,4 +15,11 @@ export function useTopicLabels() {
     right: (topic: Pick<GrammarTopic, 'uses' | 'correct'>) =>
       t('grammar.right', { correct: topic.correct, uses: topic.uses }),
   };
+}
+
+/** How the screens name a role-play by its scenario id (the server knows only the ids). */
+export function useScenarioTitle() {
+  const { t } = useTranslation();
+  return (id: string) =>
+    t(`scenarios.${id}.title` as 'scenarios.bakery.title', { defaultValue: id });
 }
