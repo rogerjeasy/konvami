@@ -205,7 +205,8 @@
         "enum": [
           "onboarding",
           "placement",
-          "practice"
+          "practice",
+          "exam"
         ],
         "title": "CallPurpose",
         "type": "string"
@@ -832,6 +833,95 @@
         "title": "ErrorDetail",
         "type": "object"
       },
+      "ExamCardOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "prompts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Prompts",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "prompts"
+        ],
+        "title": "ExamCardOut",
+        "type": "object"
+      },
+      "ExamCentreOut": {
+        "additionalProperties": false,
+        "description": "The exam centre in one answer.",
+        "properties": {
+          "exam": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LearnerExamOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/SpeakingExamOut"
+            },
+            "title": "Formats",
+            "type": "array"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "readiness": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReadinessOut"
+            },
+            "title": "Readiness",
+            "type": "object"
+          },
+          "simulations": {
+            "items": {
+              "$ref": "#/components/schemas/SimulationSummaryOut"
+            },
+            "title": "Simulations",
+            "type": "array"
+          },
+          "suggested": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested"
+          }
+        },
+        "required": [
+          "language",
+          "exam",
+          "suggested",
+          "formats",
+          "simulations",
+          "readiness"
+        ],
+        "title": "ExamCentreOut",
+        "type": "object"
+      },
       "ExamOut": {
         "additionalProperties": false,
         "properties": {
@@ -865,6 +955,44 @@
           "levels"
         ],
         "title": "ExamOut",
+        "type": "object"
+      },
+      "ExamPartOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "introduce",
+              "ask_answer",
+              "requests",
+              "questions_about_you",
+              "talk_about_life",
+              "plan_together",
+              "present_topic",
+              "feedback_questions",
+              "talk",
+              "discussion",
+              "topic_conversation",
+              "picture_experience"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "seconds"
+        ],
+        "title": "ExamPartOut",
         "type": "object"
       },
       "ExampleOut": {
@@ -1340,6 +1468,45 @@
         "title": "LanguageOut",
         "type": "object"
       },
+      "LearnerExamOut": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "targetLevel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetlevel"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "targetLevel",
+          "date"
+        ],
+        "title": "LearnerExamOut",
+        "type": "object"
+      },
       "LearnerSpendOut": {
         "additionalProperties": false,
         "properties": {
@@ -1546,6 +1713,35 @@
           "beard"
         ],
         "title": "LookModel",
+        "type": "object"
+      },
+      "MarksOut": {
+        "additionalProperties": false,
+        "properties": {
+          "coherence": {
+            "title": "Coherence",
+            "type": "integer"
+          },
+          "grammar": {
+            "title": "Grammar",
+            "type": "integer"
+          },
+          "task": {
+            "title": "Task",
+            "type": "integer"
+          },
+          "vocabulary": {
+            "title": "Vocabulary",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "task",
+          "coherence",
+          "vocabulary",
+          "grammar"
+        ],
+        "title": "MarksOut",
         "type": "object"
       },
       "Mastery": {
@@ -1828,6 +2024,27 @@
         "title": "NamedLanguageOut",
         "type": "object"
       },
+      "NextSimulationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/ExamCardOut"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "exam": {
+            "$ref": "#/components/schemas/SpeakingExamOut"
+          }
+        },
+        "required": [
+          "exam",
+          "cards"
+        ],
+        "title": "NextSimulationOut",
+        "type": "object"
+      },
       "OnboardingOut": {
         "additionalProperties": false,
         "properties": {
@@ -1851,6 +2068,39 @@
           "placement"
         ],
         "title": "OnboardingOut",
+        "type": "object"
+      },
+      "PartScoreOut": {
+        "additionalProperties": false,
+        "properties": {
+          "feedback": {
+            "title": "Feedback",
+            "type": "string"
+          },
+          "marks": {
+            "$ref": "#/components/schemas/MarksOut"
+          },
+          "modelAnswer": {
+            "title": "Modelanswer",
+            "type": "string"
+          },
+          "part": {
+            "title": "Part",
+            "type": "string"
+          },
+          "share": {
+            "title": "Share",
+            "type": "number"
+          }
+        },
+        "required": [
+          "part",
+          "marks",
+          "share",
+          "feedback",
+          "modelAnswer"
+        ],
+        "title": "PartScoreOut",
         "type": "object"
       },
       "PersonaDescription": {
@@ -2877,6 +3127,62 @@
         "title": "QueueOut",
         "type": "object"
       },
+      "ReadinessOut": {
+        "additionalProperties": false,
+        "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
+          "latest": {
+            "title": "Latest",
+            "type": "number"
+          },
+          "passing": {
+            "title": "Passing",
+            "type": "boolean"
+          },
+          "readyOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readyon"
+          },
+          "weakest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weakest"
+          }
+        },
+        "required": [
+          "latest",
+          "change",
+          "passing",
+          "weakest",
+          "readyOn"
+        ],
+        "title": "ReadinessOut",
+        "type": "object"
+      },
       "Reason": {
         "description": "Why today's part of the plan is what it is.",
         "enum": [
@@ -3362,6 +3668,158 @@
         "title": "ShareOut",
         "type": "object"
       },
+      "SimulationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "callId": {
+            "title": "Callid",
+            "type": "string"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/ExamCardOut"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "exam": {
+            "title": "Exam",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationResultOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startedAt": {
+            "format": "date-time",
+            "title": "Startedat",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "ready",
+              "failed",
+              "too_short"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "callId",
+          "exam",
+          "cards",
+          "startedAt",
+          "status",
+          "result"
+        ],
+        "title": "SimulationOut",
+        "type": "object"
+      },
+      "SimulationResultOut": {
+        "additionalProperties": false,
+        "properties": {
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/PartScoreOut"
+            },
+            "title": "Parts",
+            "type": "array"
+          },
+          "passShare": {
+            "title": "Passshare",
+            "type": "number"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "passed",
+          "passShare",
+          "summary",
+          "parts"
+        ],
+        "title": "SimulationResultOut",
+        "type": "object"
+      },
+      "SimulationSummaryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "callId": {
+            "title": "Callid",
+            "type": "string"
+          },
+          "exam": {
+            "title": "Exam",
+            "type": "string"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passed"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "title": "Startedat",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "ready",
+              "failed",
+              "too_short"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "callId",
+          "exam",
+          "startedAt",
+          "status",
+          "total",
+          "passed"
+        ],
+        "title": "SimulationSummaryOut",
+        "type": "object"
+      },
       "SoundOut": {
         "additionalProperties": false,
         "properties": {
@@ -3385,6 +3843,57 @@
         ],
         "title": "Source",
         "type": "string"
+      },
+      "SpeakingExamOut": {
+        "additionalProperties": false,
+        "description": "A speaking test the exam centre simulates (spec \u00a76.13).",
+        "properties": {
+          "exam": {
+            "title": "Exam",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/ExamPartOut"
+            },
+            "title": "Parts",
+            "type": "array"
+          },
+          "passShare": {
+            "title": "Passshare",
+            "type": "number"
+          },
+          "prepSeconds": {
+            "title": "Prepseconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "exam",
+          "levels",
+          "name",
+          "prepSeconds",
+          "parts",
+          "passShare"
+        ],
+        "title": "SpeakingExamOut",
+        "type": "object"
       },
       "Stage": {
         "enum": [
@@ -5566,6 +6075,302 @@
           }
         },
         "summary": "Request Conversation Report"
+      }
+    },
+    "/v1/exams": {
+      "get": {
+        "operationId": "getExamCentre",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamCentreOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Exam Centre"
+      }
+    },
+    "/v1/exams/simulations/{call_id}": {
+      "get": {
+        "operationId": "getSimulation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Simulation"
+      }
+    },
+    "/v1/exams/simulations/{call_id}/parts/{part_id}/audio": {
+      "get": {
+        "description": "Where a part's model answer plays from, in the examiner's voice.",
+        "operationId": "getModelAnswerAudio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "part_id",
+            "required": true,
+            "schema": {
+              "title": "Part Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Model Answer Audio"
+      }
+    },
+    "/v1/exams/simulations/{call_id}/score": {
+      "post": {
+        "description": "Asks again for a score that could not be written.",
+        "operationId": "rescoreSimulation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimulationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Rescore Simulation"
+      }
+    },
+    "/v1/exams/{exam_id}/next": {
+      "get": {
+        "description": "The cards of the learner's next simulation of a speaking test, to prepare with.",
+        "operationId": "getNextSimulation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exam_id",
+            "required": true,
+            "schema": {
+              "title": "Exam Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextSimulationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Next Simulation"
       }
     },
     "/v1/grammar": {

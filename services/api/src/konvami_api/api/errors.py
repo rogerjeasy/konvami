@@ -15,6 +15,7 @@ from konvami_api.domain.cards import CardError
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import CostError
 from konvami_api.domain.errors import ServiceUnavailable
+from konvami_api.domain.exam_centre import ExamError
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
@@ -73,6 +74,7 @@ _CARD_STATUS = {
     "not_certain": 422,
 }
 _MEMORY_STATUS = {"not_found": 404, "duplicate": 409}
+_EXAM_STATUS = {"not_found": 404, "score_limit": 429}
 _WEEK_STATUS = {"not_found": 404, "nothing_to_report": 409, "consent_required": 403}
 _REPORT_STATUS = {"nothing_to_report": 409, "consent_required": 403, "report_limit": 429}
 _TUTOR_STATUS = {
@@ -135,6 +137,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RetryError)
     async def _retry_error(_: Request, error: RetryError) -> JSONResponse:
         return _response(_RETRY_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(ExamError)
+    async def _exam_error(_: Request, error: ExamError) -> JSONResponse:
+        return _response(_EXAM_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(WeekReviewError)
     async def _week_error(_: Request, error: WeekReviewError) -> JSONResponse:

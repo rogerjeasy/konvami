@@ -26,6 +26,8 @@ from konvami_api.api.schemas import (
     CostsOut,
     DeckOut,
     DeckSummaryOut,
+    ExamCardOut,
+    ExamCentreOut,
     GrammarMapOut,
     GrammarTopicPageOut,
     HomeOut,
@@ -33,6 +35,7 @@ from konvami_api.api.schemas import (
     MemoryOut,
     MemoryPatch,
     MemorySettingsPatch,
+    NextSimulationOut,
     OnboardingOut,
     PersonaDescription,
     PersonaDraftOut,
@@ -57,7 +60,9 @@ from konvami_api.api.schemas import (
     RetriesOut,
     RetryOut,
     ReviewIn,
+    SimulationOut,
     SoundOut,
+    SpeakingExamOut,
     TranscriptOut,
     TutorCorrectionIn,
     TutorQuestionIn,
@@ -77,6 +82,7 @@ from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
 from konvami_api.domain.director import DirectorService
+from konvami_api.domain.exam_centre import ExamService, Simulation
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
@@ -126,6 +132,7 @@ class Services:
     conversation_review: ConversationReview
     director: DirectorService
     week_reviews: WeekReviewService
+    exams: ExamService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -333,6 +340,44 @@ def _router(services: Services) -> APIRouter:
     ) -> WeekReviewOut:
         """Has last week's check-in written (once); `week` is its Monday."""
         return WeekReviewOut.of(services.week_reviews.request(user, tz, week))
+
+    @router.get("/exams", operation_id="getExamCentre")
+    def get_exam_centre(user: CurrentUser) -> ExamCentreOut:
+        return ExamCentreOut.of(services.exams.centre(user))
+
+    @router.get("/exams/{exam_id}/next", operation_id="getNextSimulation", responses=NOT_FOUND)
+    def get_next_simulation(user: CurrentUser, exam_id: str) -> NextSimulationOut:
+        """The cards of the learner's next simulation of a speaking test, to prepare with."""
+        upcoming = services.exams.next(user, exam_id)
+        return NextSimulationOut(
+            exam=SpeakingExamOut.of(upcoming.exam),
+            cards=[ExamCardOut.of(card) for card in upcoming.cards],
+        )
+
+    def simulation_of(user: UUID, simulation: Simulation) -> SimulationOut:
+        return SimulationOut.of(simulation, services.exams.cards_of(user, simulation))
+
+    @router.get("/exams/simulations/{call_id}", operation_id="getSimulation", responses=NOT_FOUND)
+    def get_simulation(user: CurrentUser, call_id: str) -> SimulationOut:
+        return simulation_of(user, services.exams.result(user, call_id))
+
+    @router.post(
+        "/exams/simulations/{call_id}/score",
+        operation_id="rescoreSimulation",
+        responses=NOT_FOUND | LIMITED,
+    )
+    def rescore_simulation(user: CurrentUser, call_id: str) -> SimulationOut:
+        """Asks again for a score that could not be written."""
+        return simulation_of(user, services.exams.retry(user, call_id))
+
+    @router.get(
+        "/exams/simulations/{call_id}/parts/{part_id}/audio",
+        operation_id="getModelAnswerAudio",
+        responses=NOT_FOUND | UNAVAILABLE,
+    )
+    def get_model_answer_audio(user: CurrentUser, call_id: str, part_id: str) -> SoundOut:
+        """Where a part's model answer plays from, in the examiner's voice."""
+        return SoundOut(url=services.exams.audio(user, call_id, part_id))
 
     @router.get("/weeks/{week}/review", operation_id="getWeekReview", responses=NOT_FOUND)
     def get_week_review(

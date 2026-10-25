@@ -17,6 +17,7 @@ from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.director import DirectorService
+from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
@@ -52,6 +53,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
+    InMemoryExamRepository,
     InMemoryFileStore,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
@@ -66,6 +68,7 @@ from tests.fakes import (
     InMemoryVoiceSessionRepository,
     InMemoryWeekReviewRepository,
     RecordingCallStarter,
+    RecordingExamStarter,
     RecordingNotifier,
     RecordingReportStarter,
     RecordingWeekStarter,
@@ -166,11 +169,13 @@ VOICE = VoiceSettings(
         CallPurpose.ONBOARDING: "gpt-realtime-2.1",
         CallPurpose.PLACEMENT: "gpt-realtime-2.1",
         CallPurpose.PRACTICE: "gpt-realtime-2.1-mini",
+        CallPurpose.EXAM: "gpt-realtime-2.1-mini",
     },
     max_seconds={
         CallPurpose.ONBOARDING: 480,
         CallPurpose.PLACEMENT: 720,
         CallPurpose.PRACTICE: 600,
+        CallPurpose.EXAM: 600,
     },
     voice="marin",
     transcription_model="gpt-transcribe",
@@ -244,6 +249,11 @@ def report_starter() -> RecordingReportStarter:
 
 
 @pytest.fixture
+def exam_starter() -> RecordingExamStarter:
+    return RecordingExamStarter()
+
+
+@pytest.fixture
 def week_starter() -> RecordingWeekStarter:
     return RecordingWeekStarter()
 
@@ -277,6 +287,7 @@ def services(
     retry_transcriber: ScriptedTranscriber,
     answer_transcriber: ScriptedTranscriber,
     week_starter: RecordingWeekStarter,
+    exam_starter: RecordingExamStarter,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -354,6 +365,18 @@ def services(
         clock=clock,
         new_id=lambda: next(question_ids),
     )
+    exams = ExamService(
+        profiles=profiles,
+        personas=personas,
+        conversations=conversations,
+        sessions=calls,
+        repository=InMemoryExamRepository(),
+        starter=exam_starter,
+        text_model=text_model,
+        model="gpt-6.1-sol",
+        sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
+        clock=clock,
+    )
     voice = VoiceCallService(
         settings=VOICE,
         scripts={
@@ -377,6 +400,7 @@ def services(
                     week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
                 ),
             ),
+            CallPurpose.EXAM: ExamScript(exams),
         },
         accounts=directory,
         provider=voice_provider,
@@ -457,6 +481,7 @@ def services(
         ),
         grammar=grammar,
         director=director,
+        exams=exams,
         week_reviews=WeekReviewService(
             profiles=profiles,
             accounts=directory,
