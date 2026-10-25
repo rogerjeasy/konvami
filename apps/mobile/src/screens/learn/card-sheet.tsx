@@ -5,16 +5,19 @@ import type { Card } from '@konvami/api-client';
 import { NoticeBox } from '@/components/notice-box';
 import { ActionRow, Sheet } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { ArticleWord, WordForms } from '@/components/word-forms';
 import { commitFeedback } from '@/lib/haptics';
 import { usePracticeServices } from '@/practice/services';
 import { dueLabel } from './due-label';
+import { Listen } from './listen';
 
 // Stands between the facts about a card ("Word · Reviewed 3 times · Tomorrow").
 const SEPARATOR = ' · ';
 
 /**
  * One card in full, in a sheet: both sides, where a word came from or why a correction is
- * right, how often it was reviewed and when it is due. The card can be removed from here.
+ * right, a word's forms (its article in its gender's colour), its sound in the learner's
+ * partner's voice, how often it was reviewed and when it is due. The card can be removed from here.
  */
 export function CardSheet({ card, onClose }: { card: Card | null; onClose: () => void }) {
   const { t, i18n } = useTranslation();
@@ -44,7 +47,7 @@ export function CardSheet({ card, onClose }: { card: Card | null; onClose: () =>
     dueLabel(t, i18n.language, card.dueAt, new Date(clock.now()), true),
   ];
   return (
-    <Sheet visible title={correction ? t('learn.kind.correction') : card.front} onClose={close}>
+    <Sheet visible title={t(`learn.kind.${card.kind}`)} onClose={close}>
       <View testID="card-sheet" className="gap-4 pb-1 pt-2">
         {correction ? (
           <View className="gap-3">
@@ -69,15 +72,25 @@ export function CardSheet({ card, onClose }: { card: Card | null; onClose: () =>
             ) : null}
           </View>
         ) : (
-          <View className="gap-1.5">
-            <Text variant="emphasis">{card.back}</Text>
-            {card.note ? (
-              <Text variant="small" tone="subtle" className="italic">
-                {card.note}
-              </Text>
-            ) : null}
+          <View className="gap-3">
+            <ArticleWord
+              text={card.front}
+              article={card.details?.article ?? null}
+              variant="heading"
+              header
+            />
+            <View className="gap-1.5">
+              <Text variant="emphasis">{card.back}</Text>
+              {card.note ? (
+                <Text variant="small" tone="subtle" className="italic">
+                  {card.note}
+                </Text>
+              ) : null}
+            </View>
+            {card.details ? <WordForms details={card.details} /> : null}
           </View>
         )}
+        <Listen cardId={card.id} />
         <Text variant="caption" tone="subtle">
           {facts.join(SEPARATOR)}
         </Text>

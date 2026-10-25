@@ -38,6 +38,13 @@ const light = {
   dangerBorder: '#DC2626',
   dangerSoft: '#FEF2F2',
   dangerTitle: '#991B1B',
+  /**
+   * A noun's article in its gender's colour on a card (der blue, die red, das green: spec §6.7,
+   * the usual convention). Only the article is coloured, never a whole word or a mistake.
+   */
+  genderMasc: '#1D4ED8',
+  genderFem: '#B91C1C',
+  genderNeut: '#15803D',
   secondaryBg: '#FFFFFF',
   /** "Continue with Apple": black in light mode, white in dark (Apple's button guidelines). */
   appleBg: '#000000',
@@ -82,6 +89,9 @@ const dark: Palette = {
   dangerBorder: '#EF4444',
   dangerSoft: '#2A1414',
   dangerTitle: '#FECACA',
+  genderMasc: '#93C5FD',
+  genderFem: '#FCA5A5',
+  genderNeut: '#86EFAC',
   secondaryBg: '#171B1B',
   appleBg: '#FFFFFF',
   appleFg: '#000000',

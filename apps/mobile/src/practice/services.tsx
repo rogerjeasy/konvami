@@ -78,6 +78,8 @@ export interface PracticeServices {
   ) => Promise<Retried>;
   /** The corrections of a conversation's report the learner said again, and whether right. */
   readRetries: (conversationId: string) => Promise<Retries>;
+  /** Where a card's sound plays from (made the first time). Rejects with an `ApiError`. */
+  cardSound: (id: string) => Promise<string>;
   /** The grammar map (5.14). */
   grammar: ResourceStore<GrammarMap>;
   /** One topic of the map (5.15). Rejects with an `ApiError` (`not_found`, …). */
@@ -116,6 +118,7 @@ export function createPracticeServices(
     | 'getGrammarTopic'
     | 'retryCorrection'
     | 'getRetries'
+    | 'getCardAudio'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -142,6 +145,7 @@ export function createPracticeServices(
     tutor,
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
     readGrammarTopic: (id) => api.getGrammarTopic(id),
+    cardSound: async (id) => (await api.getCardAudio(id)).url,
     retryCorrection: (conversationId, index, recording) =>
       api.retryCorrection(conversationId, index, {
         audio: recording.base64,

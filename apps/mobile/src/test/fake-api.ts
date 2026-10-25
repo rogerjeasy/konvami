@@ -31,6 +31,7 @@ import {
   type TurnAudio,
   type TutorAnswer,
   type TutorQuestion,
+  type WordDetails,
 } from '@konvami/api-client';
 import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
 
@@ -441,6 +442,22 @@ const wording = (text: string) => (text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?
 const MAX_PARTNERS = 12;
 const DRAFTS_PER_DAY = 20;
 const FILES = 'https://files.test';
+
+/** The forms the fake knows of the words of `FAKE_REPORT`, as the worker writes them. */
+export const FAKE_WORD_FORMS: Record<string, WordDetails> = {
+  'das Wochenende': {
+    part: 'noun',
+    article: 'das',
+    plural: 'die Wochenenden',
+    present: null,
+    preterite: null,
+    perfect: null,
+    separable: null,
+    case: null,
+    comparative: null,
+    superlative: null,
+  },
+};
 
 const topic = (
   id: string,
@@ -1254,6 +1271,8 @@ export function createFakeApi(): FakeApi {
         reviewedAt: null,
         reviews: 0,
         lapses: 0,
+        // The worker writes a word's forms a moment later; the fake knows a few at once.
+        details: word ? (FAKE_WORD_FORMS[word.text] ?? null) : null,
       };
       cards.push(card);
       return card;
@@ -1369,6 +1388,11 @@ export function createFakeApi(): FakeApi {
       await record('getRetries', conversationId);
       const tried = retried.get(conversationId) ?? new Map<number, boolean>();
       return { retries: [...tried].map(([index, right]) => ({ index, right })) };
+    },
+    async getCardAudio(id) {
+      await record('getCardAudio', id);
+      if (!cards.some((card) => card.id === id)) throw new ApiError('not_found', 404);
+      return { url: `https://files.test/cards/${id}.mp3` };
     },
     async getGrammarMap() {
       await record('getGrammarMap');

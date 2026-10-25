@@ -15,9 +15,11 @@ import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
+import { ArticleWord, WordForms } from '@/components/word-forms';
 import { waitOf } from '@/lib/card-times';
 import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
+import { Listen } from '@/screens/learn/listen';
 import { ROUTES } from '@/lib/routes';
 import type { ReviewItem, ReviewState } from '@/practice';
 import { useReviewSession } from '@/practice/services';
@@ -74,9 +76,12 @@ function Flashcard({ item, revealed }: { item: ReviewItem; revealed: boolean }) 
           <Badge label={t(`learn.kind.${card.kind}`)} tone="surface" />
         </View>
         {/* A word stands large; a whole sentence a size smaller, so its answer stays in view. */}
-        <Text variant={card.kind === 'word' ? 'title' : 'heading'} accessibilityRole="header">
-          {card.front}
-        </Text>
+        <ArticleWord
+          text={card.front}
+          article={card.details?.article ?? null}
+          variant={card.kind === 'word' ? 'title' : 'heading'}
+          header
+        />
         {revealed ? (
           <Reveal>
             <View accessibilityLiveRegion="polite" className="gap-2 border-t border-border pt-4">
@@ -92,6 +97,8 @@ function Flashcard({ item, revealed }: { item: ReviewItem; revealed: boolean }) 
                   {card.note}
                 </Text>
               ) : null}
+              {card.details ? <WordForms details={card.details} /> : null}
+              <Listen cardId={card.id} />
             </View>
           </Reveal>
         ) : null}
