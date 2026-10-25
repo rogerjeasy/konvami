@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type {
+  AnsweredCard,
   ApiClient,
   Card,
   Catalog,
@@ -16,6 +17,7 @@ import type {
   Retried,
   Retries,
   Scenario,
+  SpokenRecording,
   CardSource,
   Progress,
   Transcript,
@@ -80,6 +82,11 @@ export interface PracticeServices {
   readRetries: (conversationId: string) => Promise<Retries>;
   /** Where a card's sound plays from (made the first time). Rejects with an `ApiError`. */
   cardSound: (id: string) => Promise<string>;
+  /**
+   * Answers a card out loud, from a recording; the card is not rated. Rejects with an `ApiError`
+   * (`answer_limit`, `consent_required`, …).
+   */
+  answerCard: (id: string, recording: SentenceRecording) => Promise<AnsweredCard>;
   /** The grammar map (5.14). */
   grammar: ResourceStore<GrammarMap>;
   /** One topic of the map (5.15). Rejects with an `ApiError` (`not_found`, …). */
@@ -95,6 +102,13 @@ export interface PracticeServices {
   /** Plays a conversation's recordings (and, in Persona Studio, a voice's sample). */
   clips: ClipPlayer;
 }
+
+/** A recording as the server takes it. */
+const spoken = (recording: SentenceRecording): SpokenRecording => ({
+  audio: recording.base64,
+  format: recording.format,
+  durationMs: recording.durationMs,
+});
 
 export function createPracticeServices(
   api: Pick<
@@ -119,6 +133,7 @@ export function createPracticeServices(
     | 'retryCorrection'
     | 'getRetries'
     | 'getCardAudio'
+    | 'answerCard'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -147,11 +162,8 @@ export function createPracticeServices(
     readGrammarTopic: (id) => api.getGrammarTopic(id),
     cardSound: async (id) => (await api.getCardAudio(id)).url,
     retryCorrection: (conversationId, index, recording) =>
-      api.retryCorrection(conversationId, index, {
-        audio: recording.base64,
-        format: recording.format,
-        durationMs: recording.durationMs,
-      }),
+      api.retryCorrection(conversationId, index, spoken(recording)),
+    answerCard: (id, recording) => api.answerCard(id, spoken(recording)),
     readRetries: (conversationId) => api.getRetries(conversationId),
     askTutor: (asked) =>
       tutor.mutate(
@@ -202,6 +214,21 @@ export function usePracticeServices(): PracticeServices {
 export function useHome(): HomeState {
   const { home } = usePracticeServices();
   return useSyncExternalStore(home.subscribe, home.getState, home.getState);
+}
+
+/**
+ * The partner Today suggests talking to, for a screen that starts a conversation of its own
+ * (a grammar topic, a review conversation); null until it is known, or with no partner.
+ */
+export function useSuggestedPartner(): string | null {
+  const { home: store } = usePracticeServices();
+  const home = useHome();
+  const { status } = useSession();
+  const signedIn = status === 'signedIn';
+  useEffect(() => {
+    if (signedIn) void store.load();
+  }, [signedIn, store]);
+  return home.phase === 'ready' ? home.data.suggestedPartnerId : null;
 }
 
 /** The list of past conversations; re-renders when it changes. */

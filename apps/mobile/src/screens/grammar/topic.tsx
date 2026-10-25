@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +23,7 @@ import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { askTutorRoute, callRoute, conversationRoute, ROUTES } from '@/lib/routes';
 import { diffWords } from '@/lib/word-diff';
-import { useGrammarTopic, useHome, usePracticeServices } from '@/practice/services';
+import { useGrammarTopic, useSuggestedPartner } from '@/practice/services';
 import { useTheme } from '@/theme';
 import { useTopicLabels } from './labels';
 
@@ -92,18 +91,11 @@ export function GrammarTopicScreen() {
   const { topic: id = '' } = useLocalSearchParams<{ topic: string }>();
   const reading = useGrammarTopic(id);
   const { name } = useTopicLabels();
-  const { home: homeStore } = usePracticeServices();
-  const home = useHome();
+  const partner = useSuggestedPartner();
   const signedIn = status === 'signedIn';
-
-  // The partner to practise with is the one Today suggests.
-  useEffect(() => {
-    if (signedIn) void homeStore.load();
-  }, [signedIn, homeStore]);
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;
   const page = reading.phase === 'ready' ? reading.page : null;
-  const partner = home.phase === 'ready' ? home.data.suggestedPartnerId : null;
   const title = name(id);
   return (
     <StepLayout

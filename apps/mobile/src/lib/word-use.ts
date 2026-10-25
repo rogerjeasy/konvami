@@ -72,10 +72,14 @@ function stemOf(word: string, rules: WordRules): string {
 const formOf = (form: string, stem: string) =>
   form.startsWith(stem) && form.length - stem.length <= MAX_ENDING;
 
-function usesUnder(entry: string, said: readonly string[], rules: WordRules): boolean {
+/** The main word of a dictionary entry: its longest one ("sich freuen auf" → "freuen"). */
+function mainWord(entry: string, rules: WordRules): string {
   const parts = wordsOf(entry).filter((part) => !rules.minor.has(part));
-  // The main word of a phrase is its longest one ("sich freuen auf" → "freuen").
-  const main = parts.reduce((longest, part) => (part.length > longest.length ? part : longest), '');
+  return parts.reduce((longest, part) => (part.length > longest.length ? part : longest), '');
+}
+
+function usesUnder(entry: string, said: readonly string[], rules: WordRules): boolean {
+  const main = mainWord(entry, rules);
   if (!main) return false;
   const stem = stemOf(main, rules);
   const prefix = rules.separable.find(
@@ -105,4 +109,41 @@ export function usesWord(word: string, text: string, language: string): boolean 
     entry.length > 0 &&
     said.some((_, start) => entry.every((part, offset) => said[start + offset] === part))
   );
+}
+
+// What stands for the word taken out of a sentence.
+const BLANK = '___';
+
+/**
+ * A sentence with the dictionary entry `word` taken out (a cloze: "Ich habe morgen einen ___."),
+ * to ask for the word in the sentence it came from; null when the sentence does not have it.
+ * The rest stays as written. A language pack's rules find the word in its forms, as `usesWord`
+ * does; a separable verb whose prefix went to the end is not taken out.
+ */
+export function blankWord(sentence: string, word: string, language: string): string | null {
+  const tokens = [...sentence.matchAll(/[\p{L}\p{N}]+/gu)].map((match) => ({
+    text: match[0].toLowerCase(),
+    start: match.index,
+    end: match.index + match[0].length,
+  }));
+  const rules = RULES[language];
+  let span: { start: number; end: number } | undefined;
+  if (rules) {
+    const main = mainWord(word, rules);
+    const stem = main ? stemOf(main, rules) : '';
+    const found = tokens.find(
+      (token) => stem && (formOf(token.text, stem) || formOf(token.text, rules.participle + stem)),
+    );
+    span = found;
+  } else {
+    const entry = wordsOf(word);
+    const first = tokens.findIndex(
+      (_, start) =>
+        entry.length > 0 && entry.every((part, offset) => tokens[start + offset]?.text === part),
+    );
+    const last = tokens[first + entry.length - 1];
+    const from = tokens[first];
+    if (from && last) span = { start: from.start, end: last.end };
+  }
+  return span ? sentence.slice(0, span.start) + BLANK + sentence.slice(span.end) : null;
 }

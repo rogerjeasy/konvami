@@ -24,7 +24,12 @@ describe('review session', () => {
     await session.start();
 
     expect(showing(session.getState())).toEqual(['das Wochenende', false, '1/3']);
-    expect(session.getState()).toMatchObject({ saving: false, error: null });
+    expect(session.getState()).toMatchObject({
+      saving: false,
+      error: null,
+      answer: null,
+      language: 'de',
+    });
   });
 
   it('shows the answer when asked, with when the card would come back', async () => {
@@ -41,6 +46,24 @@ describe('review session', () => {
       good: FAKE_DUE_IN_MS.good / 1000,
       easy: FAKE_DUE_IN_MS.easy / 1000,
     });
+  });
+
+  it('shows the answer with how a card answered out loud was heard, until the next card', async () => {
+    const { session } = await setup();
+    await session.start();
+    const answer = {
+      heard: 'Wochenende',
+      outcome: 'article',
+      expected: 'das Wochenende',
+      suggested: 'hard',
+    } as const;
+
+    session.reveal(answer);
+
+    expect(showing(session.getState())).toEqual(['das Wochenende', true, '1/3']);
+    expect(session.getState()).toMatchObject({ answer });
+    await session.rate('hard');
+    expect(session.getState()).toMatchObject({ revealed: false, answer: null });
   });
 
   it('stores each rating and moves on, until every card is done', async () => {

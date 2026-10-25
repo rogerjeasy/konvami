@@ -5,21 +5,28 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
+import { TextButton } from '@/components/text-button';
 import { useTheme } from '@/theme';
 
 /**
- * The top of the Learn tab: how many cards are waiting and the button that starts the review
- * or, when none is, that the learner is caught up and when the next card comes back.
+ * The top of the Learn tab: how many cards are waiting and the buttons that start the review
+ * (turning the cards over, answering them out loud, or in a conversation with a partner) or, when none is, that the learner is caught up and when the next card comes back.
  */
 export function ReviewCard({
   due,
   next,
   onReview,
+  onReviewAloud,
+  onConverse,
 }: {
   due: number;
   /** When the next card comes back, in words ("tomorrow"); null when no card is waiting. */
   next: string | null;
   onReview: () => void;
+  /** Starts a review whose cards are answered out loud (voice review). */
+  onReviewAloud: () => void;
+  /** Starts a conversation built around the due words; null while no partner is known. */
+  onConverse: (() => void) | null;
 }) {
   const { t } = useTranslation();
   const { color } = useTheme();
@@ -34,7 +41,18 @@ export function ReviewCard({
             {t('learn.review.body')}
           </Text>
         </View>
-        <Button label={t('learn.review.start')} onPress={onReview} />
+        <View className="gap-2.5">
+          <Button label={t('learn.review.start')} onPress={onReview} />
+          <Button
+            variant="secondary"
+            label={t('learn.review.aloud')}
+            leading={<Icon name="mic" color={color.fg} size={size.iconMd} />}
+            onPress={onReviewAloud}
+          />
+          {onConverse ? (
+            <TextButton tone="primary" label={t('learn.review.converse')} onPress={onConverse} />
+          ) : null}
+        </View>
       </Card>
     );
   }

@@ -1,37 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
-import type { Retried } from '@konvami/api-client';
-import { apiErrorCode } from '@/api/messages';
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
 import { Pop, Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
-import { Pill } from '@/components/pill';
+import { RecordingNow } from '@/components/recording-now';
 import { Sheet } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
-import { commitFeedback, successFeedback } from '@/lib/haptics';
+import { successFeedback } from '@/lib/haptics';
 import { diffWords, type DiffPart } from '@/lib/word-diff';
 import { usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
-import {
-  RecorderError,
-  useSentenceRecorder,
-  type SentenceRecording,
-} from '@/voice/sentence-recorder';
-
-// A sentence takes seconds to say; a recording left running stops by itself after this (ms).
-const MAX_RECORDING_MS = 20_000;
-
-type Step =
-  | { kind: 'ready' }
-  | { kind: 'recording' }
-  | { kind: 'checking' }
-  | { kind: 'heard'; result: Retried; recording: SentenceRecording }
-  /** `code` is a recorder's (`mic_denied`, …) or the server's (`retry_limit`, …). */
-  | { kind: 'failed'; code: string };
+import { useSpokenAttempt } from '@/voice/use-spoken-attempt';
 
 /** Why an attempt failed, as the sheet says it; any other reason reads as "unavailable". */
 const FAILURE_KEY = {
@@ -101,62 +84,30 @@ export function SayItBetterSheet({
 }) {
   const { t } = useTranslation();
   const { color } = useTheme();
-  const recorder = useSentenceRecorder();
   const { retryCorrection, clips } = usePracticeServices();
-  const [step, setStep] = useState<Step>({ kind: 'ready' });
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { step, record, stop, reset } = useSpokenAttempt(
+    (recording) => {
+      // Recording is offered only while the sheet is open on a correction.
+      if (index === null) return Promise.reject(new Error('closed'));
+      return retryCorrection(conversationId, index, recording);
+    },
+    (result) => {
+      if (result.right && index !== null) {
+        successFeedback();
+        onRight(index);
+      }
+    },
+  );
   const open = index !== null;
 
-  // Leaving stops a recording's timer and what is playing.
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-      clips.stop();
-    },
-    [clips],
-  );
+  // Leaving stops what is playing.
+  useEffect(() => () => clips.stop(), [clips]);
 
   /** Closes the sheet; the next correction opened starts afresh. */
   function close() {
     clips.stop();
-    setStep({ kind: 'ready' });
+    reset();
     onClose();
-  }
-
-  async function record() {
-    commitFeedback();
-    try {
-      await recorder.start();
-      setStep({ kind: 'recording' });
-      timer.current = setTimeout(() => void stop(), MAX_RECORDING_MS);
-    } catch (error) {
-      setStep({
-        kind: 'failed',
-        code: error instanceof RecorderError ? error.code : 'unavailable',
-      });
-    }
-  }
-
-  async function stop() {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-    if (index === null) return;
-    setStep({ kind: 'checking' });
-    try {
-      const recording = await recorder.stop();
-      if (!recording) {
-        setStep({ kind: 'failed', code: 'unavailable' });
-        return;
-      }
-      const result = await retryCorrection(conversationId, index, recording);
-      if (result.right) {
-        successFeedback();
-        onRight(index);
-      }
-      setStep({ kind: 'heard', result, recording });
-    } catch (error) {
-      setStep({ kind: 'failed', code: apiErrorCode(error) });
-    }
   }
 
   const target = diffWords(said, sentence).after;
@@ -185,19 +136,12 @@ export function SayItBetterSheet({
           </View>
         ) : null}
         {step.kind === 'recording' ? (
-          <View className="gap-3">
-            <View accessibilityLiveRegion="polite" className="items-center gap-2">
-              <Pill
-                tone="primary"
-                label={t('report.retry.recording')}
-                leading={<Icon name="mic" color={color.primaryText} size={size.iconSm} />}
-              />
-              <Text variant="small" tone="muted" className="text-center">
-                {t('report.retry.recordingHint')}
-              </Text>
-            </View>
-            <Button label={t('report.retry.stop')} onPress={() => void stop()} />
-          </View>
+          <RecordingNow
+            label={t('report.retry.recording')}
+            hint={t('report.retry.recordingHint')}
+            stopLabel={t('report.retry.stop')}
+            onStop={() => void stop()}
+          />
         ) : null}
         {step.kind === 'checking' ? (
           <Text tone="muted" accessibilityLiveRegion="polite" className="text-center">
@@ -243,10 +187,7 @@ export function SayItBetterSheet({
               {step.result.right ? (
                 <Button label={t('report.retry.done')} onPress={close} />
               ) : (
-                <Button
-                  label={t('report.retry.again')}
-                  onPress={() => setStep({ kind: 'ready' })}
-                />
+                <Button label={t('report.retry.again')} onPress={reset} />
               )}
             </View>
           </Reveal>
@@ -256,7 +197,7 @@ export function SayItBetterSheet({
             <NoticeBox icon="alert" tone="danger">
               {t(failureKey(step.code))}
             </NoticeBox>
-            <Button label={t('report.retry.again')} onPress={() => setStep({ kind: 'ready' })} />
+            <Button label={t('report.retry.again')} onPress={reset} />
           </View>
         ) : null}
       </View>

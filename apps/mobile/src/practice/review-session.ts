@@ -1,4 +1,4 @@
-import type { ApiClient, Card, Rating, ReviewCard } from '@konvami/api-client';
+import type { AnsweredCard, ApiClient, Card, Rating, ReviewCard } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 
 /** A card in a sitting. `dueIn` is null for one that came back: its times have changed. */
@@ -23,6 +23,10 @@ export type ReviewState =
       item: ReviewItem;
       /** The answer is showing. */
       revealed: boolean;
+      /** The language the cards are in (ISO 639-1). */
+      language: string;
+      /** How the card was heard, when it was answered out loud (voice review). */
+      answer: AnsweredCard | null;
       /** Which card of the sitting this is, counted from 1, and how many there are. */
       position: number;
       total: number;
@@ -38,8 +42,8 @@ export interface ReviewSession {
   subscribe(listener: () => void): () => void;
   /** Reads the cards that are due and shows the first; called again, it starts over. Never throws. */
   start(): Promise<void>;
-  /** Shows the answer of the card on screen. */
-  reveal(): void;
+  /** Shows the answer of the card on screen, with how it was heard when answered out loud. */
+  reveal(answer?: AnsweredCard): void;
   /** Stores how well the card was known and moves on. Does nothing until the answer shows. */
   rate(rating: Rating): Promise<void>;
 }
@@ -55,6 +59,7 @@ export function createReviewSession(
   let state: ReviewState = { phase: 'loading' };
   let queue: ReviewItem[] = [];
   let total = 0;
+  let language = '';
   /** Cards that will not come back in this sitting. */
   let finished = 0;
   /** Raised by `start`, so the answer of an earlier start is dropped. */
@@ -76,6 +81,8 @@ export function createReviewSession(
       phase: 'card',
       item,
       revealed: false,
+      language,
+      answer: null,
       position: finished + 1,
       total,
       saving: false,
@@ -95,8 +102,10 @@ export function createReviewSession(
       const from = (run += 1);
       if (state.phase !== 'loading') setState({ phase: 'loading' });
       try {
-        const { cards } = await api.getDueCards(SESSION_SIZE);
+        const due = await api.getDueCards(SESSION_SIZE);
         if (from !== run) return;
+        const { cards } = due;
+        language = due.language;
         queue = [...cards];
         total = cards.length;
         finished = 0;
@@ -107,8 +116,10 @@ export function createReviewSession(
       }
     },
 
-    reveal() {
-      if (state.phase === 'card' && !state.revealed) setState({ ...state, revealed: true });
+    reveal(answer) {
+      if (state.phase === 'card' && !state.revealed) {
+        setState({ ...state, revealed: true, answer: answer ?? null });
+      }
     },
 
     async rate(rating) {

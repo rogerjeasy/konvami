@@ -1,8 +1,10 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { createFakeApi, type FakeApi } from '@/test/fake-api';
+import { createFakeRecorder, type FakeRecorder } from '@/test/fake-recorder';
 import { renderScreen } from '@/test/render';
+import { ApiError } from '@konvami/api-client';
 import { ReviewScreen } from '.';
 
 jest.mock('expo-router', () => ({
@@ -13,6 +15,7 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
     canGoBack: jest.fn(() => true),
   },
+  useLocalSearchParams: jest.fn(() => ({})),
   Redirect: ({ href }: { href: string }) => {
     const { Text } = jest.requireActual('react-native');
     return <Text>{`redirect:${href}`}</Text>;
@@ -21,6 +24,7 @@ jest.mock('expo-router', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(useLocalSearchParams).mockReturnValue({});
   (SecureStore as unknown as { __reset: () => void }).__reset();
 });
 
@@ -192,5 +196,105 @@ describe('5.11 Review', () => {
     await open(await learning(), { signedIn: false });
 
     expect(screen.getByText('redirect:/welcome')).toBeTruthy();
+  });
+});
+
+describe('5.11 Review, answering out loud', () => {
+  async function openAloud(api: FakeApi, recorder: FakeRecorder = createFakeRecorder()) {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ aloud: '1' });
+    await renderScreen(<ReviewScreen />, { api, signedIn: true, recorder });
+    await waitFor(() => expect(screen.queryByText('Getting your cards')).toBeNull());
+    return api;
+  }
+
+  async function sayIt() {
+    await fireEvent.press(screen.getByRole('button', { name: 'Answer out loud' }));
+    expect(await screen.findByText('Recording…')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Stop' }));
+  }
+
+  it('asks for the word from its meaning and the sentence it came from', async () => {
+    await openAloud(await learning());
+
+    expect(screen.getByText('How do you say it? With its article')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'weekend' })).toBeTruthy();
+    expect(screen.getByText('Wie war dein ___?')).toBeTruthy();
+    expect(screen.queryByText(/das Wochenende/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show answer' })).toBeTruthy();
+  });
+
+  it('hears the answer, shows it was right with the word, and suggests a rating', async () => {
+    const api = await openAloud(await learning());
+
+    await sayIt();
+
+    expect(await screen.findByText('That’s it')).toBeTruthy();
+    expect(screen.getByText('You said: “das Wochenende”')).toBeTruthy();
+    expect(screen.getByLabelText('das Wochenende, neuter')).toBeTruthy();
+    expect(screen.getByText('die Wochenenden')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Good, 2 days, suggested' })).toBeTruthy();
+    expect(api.calls.filter(([method]) => method === 'answerCard')).toEqual([
+      ['answerCard', 'card_1', { audio: 'AAEC', format: 'm4a', durationMs: 2400 }],
+    ]);
+    // The learner still rates the card.
+    expect(reviews(api)).toEqual([]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Good, 2 days, suggested' }));
+    expect(await screen.findByRole('header', { name: 'exhibition' })).toBeTruthy();
+    expect(reviews(api)).toEqual([['card_1', 'good']]);
+  });
+
+  it('says a noun without its article is almost right', async () => {
+    const api = await learning();
+    api.hearsNextAnswer('Wochenende');
+    await openAloud(api);
+
+    await sayIt();
+
+    expect(await screen.findByText('Almost: say it with its article')).toBeTruthy();
+    expect(screen.getByText('You said: “Wochenende”')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hard, 1 day, suggested' })).toBeTruthy();
+  });
+
+  it('asks for a correction as it is right, and shows it when the answer was not', async () => {
+    const api = await openAloud(await learning());
+    await fireEvent.press(screen.getByRole('button', { name: 'Show answer' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^Good,/ }));
+    await screen.findByRole('header', { name: 'exhibition' });
+    await fireEvent.press(screen.getByRole('button', { name: 'Show answer' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^Good,/ }));
+    expect(await screen.findByText('How is it right?')).toBeTruthy();
+    api.hearsNextAnswer('Ich habe nach Berlin gefahren');
+
+    await sayIt();
+
+    expect(await screen.findByText('Not quite')).toBeTruthy();
+    expect(screen.getByText('Ich bin nach Berlin gefahren')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Again, 10 min, suggested' })).toBeTruthy();
+  });
+
+  it('says when the microphone is not allowed, and the answer can still be shown', async () => {
+    const recorder = createFakeRecorder();
+    recorder.failNextStart('mic_denied');
+    await openAloud(await learning(), recorder);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Answer out loud' }));
+
+    expect(await screen.findByText(/microphone/i)).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Show answer' }));
+    expect(screen.getByLabelText('das Wochenende, neuter')).toBeTruthy();
+  });
+
+  it('says when the day’s answers out loud are used up', async () => {
+    const api = await learning();
+    api.hearsNextAnswer(new ApiError('answer_limit', 429));
+    await openAloud(api);
+
+    await sayIt();
+
+    expect(
+      await screen.findByText(
+        'That’s all the answers out loud for today. Show the answer instead.',
+      ),
+    ).toBeTruthy();
   });
 });
