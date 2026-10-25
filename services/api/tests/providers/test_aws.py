@@ -10,6 +10,7 @@ from botocore.stub import Stubber
 from konvami_api.domain.voice import CallPurpose
 from konvami_api.providers.aws import (
     LambdaCallStarter,
+    LambdaDetailsStarter,
     LambdaReportStarter,
     SnsNotifier,
     cached_secret,
@@ -69,6 +70,20 @@ def test_a_report_is_handed_to_the_worker_without_waiting_for_it(functions: Stub
     )
 
     LambdaReportStarter(functions.client, "kv-dev-call-worker").start("rtc_1")
+
+
+def test_new_cards_are_handed_to_the_worker_to_be_filled_in(functions: Stubber) -> None:
+    functions.add_response(
+        "invoke",
+        {"StatusCode": 202},
+        {
+            "FunctionName": "kv-dev-call-worker",
+            "InvocationType": "Event",
+            "Payload": json.dumps({"card_details": str(USER)}).encode(),
+        },
+    )
+
+    LambdaDetailsStarter(functions.client, "kv-dev-call-worker").start(USER)
 
 
 def test_a_secret_is_fetched_once_and_then_remembered(secrets: Stubber) -> None:

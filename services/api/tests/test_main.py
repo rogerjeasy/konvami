@@ -243,6 +243,24 @@ def test_the_worker_writes_a_report_when_that_is_what_it_is_started_for(stub: St
     stub.assert_no_pending_responses()
 
 
+def test_the_worker_fills_in_new_cards_when_that_is_what_it_is_started_for(stub: Stubber) -> None:
+    """Asked to fill in a learner's cards, it reads their language and claims their cards (here:
+    none), and asks no model."""
+    with_cards = {
+        **ENVIRONMENT,
+        "KONVAMI_TEXT_MODELS": json.dumps(
+            {"assessment": "gpt-6.1-sol", "personas": "gpt-6-luna", "cards": "gpt-6.1-sol"}
+        ),
+    }
+    backend = main.build_backend(with_cards, clients(stub), sleep=lambda _: None)
+    for _ in range(2):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"card_details": USER})
+
+    stub.assert_no_pending_responses()
+
+
 def test_a_report_is_read_from_the_database(stub: Stubber) -> None:
     """The entry point builds the report service; here only that its route answers."""
     stub.add_response(

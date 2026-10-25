@@ -45,6 +45,9 @@ class Feature(StrEnum):
     LIVE_CORRECTIONS = "live_corrections"
     # A corrected sentence said again ("Say it better", spec §6.5).
     RETRY = "retry"
+    # A word card's forms, and its sound (rich cards, spec §6.7).
+    CARD_DETAILS = "card_details"
+    CARD_AUDIO = "card_audio"
     VOICE_SAMPLE = "voice_sample"
 
 

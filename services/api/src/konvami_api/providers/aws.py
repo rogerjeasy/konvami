@@ -68,6 +68,22 @@ class LambdaReportStarter:
         )
 
 
+class LambdaDetailsStarter:
+    """Has a learner's new word cards filled in with their forms by the worker function, in an
+    invocation of its own, so saving a card does not wait for the text model."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, user_id: UUID) -> None:
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"card_details": str(user_id)}).encode(),
+        )
+
+
 def cached_secret(secrets: SecretsClient, secret_id: str) -> Callable[[], str]:
     """A reader for one secret: fetched on first use, then kept for the life of the container."""
     cache: list[str] = []
