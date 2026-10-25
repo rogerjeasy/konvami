@@ -14,6 +14,7 @@ from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -402,6 +403,7 @@ def services(
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
         ),
+        grammar=GrammarMapService(profiles=profiles, reports=reports),
         costs=CostService(
             owners=frozenset({UUID(OWNER)}),
             budget=BUDGET,

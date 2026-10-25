@@ -87,7 +87,7 @@ function ScenarioSheet({
               commitFeedback();
               setChosen(null);
               onClose();
-              router.push(callRoute(partnerId, scenario.id));
+              router.push(callRoute(partnerId, { scenario: scenario.id }));
             }}
           />
         </View>

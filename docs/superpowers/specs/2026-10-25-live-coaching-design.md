@@ -33,6 +33,8 @@ the level engine all rest on it (spec §9.4, §18 phase 0 spike d).
 - **What the last three conversations were about** (their report summaries), so the partner
   finds something new.
 
+**Since the grammar map** (`2026-10-25-grammar-map-design.md`) every focus is a topic of the map: a mistake counts for the topic it belongs to, and the elicitation hints live on the topics, not on the grammar notes.
+
 **Plain code, not a model (my call).** It runs while the learner waits for the call to connect,
 it costs nothing, and it is tested. The partner is a model and makes the conversation out of the
 plan; a planning model would add seconds and a request per call for little more. The last

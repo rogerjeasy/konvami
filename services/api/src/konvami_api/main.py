@@ -19,6 +19,7 @@ from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
+from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -311,6 +312,7 @@ def build_backend(
             speech=OpenAiSpeech(openai_key, meter=meter),
             model=models.speech,
         ),
+        grammar=GrammarMapService(profiles=profiles, reports=reports),
         costs=CostService(
             owners=costs.owners,
             budget=costs.budget,

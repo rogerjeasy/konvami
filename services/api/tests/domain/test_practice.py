@@ -924,4 +924,4 @@ def test_the_plan_travels_with_the_briefing() -> None:
     briefing = world.practice.prepare(USER, world.accounts.get(USER), TODAY, lena.id)
 
     assert briefing.plan is not None
-    assert [point.topic for point in briefing.plan.focus] == ["case_dative"]
+    assert [point.topic for point in briefing.plan.focus] == ["dative"]

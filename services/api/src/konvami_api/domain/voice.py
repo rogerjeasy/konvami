@@ -191,10 +191,11 @@ class CallScript(Protocol):
         today: dt.date,
         persona_id: UUID | None,
         scenario: str | None = None,
+        practise: str | None = None,
     ) -> Briefing:
         """The persona's instructions for this learner. `persona_id` is the partner the app
-        asked for, if any, and `scenario` the role-play. Raises if the call may not start now;
-        changes nothing."""
+        asked for, if any, `scenario` the role-play and `practise` a grammar topic the learner
+        chose to practise. Raises if the call may not start now; changes nothing."""
 
     def tools(self, user_id: UUID, scenario: str | None = None) -> ToolSet:
         """Fresh tools for one call."""
@@ -331,9 +332,10 @@ class VoiceCallService:
         persona_id: UUID | None = None,
         local_date: dt.date | None = None,
         scenario: str | None = None,
+        practise: str | None = None,
     ) -> CallStarted:
         """`local_date` is today on the learner's calendar, as their device has it; `scenario`
-        makes a practice call a role-play."""
+        makes a practice call a role-play; `practise` puts a grammar topic first in its plan."""
         model = self._settings.models.get(purpose)
         max_seconds = self._settings.max_seconds.get(purpose)
         script = self._scripts.get(purpose)
@@ -353,7 +355,9 @@ class VoiceCallService:
         if level is Level.ECONOMY:
             model = self._settings.economy_models.get(purpose, model)
 
-        briefing = script.prepare(user_id, account, _today(now, local_date), persona_id, scenario)
+        briefing = script.prepare(
+            user_id, account, _today(now, local_date), persona_id, scenario, practise
+        )
         output: dict[str, Any] = {"voice": briefing.voice or self._settings.voice}
         if briefing.speed is not None:
             output["speed"] = briefing.speed

@@ -68,6 +68,16 @@ describe('5.7 Learn', () => {
     expect(router.push).toHaveBeenCalledWith('/tutor');
   });
 
+  it('leads to the grammar map', async () => {
+    await open(inApp());
+
+    const row = screen.getByRole('button', { name: 'Grammar map' });
+    expect(row.props.accessibilityHint).toBe('How well you use each part of the grammar');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/grammar');
+  });
+
   it('says how many cards are due and starts the review', async () => {
     await open(await learning());
 

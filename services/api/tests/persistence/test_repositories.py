@@ -31,12 +31,14 @@ from konvami_api.domain.recordings import RecordingRepository
 from konvami_api.domain.reports import (
     Mistake,
     Report,
+    ReportEntry,
     ReportRepository,
     ReportTotals,
     Rewrite,
     Stats,
     Status,
     StoredReport,
+    TopicUse,
     WeekMistakes,
     Word,
 )
@@ -349,7 +351,11 @@ def test_a_session_keeps_its_plan(sessions: Sessions) -> None:
     plan = SessionPlan(
         focus=(
             FocusPoint(
-                "case_dative", "Dative", "Ask how they travel.", (("mit der Bus", "mit dem Bus"),)
+                "dative",
+                "Dative",
+                "Ask how they travel.",
+                (("mit der Bus", "mit dem Bus"),),
+                ("case_dative",),
             ),
         ),
         words=(PlanWord("der Termin", "le rendez-vous"),),
@@ -1351,6 +1357,17 @@ def test_a_written_report_is_read_back_as_it_was_stored(reports: Reports) -> Non
     assert reports.reports.load("rtc_1") == StoredReport("ready", NOON, REPORT)
 
 
+def test_a_report_keeps_the_grammar_topics_the_learner_used(reports: Reports) -> None:
+    counted = replace(REPORT, usage=(TopicUse("perfekt", 3, 1), TopicUse("dative", 1, 0)))
+    ask(reports.reports, "rtc_1", NOON)
+
+    reports.reports.written("rtc_1", "ready", counted)
+
+    stored = reports.reports.load("rtc_1")
+    assert stored is not None
+    assert stored.report == counted
+
+
 @pytest.mark.parametrize("status", ["failed", "too_short"])
 def test_a_report_that_was_not_written_keeps_why(reports: Reports, status: Status) -> None:
     ask(reports.reports, "rtc_1", NOON)
@@ -1505,7 +1522,7 @@ def test_the_latest_report_is_the_ready_one_of_the_learners_newest_conversation(
     assert reports.reports.latest(USER) == newer
 
 
-def test_recent_reports_are_the_ready_ones_of_the_learners_last_conversations_in_a_language(
+def test_a_learners_report_history_is_the_ready_reports_of_their_last_conversations(
     reports: Reports,
 ) -> None:
     def call(call_id: str, at: datetime, user: UUID = USER) -> None:
@@ -1525,9 +1542,12 @@ def test_recent_reports_are_the_ready_ones_of_the_learners_last_conversations_in
     reports.reports.written("rtc_r5", "ready", third)
     reports.reports.written("rtc_theirs", "ready", replace(REPORT, summary="Le leur."))
 
-    assert reports.reports.recent(USER, "de", 2) == [third, second]
-    assert reports.reports.recent(USER, "de", 5) == [third, second, first]
-    assert reports.reports.recent(USER, "fr", 5) == []
+    assert reports.reports.history(USER, "de", 2) == [
+        ReportEntry("rtc_r5", NOON + 5 * HOUR, third),
+        ReportEntry("rtc_r2", NOON + 2 * HOUR, second),
+    ]
+    assert [e.report for e in reports.reports.history(USER, "de", 5)] == [third, second, first]
+    assert reports.reports.history(USER, "fr", 5) == []
 
 
 def test_a_learner_without_a_ready_report_has_no_latest_one(reports: Reports) -> None:
