@@ -2645,22 +2645,22 @@ def a_phone(address: str = "ExponentPushToken[1]", user: UUID = USER, **changes:
 
 
 def test_a_phone_is_read_back_as_it_was_registered(phones: PushDeviceRepository) -> None:
-    phones.register(a_phone())
+    phones.register(a_phone(), 5)
 
     assert phones.of(USER) == [a_phone()]
-    assert phones.listed(10) == [a_phone()]
+    assert phones.not_nudged_since(NOON, 10) == [a_phone()]
     assert phones.of(OTHER_USER) == []
 
 
 def test_a_phone_registered_again_is_kept_as_it_is_now_and_can_move(
     phones: PushDeviceRepository,
 ) -> None:
-    phones.register(a_phone())
+    phones.register(a_phone(), 5)
     phones.nudged("ExponentPushToken[1]", NOON + HOUR)
-    phones.register(a_phone(language="en", registered_at=NOON + HOUR))
+    phones.register(a_phone(language="en", registered_at=NOON + HOUR), 5)
     nudge_kept = phones.of(USER)[0].nudged_at
 
-    phones.register(a_phone(user=OTHER_USER, registered_at=NOON + 2 * HOUR))
+    phones.register(a_phone(user=OTHER_USER, registered_at=NOON + 2 * HOUR), 5)
 
     assert nudge_kept == NOON + HOUR
     assert phones.of(USER) == []
@@ -2671,8 +2671,8 @@ def test_a_phone_registered_again_is_kept_as_it_is_now_and_can_move(
 def test_a_phone_is_forgotten_by_its_owner_or_when_it_is_gone(
     phones: PushDeviceRepository,
 ) -> None:
-    phones.register(a_phone("ExponentPushToken[1]"))
-    phones.register(a_phone("ExponentPushToken[2]"))
+    phones.register(a_phone("ExponentPushToken[1]"), 5)
+    phones.register(a_phone("ExponentPushToken[2]"), 5)
 
     phones.remove("ExponentPushToken[1]", OTHER_USER)
     phones.remove("ExponentPushToken[2]")
@@ -2680,3 +2680,29 @@ def test_a_phone_is_forgotten_by_its_owner_or_when_it_is_gone(
     assert [phone.token for phone in phones.of(USER)] == ["ExponentPushToken[1]"]
     phones.remove("ExponentPushToken[1]", USER)
     assert phones.of(USER) == []
+
+
+def test_a_learner_keeps_only_their_newest_phones(phones: PushDeviceRepository) -> None:
+    for number in range(4):
+        phones.register(
+            a_phone(f"ExponentPushToken[{number}]", registered_at=NOON + number * HOUR), 3
+        )
+
+    assert sorted(phone.token for phone in phones.of(USER)) == [
+        "ExponentPushToken[1]",
+        "ExponentPushToken[2]",
+        "ExponentPushToken[3]",
+    ]
+
+
+def test_the_nudge_reads_only_phones_not_nudged_lately(phones: PushDeviceRepository) -> None:
+    phones.register(a_phone("ExponentPushToken[1]"), 5)
+    phones.register(a_phone("ExponentPushToken[2]"), 5)
+    phones.register(a_phone("ExponentPushToken[3]"), 5)
+    phones.nudged("ExponentPushToken[1]", NOON - 10 * HOUR)
+    phones.nudged("ExponentPushToken[2]", NOON)
+
+    waiting = phones.not_nudged_since(NOON - HOUR, 10)
+
+    # Never nudged first, then the longest waiting.
+    assert [phone.token for phone in waiting] == ["ExponentPushToken[3]", "ExponentPushToken[1]"]

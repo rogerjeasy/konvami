@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from konvami_api.domain.push import PushRequestError
+from konvami_api.domain.push import MAX_PHONES, PushDevice, PushRequestError
 from tests.domain import test_exam_centre as exam_centre
 from tests.domain import test_reports as reports
 from tests.world import NOON, OTHER_USER, USER, World
@@ -153,3 +153,40 @@ def test_a_scored_simulation_reaches_the_learners_phone() -> None:
             {"open": "simulation", "id": call_id},
         )
     ]
+
+
+def test_a_time_zone_the_server_does_not_know_is_refused() -> None:
+    world = World()
+    world.onboard()
+
+    for zone in ("Mars/Olympus", "Europe", "../etc"):
+        with pytest.raises(PushRequestError):
+            world.push.register(
+                USER, token=PHONE, platform="ios", timezone=zone, language="fr", time="18:00"
+            )
+
+
+def test_a_learner_is_reached_on_their_newest_phones_only() -> None:
+    world = World()
+    world.onboard()
+    for number in range(MAX_PHONES + 1):
+        world.clock.now = NOON + number * DAY
+        phone(world, f"ExponentPushToken[{number}]")
+
+    tokens = {device.token for device in world.push_store.of(USER)}
+    assert len(tokens) == MAX_PHONES
+    assert "ExponentPushToken[0]" not in tokens
+
+
+def test_a_phone_that_cannot_be_read_does_not_stop_the_nudge() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.talk(lena, at=NOON)
+    phone(world)
+    # Stored by other means than registering: its time zone is not one.
+    broken = PushDevice("ExponentPushToken[broken]", USER, "ios", "Europe/", "fr", "18:00", NOON)
+    world.push_store.devices[broken.token] = broken
+    world.clock.now = at_zurich(NOON + 7 * DAY, 18)
+
+    assert world.push.nudge() >= 1
+    assert PHONE in {message.token for message in world.push_sender.sent}

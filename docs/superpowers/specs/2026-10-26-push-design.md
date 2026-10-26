@@ -33,6 +33,13 @@ week, on purpose). For those, the server sends a push.
   phone registered by another account moves to it. Deleting the account deletes its phones.
 - So the same switch on 6.13 governs reminders and push; 6.13 says so in one line.
 - A token the provider no longer reaches (the app was removed) is forgotten at the next push.
+- A learner is reached on at most **five phones**, the newest; a time zone the server does not
+  know is refused. A phone moves to the account that registered it last: taking over someone
+  else's phone needs its push address, which the API never gives out and only the app on that
+  phone can read, and the move keeps a shared phone from receiving the previous learner's pushes
+  when the removal at sign-out could not get through.
+- The hourly nudge reads only phones not nudged in the last week, and a row it cannot read is
+  skipped without stopping the others.
 
 ## How
 

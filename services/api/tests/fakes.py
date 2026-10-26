@@ -1070,11 +1070,14 @@ class InMemoryPushDeviceRepository:
     def __init__(self) -> None:
         self.devices: dict[str, PushDevice] = {}
 
-    def register(self, device: PushDevice) -> None:
+    def register(self, device: PushDevice, limit: int) -> None:
         # The same phone of the same learner keeps when it was last nudged.
         known = self.devices.get(device.token)
         nudged = known.nudged_at if known and known.user_id == device.user_id else None
         self.devices[device.token] = replace(device, nudged_at=nudged)
+        theirs = sorted(self.of(device.user_id), key=lambda d: d.registered_at, reverse=True)
+        for old in theirs[limit:]:
+            del self.devices[old.token]
 
     def remove(self, token: str, user_id: UUID | None = None) -> None:
         device = self.devices.get(token)
@@ -1084,8 +1087,11 @@ class InMemoryPushDeviceRepository:
     def of(self, user_id: UUID) -> list[PushDevice]:
         return [device for device in self.devices.values() if device.user_id == user_id]
 
-    def listed(self, limit: int) -> list[PushDevice]:
-        return list(self.devices.values())[:limit]
+    def not_nudged_since(self, since: datetime, limit: int) -> list[PushDevice]:
+        waiting = [d for d in self.devices.values() if d.nudged_at is None or d.nudged_at < since]
+        return sorted(waiting, key=lambda d: d.nudged_at or datetime.min.replace(tzinfo=UTC))[
+            :limit
+        ]
 
     def nudged(self, token: str, at: datetime) -> None:
         if token in self.devices:

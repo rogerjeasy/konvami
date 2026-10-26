@@ -14,6 +14,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from konvami_api.domain.conversations import ConversationService, zone_of
 from konvami_api.domain.personas import PersonaService
@@ -76,9 +77,10 @@ class PushMessage:
 
 
 class PushDeviceRepository(Protocol):
-    def register(self, device: PushDevice) -> None:
+    def register(self, device: PushDevice, limit: int) -> None:
         """Keeps a phone for a learner, in place of what was kept for its token (a phone
-        signed in to another account moves to this one)."""
+        signed in to another account moves to this one), and at most `limit` phones of theirs:
+        the ones registered longest ago go."""
 
     def remove(self, token: str, user_id: UUID | None = None) -> None:
         """Forgets a phone: the learner's own one, or (without a learner) one the provider no
@@ -86,8 +88,8 @@ class PushDeviceRepository(Protocol):
 
     def of(self, user_id: UUID) -> list[PushDevice]: ...
 
-    def listed(self, limit: int) -> list[PushDevice]:
-        """Every phone, for the weekly nudge."""
+    def not_nudged_since(self, since: dt.datetime, limit: int) -> list[PushDevice]:
+        """The phones not nudged since `since` (or never), the longest waiting first."""
 
     def nudged(self, token: str, at: dt.datetime) -> None: ...
 
@@ -110,6 +112,17 @@ class PushRequestError(Exception):
 
 # How many phones the nudge looks at in one run: plenty for the testers.
 NUDGE_SCAN = 1000
+# The phones one learner may have reached by push: a tablet and a phone or two, no more.
+MAX_PHONES = 5
+
+
+def _is_zone(name: str) -> bool:
+    """Whether a name is a time zone this server knows."""
+    try:
+        ZoneInfo(name)
+    except Exception:
+        return False
+    return True
 
 
 class PushService:
@@ -138,10 +151,11 @@ class PushService:
         language: str,
         time: str,
     ) -> None:
-        if language not in LANGUAGES:
+        if language not in LANGUAGES or not _is_zone(timezone):
             raise PushRequestError("invalid_value")
         self._repository.register(
-            PushDevice(token, user_id, platform, timezone, language, time, self._clock())
+            PushDevice(token, user_id, platform, timezone, language, time, self._clock()),
+            MAX_PHONES,
         )
 
     def unregister(self, user_id: UUID, token: str) -> None:
@@ -194,13 +208,16 @@ class PushService:
         they talked to last. Answers how many were nudged."""
         now = self._clock()
         due: dict[UUID, list[PushDevice]] = {}
-        for device in self._repository.listed(NUDGE_SCAN):
-            local = now.astimezone(zone_of(device.timezone))
-            if local.hour != int(device.time[:2]):
+        for device in self._repository.not_nudged_since(now - QUIET_FOR, NUDGE_SCAN):
+            try:
+                local = now.astimezone(zone_of(device.timezone))
+                hour = int(device.time[:2])
+            except (ValueError, OSError):
+                # A row that cannot be read is skipped; the others are still nudged.
+                logger.warning("push device skipped: unreadable time zone or hour")
                 continue
-            if device.nudged_at is not None and now - device.nudged_at < QUIET_FOR:
-                continue
-            due.setdefault(device.user_id, []).append(device)
+            if local.hour == hour:
+                due.setdefault(device.user_id, []).append(device)
         nudged = 0
         for user_id, devices in due.items():
             last = self._conversations.listed(user_id, limit=1).conversations
