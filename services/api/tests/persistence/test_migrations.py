@@ -53,6 +53,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0021_voice_answers",
         "0022_week_review",
         "0023_exam_simulation",
+        "0024_memory_ask",
     ]
     assert {
         "app_user",
