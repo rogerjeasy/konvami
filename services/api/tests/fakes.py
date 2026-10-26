@@ -32,6 +32,7 @@ from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
+from konvami_api.domain.push import PushDevice, PushError, PushMessage
 from konvami_api.domain.reports import (
     Report,
     ReportEntry,
@@ -1063,3 +1064,45 @@ class RecordingExamStarter:
 
     def start(self, call_id: str) -> None:
         self.started.append(call_id)
+
+
+class InMemoryPushDeviceRepository:
+    def __init__(self) -> None:
+        self.devices: dict[str, PushDevice] = {}
+
+    def register(self, device: PushDevice) -> None:
+        # The same phone of the same learner keeps when it was last nudged.
+        known = self.devices.get(device.token)
+        nudged = known.nudged_at if known and known.user_id == device.user_id else None
+        self.devices[device.token] = replace(device, nudged_at=nudged)
+
+    def remove(self, token: str, user_id: UUID | None = None) -> None:
+        device = self.devices.get(token)
+        if device is not None and user_id in (None, device.user_id):
+            del self.devices[token]
+
+    def of(self, user_id: UUID) -> list[PushDevice]:
+        return [device for device in self.devices.values() if device.user_id == user_id]
+
+    def listed(self, limit: int) -> list[PushDevice]:
+        return list(self.devices.values())[:limit]
+
+    def nudged(self, token: str, at: datetime) -> None:
+        if token in self.devices:
+            self.devices[token] = replace(self.devices[token], nudged_at=at)
+
+
+class RecordingPushSender:
+    """Keeps what was sent; `gone` are tokens it answers as no longer reaching a phone, and
+    `failing` makes it fail as a provider that cannot be reached."""
+
+    def __init__(self) -> None:
+        self.sent: list[PushMessage] = []
+        self.gone: set[str] = set()
+        self.failing = False
+
+    def send(self, messages: Sequence[PushMessage]) -> list[str]:
+        if self.failing:
+            raise PushError("unreachable")
+        self.sent.extend(messages)
+        return [message.token for message in messages if message.token in self.gone]

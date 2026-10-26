@@ -653,7 +653,11 @@ class ReportService:
         text_model: TextModel,
         model: str,
         clock: Callable[[], dt.datetime],
+        announce: Callable[[UUID, str, UUID | None], None] = lambda *_: None,
     ) -> None:
+        """`announce` tells the learner, by push, that a report is ready: their id, the
+        conversation's and its partner's."""
+        self._announce = announce
         self._profiles = profiles
         self._conversations = conversations
         self._sessions = sessions
@@ -828,6 +832,7 @@ class ReportService:
             usage=_usage(analysis.usage, pack),
         )
         self._repository.written(call_id, "ready", report)
+        self._announce(session.user_id, call_id, partner.id if partner else None)
 
     def _analyse(
         self,

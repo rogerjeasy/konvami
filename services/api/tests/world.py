@@ -29,6 +29,7 @@ from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import (
@@ -77,6 +78,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryPushDeviceRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryRetryRepository,
@@ -87,6 +89,7 @@ from tests.fakes import (
     RecordingDetailsStarter,
     RecordingExamStarter,
     RecordingNotifier,
+    RecordingPushSender,
     RecordingReportStarter,
     RecordingWeekStarter,
     ScriptedTextModel,
@@ -221,6 +224,8 @@ class World:
             text_model=self.text,
             model="gpt-6.1-sol",
             clock=self.clock,
+            # The push service comes later: looked up when a report or a score is written.
+            announce=lambda *said: self.push.report_ready(*said),
         )
         self.level_store = InMemoryLevelRepository(self.sessions)
         self.levels = LevelService(
@@ -295,6 +300,15 @@ class World:
             new_id=lambda: next(memory_ids),
         )
         self.reminders = ReminderService(memories=self.memories, cards=self.cards, clock=self.clock)
+        self.push_store = InMemoryPushDeviceRepository()
+        self.push_sender = RecordingPushSender()
+        self.push = PushService(
+            repository=self.push_store,
+            sender=self.push_sender,
+            personas=self.personas,
+            conversations=self.conversations,
+            clock=self.clock,
+        )
         self.files = InMemoryFileStore()
         self.recording_store = InMemoryRecordingRepository(self.sessions)
         self.transcriber = FakeTranscriber(self.files)
@@ -360,6 +374,8 @@ class World:
             model="gpt-6.1-sol",
             sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
             clock=self.clock,
+            # The push service comes later: looked up when a report or a score is written.
+            announce=lambda *said: self.push.simulation_scored(*said),
         )
         self.exam_script = ExamScript(self.exams)
         self.voice = VoiceCallService(

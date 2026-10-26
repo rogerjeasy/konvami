@@ -378,7 +378,11 @@ class ExamService:
         model: str,
         sounds: Sounds,
         clock: Callable[[], dt.datetime],
+        announce: Callable[[UUID, str, str], None] = lambda *_: None,
     ) -> None:
+        """`announce` tells the learner, by push, that a simulation is scored: their id, the
+        call's and the speaking test's name."""
+        self._announce = announce
         self._profiles = profiles
         self._personas = personas
         self._conversations = conversations
@@ -601,6 +605,7 @@ class ExamService:
             pass_share=exam.pass_share,
         )
         self._repository.written(call_id, "ready", result)
+        self._announce(user_id, call_id, exam.name)
 
     def audio(self, user_id: UUID, call_id: str, part_id: str) -> str:
         """Where a part's model answer plays from, in the examiner's voice, made the first
