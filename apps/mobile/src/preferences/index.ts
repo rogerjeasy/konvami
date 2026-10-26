@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import i18n, { deviceLanguage, isLanguage, type Language } from '@/i18n';
 import { readItem, removeItem, writeItem } from '@/lib/storage';
-import { REMINDER_TIMES, type ReminderSettings } from '@/reminders/schedule';
+import { DEFAULT_REMINDERS, REMINDER_TIMES, type ReminderSettings } from '@/reminders/schedule';
 
 /**
  * Device preferences: the app language, which applies before sign-in, and how a conversation
@@ -48,15 +48,24 @@ let current: Preferences = {
   reminders: null,
 };
 
-/** Stored reminder settings, or `null` for none or for something this version cannot read. */
+/**
+ * Stored reminder settings, or `null` for none or for something this version cannot read. A
+ * choice added later (`events`, `word`) takes its default when the stored settings predate it.
+ */
 function remindersOf(text: string | null): ReminderSettings | null {
   try {
     const value: unknown = text ? JSON.parse(text) : null;
     if (typeof value !== 'object' || value === null) return null;
-    const { on, time, cards } = value as Record<string, unknown>;
+    const { on, time, cards, events, word } = value as Record<string, unknown>;
     if (typeof on !== 'boolean' || typeof cards !== 'boolean') return null;
     if (typeof time !== 'string' || !REMINDER_TIMES.includes(time)) return null;
-    return { on, time, cards };
+    return {
+      on,
+      time,
+      cards,
+      events: typeof events === 'boolean' ? events : DEFAULT_REMINDERS.events,
+      word: typeof word === 'boolean' ? word : DEFAULT_REMINDERS.word,
+    };
   } catch {
     return null;
   }

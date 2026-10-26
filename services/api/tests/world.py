@@ -30,6 +30,7 @@ from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
+from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import (
     MAX_REQUESTS,
     Mistake,
@@ -293,6 +294,7 @@ class World:
             clock=self.clock,
             new_id=lambda: next(memory_ids),
         )
+        self.reminders = ReminderService(memories=self.memories, cards=self.cards, clock=self.clock)
         self.files = InMemoryFileStore()
         self.recording_store = InMemoryRecordingRepository(self.sessions)
         self.transcriber = FakeTranscriber(self.files)

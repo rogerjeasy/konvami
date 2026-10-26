@@ -48,6 +48,7 @@ def found(
     day: str | None = None,
     importance: int = 2,
     replaces: int | None = None,
+    ask: str | None = None,
 ) -> dict[str, Any]:
     """One memory as the text model answers it."""
     return {
@@ -57,6 +58,7 @@ def found(
         "importance": importance,
         "turn": turn,
         "replaces": replaces,
+        "ask": ask,
     }
 
 
@@ -201,6 +203,40 @@ def test_a_day_is_kept_only_when_it_is_the_date_of_an_event(
     world = remembered(found(kind, "A un entretien d'embauche.", 1, day=day))
 
     assert [memory.day for memory in world.memories.view(USER).memories] == [kept]
+
+
+ASK = "Alors, cet entretien, ça s'est passé comment ?"
+
+
+def test_an_event_to_come_keeps_what_its_partner_asks_the_day_after() -> None:
+    world = remembered(found("event", INTERVIEW["text"], 1, day="2026-10-16", ask=ASK))
+
+    assert [memory.ask for memory in world.memories.view(USER).memories] == [ASK]
+
+
+@pytest.mark.parametrize(
+    ("kind", "day"),
+    [
+        # The conversation was on the 9th: an event that day, or before it, is not to come.
+        ("event", "2026-10-09"),
+        ("event", "2026-10-02"),
+        ("event", None),
+        ("fact", None),
+    ],
+)
+def test_only_an_event_still_to_come_keeps_a_question(kind: str, day: str | None) -> None:
+    world = remembered(found(kind, INTERVIEW["text"], 1, day=day, ask=ASK))
+
+    assert [memory.ask for memory in world.memories.view(USER).memories] == [None]
+
+
+def test_the_writer_is_told_to_ask_as_the_partner_in_the_learners_language() -> None:
+    world = remembered(ZURICH)
+
+    instructions = world.text.tasks[-1].instructions
+    assert "`ask`" in instructions
+    assert "French" in instructions
+    assert "familiar form of address" in instructions
 
 
 def test_a_memory_is_tidied_and_cut_to_a_note() -> None:
@@ -511,6 +547,16 @@ def test_the_learner_can_move_an_event_to_another_day_or_take_its_day_away() -> 
     assert (moved.day, moved.text) == (date(2026, 10, 23), INTERVIEW["text"])
 
     assert world.memories.change(USER, memory_id(1), day=None).day is None
+
+
+def test_new_words_drop_the_question_a_new_day_keeps_it() -> None:
+    world = remembered(found("event", INTERVIEW["text"], 1, day="2026-10-16", ask=ASK))
+
+    moved = world.memories.change(USER, memory_id(1), day=date(2026, 10, 23))
+    reworded = world.memories.change(USER, memory_id(1), text="Entretien chez Planzer.")
+
+    assert moved.ask == ASK
+    assert reworded.ask is None
 
 
 def test_only_an_event_is_on_a_day() -> None:

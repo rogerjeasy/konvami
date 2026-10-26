@@ -603,6 +603,11 @@ export const fr: Translation = {
   },
   reminders: {
     channel: 'Rappels d’entraînement',
+    word: {
+      title: 'Le mot du jour',
+      line: 'Mot du jour : {{word}} ({{meaning}})',
+      alone: '{{word}} : {{meaning}}. Touche pour l’écouter.',
+    },
     body: {
       today: 'Tu as {{minutes}} ? Le programme du jour est prêt.',
       practice: 'Tu as quelques minutes ? Ton programme du jour est prêt.',
@@ -1690,6 +1695,8 @@ export const fr: Translation = {
       on: 'Me rappeler les jours d’entraînement',
       time: 'Heure',
       cards: 'Aussi quand des cartes attendent',
+      events: 'Me demander comment ça s’est passé',
+      word: 'Un mot du jour parmi mes mots enregistrés',
       next: 'Prochain rappel : {{when}}',
       none: 'Aucun rappel dans les sept prochains jours.',
       denied: 'Les notifications de Konvami sont désactivées dans les réglages de ton téléphone.',

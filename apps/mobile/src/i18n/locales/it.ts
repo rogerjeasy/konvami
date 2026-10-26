@@ -602,6 +602,11 @@ export const it: Translation = {
   },
   reminders: {
     channel: 'Promemoria di pratica',
+    word: {
+      title: 'La parola del giorno',
+      line: 'Parola del giorno: {{word}} ({{meaning}})',
+      alone: '{{word}}: {{meaning}}. Tocca per ascoltarla.',
+    },
     body: {
       today: 'Hai {{minutes}}? Il piano di oggi è pronto.',
       practice: 'Hai qualche minuto? Il tuo piano di oggi è pronto.',
@@ -1686,6 +1691,8 @@ export const it: Translation = {
       on: 'Ricordamelo nei giorni di pratica',
       time: 'Ora',
       cards: 'Anche quando ci sono carte da ripassare',
+      events: 'Chiedermi com’è andata',
+      word: 'Una parola del giorno tra le mie parole salvate',
       next: 'Prossimo promemoria: {{when}}',
       none: 'Nessun promemoria nei prossimi sette giorni.',
       denied: 'Le notifiche di Konvami sono disattivate nelle impostazioni del telefono.',

@@ -105,6 +105,8 @@ export type PlanSession = Schemas['PlanSessionOut'];
 export type PlanReason = WeekPlan['reason'];
 /** The week's simulations of the learner's speaking test. */
 export type ExamWeek = Schemas['ExamWeekOut'];
+/** What the phone's reminders need besides the plan: questions after events, a word a day. */
+export type ReminderNotes = Schemas['ReminderNotesOut'];
 /** Last week's check-in on Progress: its numbers, and the partner's few sentences once written. */
 export type WeekReview = Schemas['WeekReviewOut'];
 export type WeekNumbers = Schemas['WeekNumbersOut'];
@@ -330,6 +332,8 @@ export interface ApiClient {
   getRetries(conversationId: string): Promise<Retries>;
   /** Where a card's sound plays from (made the first time). Fails with `not_found`, `unavailable`. */
   getCardAudio(id: string): Promise<{ url: string }>;
+  /** One of the learner's cards (a word of the day opens it). Rejects `not_found`. */
+  getCard(id: string): Promise<Card>;
   /**
    * Answers a card out loud; the card is not rated. Fails with `not_found`, `invalid_value`,
    * `answer_limit`, `consent_required` or `unavailable`.
@@ -514,6 +518,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getRetries: (conversationId) =>
       request('GET', `/v1/conversations/${encodeURIComponent(conversationId)}/retries`),
     getCardAudio: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}/audio`),
+    getCard: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}`),
     answerCard: (id, answer) =>
       request('POST', `/v1/cards/${encodeURIComponent(id)}/answers`, answer),
     getGrammarMap: () => request('GET', '/v1/grammar'),

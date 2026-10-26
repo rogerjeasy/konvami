@@ -103,7 +103,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get Card
+         * @description One of the learner's cards (a word of the day opens it).
+         */
+        get: operations["getCard"];
         put?: never;
         post?: never;
         /** Remove Card */
@@ -1180,6 +1184,15 @@ export interface components {
             /** Unpriced */
             unpriced: number;
         };
+        /** DailyWordOut */
+        DailyWordOut: {
+            card: components["schemas"]["CardOut"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+        };
         /** DayOut */
         DayOut: {
             /**
@@ -1322,6 +1335,16 @@ export interface components {
             /** Value */
             value: unknown;
         };
+        /** FollowUpOut */
+        FollowUpOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Text */
+            text: string;
+        };
         /** GrammarMapOut */
         GrammarMapOut: {
             /** Language */
@@ -1414,6 +1437,7 @@ export interface components {
             plan: components["schemas"]["WeekPlanOut"];
             /** Recent */
             recent: components["schemas"]["ConversationOut"][];
+            reminders: components["schemas"]["ReminderNotesOut"];
             /** Suggestedpartnerid */
             suggestedPartnerId: string | null;
         };
@@ -2047,6 +2071,17 @@ export interface components {
         RecordingsPatch: {
             /** Kept */
             kept: boolean;
+        };
+        /**
+         * ReminderNotesOut
+         * @description What the phone's reminders of the next seven days need besides the week's plan
+         *     (spec §6.18): the questions after the learner's events, and a word of the day.
+         */
+        ReminderNotesOut: {
+            /** Followups */
+            followUps: components["schemas"]["FollowUpOut"][];
+            /** Words */
+            words: components["schemas"]["DailyWordOut"][];
         };
         /** ReportMistakeOut */
         ReportMistakeOut: {
@@ -2920,6 +2955,55 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

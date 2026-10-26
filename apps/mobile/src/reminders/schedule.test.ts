@@ -1,5 +1,5 @@
-import type { WeekPlan } from '@konvami/api-client';
-import { FAKE_EXAM_WEEK, FAKE_PLAN } from '@/test/fake-api';
+import type { ReminderNotes, WeekPlan } from '@konvami/api-client';
+import { FAKE_EXAM_WEEK, FAKE_PLAN, FAKE_WORD_CARD as WORD } from '@/test/fake-api';
 import { DEFAULT_REMINDERS, upcomingReminders, type ReminderSettings } from './schedule';
 
 // Thursday 8 October 2026, 10:00 on the device's clock. The habit's days are Monday, Tuesday,
@@ -9,6 +9,7 @@ const PLAN: WeekPlan = {
   ...FAKE_PLAN,
   upcoming: ['2026-10-08', '2026-10-10', '2026-10-12', '2026-10-13'],
 };
+const NO_NOTES: ReminderNotes = { followUps: [], words: [] };
 
 function remind(
   changes: Partial<WeekPlan> = {},
@@ -17,16 +18,19 @@ function remind(
     cardsDue = 0,
     practisedToday = false,
     now = NOW,
+    notes = NO_NOTES,
   }: {
     settings?: ReminderSettings;
     cardsDue?: number;
     practisedToday?: boolean;
     now?: Date;
+    notes?: ReminderNotes;
   } = {},
 ) {
   return upcomingReminders({
     now,
     plan: { ...PLAN, ...changes },
+    notes,
     cardsDue,
     practisedToday,
     settings,
@@ -119,5 +123,39 @@ describe('the reminders of the next seven days', () => {
       'reminder-2026-10-12',
       'reminder-2026-10-13',
     ]);
+  });
+
+  it('asks how an event went on the day after it, in place of that day’s reminder', () => {
+    const notes = {
+      ...NO_NOTES,
+      followUps: [{ day: '2026-10-10', text: 'Alors, cet entretien ?' }],
+    };
+
+    const saturday = remind({}, { notes })[1];
+
+    expect(saturday).toMatchObject({ kind: 'followUp', ask: 'Alors, cet entretien ?' });
+    expect(saturday?.at.toDateString()).toBe('Sat Oct 10 2026');
+    // Turned off, Saturday is a practice day again.
+    expect(remind({}, { notes, settings: { ...DEFAULT_REMINDERS, events: false } })[1]?.kind).toBe(
+      'practice',
+    );
+  });
+
+  it('adds a word of the day to the day’s reminder, or sends it alone on a quiet day', () => {
+    const notes = {
+      ...NO_NOTES,
+      words: ['2026-10-08', '2026-10-09', '2026-10-10'].map((day) => ({ day, card: WORD })),
+    };
+    const settings = { ...DEFAULT_REMINDERS, word: true };
+
+    const [thursday, friday, saturday] = remind({}, { notes, settings });
+
+    expect(thursday).toMatchObject({ kind: 'today', word: WORD });
+    // Friday has no practice and no cards: the word comes alone.
+    expect(friday).toMatchObject({ kind: 'word', word: WORD });
+    expect(friday?.at.toDateString()).toBe('Fri Oct 09 2026');
+    expect(saturday).toMatchObject({ kind: 'practice', word: WORD });
+    // Off by default.
+    expect(remind({}, { notes }).some((reminder) => reminder.word)).toBe(false);
   });
 });

@@ -31,6 +31,7 @@ from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
+from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
 from konvami_api.domain.sounds import Sounds
@@ -472,6 +473,7 @@ def services(
         levels=levels,
         cards=cards,
         memories=memories,
+        reminders=ReminderService(memories=memories, cards=cards, clock=clock),
         home=home,
         progress=progress,
         accounts=accounts,

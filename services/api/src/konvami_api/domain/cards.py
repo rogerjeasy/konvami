@@ -391,6 +391,18 @@ class CardService:
         cards = self._repository.due(user_id, self._language(user_id), horizon, QUEUE_MAX)
         return [card for card in cards if card.kind == "word"][:limit]
 
+    def words(self, user_id: UUID, limit: int) -> list[Card]:
+        """The word cards among the learner's newest `limit` cards, newest first."""
+        cards = self._repository.listed(user_id, self._language(user_id), limit, None)
+        return [card for card in cards if card.kind == "word"]
+
+    def card(self, user_id: UUID, card_id: UUID) -> Card:
+        """One of the learner's cards. Raises `CardError("not_found")`."""
+        card = self._repository.get(user_id, card_id)
+        if card is None:
+            raise CardError("not_found")
+        return card
+
     def words_due(self, user_id: UUID, limit: int) -> list[Card]:
         """The word cards due now, the longest waiting first."""
         cards = self._repository.due(user_id, self._language(user_id), self._clock(), QUEUE_MAX)

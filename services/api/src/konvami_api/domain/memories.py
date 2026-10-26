@@ -39,6 +39,7 @@ from konvami_api.domain.text import (
     TextTask,
     answer_list,
     answer_object,
+    familiar_address,
 )
 from konvami_api.domain.voice import VoiceSessionRepository
 
@@ -77,6 +78,10 @@ class Memory:
     source_call_id: str | None
     created_at: dt.datetime
     updated_at: dt.datetime
+    # For an event still to come when it was written: what its partner asks the day after it,
+    # in the learner's explanation language (spec §6.18 follow-ups). None otherwise, and once
+    # the learner changed its words.
+    ask: str | None = None
 
 
 @dataclass(frozen=True)
@@ -163,6 +168,7 @@ class _Found(BaseModel):
     importance: int
     turn: int
     replaces: int | None
+    ask: str | None = None
 
 
 class _Answer(BaseModel):
@@ -182,6 +188,7 @@ _SCHEMA = answer_object(
                     "importance": {"type": "integer", "enum": list(IMPORTANCE)},
                     "turn": {"type": "integer"},
                     "replaces": {"type": ["integer", "null"]},
+                    "ask": {"type": ["string", "null"]},
                 }
             ),
             MAX_PER_CALL,
@@ -190,7 +197,7 @@ _SCHEMA = answer_object(
 )
 
 
-def _instructions(target: str, explanation: str) -> str:
+def _instructions(target: str, explanation: str, partner: str | None) -> str:
     return f"""You keep the memory of a language-learning app in which a learner practises
 {target} by talking with AI conversation partners. You read one conversation and write down what
 a good friend would still know next time. You get the date of the conversation, the partner's
@@ -231,6 +238,12 @@ true now and give its `id` as `replaces`: how the interview went (it keeps its `
 that moved to another day, a new home in place of the old one. Something new that follows from
 it (the first day in the job they got) is a memory of its own. Otherwise `replaces` is null.
 
+`ask`: for an `event` whose day is after the date of the conversation, the one short question
+{partner or "the partner"} would send the learner the day after it, to hear how it went ("So,
+how did the interview go?"), in {explanation}. {familiar_address(explanation)} It is friendly
+and curious, never a reproach, and names the event so that it reads well on its own. null for
+an event that is today or already over, and for every other kind.
+
 `never_about` lists topics the learner asked the app to leave alone, in their own words. Write
 nothing down that touches one of them, however clearly it was said.
 
@@ -253,6 +266,8 @@ class _Note:
     importance: int
     # The number, in what the model was shown as known, of the memory this is news about.
     replaces: int | None
+    # What its partner asks the day after an event still to come.
+    ask: str | None = None
 
 
 def _day(kind: Kind, answered: str | None) -> dt.date | None:
@@ -264,10 +279,19 @@ def _day(kind: Kind, answered: str | None) -> dt.date | None:
         return None
 
 
-def _notes(found: Sequence[_Found], turns: Sequence[Turn], partner: Persona | None) -> list[_Note]:
+def _ask(day: dt.date | None, answered: str | None, on: dt.date) -> str | None:
+    """The question kept with an event: only for one still to come after the conversation."""
+    text = one_line(answered or "")[:TEXT_MAX].strip()
+    return text if day is not None and day > on and wording(text) else None
+
+
+def _notes(
+    found: Sequence[_Found], turns: Sequence[Turn], partner: Persona | None, on: dt.date
+) -> list[_Note]:
     """What of the model's answer is kept. A model can put what the partner said about their
     own life down as a fact about the learner, which would then be told to every partner: the
-    turn it names for such a memory has to be one of the learner's."""
+    turn it names for such a memory has to be one of the learner's. `on` is the date of the
+    conversation."""
     notes: list[_Note] = []
     for item in found:
         text = one_line(item.text)[:TEXT_MAX].strip()
@@ -280,7 +304,10 @@ def _notes(found: Sequence[_Found], turns: Sequence[Turn], partner: Persona | No
         elif said.speaker != "learner":
             continue
         importance = min(max(item.importance, IMPORTANCE[0]), IMPORTANCE[-1])
-        notes.append(_Note(item.kind, text, _day(item.kind, item.day), importance, item.replaces))
+        day = _day(item.kind, item.day)
+        notes.append(
+            _Note(item.kind, text, day, importance, item.replaces, _ask(day, item.ask, on))
+        )
     return notes[:MAX_PER_CALL]
 
 
@@ -349,7 +376,8 @@ class MemoryService:
             # Their own words are not cut for them: a note that is too long is refused.
             if not memory_key(text) or len(text) > TEXT_MAX:
                 raise MemoriesError("invalid_value")
-            memory = replace(memory, text=text)
+            # The question was asked about the old words.
+            memory = replace(memory, text=text, ask=None)
         if "day" in changes:
             if changes["day"] is not None and memory.kind != "event":
                 raise MemoriesError("invalid_value")
@@ -463,7 +491,9 @@ class MemoryService:
         task = TextTask(
             model=self._model,
             instructions=_instructions(
-                catalog.english_name(language), catalog.english_name(explained_in)
+                catalog.english_name(language),
+                catalog.english_name(explained_in),
+                partner.name if partner else None,
             ),
             content=json.dumps(content, ensure_ascii=False),
             answer_name="memories",
@@ -476,7 +506,8 @@ class MemoryService:
             # Nothing was written down: a later invocation for this conversation may try again.
             self._repository.release(call_id)
             return
-        self._keep(user_id, call_id, partner, known, _notes(answer.memories, turns, partner))
+        notes = _notes(answer.memories, turns, partner, session.started_at.date())
+        self._keep(user_id, call_id, partner, known, notes)
 
     def _keep(
         self,
@@ -509,6 +540,7 @@ class MemoryService:
                         persona_id=persona_id,
                         source_call_id=call_id,
                         updated_at=now,
+                        ask=note.ask,
                     ),
                 )
                 continue
@@ -525,6 +557,7 @@ class MemoryService:
                     source_call_id=call_id,
                     created_at=now,
                     updated_at=now,
+                    ask=note.ask,
                 ),
                 MAX_MEMORIES,
             )

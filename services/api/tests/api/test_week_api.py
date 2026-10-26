@@ -47,6 +47,11 @@ def test_today_carries_this_weeks_plan(call: Call, text_model: ScriptedTextModel
     ]
     assert (plan["todayCards"], plan["missed"]) == (0, [])
     assert plan["exam"] is None
+    # Nothing to ask about yet, and no saved words.
+    assert call("GET", "/v1/home?tz=Europe/Zurich").body["reminders"] == {
+        "followUps": [],
+        "words": [],
+    }
     # Saturday, then next week's Monday, Tuesday and Thursday.
     assert plan["upcoming"] == ["2026-10-10", "2026-10-12", "2026-10-13", "2026-10-15"]
 

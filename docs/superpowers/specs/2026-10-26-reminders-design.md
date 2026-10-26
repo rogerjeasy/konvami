@@ -55,13 +55,35 @@ partner, a cards-due reminder, quiet hours, a frequency limit and a way to switc
   §6.1.2 puts reminders in the profile): the permission is per phone and the schedule lives on it.
   A second phone asks again.
 
+## Follow-ups on real-life events (added the same day)
+
+- When the memory writer reads a conversation (the small text model, after the report), it also
+  writes, for an **event still to come**, the one question its partner sends the day after it, in
+  the learner's explanation language and familiar form: "Alors, comment s'est passé ton entretien
+  à la banque à Genève ?". No extra request: it is one more field of the same answer. It is kept
+  with the memory (`memory.ask`, migration 0024); changing the memory's words drops it (it was
+  asked about the old words), moving its day keeps it.
+- Today carries the questions of the next seven days (`reminders.followUps`); none while memory
+  is off, as partners are then told nothing from before.
+- On its day, the question **takes that day's one reminder**, from the partner Today suggests. A
+  switch on 6.13 ("Ask how things went", on by default) turns them off.
+- **Tried with the real model** (2026-10-26, gpt-6-luna; French and English): the right day for
+  "am Dienstag", "morgen", "am Sonntag", no question for yesterday's dentist, and questions that
+  read well on their own ("So, how did your first day as a nurse go?").
+
+## A word of the day (added the same day)
+
+- **Off by default** (the spec makes it optional); a switch on 6.13 turns it on.
+- Each of the next seven days has one of the learner's saved words (`reminders.words`): they take
+  turns among the newest hundred cards' words, so a day keeps its word and two days in a row never
+  share one. No sound is made for it ahead: a notification cannot play a clip.
+- The word **joins the day's reminder** on a line of its own ("Today's word: die Abschiedsfeier
+  (the farewell party)"), or on a day with nothing else **comes alone** ("Today's word ·
+  die Abschiedsfeier: the farewell party. Tap to hear it."). Tapped, it opens its card on Learn
+  (`GET /v1/cards/{id}`), with Listen in the partner's voice.
+
 ## Left out, and why
 
-- **Follow-ups on real-life events** ("Your appointment was today: tell me how it went"): the
-  memories name events in words for the partner ("Has a job interview"), not as text that reads
-  well in a notification; a follow-up worded by the partner needs a text model, which a schedule
-  made on the phone has not got.
-- **"Word of the day"** voice clips: optional in the spec, and they need sound made per day.
 - **Pen-pal notes** (spec §6.16) and any push from the server: no push set-up yet.
 
 ## Native module

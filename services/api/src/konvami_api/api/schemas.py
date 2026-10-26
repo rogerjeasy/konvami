@@ -80,6 +80,7 @@ from konvami_api.domain.profile import (
     Source,
 )
 from konvami_api.domain.progress import ProgressView
+from konvami_api.domain.reminders import ReminderNotes
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
 from konvami_api.domain.retries import Retried
@@ -1691,6 +1692,34 @@ class ProgressOut(ApiModel):
         )
 
 
+class FollowUpOut(ApiModel):
+    # The day to ask on: the day after the event.
+    day: dt.date
+    # What the partner asks, in the learner's explanation language.
+    text: str
+
+
+class DailyWordOut(ApiModel):
+    day: dt.date
+    card: CardOut
+
+
+class ReminderNotesOut(ApiModel):
+    """What the phone's reminders of the next seven days need besides the week's plan
+    (spec §6.18): the questions after the learner's events, and a word of the day."""
+
+    follow_ups: list[FollowUpOut]
+    # One a day, today's first; empty without saved words.
+    words: list[DailyWordOut]
+
+    @classmethod
+    def of(cls, notes: ReminderNotes) -> "ReminderNotesOut":
+        return cls(
+            follow_ups=[FollowUpOut(day=ask.day, text=ask.text) for ask in notes.follow_ups],
+            words=[DailyWordOut(day=word.day, card=CardOut.of(word.card)) for word in notes.words],
+        )
+
+
 class HomeOut(ApiModel):
     """The Today screen in one answer."""
 
@@ -1710,12 +1739,14 @@ class HomeOut(ApiModel):
     activity: ActivityOut
     recent: list[ConversationOut]
     plan: WeekPlanOut
+    reminders: ReminderNotesOut
 
     @classmethod
-    def of(cls, home: HomeView, plan: WeekPlan) -> "HomeOut":
+    def of(cls, home: HomeView, plan: WeekPlan, notes: ReminderNotes) -> "HomeOut":
         level, exam = home.level, home.exam
         return cls(
             plan=WeekPlanOut.of(plan),
+            reminders=ReminderNotesOut.of(notes),
             language=home.language,
             level=HomeLevelOut.of(level) if level else None,
             focus=list(home.focus),

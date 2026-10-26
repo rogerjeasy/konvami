@@ -12,6 +12,8 @@ export interface ScheduledReminder {
   at: Date;
   title: string;
   body: string;
+  /** The card a word of the day opens; without one, a tap opens Today. */
+  card?: string;
 }
 
 export interface ReminderDevice {
@@ -23,6 +25,9 @@ export interface ReminderDevice {
    * call them.
    */
   replace(reminders: readonly ScheduledReminder[], channel: string): Promise<void>;
-  /** Calls `open` when the learner taps a reminder, also one that started the app. */
-  onOpen(open: () => void): () => void;
+  /**
+   * Calls `open` when the learner taps a reminder, also one that started the app, with the
+   * card it opens (`null` for Today).
+   */
+  onOpen(open: (card: string | null) => void): () => void;
 }

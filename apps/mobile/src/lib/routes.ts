@@ -123,6 +123,10 @@ export const callRoute = (
     },
   }) as const satisfies Href;
 
+/** 5.7 Learn with one card open, as a word of the day opens it. */
+export const learnCardRoute = (card: string) =>
+  ({ pathname: '/learn', params: { card } }) as const satisfies Href;
+
 /** 5.11 Review, answering each card out loud instead of turning it over (voice review). */
 export const reviewAloudRoute = {
   pathname: '/review',

@@ -813,7 +813,7 @@ _CARD_TOTALS = f"""
 
 _MEMORY = f"""
     SELECT CAST(id AS text) AS id, CAST(persona_id AS text) AS persona_id, kind, text,
-           to_char(day, 'YYYY-MM-DD') AS day, importance, source_call_id,
+           to_char(day, 'YYYY-MM-DD') AS day, importance, source_call_id, ask,
            {epoch_micros("created_at")} AS created_at, {epoch_micros("updated_at")} AS updated_at
     FROM memory
 """
@@ -824,11 +824,11 @@ _MEMORY = f"""
 _ADD_MEMORY = f"""
     WITH {_ENSURE_USER}
     INSERT INTO memory
-        (id, user_id, persona_id, kind, text_key, text, day, importance, source_call_id,
+        (id, user_id, persona_id, kind, text_key, text, day, importance, source_call_id, ask,
          created_at, updated_at)
     SELECT CAST(:id AS uuid), CAST(:user_id AS uuid), CAST(:persona_id AS uuid), :kind,
            :text_key, :text, CAST(:day AS date), :importance, CAST(:source_call_id AS text),
-           CAST(:created_at AS timestamptz), CAST(:updated_at AS timestamptz)
+           CAST(:ask AS text), CAST(:created_at AS timestamptz), CAST(:updated_at AS timestamptz)
     WHERE (SELECT count(*) FROM memory WHERE user_id = CAST(:user_id AS uuid)) < :limit
     ON CONFLICT DO NOTHING
     RETURNING id
@@ -840,7 +840,7 @@ _REPLACE_MEMORY = """
     UPDATE memory
     SET persona_id = CAST(:persona_id AS uuid), kind = :kind, text_key = :text_key,
         text = :text, day = CAST(:day AS date), importance = :importance,
-        source_call_id = CAST(:source_call_id AS text),
+        source_call_id = CAST(:source_call_id AS text), ask = CAST(:ask AS text),
         updated_at = CAST(:updated_at AS timestamptz)
     WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
       AND NOT EXISTS (
@@ -1849,6 +1849,7 @@ def _memory(row: dict[str, Any]) -> memories.Memory:
         source_call_id=row["source_call_id"],
         created_at=from_epoch_micros(row["created_at"]),
         updated_at=from_epoch_micros(row["updated_at"]),
+        ask=row["ask"],
     )
 
 
@@ -1863,6 +1864,7 @@ def _memory_fields(user_id: UUID, key: str, memory: memories.Memory) -> dict[str
         "day": memory.day.isoformat() if memory.day else None,
         "importance": memory.importance,
         "source_call_id": memory.source_call_id,
+        "ask": memory.ask,
         "updated_at": memory.updated_at.isoformat(),
     }
 

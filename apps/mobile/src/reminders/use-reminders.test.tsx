@@ -18,6 +18,18 @@ describe('the reminders, for the whole app', () => {
     expect(router.navigate).toHaveBeenCalledWith('/today');
   });
 
+  it('open the card of a tapped word of the day', async () => {
+    const device = createFakeReminderDevice('granted');
+    await renderScreen(<ReminderKeeper />, { reminders: device, signedIn: true });
+
+    await act(async () => device.tap('card_word'));
+
+    expect(router.navigate).toHaveBeenCalledWith({
+      pathname: '/learn',
+      params: { card: 'card_word' },
+    });
+  });
+
   it('are all taken back once the learner signs out', async () => {
     const auth = await createTestAuth();
     const device = createFakeReminderDevice('granted');

@@ -2167,6 +2167,7 @@ def test_a_memory_is_read_back_as_it_was_stored(memories: Memories) -> None:
         day=date(2026, 10, 16),
         importance=3,
         source_call_id="rtc_1",
+        ask="Alors, cet entretien ?",
         created_at=NOON.astimezone(berlin),
         updated_at=(NOON + HOUR).astimezone(berlin),
     )

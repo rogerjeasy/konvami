@@ -9,6 +9,7 @@ import {
   FAKE_EXAM_WEEK,
   FAKE_NOW,
   FAKE_PERSONAS,
+  FAKE_WORD_CARD,
   type FakeApi,
 } from '@/test/fake-api';
 import { createFakeReminderDevice, type FakeReminderDevice } from '@/test/fake-reminder-device';
@@ -530,6 +531,31 @@ describe('5.1 Today', () => {
         id: 'reminder-2026-10-09',
         title: 'Lena',
         body: 'Got 10 min? Today’s plan is ready.',
+      });
+    });
+
+    it('let a partner ask how an event went, and bring a word of the day', async () => {
+      await setReminders({ ...DEFAULT_REMINDERS, word: true });
+      const device = createFakeReminderDevice('granted');
+      const api = inApp();
+      api.noted({
+        followUps: [{ day: '2026-10-10', text: 'Alors, cet entretien ?' }],
+        words: ['2026-10-09', '2026-10-11'].map((day) => ({ day, card: FAKE_WORD_CARD })),
+      });
+      // Friday 9 October at 9:00.
+      await open(api, new Date(2026, 9, 9, 9, 0), device);
+
+      await waitFor(() => expect(device.scheduled.length).toBeGreaterThan(2));
+      const [friday, saturday, sunday] = device.scheduled;
+      expect(friday?.body).toBe(
+        'Got 10 min? Today’s plan is ready.\nToday’s word: die Abschiedsfeier (the farewell party)',
+      );
+      expect(saturday).toMatchObject({ title: 'Lena', body: 'Alors, cet entretien ?' });
+      expect(sunday).toMatchObject({
+        id: 'reminder-2026-10-11',
+        title: 'Today’s word',
+        body: 'die Abschiedsfeier: the farewell party. Tap to hear it.',
+        card: 'card_word',
       });
     });
   });

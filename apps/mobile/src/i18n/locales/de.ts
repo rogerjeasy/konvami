@@ -605,6 +605,11 @@ export const de: Translation = {
   },
   reminders: {
     channel: 'Übungserinnerungen',
+    word: {
+      title: 'Wort des Tages',
+      line: 'Wort des Tages: {{word}} ({{meaning}})',
+      alone: '{{word}}: {{meaning}}. Tippe, um es zu hören.',
+    },
     body: {
       today: 'Hast du {{minutes}}? Der Plan für heute steht.',
       practice: 'Hast du ein paar Minuten? Dein Plan für heute steht.',
@@ -1689,6 +1694,8 @@ export const de: Translation = {
       on: 'An meinen Übungstagen erinnern',
       time: 'Uhrzeit',
       cards: 'Auch wenn Karten warten',
+      events: 'Fragen, wie es gelaufen ist',
+      word: 'Ein Wort des Tages aus meinen gespeicherten Wörtern',
       next: 'Nächste Erinnerung: {{when}}',
       none: 'In den nächsten sieben Tagen keine Erinnerung.',
       denied: 'Mitteilungen sind für Konvami in den Einstellungen deines Telefons ausgeschaltet.',

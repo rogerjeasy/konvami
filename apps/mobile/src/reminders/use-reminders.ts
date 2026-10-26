@@ -3,13 +3,16 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Home } from '@konvami/api-client';
 import { useSession } from '@/auth';
-import { ROUTES } from '@/lib/routes';
+import { learnCardRoute, ROUTES } from '@/lib/routes';
 import { usePreferences } from '@/preferences';
 import type { ScheduledReminder } from './device';
 import { upcomingReminders, type Reminder } from './schedule';
 import { useReminderDevice, useReminderPermission } from './services';
 
-/** A reminder's words: from the partner Today suggests, in the app's language, never a reproach. */
+/**
+ * A reminder's words: from the partner Today suggests, in the app's language, never a reproach.
+ * The word of the day joins the day's reminder on a line of its own, or comes alone.
+ */
 function useReminderWords(home: Home | null) {
   const { t } = useTranslation();
   const partner =
@@ -17,17 +20,37 @@ function useReminderWords(home: Home | null) {
     home?.partners[0];
   const title = partner?.persona.name ?? t('common.appName');
   return (reminder: Reminder): ScheduledReminder => {
+    const { word } = reminder;
+    const wordLine = word
+      ? t('reminders.word.line', { word: word.front, meaning: word.back })
+      : null;
+    if (reminder.kind === 'word' && word) {
+      return {
+        id: reminder.id,
+        at: reminder.at,
+        title: t('reminders.word.title'),
+        body: t('reminders.word.alone', { word: word.front, meaning: word.back }),
+        card: word.id,
+      };
+    }
     const body =
-      reminder.kind === 'today'
-        ? t('reminders.body.today', {
-            minutes: t('time.minutes', { count: reminder.minutes ?? 0 }),
-          })
-        : reminder.kind === 'simulation' && home?.plan.exam
-          ? t('reminders.body.simulation', { name: home.plan.exam.name })
-          : reminder.kind === 'cards'
-            ? t('reminders.body.cards')
-            : t('reminders.body.practice');
-    return { id: reminder.id, at: reminder.at, title, body };
+      reminder.kind === 'followUp' && reminder.ask
+        ? reminder.ask
+        : reminder.kind === 'today'
+          ? t('reminders.body.today', {
+              minutes: t('time.minutes', { count: reminder.minutes ?? 0 }),
+            })
+          : reminder.kind === 'simulation' && home?.plan.exam
+            ? t('reminders.body.simulation', { name: home.plan.exam.name })
+            : reminder.kind === 'cards'
+              ? t('reminders.body.cards')
+              : t('reminders.body.practice');
+    return {
+      id: reminder.id,
+      at: reminder.at,
+      title,
+      body: wordLine ? `${body}\n${wordLine}` : body,
+    };
   };
 }
 
@@ -47,6 +70,7 @@ export function useReminderSchedule(home: Home | null, now: Date) {
       ? upcomingReminders({
           now,
           plan: home.plan,
+          notes: home.reminders,
           cardsDue: home.cardsDue,
           practisedToday: home.activity.practisedToday,
           settings,
@@ -72,7 +96,10 @@ export function ReminderKeeper() {
   const { t } = useTranslation();
   const device = useReminderDevice();
   const { status } = useSession();
-  useEffect(() => device.onOpen(() => router.navigate(ROUTES.today)), [device]);
+  useEffect(
+    () => device.onOpen((card) => router.navigate(card ? learnCardRoute(card) : ROUTES.today)),
+    [device],
+  );
   useEffect(() => {
     if (status === 'signedOut') void device.replace([], t('reminders.channel')).catch(() => {});
   }, [device, status, t]);
