@@ -107,6 +107,8 @@ export type PlanReason = WeekPlan['reason'];
 export type ExamWeek = Schemas['ExamWeekOut'];
 /** What the phone's reminders need besides the plan: questions after events, a word a day. */
 export type ReminderNotes = Schemas['ReminderNotesOut'];
+/** A phone the server may reach by push. */
+export type PushDevice = Schemas['PushDeviceIn'];
 /** Last week's check-in on Progress: its numbers, and the partner's few sentences once written. */
 export type WeekReview = Schemas['WeekReviewOut'];
 export type WeekNumbers = Schemas['WeekNumbersOut'];
@@ -334,6 +336,10 @@ export interface ApiClient {
   getCardAudio(id: string): Promise<{ url: string }>;
   /** One of the learner's cards (a word of the day opens it). Rejects `not_found`. */
   getCard(id: string): Promise<Card>;
+  /** Lets the server reach this phone by push (reports, scores, a nudge after a quiet week). */
+  registerPushDevice(device: PushDevice): Promise<{ registered: boolean }>;
+  /** This phone is not to be reached any more. */
+  removePushDevice(token: string): Promise<{ registered: boolean }>;
   /**
    * Answers a card out loud; the card is not rated. Fails with `not_found`, `invalid_value`,
    * `answer_limit`, `consent_required` or `unavailable`.
@@ -519,6 +525,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('GET', `/v1/conversations/${encodeURIComponent(conversationId)}/retries`),
     getCardAudio: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}/audio`),
     getCard: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}`),
+    registerPushDevice: (device) => request('PUT', '/v1/push/device', device),
+    removePushDevice: (token) => request('DELETE', `/v1/push/devices/${encodeURIComponent(token)}`),
     answerCard: (id, answer) =>
       request('POST', `/v1/cards/${encodeURIComponent(id)}/answers`, answer),
     getGrammarMap: () => request('GET', '/v1/grammar'),

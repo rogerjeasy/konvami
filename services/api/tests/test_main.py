@@ -287,6 +287,17 @@ def test_the_worker_scores_an_exam_simulation_when_that_is_what_it_is_started_fo
     stub.assert_no_pending_responses()
 
 
+def test_the_worker_nudges_quiet_learners_when_the_schedule_starts_it(stub: Stubber) -> None:
+    """Started by the hourly schedule, it reads the registered phones (here: none) and sends
+    nothing."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"nudges": True})
+
+    stub.assert_no_pending_responses()
+
+
 def test_a_report_is_read_from_the_database(stub: Stubber) -> None:
     """The entry point builds the report service; here only that its route answers."""
     stub.add_response(

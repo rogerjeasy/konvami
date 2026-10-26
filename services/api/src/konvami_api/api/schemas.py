@@ -80,6 +80,7 @@ from konvami_api.domain.profile import (
     Source,
 )
 from konvami_api.domain.progress import ProgressView
+from konvami_api.domain.push import Platform
 from konvami_api.domain.reminders import ReminderNotes
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
@@ -261,6 +262,28 @@ class PlacementDecision(ApiModel):
 MAX_SDP_LENGTH = 20_000
 # The longest scenario id accepted; the pack's ids are short words.
 MAX_SCENARIO_ID = 40
+
+
+# A phone's address at Expo's push service, and a time of day ("18:00").
+PUSH_ADDRESS = r"^Expo(nent)?PushToken\[[^\]]{1,200}\]$"
+TIME_OF_DAY = r"^([01][0-9]|2[0-3]):[0-5][0-9]$"
+MAX_PUSH_TIME_ZONE = 64
+
+
+class PushDeviceIn(ApiModel):
+    """A phone that may be reached by push (spec §6.18), registered while the learner has
+    reminders on and the phone allows notifications."""
+
+    token: str = Field(pattern=PUSH_ADDRESS)
+    platform: Platform
+    # The phone's time zone, app language and reminder time: the weekly nudge comes then.
+    time_zone: str = Field(min_length=1, max_length=MAX_PUSH_TIME_ZONE)
+    language: Literal["en", "de", "fr", "it"]
+    time: str = Field(pattern=TIME_OF_DAY)
+
+
+class PushDeviceOut(ApiModel):
+    registered: bool
 
 
 class VoiceCallIn(ApiModel):

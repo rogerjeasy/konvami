@@ -7,7 +7,8 @@
 #   whenever the package changes.
 # - A third follows each live voice call from the server (onboarding design O2): the API starts
 #   it when it creates a call, and it runs the persona's tools until the call ends. The same
-#   function, started once more, writes a practice conversation's Session Report (spec §12.2).
+#   function, started once more, writes a practice conversation's Session Report (spec §12.2),
+#   and an hourly schedule starts it to nudge learners who have been quiet for a week (§6.18).
 
 data "aws_region" "current" {}
 
@@ -225,6 +226,31 @@ resource "aws_lambda_function_event_invoke_config" "call_worker" {
   function_name                = aws_lambda_function.call_worker.function_name
   maximum_retry_attempts       = 0
   maximum_event_age_in_seconds = 60
+}
+
+# --- The hourly nudge (spec §6.18) --------------------------------------------------------------
+
+# Once an hour the worker looks for learners who have not talked for a week, at their own reminder
+# hour, and sends each one gentle push (at most once a week). Push goes out through Expo's push
+# service; the function needs no credentials for it.
+resource "aws_cloudwatch_event_rule" "nudges" {
+  name                = "${var.name}-nudges"
+  description         = "Starts the Konvami call worker once an hour to nudge learners who have been quiet for a week"
+  schedule_expression = "cron(0 * * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "nudges" {
+  rule  = aws_cloudwatch_event_rule.nudges.name
+  arn   = aws_lambda_function.call_worker.arn
+  input = jsonencode({ nudges = true })
+}
+
+resource "aws_lambda_permission" "nudges" {
+  statement_id  = "AllowHourlyNudges"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.call_worker.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.nudges.arn
 }
 
 # Runs the migrations on every deploy of a changed package, before the API is used with it.
