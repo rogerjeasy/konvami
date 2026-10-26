@@ -118,10 +118,24 @@ describe('reminders', () => {
     await loadPreferences();
     expect(getPreferences().reminders).toBeNull();
 
-    await setReminders({ on: true, time: '07:00', cards: false });
+    const chosen = { on: true, time: '07:00', cards: false, events: false, word: true };
+    await setReminders(chosen);
     await loadPreferences();
 
-    expect(getPreferences().reminders).toEqual({ on: true, time: '07:00', cards: false });
+    expect(getPreferences().reminders).toEqual(chosen);
+  });
+
+  it('give a choice added later its default when the stored ones predate it', async () => {
+    await writeItem('konvami.pref.reminders', '{"on":true,"time":"07:00","cards":false}');
+    await loadPreferences();
+
+    expect(getPreferences().reminders).toEqual({
+      on: true,
+      time: '07:00',
+      cards: false,
+      events: true,
+      word: false,
+    });
   });
 
   it('read something they cannot understand as not decided', async () => {

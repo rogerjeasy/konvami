@@ -98,6 +98,8 @@ export interface PracticeServices {
   readRetries: (conversationId: string) => Promise<Retries>;
   /** Where a card's sound plays from (made the first time). Rejects with an `ApiError`. */
   cardSound: (id: string) => Promise<string>;
+  /** One of the learner's cards. Rejects with an `ApiError` (`not_found`, …). */
+  readCard: (id: string) => Promise<Card>;
   /**
    * Answers a card out loud, from a recording; the card is not rated. Rejects with an `ApiError`
    * (`answer_limit`, `consent_required`, …).
@@ -149,6 +151,7 @@ export function createPracticeServices(
     | 'retryCorrection'
     | 'getRetries'
     | 'getCardAudio'
+    | 'getCard'
     | 'answerCard'
     | 'requestWeekReview'
     | 'getWeekReview'
@@ -191,6 +194,7 @@ export function createPracticeServices(
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
     readGrammarTopic: (id) => api.getGrammarTopic(id),
     cardSound: async (id) => (await api.getCardAudio(id)).url,
+    readCard: (id) => api.getCard(id),
     retryCorrection: (conversationId, index, recording) =>
       api.retryCorrection(conversationId, index, spoken(recording)),
     answerCard: (id, recording) => api.answerCard(id, spoken(recording)),

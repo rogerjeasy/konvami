@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { createFakeApi, type FakeApi } from '@/test/fake-api';
 import { createFakeProfileDevice } from '@/test/fake-profile-device';
@@ -13,7 +13,9 @@ jest.mock('expo-router', () => ({
     navigate: jest.fn(),
     back: jest.fn(),
     canGoBack: jest.fn(() => true),
+    setParams: jest.fn(),
   },
+  useLocalSearchParams: jest.fn(() => ({})),
   useFocusEffect: jest.fn(),
   Redirect: ({ href }: { href: string }) => {
     const { Text } = jest.requireActual('react-native');
@@ -23,6 +25,7 @@ jest.mock('expo-router', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(useLocalSearchParams).mockReturnValue({});
   (SecureStore as unknown as { __reset: () => void }).__reset();
 });
 
@@ -169,6 +172,18 @@ describe('5.7 Learn', () => {
     );
 
     await waitFor(() => expect(device.played).toEqual(['https://files.test/cards/card_1.mp3']));
+  });
+
+  it('opens the card a word of the day was about, and lets it go once closed', async () => {
+    const api = await learning();
+    jest.mocked(useLocalSearchParams).mockReturnValue({ card: 'card_1' });
+    await open(api);
+
+    const sheet = within(await screen.findByTestId('card-sheet'));
+    expect(sheet.getByText('das Wochenende')).toBeTruthy();
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Close' })[0]!);
+
+    expect(router.setParams).toHaveBeenCalledWith({ card: undefined });
   });
 
   it('shows a correction as what was said and how it is right', async () => {

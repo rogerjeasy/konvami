@@ -69,6 +69,7 @@ export function RemindersScreen() {
       ? upcomingReminders({
           now,
           plan: data.plan,
+          notes: data.reminders,
           cardsDue: data.cardsDue,
           practisedToday: data.activity.practisedToday,
           settings,
@@ -120,6 +121,16 @@ export function RemindersScreen() {
                     label={t('profile.reminders.cards')}
                     value={settings.cards}
                     onChange={(cards) => change({ cards })}
+                  />
+                  <ToggleRow
+                    label={t('profile.reminders.events')}
+                    value={settings.events}
+                    onChange={(events) => change({ events })}
+                  />
+                  <ToggleRow
+                    label={t('profile.reminders.word')}
+                    value={settings.word}
+                    onChange={(word) => change({ word })}
                   />
                   {data ? (
                     <Text variant="small" tone="muted">

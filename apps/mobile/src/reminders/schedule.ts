@@ -1,4 +1,4 @@
-import type { WeekPlan } from '@konvami/api-client';
+import type { Card, ReminderNotes, WeekPlan } from '@konvami/api-client';
 import { calendarDateOf, toIsoDate } from '@/lib/dates';
 
 /**
@@ -14,6 +14,10 @@ export interface ReminderSettings {
   time: string;
   /** Whether a day without practice may remind of the cards that are waiting. */
   cards: boolean;
+  /** Whether a partner asks, the day after, how an event the learner told them about went. */
+  events: boolean;
+  /** Whether each day brings one of the learner's saved words (spec §6.18, optional). */
+  word: boolean;
 }
 
 // Reminders come at the learner's time, never at night: the times they can choose.
@@ -27,7 +31,13 @@ export const REMINDER_TIMES = [
   '20:00',
   '21:00',
 ];
-export const DEFAULT_REMINDERS: ReminderSettings = { on: true, time: '18:00', cards: true };
+export const DEFAULT_REMINDERS: ReminderSettings = {
+  on: true,
+  time: '18:00',
+  cards: true,
+  events: true,
+  word: false,
+};
 
 // How far ahead reminders are scheduled.
 const DAYS_AHEAD = 7;
@@ -40,7 +50,11 @@ export type ReminderKind =
   // A planned day this week with a simulation still to do, or today when it starts with one.
   | 'simulation'
   // A day without practice planned, while cards are waiting.
-  | 'cards';
+  | 'cards'
+  // The day after an event: its partner asks how it went.
+  | 'followUp'
+  // A day with nothing else: only the word of the day.
+  | 'word';
 
 export interface Reminder {
   /** One per day, so a new schedule replaces the old one. */
@@ -49,6 +63,10 @@ export interface Reminder {
   kind: ReminderKind;
   /** Today's planned minutes, for a reminder of today. */
   minutes?: number;
+  /** What the partner asks, for a follow-up. */
+  ask?: string;
+  /** The day's word, when the learner wants one. */
+  word?: Card;
 }
 
 /** "18:00" on the given day, on the device's clock. */
@@ -63,20 +81,23 @@ function addDays(date: Date, count: number): Date {
 
 /**
  * The reminders of the next seven days: at most one a day, at the learner's time, none at a
- * time already gone. A planned day reminds to practise; the week's next planned day names a
- * simulation still to do; the first day without practice reminds of waiting cards. Today is
- * left out once the learner practised or today's plan is done, and the rest of a week that is
- * done, or out of voice minutes, waits for next week.
+ * time already gone. The day after an event, its partner asks how it went; otherwise a planned
+ * day reminds to practise, the week's next planned day naming a simulation still to do, and the
+ * first day without practice reminds of waiting cards. The word of the day joins the day's
+ * reminder, or comes alone. Today is left out once the learner practised or today's plan is
+ * done, and the rest of a week that is done, or out of voice minutes, waits for next week.
  */
 export function upcomingReminders({
   now,
   plan,
+  notes,
   cardsDue,
   practisedToday,
   settings,
 }: {
   now: Date;
   plan: WeekPlan;
+  notes: ReminderNotes;
   cardsDue: number;
   practisedToday: boolean;
   settings: ReminderSettings;
@@ -89,6 +110,8 @@ export function upcomingReminders({
   const planned = new Set(plan.upcoming);
   let simulationLeft = plan.exam !== null && plan.exam.simulations > plan.exam.done;
   let cardsLeft = settings.cards && cardsDue > 0;
+  const asks = new Map(settings.events ? notes.followUps.map((ask) => [ask.day, ask.text]) : []);
+  const words = new Map(settings.word ? notes.words.map((word) => [word.day, word.card]) : []);
 
   const reminders: Reminder[] = [];
   for (let offset = 0; offset < DAYS_AHEAD; offset += 1) {
@@ -99,17 +122,24 @@ export function upcomingReminders({
     const isToday = day === today;
     if (isToday && practisedToday) continue;
     const id = `reminder-${day}`;
+    const word = words.get(day);
+    const withWord = (reminder: Reminder): Reminder => (word ? { ...reminder, word } : reminder);
+    const ask = asks.get(day);
     const thisWeek = day <= sunday;
     const practice = isToday ? plan.today.length > 0 : planned.has(day);
-    if (practice && !(thisWeek && weekOver)) {
+    if (ask) {
+      reminders.push(withWord({ id, at, kind: 'followUp', ask }));
+    } else if (practice && !(thisWeek && weekOver)) {
       const simulation = isToday ? plan.today[0]?.kind === 'exam' : thisWeek && simulationLeft;
       if (simulation) simulationLeft = false;
       const kind: ReminderKind = simulation ? 'simulation' : isToday ? 'today' : 'practice';
       const minutes = plan.today.reduce((sum, session) => sum + session.minutes, 0);
-      reminders.push(isToday ? { id, at, kind, minutes } : { id, at, kind });
+      reminders.push(withWord(isToday ? { id, at, kind, minutes } : { id, at, kind }));
     } else if (cardsLeft) {
       cardsLeft = false;
-      reminders.push({ id, at, kind: 'cards' });
+      reminders.push(withWord({ id, at, kind: 'cards' }));
+    } else if (word) {
+      reminders.push({ id, at, kind: 'word', word });
     }
   }
   return reminders;

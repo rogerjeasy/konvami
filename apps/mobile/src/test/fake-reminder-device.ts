@@ -8,15 +8,15 @@ export interface FakeReminderDevice extends ReminderDevice {
   /** The reminders scheduled last, and the channel name they came with. */
   scheduled: ScheduledReminder[];
   channel: string | null;
-  /** Taps a reminder, as the learner would. */
-  tap(): void;
+  /** Taps a reminder, as the learner would; one of a word of the day opens its card. */
+  tap(card?: string): void;
 }
 
 export function createFakeReminderDevice(
   allowed: ReminderPermission = 'undetermined',
   answer: ReminderPermission = 'granted',
 ): FakeReminderDevice {
-  const opened = new Set<() => void>();
+  const opened = new Set<(card: string | null) => void>();
   const device: FakeReminderDevice = {
     allowed,
     answer,
@@ -37,7 +37,7 @@ export function createFakeReminderDevice(
       opened.add(open);
       return () => opened.delete(open);
     },
-    tap: () => opened.forEach((open) => open()),
+    tap: (card) => opened.forEach((open) => open(card ?? null)),
   };
   return device;
 }

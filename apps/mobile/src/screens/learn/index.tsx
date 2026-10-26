@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Redirect, router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Card as Flashcard } from '@konvami/api-client';
 import { useSession } from '@/auth';
@@ -40,7 +40,9 @@ function nextDue(cards: readonly Flashcard[], now: Date): string | null {
 export function LearnScreen() {
   const { t, i18n } = useTranslation();
   const { status } = useSession();
-  const { deck: store, clock } = usePracticeServices();
+  const { deck: store, clock, readCard } = usePracticeServices();
+  // A tapped word of the day opens its card (`learnCardRoute`).
+  const { card: cardId } = useLocalSearchParams<{ card?: string }>();
   const deck = useDeck();
   const partner = useSuggestedPartner();
   const [open, setOpen] = useState<Flashcard | null>(null);
@@ -49,6 +51,19 @@ export function LearnScreen() {
   useEffect(() => {
     if (signedIn) void store.load();
   }, [signedIn, store]);
+
+  useEffect(() => {
+    if (!signedIn || !cardId) return;
+    let live = true;
+    // A card removed since the reminder was scheduled simply does not open.
+    readCard(cardId).then(
+      (card) => live && setOpen(card),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [signedIn, cardId, readCard]);
 
   // Coming back to the tab: a card may have been saved from a report, or reviewed, meanwhile.
   useFocusEffect(
@@ -167,7 +182,14 @@ export function LearnScreen() {
           </Text>
         </View>
       )}
-      <CardSheet card={open} onClose={() => setOpen(null)} />
+      <CardSheet
+        card={open}
+        onClose={() => {
+          setOpen(null);
+          // Closed, it does not open again when the screen comes back.
+          if (cardId) router.setParams({ card: undefined });
+        }}
+      />
     </TabScreen>
   );
 }

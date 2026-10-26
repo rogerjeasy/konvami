@@ -57,7 +57,11 @@ describe('6.13 Reminders', () => {
     await fireEvent.press(await screen.findByRole('radio', { name: '7:00 AM' }));
     await fireEvent.press(toggle('Also when cards are waiting'));
 
-    expect(getPreferences().reminders).toEqual({ on: true, time: '07:00', cards: false });
+    expect(getPreferences().reminders).toEqual({
+      ...DEFAULT_REMINDERS,
+      time: '07:00',
+      cards: false,
+    });
     await waitFor(() => expect(device.scheduled[0]?.at.getHours()).toBe(7));
     // 7:00 today is gone: the first is Saturday's.
     expect(device.scheduled[0]?.id).toBe('reminder-2026-10-10');

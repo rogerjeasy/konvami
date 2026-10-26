@@ -53,7 +53,11 @@ export const appReminderDevice: ReminderDevice = {
     for (const reminder of reminders) {
       await Notifications.scheduleNotificationAsync({
         identifier: reminder.id,
-        content: { title: reminder.title, body: reminder.body },
+        content: {
+          title: reminder.title,
+          body: reminder.body,
+          data: reminder.card ? { card: reminder.card } : {},
+        },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: reminder.at,
@@ -66,7 +70,8 @@ export const appReminderDevice: ReminderDevice = {
     const tapped = (response: Notifications.NotificationResponse | null) => {
       if (response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
       void Notifications.clearLastNotificationResponseAsync();
-      open();
+      const card = response.notification.request.content.data?.card;
+      open(typeof card === 'string' ? card : null);
     };
     // A tap that started the app came before this listener.
     void Notifications.getLastNotificationResponseAsync().then(tapped);

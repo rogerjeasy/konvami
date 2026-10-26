@@ -35,6 +35,7 @@ import {
   type ExamCentre,
   type Simulation,
   type SpeakingExam,
+  type ReminderNotes,
   type WeekPlan,
   type WeekReview,
   type WordDetails,
@@ -139,6 +140,23 @@ export const FAKE_PLAN: WeekPlan = {
   missed: [],
   exam: null,
   upcoming: ['2026-10-10', '2026-10-12', '2026-10-13', '2026-10-15'],
+};
+
+/** A saved word, as a word of the day brings it. */
+export const FAKE_WORD_CARD: Card = {
+  id: 'card_word',
+  kind: 'word',
+  front: 'die Abschiedsfeier',
+  back: 'the farewell party',
+  note: 'Wir planen eine Abschiedsfeier für Maria.',
+  explainedIn: 'en',
+  conversationId: null,
+  createdAt: '2026-10-02T12:00:00Z',
+  dueAt: '2026-10-12T12:00:00Z',
+  reviewedAt: null,
+  reviews: 0,
+  lapses: 0,
+  details: null,
 };
 
 /** The week's simulations for a learner five weeks from the Goethe B1: one, not done yet. */
@@ -768,6 +786,8 @@ export interface FakeApi extends ApiClient {
   beOwner(): void;
   /** Changes this week's plan from `FAKE_PLAN`, as the server would have re-planned it. */
   planned(plan: Partial<WeekPlan>): void;
+  /** What Today brings for the phone's reminders besides the plan (follow-ups, words). */
+  noted(notes: Partial<ReminderNotes>): void;
   /**
    * The learner practised last week: Progress gets its check-in (`FAKE_WEEK_REVIEW` with
    * `review`'s changes). Asked for, its words are written by the time it is next read, unless
@@ -848,6 +868,7 @@ export function createFakeApi(): FakeApi {
   let owner = false;
   const plan: WeekPlan = FAKE_PLAN;
   let planChanges: Partial<WeekPlan> = {};
+  let reminderNotes: ReminderNotes = { followUps: [], words: [] };
   let lastWeek: WeekReview | null = null;
   let weekWrites: 'ready' | 'pending' | 'failed' = 'ready';
   const simulations = new Map<string, Simulation>();
@@ -1170,6 +1191,7 @@ export function createFakeApi(): FakeApi {
       suggestedPartnerId: counted()[0]?.partner?.id ?? personas?.[0]?.id ?? null,
       activity: activity(),
       recent: counted().slice(0, RECENT_CONVERSATIONS),
+      reminders: reminderNotes,
       // What was done this week moves the plan on, as on the server.
       plan: {
         ...plan,
@@ -1219,6 +1241,9 @@ export function createFakeApi(): FakeApi {
     },
     planned(changes) {
       planChanges = { ...planChanges, ...changes };
+    },
+    noted(changes) {
+      reminderNotes = { ...reminderNotes, ...changes };
     },
     simulated(callId, { status = 'ready', result, daysAgo = 0, scores = 'ready' } = {}) {
       simulations.set(callId, {
@@ -1729,6 +1754,12 @@ export function createFakeApi(): FakeApi {
           : 'wrong';
       const suggested = ({ right: 'good', article: 'hard', wrong: 'again' } as const)[outcome];
       return { heard, outcome, expected, suggested };
+    },
+    async getCard(id) {
+      await record('getCard', id);
+      const card = cards.find((saved) => saved.id === id);
+      if (!card) throw new ApiError('not_found', 404);
+      return card;
     },
     async getCardAudio(id) {
       await record('getCardAudio', id);
