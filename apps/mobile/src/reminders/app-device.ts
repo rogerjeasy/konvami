@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
-import type { ReminderDevice, ReminderPermission } from './device';
+import { openTargetOf, type ReminderDevice, type ReminderPermission } from './device';
 
 // Android groups an app's notifications in channels; reminders are the only one.
 const CHANNEL = 'reminders';
@@ -56,7 +57,7 @@ export const appReminderDevice: ReminderDevice = {
         content: {
           title: reminder.title,
           body: reminder.body,
-          data: reminder.card ? { card: reminder.card } : {},
+          data: reminder.card ? { card: reminder.card } : { open: 'today' },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -66,12 +67,23 @@ export const appReminderDevice: ReminderDevice = {
       });
     }
   },
+  async pushToken() {
+    // The EAS project the token is made for: Expo's push service sends with its credentials.
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+    if (!projectId || (Platform.OS !== 'ios' && Platform.OS !== 'android')) return null;
+    try {
+      const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+      return { token: data, platform: Platform.OS };
+    } catch {
+      // A build without push credentials (Firebase on Android, a push key on iOS) has no token.
+      return null;
+    }
+  },
   onOpen(open) {
     const tapped = (response: Notifications.NotificationResponse | null) => {
       if (response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
       void Notifications.clearLastNotificationResponseAsync();
-      const card = response.notification.request.content.data?.card;
-      open(typeof card === 'string' ? card : null);
+      open(openTargetOf(response.notification.request.content.data));
     };
     // A tap that started the app came before this listener.
     void Notifications.getLastNotificationResponseAsync().then(tapped);

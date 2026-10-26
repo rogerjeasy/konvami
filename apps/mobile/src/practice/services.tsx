@@ -11,6 +11,7 @@ import type {
   AnsweredCard,
   ApiClient,
   Card,
+  PushDevice,
   Catalog,
   ExamCentre,
   NextSimulation,
@@ -100,6 +101,11 @@ export interface PracticeServices {
   cardSound: (id: string) => Promise<string>;
   /** One of the learner's cards. Rejects with an `ApiError` (`not_found`, …). */
   readCard: (id: string) => Promise<Card>;
+  /** Whether the server may reach this phone by push. Reject with an `ApiError`. */
+  push: {
+    register: (device: PushDevice) => Promise<unknown>;
+    remove: (token: string) => Promise<unknown>;
+  };
   /**
    * Answers a card out loud, from a recording; the card is not rated. Rejects with an `ApiError`
    * (`answer_limit`, `consent_required`, …).
@@ -152,6 +158,8 @@ export function createPracticeServices(
     | 'getRetries'
     | 'getCardAudio'
     | 'getCard'
+    | 'registerPushDevice'
+    | 'removePushDevice'
     | 'answerCard'
     | 'requestWeekReview'
     | 'getWeekReview'
@@ -195,6 +203,10 @@ export function createPracticeServices(
     readGrammarTopic: (id) => api.getGrammarTopic(id),
     cardSound: async (id) => (await api.getCardAudio(id)).url,
     readCard: (id) => api.getCard(id),
+    push: {
+      register: (device) => api.registerPushDevice(device),
+      remove: (token) => api.removePushDevice(token),
+    },
     retryCorrection: (conversationId, index, recording) =>
       api.retryCorrection(conversationId, index, spoken(recording)),
     answerCard: (id, recording) => api.answerCard(id, spoken(recording)),

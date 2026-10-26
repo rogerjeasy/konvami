@@ -30,6 +30,7 @@ from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService
@@ -62,6 +63,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryPushDeviceRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryRetryRepository,
@@ -71,6 +73,7 @@ from tests.fakes import (
     RecordingCallStarter,
     RecordingExamStarter,
     RecordingNotifier,
+    RecordingPushSender,
     RecordingReportStarter,
     RecordingWeekStarter,
     ScriptedTextModel,
@@ -311,6 +314,13 @@ def services(
         clock=clock,
     )
     conversations = ConversationService(InMemoryConversationRepository(calls), personas)
+    push = PushService(
+        repository=InMemoryPushDeviceRepository(),
+        sender=RecordingPushSender(),
+        personas=personas,
+        conversations=conversations,
+        clock=clock,
+    )
     reports = ReportService(
         profiles=profiles,
         conversations=conversations,
@@ -474,6 +484,7 @@ def services(
         cards=cards,
         memories=memories,
         reminders=ReminderService(memories=memories, cards=cards, clock=clock),
+        push=push,
         home=home,
         progress=progress,
         accounts=accounts,

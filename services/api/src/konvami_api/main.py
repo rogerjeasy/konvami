@@ -36,6 +36,7 @@ from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService
@@ -65,6 +66,7 @@ from konvami_api.persistence.repositories import (
     SqlPersonaRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
+    SqlPushDeviceRepository,
     SqlRecordingRepository,
     SqlReportRepository,
     SqlRetryRepository,
@@ -86,6 +88,7 @@ from konvami_api.providers.aws import (
     cached_secret,
 )
 from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
+from konvami_api.providers.expo_push import ExpoPush
 from konvami_api.providers.openai_realtime import OpenAiRealtime
 from konvami_api.providers.openai_speech import OpenAiSpeech
 from konvami_api.providers.openai_text import OpenAiText
@@ -191,6 +194,13 @@ def build_backend(
         clock=_now,
     )
     conversations = ConversationService(SqlConversationRepository(sql), personas)
+    push = PushService(
+        repository=SqlPushDeviceRepository(sql),
+        sender=ExpoPush(),
+        personas=personas,
+        conversations=conversations,
+        clock=_now,
+    )
     directory = CognitoAccounts(clients.cognito, environment.get(_USER_POOL, ""))
     sessions = SqlVoiceSessionRepository(sql)
     worker = environment.get(_CALL_WORKER, "")
@@ -204,6 +214,7 @@ def build_backend(
         text_model=text,
         model=models.report,
         clock=_now,
+        announce=push.report_ready,
     )
     card_store = SqlCardRepository(sql)
     cards = CardService(
@@ -273,6 +284,7 @@ def build_backend(
         model=models.report,
         sounds=sounds,
         clock=_now,
+        announce=push.simulation_scored,
     )
     director = DirectorService(
         profiles=profiles,
@@ -367,6 +379,7 @@ def build_backend(
         cards=cards,
         memories=memories,
         reminders=ReminderService(memories=memories, cards=cards, clock=_now),
+        push=push,
         home=home,
         progress=progress,
         accounts=accounts,
@@ -480,8 +493,12 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     time from their recordings, counting the due words the learner used as reviewed, writing
     its report, moving the level if the reports say so, then writing down what it told about
     the learner; and filling in a learner's new word cards with
-    their forms (`card_details`); writing a learner's weekly check-in (`week_review`); and scoring
-    an exam simulation (`exam`)."""
+    their forms (`card_details`); writing a learner's weekly check-in (`week_review`); scoring
+    an exam simulation (`exam`); and, once an hour, nudging learners who have been quiet for a
+    week (`nudges`, from the schedule)."""
+    if "nudges" in event:
+        backend.services.push.nudge()
+        return
     if "exam" in event:
         backend.services.exams.score(event["exam"])
         return

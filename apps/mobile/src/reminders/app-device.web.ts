@@ -12,5 +12,6 @@ export const appReminderDevice: ReminderDevice = standIn ?? {
   permission: async () => 'unsupported',
   ask: async () => 'unsupported',
   replace: async () => {},
+  pushToken: async () => null,
   onOpen: () => () => {},
 };

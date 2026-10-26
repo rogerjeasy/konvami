@@ -3192,6 +3192,69 @@
         "title": "ProgressOut",
         "type": "object"
       },
+      "PushDeviceIn": {
+        "additionalProperties": false,
+        "description": "A phone that may be reached by push (spec \u00a76.18), registered while the learner has\nreminders on and the phone allows notifications.",
+        "properties": {
+          "language": {
+            "enum": [
+              "en",
+              "de",
+              "fr",
+              "it"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "platform": {
+            "enum": [
+              "ios",
+              "android"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "time": {
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "title": "Time",
+            "type": "string"
+          },
+          "timeZone": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Timezone",
+            "type": "string"
+          },
+          "token": {
+            "pattern": "^Expo(nent)?PushToken\\[[^\\]]{1,200}\\]$",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "platform",
+          "timeZone",
+          "language",
+          "time"
+        ],
+        "title": "PushDeviceIn",
+        "type": "object"
+      },
+      "PushDeviceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "registered": {
+            "title": "Registered",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "registered"
+        ],
+        "title": "PushDeviceOut",
+        "type": "object"
+      },
       "QueueCardOut": {
         "additionalProperties": false,
         "properties": {
@@ -7908,6 +7971,105 @@
           }
         },
         "summary": "Get Progress"
+      }
+    },
+    "/v1/push/device": {
+      "put": {
+        "description": "Lets the server reach this phone: reports, scores and a nudge after a quiet week.",
+        "operationId": "registerPushDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushDeviceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDeviceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Register Push Device"
+      }
+    },
+    "/v1/push/devices/{token}": {
+      "delete": {
+        "description": "This phone is not to be reached any more (reminders off, signing out).",
+        "operationId": "removePushDevice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDeviceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Push Device"
       }
     },
     "/v1/recordings": {

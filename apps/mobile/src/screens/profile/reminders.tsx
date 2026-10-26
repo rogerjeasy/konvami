@@ -132,6 +132,9 @@ export function RemindersScreen() {
                     value={settings.word}
                     onChange={(word) => change({ word })}
                   />
+                  <Text variant="small" tone="muted">
+                    {t('profile.reminders.push')}
+                  </Text>
                   {data ? (
                     <Text variant="small" tone="muted">
                       {next

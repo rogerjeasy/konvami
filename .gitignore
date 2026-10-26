@@ -54,3 +54,10 @@ infra/**/.build/
 
 # The speech of the accuracy test (services/api/evals/verbatim): made again on demand.
 services/api/evals/verbatim/.audio/
+
+# Firebase (push on Android): the service-account key is a secret, and the app's Firebase
+# config is given to EAS builds as a file variable. Neither is ever committed.
+all-things-agentics-firebase-adminsdk-fbsvc-0a3de0efed.json
+*firebase-adminsdk*.json
+google-services.json
+GoogleService-Info.plist

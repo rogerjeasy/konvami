@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from konvami_api.domain import memories
+from konvami_api.domain import memories, push
 from konvami_api.domain.accounts import DELETION_MEMORY
 from konvami_api.domain.cards import Card, CardTotals, Kind, WordDetails
 from konvami_api.domain.conversations import (
@@ -1600,6 +1600,105 @@ def _simulation(row: dict[str, Any]) -> Simulation:
         else None,
         voice=row["voice"],
     )
+
+
+_PUSH_DEVICE = f"""
+    SELECT token, CAST(user_id AS text) AS user_id, platform, timezone, language, remind_at,
+           {epoch_micros("registered_at")} AS registered_at,
+           {epoch_micros("nudged_at")} AS nudged_at
+    FROM push_device
+"""
+
+# A token registered again (by this or another account) is the same phone: it is kept as now.
+_REGISTER_PUSH_DEVICE = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO push_device
+        (token, user_id, platform, timezone, language, remind_at, registered_at)
+    VALUES (:token, CAST(:user_id AS uuid), :platform, :timezone, :language, :remind_at,
+            CAST(:registered_at AS timestamptz))
+    ON CONFLICT (token) DO UPDATE
+    SET user_id = EXCLUDED.user_id, platform = EXCLUDED.platform,
+        timezone = EXCLUDED.timezone, language = EXCLUDED.language,
+        remind_at = EXCLUDED.remind_at, registered_at = EXCLUDED.registered_at,
+        nudged_at = CASE WHEN push_device.user_id = EXCLUDED.user_id
+                         THEN push_device.nudged_at END
+"""
+
+# Keeps a learner's newest phones only (`limit`), after one was registered.
+_TRIM_PUSH_DEVICES = """
+    DELETE FROM push_device
+    WHERE user_id = CAST(:user_id AS uuid)
+      AND token NOT IN (
+          SELECT token FROM push_device WHERE user_id = CAST(:user_id AS uuid)
+          ORDER BY registered_at DESC, token LIMIT :limit
+      )
+"""
+
+_REMOVE_PUSH_DEVICE = """
+    DELETE FROM push_device
+    WHERE token = :token AND (CAST(:user_id AS uuid) IS NULL OR user_id = CAST(:user_id AS uuid))
+"""
+
+
+def _push_device(row: dict[str, Any]) -> push.PushDevice:
+    return push.PushDevice(
+        token=row["token"],
+        user_id=UUID(row["user_id"]),
+        platform=row["platform"],
+        timezone=row["timezone"],
+        language=row["language"],
+        time=row["remind_at"],
+        registered_at=from_epoch_micros(row["registered_at"]),
+        nudged_at=from_epoch_micros(row["nudged_at"]) if row["nudged_at"] is not None else None,
+    )
+
+
+class SqlPushDeviceRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def register(self, device: push.PushDevice, limit: int) -> None:
+        self._client.execute(
+            _REGISTER_PUSH_DEVICE,
+            {
+                "token": device.token,
+                "user_id": str(device.user_id),
+                "platform": device.platform,
+                "timezone": device.timezone,
+                "language": device.language,
+                "remind_at": device.time,
+                "registered_at": device.registered_at.isoformat(),
+            },
+        )
+        self._client.execute(_TRIM_PUSH_DEVICES, {"user_id": str(device.user_id), "limit": limit})
+
+    def remove(self, token: str, user_id: UUID | None = None) -> None:
+        self._client.execute(
+            _REMOVE_PUSH_DEVICE,
+            {"token": token, "user_id": str(user_id) if user_id else None},
+        )
+
+    def of(self, user_id: UUID) -> list[push.PushDevice]:
+        rows = self._client.execute(
+            f"{_PUSH_DEVICE} WHERE user_id = CAST(:user_id AS uuid) ORDER BY registered_at",
+            {"user_id": str(user_id)},
+        )
+        return [_push_device(row) for row in rows]
+
+    def not_nudged_since(self, since: dt.datetime, limit: int) -> list[push.PushDevice]:
+        rows = self._client.execute(
+            f"""{_PUSH_DEVICE}
+            WHERE nudged_at IS NULL OR nudged_at < CAST(:since AS timestamptz)
+            ORDER BY nudged_at NULLS FIRST, registered_at LIMIT :limit""",
+            {"since": since.isoformat(), "limit": limit},
+        )
+        return [_push_device(row) for row in rows]
+
+    def nudged(self, token: str, at: dt.datetime) -> None:
+        self._client.execute(
+            "UPDATE push_device SET nudged_at = CAST(:at AS timestamptz) WHERE token = :token",
+            {"token": token, "at": at.isoformat()},
+        )
 
 
 class SqlExamRepository:

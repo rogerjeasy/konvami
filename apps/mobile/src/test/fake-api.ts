@@ -1755,6 +1755,14 @@ export function createFakeApi(): FakeApi {
       const suggested = ({ right: 'good', article: 'hard', wrong: 'again' } as const)[outcome];
       return { heard, outcome, expected, suggested };
     },
+    async registerPushDevice(device) {
+      await record('registerPushDevice', device);
+      return { registered: true };
+    },
+    async removePushDevice(token) {
+      await record('removePushDevice', token);
+      return { registered: false };
+    },
     async getCard(id) {
       await record('getCard', id);
       const card = cards.find((saved) => saved.id === id);
