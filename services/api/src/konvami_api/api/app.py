@@ -51,6 +51,8 @@ from konvami_api.api.schemas import (
     ProfileOut,
     ProfilePatch,
     ProgressOut,
+    PushDeviceIn,
+    PushDeviceOut,
     QueueOut,
     RecordingIn,
     RecordingsOut,
@@ -93,6 +95,7 @@ from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService, ReportState
@@ -120,6 +123,7 @@ class Services:
     cards: CardService
     memories: MemoryService
     reminders: ReminderService
+    push: PushService
     home: HomeService
     progress: ProgressService
     accounts: AccountService
@@ -491,6 +495,25 @@ def _router(services: Services) -> APIRouter:
         services.card_details.forget(user, card_id)
         deck = services.cards.deck(user, limit=1)
         return DeckSummaryOut(total=deck.total, due=deck.due)
+
+    @router.put("/push/device", operation_id="registerPushDevice", responses=REFUSED)
+    def register_push_device(user: CurrentUser, device: PushDeviceIn) -> PushDeviceOut:
+        """Lets the server reach this phone: reports, scores and a nudge after a quiet week."""
+        services.push.register(
+            user,
+            token=device.token,
+            platform=device.platform,
+            timezone=device.time_zone,
+            language=device.language,
+            time=device.time,
+        )
+        return PushDeviceOut(registered=True)
+
+    @router.delete("/push/devices/{token}", operation_id="removePushDevice")
+    def remove_push_device(user: CurrentUser, token: str) -> PushDeviceOut:
+        """This phone is not to be reached any more (reminders off, signing out)."""
+        services.push.unregister(user, token)
+        return PushDeviceOut(registered=False)
 
     # After `/cards/due`: a card's id is never "due".
     @router.get("/cards/{card_id}", operation_id="getCard", responses=NOT_FOUND | REFUSED)

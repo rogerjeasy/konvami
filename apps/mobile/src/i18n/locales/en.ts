@@ -1676,6 +1676,7 @@ export const en = {
       cards: 'Also when cards are waiting',
       events: 'Ask how things went',
       word: 'A word of the day from my saved words',
+      push: 'With reminders on, you also hear when a report or a simulation score is ready, and once after a quiet week.',
       next: 'Next reminder: {{when}}',
       none: 'No reminder in the next seven days.',
       denied: 'Notifications are turned off for Konvami in your phone’s settings.',

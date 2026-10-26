@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import type { Home } from '@konvami/api-client';
-import { useSession } from '@/auth';
-import { learnCardRoute, ROUTES } from '@/lib/routes';
+import type { Home, PushDevice } from '@konvami/api-client';
+import { useAuthServices, useSession } from '@/auth';
+import { learnCardRoute, reportRoute, ROUTES, simulationRoute } from '@/lib/routes';
+import { usePracticeServices } from '@/practice/services';
 import { usePreferences } from '@/preferences';
-import type { ScheduledReminder } from './device';
+import type { OpenTarget, ScheduledReminder } from './device';
 import { upcomingReminders, type Reminder } from './schedule';
 import { useReminderDevice, useReminderPermission } from './services';
 
@@ -88,20 +89,71 @@ export function useReminderSchedule(home: Home | null, now: Date) {
   }, [device, key, t]);
 }
 
+/** Where a tapped reminder or push leads. */
+function routeOf(target: OpenTarget) {
+  switch (target.open) {
+    case 'card':
+      return learnCardRoute(target.id);
+    case 'report':
+      return reportRoute(target.id);
+    case 'simulation':
+      return simulationRoute(target.id);
+    default:
+      return ROUTES.today;
+  }
+}
+
 /**
- * For the whole app: a tapped reminder opens Today, and a learner who signs out (or deletes
- * their account) is reminded of nothing more on this device.
+ * For the whole app: a tapped reminder or push opens what it is about; the server may reach this
+ * phone by push while the learner is signed in, the phone allows it and reminders are on, and not
+ * once they are turned off; a learner who signs out (or deletes their account) is reminded of
+ * nothing more and reached no more on this device.
  */
 export function ReminderKeeper() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const device = useReminderDevice();
+  const { permission } = useReminderPermission();
+  const { reminders: settings } = usePreferences();
+  const { session } = useAuthServices();
   const { status } = useSession();
-  useEffect(
-    () => device.onOpen((card) => router.navigate(card ? learnCardRoute(card) : ROUTES.today)),
-    [device],
-  );
+  const { push, clock } = usePracticeServices();
+  const on = settings?.on ?? null;
+  const time = settings?.time ?? null;
+
+  useEffect(() => device.onOpen((target) => router.navigate(routeOf(target))), [device]);
   useEffect(() => {
     if (status === 'signedOut') void device.replace([], t('reminders.channel')).catch(() => {});
   }, [device, status, t]);
+
+  useEffect(() => {
+    if (status !== 'signedIn' || permission !== 'granted' || on === null || time === null) return;
+    let live = true;
+    void device.pushToken().then((found) => {
+      if (!found || !live) return;
+      const done = on
+        ? push.register({
+            token: found.token,
+            platform: found.platform,
+            timeZone: clock.timeZone() ?? 'UTC',
+            language: i18n.language as PushDevice['language'],
+            time,
+          })
+        : push.remove(found.token);
+      done.catch(() => {});
+    });
+    return () => {
+      live = false;
+    };
+  }, [device, status, permission, on, time, i18n.language, push, clock]);
+
+  // Before signing out, while the account can still be reached.
+  useEffect(
+    () =>
+      session.beforeSignOut(async () => {
+        const found = await device.pushToken();
+        if (found) await push.remove(found.token);
+      }),
+    [session, device, push],
+  );
   return null;
 }

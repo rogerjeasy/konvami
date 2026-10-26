@@ -1697,6 +1697,7 @@ export const fr: Translation = {
       cards: 'Aussi quand des cartes attendent',
       events: 'Me demander comment ça s’est passé',
       word: 'Un mot du jour parmi mes mots enregistrés',
+      push: 'Avec les rappels, tu sais aussi quand un bilan ou la note d’une simulation est prêt, et une fois après une semaine calme.',
       next: 'Prochain rappel : {{when}}',
       none: 'Aucun rappel dans les sept prochains jours.',
       denied: 'Les notifications de Konvami sont désactivées dans les réglages de ton téléphone.',

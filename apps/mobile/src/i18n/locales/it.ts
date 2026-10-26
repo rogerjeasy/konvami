@@ -1693,6 +1693,7 @@ export const it: Translation = {
       cards: 'Anche quando ci sono carte da ripassare',
       events: 'Chiedermi com’è andata',
       word: 'Una parola del giorno tra le mie parole salvate',
+      push: 'Con i promemoria saprai anche quando un resoconto o il punteggio di una simulazione è pronto, e una volta dopo una settimana tranquilla.',
       next: 'Prossimo promemoria: {{when}}',
       none: 'Nessun promemoria nei prossimi sette giorni.',
       denied: 'Le notifiche di Konvami sono disattivate nelle impostazioni del telefono.',

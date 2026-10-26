@@ -3,6 +3,24 @@
  * the device itself (no push server). The app provides `appReminderDevice`; tests provide a fake.
  */
 
+/** What a tapped reminder or push opens: a word's card, a report, a simulation's score, or Today. */
+export type OpenTarget =
+  | { open: 'card'; id: string }
+  | { open: 'report'; id: string }
+  | { open: 'simulation'; id: string }
+  | { open: 'today' };
+
+/** What a notification's data says it opens; anything else opens Today. */
+export function openTargetOf(data: Record<string, unknown> | undefined): OpenTarget {
+  const id = typeof data?.id === 'string' ? data.id : null;
+  const card = typeof data?.card === 'string' ? data.card : null;
+  if (card) return { open: 'card', id: card };
+  if (id && (data?.open === 'report' || data?.open === 'simulation')) {
+    return { open: data.open, id };
+  }
+  return { open: 'today' };
+}
+
 /** Whether the app may notify: `unsupported` where it cannot schedule at all (the web preview). */
 export type ReminderPermission = 'granted' | 'denied' | 'undetermined' | 'unsupported';
 
@@ -26,8 +44,13 @@ export interface ReminderDevice {
    */
   replace(reminders: readonly ScheduledReminder[], channel: string): Promise<void>;
   /**
-   * Calls `open` when the learner taps a reminder, also one that started the app, with the
-   * card it opens (`null` for Today).
+   * This phone's address for push from the server, and its platform; `null` where there is none
+   * (the web preview, or a build without push credentials).
    */
-  onOpen(open: (card: string | null) => void): () => void;
+  pushToken(): Promise<{ token: string; platform: 'ios' | 'android' } | null>;
+  /**
+   * Calls `open` when the learner taps a reminder or a push, also one that started the app, with
+   * what it opens.
+   */
+  onOpen(open: (target: OpenTarget) => void): () => void;
 }

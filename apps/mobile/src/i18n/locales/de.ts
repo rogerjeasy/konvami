@@ -1696,6 +1696,7 @@ export const de: Translation = {
       cards: 'Auch wenn Karten warten',
       events: 'Fragen, wie es gelaufen ist',
       word: 'Ein Wort des Tages aus meinen gespeicherten Wörtern',
+      push: 'Mit Erinnerungen erfährst du auch, wenn ein Bericht oder eine Simulationsbewertung fertig ist, und einmal nach einer ruhigen Woche.',
       next: 'Nächste Erinnerung: {{when}}',
       none: 'In den nächsten sieben Tagen keine Erinnerung.',
       denied: 'Mitteilungen sind für Konvami in den Einstellungen deines Telefons ausgeschaltet.',

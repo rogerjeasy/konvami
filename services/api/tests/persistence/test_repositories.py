@@ -30,6 +30,7 @@ from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
 from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
 from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
+from konvami_api.domain.push import PushDevice, PushDeviceRepository
 from konvami_api.domain.recordings import RecordingRepository
 from konvami_api.domain.reports import (
     Mistake,
@@ -73,6 +74,7 @@ from konvami_api.persistence.repositories import (
     SqlPersonaRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
+    SqlPushDeviceRepository,
     SqlRecordingRepository,
     SqlReportRepository,
     SqlRetryRepository,
@@ -94,6 +96,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryPushDeviceRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryRetryRepository,
@@ -2616,3 +2619,90 @@ def test_a_failed_or_lost_score_is_asked_for_again_up_to_a_limit(exams: Exams) -
 
     assert not exams.simulations.request("rtc_1", NOON, stale_before=NOON - HOUR, max_requests=3)
     assert exams.simulations.load(USER, "rtc_1").status == "failed"  # type: ignore[union-attr]
+
+
+# --- Push devices -------------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def phones(request: pytest.FixtureRequest) -> PushDeviceRepository:
+    if request.param == "memory":
+        return InMemoryPushDeviceRepository()
+    return SqlPushDeviceRepository(request.getfixturevalue("db"))
+
+
+def a_phone(address: str = "ExponentPushToken[1]", user: UUID = USER, **changes: Any) -> PushDevice:
+    fields: dict[str, Any] = {
+        "token": address,
+        "user_id": user,
+        "platform": "ios",
+        "timezone": "Europe/Zurich",
+        "language": "fr",
+        "time": "18:00",
+        "registered_at": NOON,
+    }
+    return PushDevice(**{**fields, **changes})
+
+
+def test_a_phone_is_read_back_as_it_was_registered(phones: PushDeviceRepository) -> None:
+    phones.register(a_phone(), 5)
+
+    assert phones.of(USER) == [a_phone()]
+    assert phones.not_nudged_since(NOON, 10) == [a_phone()]
+    assert phones.of(OTHER_USER) == []
+
+
+def test_a_phone_registered_again_is_kept_as_it_is_now_and_can_move(
+    phones: PushDeviceRepository,
+) -> None:
+    phones.register(a_phone(), 5)
+    phones.nudged("ExponentPushToken[1]", NOON + HOUR)
+    phones.register(a_phone(language="en", registered_at=NOON + HOUR), 5)
+    nudge_kept = phones.of(USER)[0].nudged_at
+
+    phones.register(a_phone(user=OTHER_USER, registered_at=NOON + 2 * HOUR), 5)
+
+    assert nudge_kept == NOON + HOUR
+    assert phones.of(USER) == []
+    # Another learner's phone has not been nudged.
+    assert phones.of(OTHER_USER) == [a_phone(user=OTHER_USER, registered_at=NOON + 2 * HOUR)]
+
+
+def test_a_phone_is_forgotten_by_its_owner_or_when_it_is_gone(
+    phones: PushDeviceRepository,
+) -> None:
+    phones.register(a_phone("ExponentPushToken[1]"), 5)
+    phones.register(a_phone("ExponentPushToken[2]"), 5)
+
+    phones.remove("ExponentPushToken[1]", OTHER_USER)
+    phones.remove("ExponentPushToken[2]")
+
+    assert [phone.token for phone in phones.of(USER)] == ["ExponentPushToken[1]"]
+    phones.remove("ExponentPushToken[1]", USER)
+    assert phones.of(USER) == []
+
+
+def test_a_learner_keeps_only_their_newest_phones(phones: PushDeviceRepository) -> None:
+    for number in range(4):
+        phones.register(
+            a_phone(f"ExponentPushToken[{number}]", registered_at=NOON + number * HOUR), 3
+        )
+
+    assert sorted(phone.token for phone in phones.of(USER)) == [
+        "ExponentPushToken[1]",
+        "ExponentPushToken[2]",
+        "ExponentPushToken[3]",
+    ]
+
+
+def test_the_nudge_reads_only_phones_not_nudged_lately(phones: PushDeviceRepository) -> None:
+    phones.register(a_phone("ExponentPushToken[1]"), 5)
+    phones.register(a_phone("ExponentPushToken[2]"), 5)
+    phones.register(a_phone("ExponentPushToken[3]"), 5)
+    phones.nudged("ExponentPushToken[1]", NOON - 10 * HOUR)
+    phones.nudged("ExponentPushToken[2]", NOON)
+
+    waiting = phones.not_nudged_since(NOON - HOUR, 10)
+
+    # Never nudged first, then the longest waiting.
+    assert [phone.token for phone in waiting] == ["ExponentPushToken[3]", "ExponentPushToken[1]"]
