@@ -601,7 +601,22 @@ export const fr: Translation = {
     minutes_one: '{{count}} min',
     minutes_other: '{{count}} min',
   },
+  reminders: {
+    channel: 'Rappels d’entraînement',
+    body: {
+      today: 'Tu as {{minutes}} ? Le programme du jour est prêt.',
+      practice: 'Tu as quelques minutes ? Ton programme du jour est prêt.',
+      simulation: 'Ta simulation du {{name}} est prévue cette semaine. Quand tu veux.',
+      cards: 'Tes cartes t’attendent, avant que tu les oublies.',
+    },
+  },
   today: {
+    reminders: {
+      title: 'Un rappel les jours où tu t’entraînes ?',
+      body: '{{name}} peut t’envoyer un petit mot à {{time}} les jours prévus. Un par jour au plus, et tu peux changer d’avis à tout moment.',
+      yes: 'Me le rappeler',
+      no: 'Pas maintenant',
+    },
     greeting: {
       morning: 'Bonjour, {{name}}',
       afternoon: 'Bonjour, {{name}}',
@@ -708,7 +723,7 @@ export const fr: Translation = {
       someRoom_other:
         'Ton objectif de la semaine a de la place pour {{count}} : chaque simulation prend un appel entier de {{minutes}} minutes.',
       noRoom:
-        'Ton objectif de la semaine n’a pas de place pour une simulation : elle prend un appel entier de {{minutes}} minutes, plus de la moitié.',
+        'Ton objectif de la semaine n’a pas de place pour une simulation : elle prend un appel entier de {{minutes}} minutes, plus de la moitié.',
     },
     recent: {
       title: 'Conversations récentes',
@@ -1630,6 +1645,9 @@ export const fr: Translation = {
       personalHint: 'Prénom, photo et langue de l’app',
       learning: 'Apprentissage',
       learningHint: 'Langue, niveau, objectifs et examen',
+      reminders: 'Rappels',
+      remindersHint: 'Un petit mot les jours d’entraînement',
+      remindersOff: 'Désactivés',
       partners: 'Mes partenaires',
       partnersCount_one: '{{count}} partenaire',
       partnersCount_other: '{{count}} partenaires',
@@ -1665,6 +1683,19 @@ export const fr: Translation = {
       changed: 'Modifié le {{date}}',
       edit: 'Modifier : {{item}}',
       goals: 'Tes objectifs',
+    },
+    reminders: {
+      title: 'Rappels',
+      body: 'Un petit mot les jours où tu as prévu de t’entraîner, à l’heure de ton choix. Un par jour au plus, jamais la nuit.',
+      on: 'Me rappeler les jours d’entraînement',
+      time: 'Heure',
+      cards: 'Aussi quand des cartes attendent',
+      next: 'Prochain rappel : {{when}}',
+      none: 'Aucun rappel dans les sept prochains jours.',
+      denied: 'Les notifications de Konvami sont désactivées dans les réglages de ton téléphone.',
+      openSettings: 'Ouvrir les réglages',
+      unsupported:
+        'Les rappels arrivent dans l’app Konvami pour iPhone et Android, pas dans le navigateur.',
     },
     goals: {
       title: 'Tes objectifs',

@@ -111,6 +111,12 @@ const config: ExpoConfig = {
         microphonePermission: MICROPHONE_REASON,
       },
     ],
+    [
+      // Practice reminders (spec §6.18), scheduled on the device: no push server. A native
+      // module: after adding it, development builds must be rebuilt.
+      'expo-notifications',
+      { icon: './assets/brand/notification-icon.png', color: brand.tile },
+    ],
   ],
   experiments: {
     typedRoutes: true,

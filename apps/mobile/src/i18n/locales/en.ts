@@ -590,7 +590,22 @@ export const en = {
     minutes_one: '{{count}} min',
     minutes_other: '{{count}} min',
   },
+  reminders: {
+    channel: 'Practice reminders',
+    body: {
+      today: 'Got {{minutes}}? Today’s plan is ready.',
+      practice: 'Got a few minutes? Your plan for today is ready.',
+      simulation: 'Your {{name}} simulation is planned for this week. Ready when you are.',
+      cards: 'Your cards are waiting, back before you forget them.',
+    },
+  },
   today: {
+    reminders: {
+      title: 'A reminder on your practice days?',
+      body: '{{name}} can send you a short note at {{time}} on the days you planned. At most one a day, and you can change it any time.',
+      yes: 'Remind me',
+      no: 'Not now',
+    },
     greeting: {
       morning: 'Good morning, {{name}}',
       afternoon: 'Good afternoon, {{name}}',
@@ -1610,6 +1625,9 @@ export const en = {
       personalHint: 'Name, photo and app language',
       learning: 'Learning',
       learningHint: 'Language, level, goals and exam',
+      reminders: 'Reminders',
+      remindersHint: 'A note on your practice days',
+      remindersOff: 'Off',
       partners: 'My partners',
       partnersCount_one: '{{count}} partner',
       partnersCount_other: '{{count}} partners',
@@ -1644,6 +1662,18 @@ export const en = {
       changed: 'Changed {{date}}',
       edit: 'Change: {{item}}',
       goals: 'Your goals',
+    },
+    reminders: {
+      title: 'Reminders',
+      body: 'A short note on the days you planned to practise, at the time you choose. At most one a day, never at night.',
+      on: 'Remind me on my practice days',
+      time: 'At',
+      cards: 'Also when cards are waiting',
+      next: 'Next reminder: {{when}}',
+      none: 'No reminder in the next seven days.',
+      denied: 'Notifications are turned off for Konvami in your phone’s settings.',
+      openSettings: 'Open settings',
+      unsupported: 'Reminders come in the Konvami app for iPhone and Android, not in the browser.',
     },
     goals: {
       title: 'Your goals',

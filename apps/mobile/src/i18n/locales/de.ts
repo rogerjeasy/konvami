@@ -603,7 +603,23 @@ export const de: Translation = {
     minutes_one: '{{count}} Min.',
     minutes_other: '{{count}} Min.',
   },
+  reminders: {
+    channel: 'Übungserinnerungen',
+    body: {
+      today: 'Hast du {{minutes}}? Der Plan für heute steht.',
+      practice: 'Hast du ein paar Minuten? Dein Plan für heute steht.',
+      simulation:
+        'Deine Simulation für das {{name}} ist diese Woche geplant. Wann immer du bereit bist.',
+      cards: 'Deine Karten warten auf dich, bevor du sie vergisst.',
+    },
+  },
   today: {
+    reminders: {
+      title: 'Eine Erinnerung an deinen Übungstagen?',
+      body: '{{name}} kann dir an deinen geplanten Tagen um {{time}} eine kurze Nachricht schicken. Höchstens eine am Tag, und du kannst es jederzeit ändern.',
+      yes: 'Erinnere mich',
+      no: 'Jetzt nicht',
+    },
     greeting: {
       morning: 'Guten Morgen, {{name}}',
       afternoon: 'Guten Tag, {{name}}',
@@ -1627,6 +1643,9 @@ export const de: Translation = {
       personalHint: 'Name, Foto und App-Sprache',
       learning: 'Lernen',
       learningHint: 'Sprache, Niveau, Ziele und Prüfung',
+      reminders: 'Erinnerungen',
+      remindersHint: 'Eine Nachricht an deinen Übungstagen',
+      remindersOff: 'Aus',
       partners: 'Meine Partner',
       partnersCount_one: '{{count}} Partner',
       partnersCount_other: '{{count}} Partner',
@@ -1663,6 +1682,19 @@ export const de: Translation = {
       changed: 'Geändert am {{date}}',
       edit: 'Ändern: {{item}}',
       goals: 'Deine Ziele',
+    },
+    reminders: {
+      title: 'Erinnerungen',
+      body: 'Eine kurze Nachricht an den Tagen, an denen du üben wolltest, zur Uhrzeit deiner Wahl. Höchstens eine am Tag, nie nachts.',
+      on: 'An meinen Übungstagen erinnern',
+      time: 'Uhrzeit',
+      cards: 'Auch wenn Karten warten',
+      next: 'Nächste Erinnerung: {{when}}',
+      none: 'In den nächsten sieben Tagen keine Erinnerung.',
+      denied: 'Mitteilungen sind für Konvami in den Einstellungen deines Telefons ausgeschaltet.',
+      openSettings: 'Einstellungen öffnen',
+      unsupported:
+        'Erinnerungen kommen in der Konvami-App für iPhone und Android, nicht im Browser.',
     },
     goals: {
       title: 'Deine Ziele',

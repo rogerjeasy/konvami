@@ -115,6 +115,14 @@ export function formatClock(locale: string, iso: string): string {
   );
 }
 
+/** A time of day on the device's clock ("18:00" is "18:00" or "6:00 PM"), from "HH:MM". */
+export function formatTimeOfDay(locale: string, time: string): string {
+  const [hours = 0, minutes = 0] = time.split(':').map(Number);
+  return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(
+    new Date(2000, 0, 1, hours, minutes),
+  );
+}
+
 /** An amount of US dollars with its cents ("$162.40", "162,40 $"): what the providers bill in. */
 export function formatUsd(locale: string, usd: number): string {
   return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(usd);

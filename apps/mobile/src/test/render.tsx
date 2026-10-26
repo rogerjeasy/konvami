@@ -19,6 +19,8 @@ import { ThemeProvider } from '@/theme';
 import { VoiceProvider } from '@/voice/services';
 import { RecorderProvider } from '@/voice/sentence-recorder';
 import { createFakeRecorder, type FakeRecorder } from '@/test/fake-recorder';
+import { createFakeReminderDevice, type FakeReminderDevice } from '@/test/fake-reminder-device';
+import { RemindersProvider } from '@/reminders/services';
 
 const TEST_ACCOUNT = { email: 'amara.diallo@mail.com', password: 'Sommer2026!' };
 
@@ -36,7 +38,8 @@ export async function createTestAuth(): Promise<AuthServices & { provider: FakeA
  * (sign-up) or `access` (sign-in and password reset) to start mid-flow, `api` to prepare or
  * inspect what the backend holds, `voice` to play a live call, `recorder` to record a sentence, `device` to decide what the photo
  * picker answers and to hear what is played (samples and recordings), `now` to set the device's clock (it stands at the
- * fake server's time otherwise), `studioStart` to open Persona Studio on a draft, and `signedIn`
+ * fake server's time otherwise), `studioStart` to open Persona Studio on a draft, `reminders` to decide what the phone allows
+ * and to see the reminders scheduled, and `signedIn`
  * to start as a signed-in learner (Amara). The result also carries the profile services, for
  * tests that look at what one screen left for the next.
  */
@@ -52,6 +55,7 @@ export async function renderScreen(
     device,
     now,
     studioStart,
+    reminders,
     signedIn = false,
   }: {
     auth?: AuthServices;
@@ -62,6 +66,7 @@ export async function renderScreen(
     recorder?: FakeRecorder;
     device?: FakeProfileDevice;
     studioStart?: PersonaDraft;
+    reminders?: FakeReminderDevice;
     /** The device's clock: a fixed moment, or a function for a clock that a test moves. */
     now?: Date | (() => number);
     signedIn?: boolean;
@@ -101,23 +106,25 @@ export async function renderScreen(
         <OnboardingProvider store={onboarding}>
           <PracticeProvider services={practice}>
             <ProfileProvider services={profile}>
-              <RecorderProvider useRecorder={() => sentences}>
-                <VoiceProvider
-                  createEngine={(purpose, personaId, scenario, practise) => {
-                    engine.openedFor.push(purpose);
-                    engine.openedWith.push(personaId);
-                    engine.openedScenarios.push(scenario);
-                    engine.openedPractise.push(practise);
-                    return engine;
-                  }}
-                >
-                  <SignUpDraftProvider initial={draft}>
-                    <AccessDraftProvider initial={access}>
-                      <ExamNotesProvider>{ui}</ExamNotesProvider>
-                    </AccessDraftProvider>
-                  </SignUpDraftProvider>
-                </VoiceProvider>
-              </RecorderProvider>
+              <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
+                <RecorderProvider useRecorder={() => sentences}>
+                  <VoiceProvider
+                    createEngine={(purpose, personaId, scenario, practise) => {
+                      engine.openedFor.push(purpose);
+                      engine.openedWith.push(personaId);
+                      engine.openedScenarios.push(scenario);
+                      engine.openedPractise.push(practise);
+                      return engine;
+                    }}
+                  >
+                    <SignUpDraftProvider initial={draft}>
+                      <AccessDraftProvider initial={access}>
+                        <ExamNotesProvider>{ui}</ExamNotesProvider>
+                      </AccessDraftProvider>
+                    </SignUpDraftProvider>
+                  </VoiceProvider>
+                </RecorderProvider>
+              </RemindersProvider>
             </ProfileProvider>
           </PracticeProvider>
         </OnboardingProvider>

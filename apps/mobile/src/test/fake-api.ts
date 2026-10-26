@@ -138,6 +138,7 @@ export const FAKE_PLAN: WeekPlan = {
   reason: 'on_track',
   missed: [],
   exam: null,
+  upcoming: ['2026-10-10', '2026-10-12', '2026-10-13', '2026-10-15'],
 };
 
 /** The week's simulations for a learner five weeks from the Goethe B1: one, not done yet. */

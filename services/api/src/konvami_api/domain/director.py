@@ -246,6 +246,9 @@ class WeekPlan:
     missed: tuple[dt.date, ...]
     # The week's simulations; None without an exam that has a speaking test.
     exam: ExamWeek | None = None
+    # The planned days among the next seven, today's included, into next week: the device
+    # reminds the learner on them (spec §6.18).
+    upcoming: tuple[dt.date, ...] = ()
 
 
 def _steps_down(minutes: int) -> int:
@@ -478,7 +481,20 @@ def plan_week(inputs: WeekInputs) -> WeekPlan:
         reason=reason,
         missed=missed,
         exam=exam,
+        upcoming=_upcoming(inputs, weekdays),
     )
+
+
+def _upcoming(inputs: WeekInputs, weekdays: Sequence[int]) -> tuple[dt.date, ...]:
+    """The planned days from today to six days on: the rest of this week's, then next week's
+    habit."""
+    today = inputs.today
+    monday = today - dt.timedelta(days=today.weekday())
+    later = planned_weekdays(inputs.habit.days)
+    days = [monday + dt.timedelta(days=d) for d in weekdays] + [
+        monday + _WEEK + dt.timedelta(days=d) for d in later
+    ]
+    return tuple(day for day in days if today <= day < today + _WEEK)
 
 
 # --- What the week works on ----------------------------------------------------------------------

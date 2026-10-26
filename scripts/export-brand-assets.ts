@@ -34,6 +34,8 @@ const png: { file: string; svg: string; size: number }[] = [
     size: 1024,
   },
   { file: 'favicon.png', svg: markSvg({ tile: 'rounded' }), size: 48 },
+  // Android draws a notification's small icon from its alpha only: the white mark, 96 px.
+  { file: 'notification-icon.png', svg: monoMarkSvg(), size: 96 },
 ];
 
 const svg: { file: string; svg: string }[] = [

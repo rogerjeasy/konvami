@@ -22,8 +22,10 @@ import { sessionRoute } from '@/lib/plan';
 import { callRoute, conversationRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
 import { useAccount } from '@/profile/services';
+import { useReminderSchedule } from '@/reminders/use-reminders';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
+import { ReminderOffer } from './reminder-offer';
 import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
 import { WeekCard } from './week-card';
@@ -54,6 +56,8 @@ function Header({ now }: { now: Date }) {
 function Day({ home, now }: { home: Home; now: Date }) {
   const { t } = useTranslation();
   const { split } = useScreenLayout();
+  // Today is where the plan is read: the device's reminders follow it from here.
+  useReminderSchedule(home, now);
   const partner =
     home.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ?? home.partners[0];
 
@@ -94,6 +98,10 @@ function Day({ home, now }: { home: Home; now: Date }) {
       plan={home.plan}
       onChangeGoal={() => router.push(ROUTES.accountGoals)}
     />,
+    // Once there was a first conversation, reminders are worth offering.
+    partner && home.activity.conversations > 0 ? (
+      <ReminderOffer key="reminders" partnerName={partner.persona.name} />
+    ) : null,
   ];
   const about = [
     home.level ? <LevelCard key="level" level={home.level} /> : null,

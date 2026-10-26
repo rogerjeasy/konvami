@@ -2,6 +2,8 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { STALE_AFTER_MS } from '@/practice/home-store';
+import { getPreferences, setReminders } from '@/preferences';
+import { DEFAULT_REMINDERS } from '@/reminders/schedule';
 import {
   createFakeApi,
   FAKE_EXAM_WEEK,
@@ -9,6 +11,7 @@ import {
   FAKE_PERSONAS,
   type FakeApi,
 } from '@/test/fake-api';
+import { createFakeReminderDevice, type FakeReminderDevice } from '@/test/fake-reminder-device';
 import { renderScreen } from '@/test/render';
 import { TodayScreen } from '.';
 
@@ -26,9 +29,10 @@ jest.mock('expo-router', () => ({
   },
 }));
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   (SecureStore as unknown as { __reset: () => void }).__reset();
+  await setReminders(null);
 });
 
 const [LENA, JONAS] = FAKE_PERSONAS as [(typeof FAKE_PERSONAS)[0], (typeof FAKE_PERSONAS)[0]];
@@ -43,8 +47,12 @@ function inApp(options?: Parameters<FakeApi['enterApp']>[0]): FakeApi {
   return api;
 }
 
-async function open(api: FakeApi = inApp(), now?: Date | (() => number)) {
-  await renderScreen(<TodayScreen />, { api, now, signedIn: true });
+async function open(
+  api: FakeApi = inApp(),
+  now?: Date | (() => number),
+  reminders?: FakeReminderDevice,
+) {
+  await renderScreen(<TodayScreen />, { api, now, reminders, signedIn: true });
   // The week is there once the day has loaded.
   await screen.findByText('This week');
   return api;
@@ -444,6 +452,85 @@ describe('5.1 Today', () => {
       await fireEvent.press(screen.getByRole('button', { name: 'Change my weekly goal' }));
 
       expect(router.push).toHaveBeenCalledWith('/account/goals');
+    });
+  });
+
+  describe('reminders (spec §6.18)', () => {
+    // A learner who has talked once: reminders are worth offering.
+    function talkedOnce() {
+      const api = inApp();
+      api.talked(0, { daysAgo: 1 });
+      return api;
+    }
+
+    it('are offered after the first conversation, and the phone is asked only on yes', async () => {
+      const device = createFakeReminderDevice('undetermined', 'granted');
+      await open(talkedOnce(), undefined, device);
+
+      expect(
+        screen.getByRole('header', { name: 'A reminder on your practice days?' }),
+      ).toBeTruthy();
+      expect(device.asked).toBe(0);
+      await fireEvent.press(screen.getByRole('button', { name: 'Remind me' }));
+
+      await waitFor(() => expect(device.scheduled.length).toBeGreaterThan(0));
+      expect(device.asked).toBe(1);
+      expect(getPreferences().reminders).toEqual(DEFAULT_REMINDERS);
+      expect(device.channel).toBe('Practice reminders');
+      // From the partner, at the learner's time: today's plan, then the planned days ahead.
+      const [first, second] = device.scheduled;
+      expect(first?.title).toBe('Lena');
+      expect(first?.body).toBe('Got 10 min? Today’s plan is ready.');
+      expect(second?.body).toBe('Got a few minutes? Your plan for today is ready.');
+      expect([first?.at.getHours(), first?.at.getMinutes()]).toEqual([18, 0]);
+      expect(
+        screen.queryByRole('header', { name: 'A reminder on your practice days?' }),
+      ).toBeNull();
+    });
+
+    it('take no for an answer, and are not offered again', async () => {
+      const device = createFakeReminderDevice();
+      await open(talkedOnce(), undefined, device);
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
+
+      expect(device.asked).toBe(0);
+      expect(getPreferences().reminders).toEqual({ ...DEFAULT_REMINDERS, on: false });
+      expect(screen.queryByRole('button', { name: 'Remind me' })).toBeNull();
+    });
+
+    it('are turned off when the phone says no', async () => {
+      const device = createFakeReminderDevice('undetermined', 'denied');
+      await open(talkedOnce(), undefined, device);
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Remind me' }));
+
+      await waitFor(() => expect(getPreferences().reminders?.on).toBe(false));
+      expect(device.scheduled).toEqual([]);
+    });
+
+    it('are not offered before a first conversation, nor where the phone refuses them', async () => {
+      await open(inApp(), undefined, createFakeReminderDevice());
+      expect(screen.queryByRole('button', { name: 'Remind me' })).toBeNull();
+    });
+
+    it('are not offered where the phone already refuses them', async () => {
+      await open(talkedOnce(), undefined, createFakeReminderDevice('denied'));
+      expect(screen.queryByRole('button', { name: 'Remind me' })).toBeNull();
+    });
+
+    it('follow today’s plan once chosen: today’s minutes, from the partner', async () => {
+      await setReminders(DEFAULT_REMINDERS);
+      const device = createFakeReminderDevice('granted');
+      // Friday at 9:00: today's reminder at 18:00 is still ahead.
+      await open(inApp(), new Date(2026, 9, 9, 9, 0), device);
+
+      await waitFor(() => expect(device.scheduled.length).toBeGreaterThan(0));
+      expect(device.scheduled[0]).toMatchObject({
+        id: 'reminder-2026-10-09',
+        title: 'Lena',
+        body: 'Got 10 min? Today’s plan is ready.',
+      });
     });
   });
 });
