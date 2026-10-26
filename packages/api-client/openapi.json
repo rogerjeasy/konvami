@@ -698,6 +698,25 @@
         "title": "CostsOut",
         "type": "object"
       },
+      "DailyWordOut": {
+        "additionalProperties": false,
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/CardOut"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "card"
+        ],
+        "title": "DailyWordOut",
+        "type": "object"
+      },
       "DayOut": {
         "additionalProperties": false,
         "properties": {
@@ -1103,6 +1122,26 @@
         "title": "FieldOut",
         "type": "object"
       },
+      "FollowUpOut": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "text"
+        ],
+        "title": "FollowUpOut",
+        "type": "object"
+      },
       "GrammarMapOut": {
         "additionalProperties": false,
         "properties": {
@@ -1439,6 +1478,9 @@
             "title": "Recent",
             "type": "array"
           },
+          "reminders": {
+            "$ref": "#/components/schemas/ReminderNotesOut"
+          },
           "suggestedPartnerId": {
             "anyOf": [
               {
@@ -1463,7 +1505,8 @@
           "suggestedPartnerId",
           "activity",
           "recent",
-          "plan"
+          "plan",
+          "reminders"
         ],
         "title": "HomeOut",
         "type": "object"
@@ -3337,6 +3380,32 @@
           "kept"
         ],
         "title": "RecordingsPatch",
+        "type": "object"
+      },
+      "ReminderNotesOut": {
+        "additionalProperties": false,
+        "description": "What the phone's reminders of the next seven days need besides the week's plan\n(spec \u00a76.18): the questions after the learner's events, and a word of the day.",
+        "properties": {
+          "followUps": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpOut"
+            },
+            "title": "Followups",
+            "type": "array"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/DailyWordOut"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "followUps",
+          "words"
+        ],
+        "title": "ReminderNotesOut",
         "type": "object"
       },
       "ReportMistakeOut": {
@@ -5470,6 +5539,65 @@
           }
         },
         "summary": "Remove Card"
+      },
+      "get": {
+        "description": "One of the learner's cards (a word of the day opens it).",
+        "operationId": "getCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Card"
       }
     },
     "/v1/cards/{card_id}/answers": {

@@ -549,6 +549,7 @@ def test_home_of_a_new_learner_has_partners_a_level_and_an_empty_week(
     assert response.status == 200
     # The week's plan has tests of its own (`test_week_api.py`).
     assert response.body.pop("plan")["week"] == "2026-10-05"
+    assert response.body.pop("reminders") == {"followUps": [], "words": []}
     assert response.body == {
         "language": "de",
         "level": {"level": "A2", "source": "asked", "skills": None},

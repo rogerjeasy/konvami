@@ -94,6 +94,7 @@ from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.recordings import RecordingService
+from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
 from konvami_api.domain.tutor import TutorService
@@ -118,6 +119,7 @@ class Services:
     levels: LevelService
     cards: CardService
     memories: MemoryService
+    reminders: ReminderService
     home: HomeService
     progress: ProgressService
     accounts: AccountService
@@ -316,7 +318,9 @@ def _router(services: Services) -> APIRouter:
         tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
     ) -> HomeOut:
         home = services.home.view(user, tz)
-        return HomeOut.of(home, services.director.week(user, tz))
+        return HomeOut.of(
+            home, services.director.week(user, tz), services.reminders.notes(user, tz)
+        )
 
     @router.get("/progress", operation_id="getProgress", responses=CONFLICT)
     def get_progress(
@@ -487,6 +491,12 @@ def _router(services: Services) -> APIRouter:
         services.card_details.forget(user, card_id)
         deck = services.cards.deck(user, limit=1)
         return DeckSummaryOut(total=deck.total, due=deck.due)
+
+    # After `/cards/due`: a card's id is never "due".
+    @router.get("/cards/{card_id}", operation_id="getCard", responses=NOT_FOUND | REFUSED)
+    def get_card(user: CurrentUser, card_id: UUID) -> CardOut:
+        """One of the learner's cards (a word of the day opens it)."""
+        return CardOut.of(services.cards.card(user, card_id))
 
     def partners_named(user: UUID, memories: Sequence[Memory]) -> dict[UUID, Persona]:
         """The partners whose names the memories need; they are read only when one does."""

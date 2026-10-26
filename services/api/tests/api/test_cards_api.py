@@ -441,3 +441,22 @@ def test_home_counts_the_cards_that_are_due(
 
     assert none_yet == 0
     assert call("GET", "/v1/home").body["cardsDue"] == 1
+
+
+def test_a_card_is_read_by_its_owner_and_is_todays_word_on_home(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    reported(call, text_model, calls, services)
+    saved = call("POST", "/v1/cards", WORD).body
+
+    read = call("GET", f"/v1/cards/{FIRST_ID}")
+    words = call("GET", "/v1/home").body["reminders"]["words"]
+
+    assert (read.status, read.body) == (200, saved)
+    assert call("GET", f"/v1/cards/{UUID(int=7)}").status == 404
+    # One word for each of the next seven days: the learner has only this one.
+    assert [word["day"] for word in words][:2] == ["2026-10-09", "2026-10-10"]
+    assert {word["card"]["id"] for word in words} == {FIRST_ID}
