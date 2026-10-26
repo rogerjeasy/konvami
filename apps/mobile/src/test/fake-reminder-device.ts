@@ -1,4 +1,9 @@
-import type { ReminderDevice, ReminderPermission, ScheduledReminder } from '@/reminders/device';
+import type {
+  OpenTarget,
+  ReminderDevice,
+  ReminderPermission,
+  ScheduledReminder,
+} from '@/reminders/device';
 
 export interface FakeReminderDevice extends ReminderDevice {
   /** What the phone allows now, and what it answers when asked. */
@@ -8,21 +13,25 @@ export interface FakeReminderDevice extends ReminderDevice {
   /** The reminders scheduled last, and the channel name they came with. */
   scheduled: ScheduledReminder[];
   channel: string | null;
-  /** Taps a reminder, as the learner would; one of a word of the day opens its card. */
-  tap(card?: string): void;
+  /** This phone's push address; `null` for none. */
+  token: string | null;
+  /** Taps a reminder or a push, as the learner would. */
+  tap(target?: OpenTarget): void;
 }
 
 export function createFakeReminderDevice(
   allowed: ReminderPermission = 'undetermined',
   answer: ReminderPermission = 'granted',
 ): FakeReminderDevice {
-  const opened = new Set<(card: string | null) => void>();
+  const opened = new Set<(target: OpenTarget) => void>();
   const device: FakeReminderDevice = {
     allowed,
     answer,
     asked: 0,
     scheduled: [],
     channel: null,
+    token: 'ExponentPushToken[fake-phone]',
+    pushToken: async () => (device.token ? { token: device.token, platform: 'ios' } : null),
     permission: async () => device.allowed,
     async ask() {
       device.asked += 1;
@@ -37,7 +46,7 @@ export function createFakeReminderDevice(
       opened.add(open);
       return () => opened.delete(open);
     },
-    tap: (card) => opened.forEach((open) => open(card ?? null)),
+    tap: (target = { open: 'today' }) => opened.forEach((open) => open(target)),
   };
   return device;
 }

@@ -8,6 +8,9 @@ import {
   type User,
 } from './types';
 
+// How long a task before a sign-out may hold it up (a request that cannot get through).
+const SIGN_OUT_TASK_MS = 3000;
+
 /**
  * Who is signed in on this device. One store for the whole app: it restores the saved session at
  * launch, keeps a working access token, and is the only code that writes the saved session.
@@ -36,6 +39,12 @@ export interface SessionStore {
     signOutOthers: boolean;
   }): Promise<void>;
   signOut(): Promise<void>;
+  /**
+   * Runs `task` before each sign-out on this device, while the account can still be reached (the
+   * app stops push to this phone). A task that fails, or takes longer than a few seconds, does not
+   * hold the sign-out up. Returns the way to stop.
+   */
+  beforeSignOut(task: () => Promise<void>): () => void;
   /**
    * Ends every session of the account, on every device, and signs out here. Unlike `signOut`
    * it rejects when the server could not be told: the user stays signed in and can try again.
@@ -105,6 +114,25 @@ export function createSessionStore(provider: AuthProvider): SessionStore {
     return tokens.accessToken;
   }
 
+  const signingOut = new Set<() => Promise<void>>();
+
+  /** One task before a sign-out, given a few seconds at most. */
+  async function inTime(task: () => Promise<void>) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const giveUp = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, SIGN_OUT_TASK_MS);
+    });
+    try {
+      await Promise.race([task().catch(() => {}), giveUp]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function beforeSigningOut() {
+    await Promise.all([...signingOut].map(inTime));
+  }
+
   async function signIn(email: string, password: string) {
     const next = await provider.signIn(email, password);
     const user = await provider.getUser(next.accessToken);
@@ -160,7 +188,13 @@ export function createSessionStore(provider: AuthProvider): SessionStore {
       if (state.user) await signedIn({ ...state.user, aiConsent });
     },
 
+    beforeSignOut(task) {
+      signingOut.add(task);
+      return () => void signingOut.delete(task);
+    },
+
     async signOut() {
+      await beforeSigningOut();
       const token = refreshToken;
       // The device signs out even when the server cannot be told; the token then simply expires.
       if (token) await provider.signOut(token).catch(() => {});
@@ -168,6 +202,7 @@ export function createSessionStore(provider: AuthProvider): SessionStore {
     },
 
     async signOutEverywhere() {
+      await beforeSigningOut();
       await provider.signOutEverywhere(await accessToken());
       await forget();
     },

@@ -168,6 +168,23 @@ describe('signOut', () => {
     expect(provider.liveRefreshTokens.size).toBe(0);
   });
 
+  it('first runs what the app asked to do while the account can still be reached', async () => {
+    const { session } = setup();
+    await session.signIn(EMAIL, PASSWORD);
+    const seen: string[] = [];
+    session.beforeSignOut(async () => {
+      seen.push(session.getState().status);
+    });
+    session.beforeSignOut(async () => {
+      throw new Error('offline');
+    });
+
+    await session.signOut();
+
+    expect(seen).toEqual(['signedIn']);
+    expect(session.getState().status).toBe('signedOut');
+  });
+
   it('still signs out on the device when the server cannot be reached', async () => {
     const { provider, session } = setup();
     await session.signIn(EMAIL, PASSWORD);

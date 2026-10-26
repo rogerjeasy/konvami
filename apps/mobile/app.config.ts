@@ -46,6 +46,11 @@ const config: ExpoConfig = {
   },
   android: {
     package: BUNDLE_ID,
+    // Push from the server on Android goes through Firebase: the app's Firebase config, given to
+    // EAS builds as a file variable (never committed). Without it the app has no push address.
+    ...(process.env.GOOGLE_SERVICES_JSON
+      ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
+      : {}),
     adaptiveIcon: {
       backgroundColor: brand.tile,
       foregroundImage: './assets/brand/android-icon-foreground.png',
