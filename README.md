@@ -1,6 +1,6 @@
 # Konvami
 
-Konvami is a voice-first language partner for iOS and Android. Learners hold live spoken conversations with AI partners (personas they can shape themselves), then get a written report of their mistakes, flashcards from what they choose to keep, and a weekly plan built around their goals. The name joins German *Konversation* and French *ami*.
+Konvami is a voice-first language partner for iOS and Android. Learners hold live spoken conversations with AI partners (personas they can shape themselves), then get a written report of their mistakes, flashcards from what they choose to keep, and a weekly plan built around their goals. The name joins German _Konversation_ and French _ami_.
 
 The repository holds the Expo / React Native app, a Python FastAPI backend on AWS Lambda, a small static site for the privacy policy, shared packages and the Terraform infrastructure.
 
@@ -82,12 +82,12 @@ pnpm --filter @konvami/mobile ios        # native development build (also: andro
 
 The first-launch screens work without configuration. Signing in and everything after it need a deployed backend. The app's settings are public identifiers, never secrets:
 
-| Variable | Purpose |
-| --- | --- |
-| `EXPO_PUBLIC_API_URL` | The API Gateway address |
-| `EXPO_PUBLIC_AUTH_REGION`, `EXPO_PUBLIC_AUTH_CLIENT_ID` | The Cognito user pool's region and app client |
-| `EXPO_PUBLIC_TERMS_URL`, `EXPO_PUBLIC_PRIVACY_URL` | Legal pages (`{lang}` is replaced by the app language) |
-| `APPLE_TEAM_ID` | Only for `pnpm --filter @konvami/mobile device:ios` on your own iPhone |
+| Variable                                                | Purpose                                                                |
+| ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `EXPO_PUBLIC_API_URL`                                   | The API Gateway address                                                |
+| `EXPO_PUBLIC_AUTH_REGION`, `EXPO_PUBLIC_AUTH_CLIENT_ID` | The Cognito user pool's region and app client                          |
+| `EXPO_PUBLIC_TERMS_URL`, `EXPO_PUBLIC_PRIVACY_URL`      | Legal pages (`{lang}` is replaced by the app language)                 |
+| `APPLE_TEAM_ID`                                         | Only for `pnpm --filter @konvami/mobile device:ios` on your own iPhone |
 
 After a Terraform apply, `terraform output -raw mobile_env` in `infra/envs/dev` prints the values for `apps/mobile/.env`.
 
