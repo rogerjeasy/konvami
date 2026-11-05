@@ -103,6 +103,12 @@ export function TalkScreen() {
             detail={t('talk.lessonsHint')}
             onPress={() => router.push(ROUTES.grammar)}
           />
+          <ListRow
+            icon="volume"
+            title={t('talk.pronunciation')}
+            detail={t('talk.pronunciationHint')}
+            onPress={() => router.push(ROUTES.pronunciation)}
+          />
         </ListGroup>
       </Reveal>
       {home.phase === 'ready' ? (
