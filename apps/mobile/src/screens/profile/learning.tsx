@@ -13,6 +13,7 @@ import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
 import { answerField, useAnswerRows } from '@/onboarding/answers';
 import { OnboardingGate } from '@/onboarding/gate';
+import { AskAgain } from './ask-again';
 import { STEP_ROUTES } from '@/onboarding/routing';
 import type { OnboardingData } from '@/onboarding/store';
 
@@ -131,6 +132,9 @@ export function LearningScreen() {
             <Goals data={data} />
           </Reveal>
           <Answers data={data} />
+          <Reveal delay={staggerDelay(7)}>
+            <AskAgain />
+          </Reveal>
         </StepLayout>
       )}
     </OnboardingGate>

@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { CourseStep } from '@/screens/onboarding/course';
 import { LevelStep } from '@/screens/onboarding/level';
-import { createFakeApi, type FakeApi } from '@/test/fake-api';
+import { createFakeApi, FAKE_PERSONAS, type FakeApi } from '@/test/fake-api';
 import { renderScreen } from '@/test/render';
 import { LearningScreen } from './learning';
 
@@ -148,5 +148,29 @@ describe('a question opened from the profile', () => {
       ],
     ]);
     expect((await api.getHome()).level).toMatchObject({ level: 'B2', source: 'asked' });
+  });
+
+  describe('Ask me again (spec §14.2)', () => {
+    it('starts a short call with the suggested partner about the learning settings', async () => {
+      await open(<LearningScreen />);
+
+      await fireEvent.press(await screen.findByRole('button', { name: /About how I learn/ }));
+
+      expect(router.push).toHaveBeenCalledWith({
+        pathname: '/call/[personaId]',
+        params: { personaId: FAKE_PERSONAS[0]!.id, practise: 'check:learning' },
+      });
+    });
+
+    it('starts one about the goals as well', async () => {
+      await open(<LearningScreen />);
+
+      await fireEvent.press(await screen.findByRole('button', { name: /About my goals/ }));
+
+      expect(router.push).toHaveBeenCalledWith({
+        pathname: '/call/[personaId]',
+        params: { personaId: FAKE_PERSONAS[0]!.id, practise: 'check:goals' },
+      });
+    });
   });
 });

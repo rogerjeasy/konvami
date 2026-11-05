@@ -26,6 +26,7 @@ import { useMinutesBack } from '@/profile/services';
 import { Goals } from './goals';
 import { CorrectionSheet, LiveCorrections } from './live-corrections';
 import { CallPlanStrip } from './plan';
+import { SettingsToast } from './settings-toast';
 import { setLiveCorrections, setPartnerCaptions, usePreferences } from '@/preferences';
 import { HELP_KINDS, type HelpKind } from '@/voice/help';
 import { withLine } from '@/voice/problems';
@@ -201,6 +202,7 @@ function Call({
         <>
           {rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : null}
           {plan ? <CallPlanStrip plan={plan} learnerLines={conversation.learnerLines} /> : null}
+          <SettingsToast changes={conversation.profileChanges} />
         </>
       }
       belowLearner={

@@ -232,6 +232,12 @@ export function ProfileScreen() {
               onPress={go(ROUTES.accountLearning)}
             />
             <ListRow
+              icon="message"
+              title={t('profile.rows.changes')}
+              detail={t('profile.rows.changesHint')}
+              onPress={go(ROUTES.accountChanges)}
+            />
+            <ListRow
               icon="clock"
               title={t('profile.rows.reminders')}
               detail={t('profile.rows.remindersHint')}
