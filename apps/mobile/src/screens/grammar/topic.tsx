@@ -130,13 +130,6 @@ export function GrammarTopicScreen() {
                 router.push(lessonCallRoute(partner, id));
               }}
             />
-            <TextButton
-              tone="primary"
-              label={t('grammar.topic.ask')}
-              onPress={() =>
-                router.push(askTutorRoute(t('grammar.topic.question', { topic: title })))
-              }
-            />
           </>
         ) : undefined
       }
@@ -219,6 +212,19 @@ export function GrammarTopicScreen() {
                 )}
               </View>
             </Section>
+          </Reveal>
+          {/* Not pinned with the two buttons: three actions would take a third of a 320 x 568
+              window and leave the topic little room. */}
+          <Reveal delay={staggerDelay(5)}>
+            <View className="items-center">
+              <TextButton
+                tone="primary"
+                label={t('grammar.topic.ask')}
+                onPress={() =>
+                  router.push(askTutorRoute(t('grammar.topic.question', { topic: title })))
+                }
+              />
+            </View>
           </Reveal>
         </View>
       )}
