@@ -45,6 +45,8 @@ const PRIVACY_MANIFEST = {
     'NSPrivacyCollectedDataTypeAudioData',
     'NSPrivacyCollectedDataTypeOtherUserContent',
     'NSPrivacyCollectedDataTypeProductInteraction',
+    // Age group, consent choices and the learning profile (level, goals, interests).
+    'NSPrivacyCollectedDataTypeOtherDataTypes',
   ].map((NSPrivacyCollectedDataType) => ({ NSPrivacyCollectedDataType, ...COLLECTED_FOR_THE_APP })),
   // The required-reason APIs that React Native, Expo and the app's libraries use, with the reasons
   // Expo documents for them (preferences, file times, boot time, free disk space).
