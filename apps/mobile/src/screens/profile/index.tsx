@@ -26,7 +26,13 @@ import { ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
 import { Meter } from '@/components/meter';
 import { TextButton } from '@/components/text-button';
-import { useAccount, useAllowance, useMinutesBack, useProfileServices } from '@/profile/services';
+import {
+  useAccount,
+  useAllowance,
+  useMinutesBack,
+  usePlan,
+  useProfileServices,
+} from '@/profile/services';
 import { usePreferences } from '@/preferences';
 import { withLine } from '@/voice/problems';
 import { useTheme } from '@/theme';
@@ -179,6 +185,8 @@ function VoiceMinutes() {
 export function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const { reminders } = usePreferences();
+  const planState = usePlan();
+  const plan = planState.phase === 'ready' ? planState.data : null;
   const { color } = useTheme();
   const { session } = useAuthServices();
   const { status } = useSession();
@@ -236,6 +244,13 @@ export function ProfileScreen() {
               title={t('profile.rows.changes')}
               detail={t('profile.rows.changesHint')}
               onPress={go(ROUTES.accountChanges)}
+            />
+            <ListRow
+              icon="award"
+              title={t('profile.rows.plan')}
+              detail={t('profile.rows.planHint')}
+              value={plan?.enforced ? t(`plan.tiers.${plan.tier}`) : undefined}
+              onPress={go(ROUTES.accountPlan)}
             />
             <ListRow
               icon="clock"

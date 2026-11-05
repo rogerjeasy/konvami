@@ -6,6 +6,7 @@ import {
   type Catalog,
   type Conversation,
   type Costs,
+  type Plan,
   type GrammarMap,
   type GrammarTopic,
   type GrammarTopicPage,
@@ -123,6 +124,31 @@ export const FAKE_NOW = '2026-10-09T12:00:00Z';
 export const FAKE_WEEK_ENDS = '2026-10-12T00:00:00Z';
 /** Each learner's voice minutes per week, in seconds (as configured on the server). */
 export const FAKE_WEEKLY_SECONDS = 3600;
+
+/** A learner on the free plan, with plans enforced (as the store build has them). */
+export const FAKE_SUBSCRIPTION: Plan = {
+  userId: '11111111-1111-4111-8111-111111111111',
+  tier: 'free',
+  trial: false,
+  autoRenew: false,
+  billingIssue: false,
+  expiresAt: null,
+  enforced: true,
+  weeklySeconds: 900,
+  personas: 2,
+  perks: [],
+  packSeconds: 0,
+  tiers: [
+    { tier: 'free', weeklySeconds: 900, personas: 2, perks: [] },
+    { tier: 'plus', weeklySeconds: 3600, personas: null, perks: [] },
+    {
+      tier: 'pro',
+      weeklySeconds: 8400,
+      personas: null,
+      perks: ['exam_simulations', 'premium_voices'],
+    },
+  ],
+};
 /** As on the server (services/api: domain/voice.py MIN_CALL_SECONDS). */
 const MIN_CALL_SECONDS = 60;
 
@@ -709,6 +735,8 @@ export interface FakeApi extends ApiClient {
   hearsNextRetry(heard: string): void;
   /** What the next card answered out loud is heard as; by default, its answer. */
   hearsNextAnswer(heard: string | ApiError): void;
+  /** Changes the plan `getPlan` answers (the learner bought something, or plans are not enforced). */
+  hasPlan(changes: Partial<Plan>): void;
   /** Every call so far, as `[method, ...arguments]`, in order. */
   readonly calls: readonly unknown[][];
   /** Stores answers directly, as if they had been given earlier. */
@@ -915,6 +943,7 @@ export function createFakeApi(): FakeApi {
   let picture: string | null = null;
   let usedSeconds = 0;
   let owner = false;
+  let subscription: Plan = { ...FAKE_SUBSCRIPTION };
   const plan: WeekPlan = FAKE_PLAN;
   let planChanges: Partial<WeekPlan> = {};
   let reminderNotes: ReminderNotes = { followUps: [], words: [] };
@@ -1307,6 +1336,9 @@ export function createFakeApi(): FakeApi {
     },
     beOwner() {
       owner = true;
+    },
+    hasPlan(changes) {
+      subscription = { ...subscription, ...changes };
     },
     planned(changes) {
       planChanges = { ...planChanges, ...changes };
@@ -2143,6 +2175,10 @@ export function createFakeApi(): FakeApi {
     async getAccount() {
       await record('getAccount');
       return account();
+    },
+    async getPlan() {
+      await record('getPlan');
+      return subscription;
     },
     async getVoiceAllowance() {
       await record('getVoiceAllowance');

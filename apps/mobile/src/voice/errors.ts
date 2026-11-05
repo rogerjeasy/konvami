@@ -11,6 +11,8 @@ export type VoiceErrorCode =
   | 'minutes_used_up'
   /** Voice calls are stopped for everyone for now: the month's spending reached its ceiling. */
   | 'voice_paused'
+  /** The learner's plan does not include this call (an exam simulation needs Pro). */
+  | 'plan_required'
   /** The voice service cannot take a call right now. */
   | 'voice_unavailable'
   | 'network'

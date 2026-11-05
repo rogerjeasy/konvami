@@ -7,6 +7,7 @@ import type {
   ProfileChanges,
   ProfileQuestionState,
   Recordings,
+  Plan,
   VoiceAllowance,
 } from '@konvami/api-client';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +49,8 @@ export interface ProfileServices {
   question: QuestionStore;
   /** The learner's voice minutes this week (spec §6.19). */
   allowance: ResourceStore<VoiceAllowance>;
+  /** What the learner has bought and what each plan includes (6.17, spec §6.21.2). */
+  plan: ResourceStore<Plan>;
   /**
    * A month's estimated spending, for the owner only (`month` is its first day, this month when
    * left out). Rejects with an `ApiError` (`not_owner` for anyone else).
@@ -90,6 +93,7 @@ export function createProfileServices(
   let studioStart: PersonaDraft | null = null;
   const recordings = createResourceStore(() => api.getRecordings(), Date.now);
   const allowance = createResourceStore(() => api.getVoiceAllowance(), Date.now);
+  const plan = createResourceStore(() => api.getPlan(), Date.now);
   const memory = createMemoryStore(api, Date.now);
   return {
     account: createAccountStore(api, device.pictures.send),
@@ -109,6 +113,7 @@ export function createProfileServices(
       device.onSettingsChanged();
     }),
     allowance,
+    plan,
     costs: (month) => api.getCosts(month),
     pictures: device.pictures,
     samples: device.samples,
@@ -150,6 +155,7 @@ export function ProfileProvider({
     services.changes.reset();
     services.question.reset();
     services.allowance.reset();
+    services.plan.reset();
   }, [status, services]);
   return <ProfileContext.Provider value={services}>{children}</ProfileContext.Provider>;
 }
@@ -206,6 +212,12 @@ export function useMinutesBack(wanted: boolean): string | null {
   return t('call.minutesBack', {
     day: formatDayLine(i18n.language, new Date(state.data.resetsAt)),
   });
+}
+
+/** The learner's plan and the plans on offer; re-renders when it changes. */
+export function usePlan(): ResourceState<Plan> {
+  const { plan } = useProfileServices();
+  return useSyncExternalStore(plan.subscribe, plan.getState, plan.getState);
 }
 
 /** What partners changed by voice; re-renders when it changes. */

@@ -51,6 +51,7 @@ export interface StartedCall {
 const API_CODES: Record<string, VoiceErrorCode> = {
   consent_required: 'consent_required',
   minutes_used_up: 'minutes_used_up',
+  plan_required: 'plan_required',
   voice_paused: 'voice_paused',
   voice_unavailable: 'voice_unavailable',
   not_configured: 'voice_unavailable',

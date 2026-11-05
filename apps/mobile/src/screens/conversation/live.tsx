@@ -22,7 +22,8 @@ import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
 import { conversationDoneRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices, useScenarios } from '@/practice/services';
-import { useMinutesBack } from '@/profile/services';
+import { usePaywall, usePurchaseDevice } from '@/plan/services';
+import { useMinutesBack, usePlan } from '@/profile/services';
 import { Goals } from './goals';
 import { CorrectionSheet, LiveCorrections } from './live-corrections';
 import { CallPlanStrip } from './plan';
@@ -168,6 +169,10 @@ function Call({
   const [explaining, setExplaining] = useState<LiveCorrection | null>(null);
   const canHelp = call.status === 'live' && !conversation.finished;
   const minutesBack = useMinutesBack(call.problem === 'minutes_used_up');
+  const paywall = usePaywall();
+  const device = usePurchaseDevice();
+  const planState = usePlan();
+  const canUpgrade = device.available && planState.phase === 'ready' && planState.data.enforced;
 
   /** Ends the call and shows what it added up to; a call that never connected just closes. */
   const leave = useCallback(() => {
@@ -254,7 +259,16 @@ function Call({
       }
       failedActions={
         call.problem && FINAL.includes(call.problem) ? (
-          <Button label={t('conversation.back')} onPress={toToday} />
+          <>
+            {call.problem === 'minutes_used_up' && canUpgrade ? (
+              <Button label={t('plan.see')} onPress={() => paywall.open('minutes')} />
+            ) : null}
+            <Button
+              variant={call.problem === 'minutes_used_up' && canUpgrade ? 'secondary' : 'primary'}
+              label={t('conversation.back')}
+              onPress={toToday}
+            />
+          </>
         ) : (
           <>
             <Button label={t('conversation.retry')} onPress={onRetry} />

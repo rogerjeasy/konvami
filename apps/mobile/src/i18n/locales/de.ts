@@ -68,6 +68,7 @@ export const de: Translation = {
     phoneLanguage: 'Sprache des Telefons ({{language}})',
   },
   errors: {
+    planRequired: 'Dein Tarif enthält das nicht. Schau dir die Tarife an, um ihn zu ändern.',
     network: 'Konvami ist nicht erreichbar. Prüf deine Verbindung und versuch es noch einmal.',
     tooManyAttempts: 'Zu viele Versuche. Warte ein paar Minuten und versuch es dann noch einmal.',
     notConfigured: 'Die Registrierung ist in dieser Version noch nicht eingerichtet.',
@@ -1683,6 +1684,70 @@ export const de: Translation = {
       phrasebook: 'Phrasebuch',
     },
   },
+  plan: {
+    title: 'Dein Tarif',
+    body: 'Was du hast, was er enthält und wie viele Sprachminuten noch übrig sind.',
+    loadFailed: 'Dein Tarif konnte nicht geladen werden.',
+    tiers: {
+      free: 'Free',
+      plus: 'Plus',
+      pro: 'Pro',
+    },
+    trial: 'Gratis-Test',
+    trialUntil: 'Dein Gratis-Test endet am {{date}}.',
+    renews: 'Verlängert sich am {{date}}.',
+    endsOn: 'Endet am {{date}}. Er verlängert sich nicht.',
+    billingIssue:
+      'Der Store konnte deine letzte Zahlung nicht einziehen. Aktualisiere dort deine Zahlungsmethode, um deinen Tarif zu behalten.',
+    testing:
+      'Solange Konvami im Test ist, sind alle Funktionen offen und du hast {{count}} Sprachminuten pro Woche.',
+    includes: 'Enthalten',
+    minutesPerWeek: '{{count}} Sprachminuten pro Woche',
+    partnersLimit: 'Bis zu {{count}} Partner',
+    partnersAny: 'So viele Partner, wie du willst',
+    perks: {
+      exam_simulations: 'Bewertete Prüfungssimulationen',
+      premium_voices: 'Premium-Stimmen',
+    },
+    packLeft: 'Noch {{count}} Minuten aus Paketen',
+    see: 'Tarife ansehen',
+    restore: 'Käufe wiederherstellen',
+    restored: 'Käufe wiederhergestellt.',
+    restoreFailed: 'Käufe konnten nicht wiederhergestellt werden. Versuch es noch einmal.',
+    manage: 'Abo verwalten',
+    manageFailed: 'Die Abo-Einstellungen konnten nicht geöffnet werden.',
+    unavailable:
+      'Tarife werden in der Konvami-App auf dem Handy gekauft. Diese Version kann sie nicht verkaufen.',
+    paywall: {
+      title: 'Tarif wählen',
+      reasons: {
+        plans: 'Mehr Sprachminuten und mehr Partner, wann immer du sie willst.',
+        minutes:
+          'Du hast die Sprachminuten dieser Woche aufgebraucht. Ein Tarif gibt dir mehr, ein Paket einmalig Minuten dazu.',
+        partners:
+          'Dein Tarif hat Platz für eine begrenzte Zahl von Partnern. Plus und Pro haben so viele, wie du willst.',
+        exams: 'Bewertete Prüfungssimulationen gibt es mit Pro.',
+        trial: 'Teste Plus gratis. Jederzeit in deinem Store-Konto kündbar.',
+      },
+      month: 'pro Monat',
+      year: 'pro Jahr',
+      trialDays: '{{count}} Tage gratis',
+      choose: 'Wählen',
+      packs: 'Zusätzliche Minuten',
+      packsBody:
+        'Einmalige Pakete. Sie werden nach den Wochenminuten verbraucht und verfallen nie.',
+      loadFailed: 'Die Tarife konnten nicht geladen werden.',
+      purchaseFailed: 'Der Kauf ist nicht zustande gekommen. Bitte versuch es noch einmal.',
+      thanks: 'Danke. Dein Tarif wird gleich aktualisiert.',
+      renewal: 'Abos verlängern sich, bis du sie in deinem Store-Konto kündigst.',
+    },
+    ready: {
+      trial: 'Plus {{count}} Tage gratis testen',
+      body: 'Mehr Sprachminuten und so viele Partner, wie du willst. Jederzeit kündbar.',
+      see: 'Angebot ansehen',
+    },
+  },
+
   profile: {
     minutes: {
       left_one: 'Noch {{count}} Minute',
@@ -1709,6 +1774,8 @@ export const de: Translation = {
       privacy: 'Datenschutz und Sicherheit',
     },
     rows: {
+      plan: 'Tarif',
+      planHint: 'Was du hast, Minuten und Upgrades',
       costs: 'Kosten',
       costsHint: 'Was Konvami ausgibt, pro Tag, Funktion und Lernendem',
       flags: 'Meldungen',

@@ -7,5 +7,6 @@ export function apiErrorCode(error: unknown): string {
 
 /** Translation key of the message for a failed API call. */
 export function apiErrorKey(code: string) {
+  if (code === 'plan_required') return 'errors.planRequired';
   return code === 'network' ? 'errors.network' : 'errors.unknown';
 }
