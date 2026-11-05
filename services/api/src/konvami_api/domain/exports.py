@@ -96,17 +96,20 @@ class DataExportService:
         )
 
     def _account(self, user_id: UUID) -> dict[str, Any]:
-        """What the sign-in service keeps (the email address and the password are not shown:
-        the first is the learner's own, the second is only stored as a hash by the provider)."""
+        """What the sign-in service keeps. The password is not part of it: the provider stores
+        only a hash that nobody at Konvami can read."""
         try:
             account = self._accounts.get(user_id)
         except AccountNotFound:
             return {}
-        return {
+        details: dict[str, Any] = {
             "first_name": account.first_name,
             "language": account.language,
             "ai_consent_for_voice": account.voice_consent,
         }
+        if account.email:
+            details["email"] = account.email
+        return details
 
     def _data(self, user_id: UUID) -> dict[str, list[dict[str, Any]]]:
         data = {table: list(rows) for table, rows in self._records.rows(user_id).items()}

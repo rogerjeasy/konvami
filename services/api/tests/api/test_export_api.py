@@ -4,8 +4,9 @@ import json
 from datetime import UTC, datetime
 from uuid import UUID
 
+from konvami_api.domain.accounts import Account
 from tests.api.conftest import OTHER_USER, USER, Call
-from tests.fakes import InMemoryExportRepository, InMemoryFileStore
+from tests.fakes import FakeAccountDirectory, InMemoryExportRepository, InMemoryFileStore
 
 EXPORT = "/v1/account/export"
 
@@ -99,3 +100,16 @@ def test_deleting_the_account_deletes_its_archives(call: Call, files: InMemoryFi
     call("DELETE", "/v1/account")
 
     assert files.keys() == []
+
+
+def test_the_learners_email_address_is_in_their_own_copy(
+    call: Call, files: InMemoryFileStore, directory: FakeAccountDirectory
+) -> None:
+    directory.accounts[UUID(USER)] = Account(
+        "Amara", "fr", voice_consent=True, email="amara.diallo@mail.com"
+    )
+
+    call("POST", EXPORT)
+
+    account = archive_of(files)["account"]
+    assert account["email"] == "amara.diallo@mail.com"  # type: ignore[index]

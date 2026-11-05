@@ -15,7 +15,7 @@ ATTRIBUTES = {
 
 def test_an_account_carries_the_name_the_language_and_the_voice_consent() -> None:
     assert account_from_attributes(ATTRIBUTES) == Account(
-        first_name="Amara", language="fr", voice_consent=True
+        first_name="Amara", language="fr", voice_consent=True, email="amara.diallo@mail.com"
     )
 
 

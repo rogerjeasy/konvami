@@ -30,6 +30,9 @@ class Account:
     first_name: str
     language: InterfaceLanguage
     voice_consent: bool
+    # The sign-in address; empty when the provider did not give one. Only the learner's own copy
+    # of their data shows it (domain/exports.py).
+    email: str = ""
 
 
 class AccountNotFound(Exception):  # noqa: N818 - reads as a fact, like KeyError
@@ -69,6 +72,7 @@ def account_from_attributes(attributes: Mapping[str, str]) -> Account:
         first_name=attributes.get("given_name", "").strip(),
         language=language,
         voice_consent=_voice_consent(attributes.get("custom:ai_consent")),
+        email=attributes.get("email", "").strip(),
     )
 
 
