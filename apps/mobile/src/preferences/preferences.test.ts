@@ -8,6 +8,7 @@ import {
   setLanguage,
   setLiveCorrections,
   setPartnerCaptions,
+  setAnalytics,
   setReminders,
 } from '.';
 import { writeItem } from '@/lib/storage';
@@ -143,5 +144,25 @@ describe('reminders', () => {
     await loadPreferences();
 
     expect(getPreferences().reminders).toBeNull();
+  });
+});
+
+describe('anonymous usage counts', () => {
+  afterEach(() => setAnalytics(false));
+
+  it('are off until the learner turns them on', async () => {
+    await loadPreferences();
+
+    expect(getPreferences().analytics).toBe(false);
+  });
+
+  it('are kept once turned on and forgotten once turned off', async () => {
+    await setAnalytics(true);
+    await loadPreferences();
+    expect(getPreferences().analytics).toBe(true);
+
+    await setAnalytics(false);
+    await loadPreferences();
+    expect(getPreferences().analytics).toBe(false);
   });
 });

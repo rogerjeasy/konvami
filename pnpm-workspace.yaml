@@ -4,5 +4,7 @@ packages:
 
 # Dependencies allowed to run install scripts (pnpm blocks all others by default).
 allowBuilds:
+  # Downloads a binary that only uploads source maps to Sentry, which no build here does yet.
+  '@sentry/cli': false
   esbuild: true
   unrs-resolver: true

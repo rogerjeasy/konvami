@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { reportError } from '@/monitoring';
 
 interface Props {
   children: ReactNode;
@@ -22,6 +23,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(): State {
     return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    // A screen that breaks is shown a fallback, so crash reporting would not otherwise see it.
+    reportError(error);
   }
 
   componentDidUpdate(previous: Props) {
