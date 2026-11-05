@@ -27,11 +27,13 @@ Konvami ist in der Testphase. Einige Funktionen aus dem Entwurf der App sind noc
 
 **Was sich deine Partner merken.** Nach einem Gespräch werden kurze Notizen über dich festgehalten („Hat am Freitag ein Vorstellungsgespräch“), damit deine Partner nachfragen können, wie es lief. Du kannst jede Notiz lesen, ändern und löschen, Themen ausschließen oder das Merken ausschalten, unter Profil › Was meine Partner wissen. Konvami speichert höchstens 300 Notizen.
 
-**Deine Lernwerkzeuge.** Die Karteikarten, die du speicherst, deine Wiederholungen und die Fragen, die du dem Tutor stellst, mit seinen Antworten.
+**Deine Lernwerkzeuge.** Die Karteikarten, die du speicherst, deine Wiederholungen und die Fragen, die du dem Tutor stellst, mit seinen Antworten, und die Wendungen, die du in deinem Phrasenbuch behältst.
 
 **Dein Foto**, falls du eines hinzufügst. Es ist privat: Nur du siehst es.
 
 **Nutzung.** Wie viele Sprachminuten du pro Woche genutzt hast und eine Schätzung, was jede Anfrage an einen KI-Anbieter gekostet hat, damit wir das wöchentliche Kontingent und das monatliche Budget einhalten können.
+
+**Meldungen, die du sendest.** Wenn du eine Aussage eines Partners oder eine Korrektur als falsch oder unangemessen meldest, speichern wir die Meldung: deinen Grund, deine Notiz und den gemeldeten Text, damit sie geprüft werden kann. Nur die Person, die Konvami betreibt, liest sie, ohne deinen Namen.
 
 **Technische Protokolle.** Zu jeder Anfrage an unsere Server: die Zeit, die angefragte Adresse, das Ergebnis und die Dauer. IP-Adressen, Passwörter und Inhalte werden nicht protokolliert.
 
@@ -77,7 +79,7 @@ Daten werden verschlüsselt übertragen (TLS) und verschlüsselt gespeichert, in
 
 Du hast das Recht,
 
-- die Daten, die wir über dich speichern, **einzusehen** und eine Kopie davon zu erhalten, in einem gängigen maschinenlesbaren Format;
+- die Daten, die wir über dich speichern, **einzusehen** und eine Kopie davon zu erhalten, in einem gängigen maschinenlesbaren Format: in der App unter Profil › Datenschutz und KI › Meine Daten exportieren;
 - sie **berichtigen** zu lassen: Das meiste kannst du selbst im Profil ändern;
 - sie **löschen** zu lassen: in der App unter Profil › Datenschutz und KI › Konto löschen, oder indem du uns schreibst;
 - ihre Nutzung **einschränken** zu lassen oder ihr **zu widersprechen** und deine Einwilligung jederzeit **zu widerrufen**, ohne dass das, was vorher geschah, unrechtmäßig wird;

@@ -6,7 +6,7 @@ export const LANGUAGES = ['en', 'de', 'fr', 'it'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 /** The pages, each written once per language under content/<page>/<lang>.md. */
-export const PAGES = ['privacy'] as const;
+export const PAGES = ['privacy', 'terms'] as const;
 export type Page = (typeof PAGES)[number];
 
 /** Each language's name in itself, for the language switcher. */

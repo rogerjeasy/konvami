@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { LANGUAGES, pagePath } from './pages.ts';
+import { LANGUAGES, PAGES, pagePath } from './pages.ts';
 import { buildSite } from './site.ts';
 
 const out = mkdtempSync(join(tmpdir(), 'konvami-site-'));
@@ -20,12 +20,14 @@ const settings = {
 describe('buildSite', () => {
   const written = buildSite(settings, out);
 
-  it('writes the privacy policy in every language, with the settings filled in', () => {
+  it('writes every page in every language, with the settings filled in', () => {
     for (const lang of LANGUAGES) {
-      const html = readFileSync(join(out, pagePath(lang, 'privacy')), 'utf8');
-      expect(html).toContain('Ada Example');
-      expect(html).toContain('privacy@example.org');
-      expect(html).not.toContain('{{');
+      for (const page of PAGES) {
+        const html = readFileSync(join(out, pagePath(lang, page)), 'utf8');
+        expect(html).toContain('Ada Example');
+        expect(html).toContain('privacy@example.org');
+        expect(html).not.toContain('{{');
+      }
     }
   });
 
@@ -47,6 +49,8 @@ describe('buildSite', () => {
 
   it('links the front page to every page', () => {
     const index = readFileSync(join(out, 'index.html'), 'utf8');
-    for (const lang of LANGUAGES) expect(index).toContain(`href="${pagePath(lang, 'privacy')}"`);
+    for (const lang of LANGUAGES) {
+      for (const page of PAGES) expect(index).toContain(`href="${pagePath(lang, page)}"`);
+    }
   });
 });

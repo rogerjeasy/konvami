@@ -27,11 +27,13 @@ Konvami est en phase de test. Certaines fonctions prévues dans la conception de
 
 **Ce dont se souviennent tes partenaires.** Après une conversation, de courtes notes sur toi (« A un entretien d’embauche vendredi ») sont écrites, pour que tes partenaires puissent te demander comment ça s’est passé. Tu peux lire, modifier et supprimer chaque note, exclure des sujets ou désactiver la mémoire, dans Profil › Ce que savent mes partenaires. Konvami conserve au maximum 300 notes.
 
-**Tes outils d’apprentissage.** Les cartes que tu enregistres, tes révisions, et les questions que tu poses au tuteur avec ses réponses.
+**Tes outils d’apprentissage.** Les cartes que tu enregistres, tes révisions, et les questions que tu poses au tuteur avec ses réponses, et les expressions que tu gardes dans ton carnet de phrases.
 
 **Ta photo**, si tu en ajoutes une. Elle est privée : elle n’est visible que par toi.
 
 **L’utilisation.** Le nombre de minutes vocales utilisées chaque semaine et une estimation du coût de chaque requête à un fournisseur d’IA, pour respecter le quota hebdomadaire et le budget mensuel.
+
+**Les signalements que tu envoies.** Quand tu signales une phrase d’un partenaire ou une correction comme erronée ou inappropriée, nous conservons le signalement : ton motif, ta note et le texte signalé, pour qu’il puisse être examiné. Seule la personne qui gère Konvami le lit, sans ton nom.
 
 **Les journaux techniques.** Pour chaque requête à nos serveurs : l’heure, l’adresse demandée, le résultat et la durée. Ni adresse IP, ni mot de passe, ni contenu ne sont journalisés.
 
@@ -77,7 +79,7 @@ Les données circulent chiffrées (TLS) et sont stockées chiffrées, dans l’U
 
 Tu as le droit :
 
-- de **consulter** les données que nous conservons sur toi et d’en obtenir une copie, dans un format courant lisible par machine ;
+- de **consulter** les données que nous conservons sur toi et d’en obtenir une copie, dans un format courant lisible par machine : dans l’app, Profil › Confidentialité et IA › Exporter mes données ;
 - de les **rectifier** : la plupart se modifient dans Profil ;
 - de les **supprimer** : dans l’app, Profil › Confidentialité et IA › Supprimer le compte, ou en nous écrivant ;
 - d’en **limiter** l’utilisation ou de t’y **opposer**, et de **retirer** ton consentement à tout moment, sans remettre en cause ce qui a été fait avant ;

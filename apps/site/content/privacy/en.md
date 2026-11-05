@@ -27,11 +27,13 @@ Konvami is in its testing phase. Some features described in the app's design are
 
 **What your partners remember.** After a conversation, short notes about you ("Has a job interview on Friday") are written down so your partners can ask how it went. You can read, edit and delete every note, mark topics as off-limits, or switch memory off, in Profile › What my partners know. Konvami keeps at most 300 notes.
 
-**Your learning tools.** The flashcards you save, your reviews of them, and the questions you ask the Tutor with its answers.
+**Your learning tools.** The flashcards you save, your reviews of them, the questions you ask the Tutor with its answers, and the phrases you keep in your phrasebook.
 
 **Your photo**, if you add one. It is private: only you see it.
 
 **Usage.** How many voice minutes you used each week and an estimate of what each request to an AI provider cost, so that we can keep to the weekly allowance and the monthly budget.
+
+**Reports you send.** When you report a line of a partner or a correction as wrong or inappropriate, we keep the report: your reason, your note and the text you reported, so that it can be reviewed. Only the person who runs Konvami reads it, without your name.
 
 **Technical logs.** For each request to our servers: the time, the address requested, the result and how long it took. No IP addresses, passwords or contents are logged.
 
@@ -77,7 +79,7 @@ Data travels encrypted (TLS) and is stored encrypted, in the EU. Recordings and 
 
 You have the right to:
 
-- **see** the data we keep about you and get a copy of it, in a common machine-readable format;
+- **see** the data we keep about you and get a copy of it, in a common machine-readable format: in the app, Profile › Privacy and AI › Export my data;
 - **correct** it: most of it can be changed in Profile;
 - **delete** it: in the app, Profile › Privacy and AI › Delete account, or by writing to us;
 - **restrict** or **object to** its use, and to **withdraw** your consent at any time, without affecting what was done before;
