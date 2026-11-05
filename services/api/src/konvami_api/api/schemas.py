@@ -45,6 +45,12 @@ from konvami_api.domain.memories import TEXT_MAX as MEMORY_TEXT_MAX
 from konvami_api.domain.memories import Kind as MemoryKind
 from konvami_api.domain.memories import Memory, MemoryBook
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
+from konvami_api.domain.penpal import Note as PenPalNote
+from konvami_api.domain.penpal import Overview as PenPalOverview
+from konvami_api.domain.penpal import Sender as PenPalSender
+from konvami_api.domain.penpal import Settings as PenPalSettings
+from konvami_api.domain.penpal import Status as PenPalStatus
+from konvami_api.domain.penpal import Thread as PenPalThread
 from konvami_api.domain.persona_parts import (
     Backdrop,
     CorrectionTiming,
@@ -2115,6 +2121,118 @@ class QueuedFlagOut(FlagOut):
 
 class FlagQueueOut(ApiModel):
     flags: list[QueuedFlagOut]
+
+
+class PenPalSettingsOut(ApiModel):
+    """What the learner chose for their partners' unprompted voice notes (spec §6.16)."""
+
+    enabled: bool
+    per_week: int
+    # Hours of the day, 0 to 23, on the learner's clock, between which no note is sent.
+    quiet_from: int
+    quiet_to: int
+    timezone: str
+
+    @classmethod
+    def of(cls, settings: PenPalSettings) -> "PenPalSettingsOut":
+        return cls(**dataclasses.asdict(settings))
+
+
+class PenPalSettingsIn(ApiModel):
+    """A key left out leaves a setting as it is; the service checks the ranges."""
+
+    enabled: StrictBool | None = None
+    per_week: int | None = None
+    quiet_from: int | None = None
+    quiet_to: int | None = None
+    timezone: Annotated[str, Field(min_length=1, max_length=64)] | None = None
+
+
+class PenPalCorrectionOut(ApiModel):
+    original: str
+    corrected: str
+    # In the learner's explanation language.
+    explanation: str
+    category: str
+    # False when the second check could not confirm it: shown as a possibility ("Not sure").
+    certain: bool
+
+
+class PenPalNoteOut(ApiModel):
+    id: UUID
+    persona_id: UUID
+    sender: PenPalSender
+    status: PenPalStatus
+    # A partner's note: what it says. A learner's: what they said, word for word.
+    text: str
+    created_at: dt.datetime
+    # The learner's note a partner's answer is to; null for a note written on its own.
+    reply_to: UUID | None
+    # A short-lived address of the sound; null without one.
+    audio_url: str | None
+    corrections: list[PenPalCorrectionOut]
+
+    @classmethod
+    def of(cls, note: PenPalNote, audio_url: str | None = None) -> "PenPalNoteOut":
+        return cls(
+            id=note.id,
+            persona_id=note.persona_id,
+            sender=note.sender,
+            status=note.status,
+            text=note.text,
+            created_at=note.created_at,
+            reply_to=note.reply_to,
+            audio_url=audio_url,
+            corrections=[PenPalCorrectionOut(**dataclasses.asdict(c)) for c in note.corrections],
+        )
+
+
+class PenPalSummaryOut(ApiModel):
+    persona_id: UUID
+    # The newest note of the thread; null before the first.
+    last: PenPalNoteOut | None
+    unread: int
+
+
+class PenPalOut(ApiModel):
+    settings: PenPalSettingsOut
+    threads: list[PenPalSummaryOut]
+
+    @classmethod
+    def of(cls, overview: PenPalOverview) -> "PenPalOut":
+        return cls(
+            settings=PenPalSettingsOut.of(overview.settings),
+            threads=[
+                PenPalSummaryOut(
+                    persona_id=thread.persona_id,
+                    last=PenPalNoteOut.of(thread.last) if thread.last else None,
+                    unread=thread.unread,
+                )
+                for thread in overview.threads
+            ],
+        )
+
+
+class PenPalThreadOut(ApiModel):
+    persona_id: UUID
+    # Oldest first.
+    notes: list[PenPalNoteOut]
+    unread: int
+
+    @classmethod
+    def of(cls, thread: PenPalThread) -> "PenPalThreadOut":
+        return cls(
+            persona_id=thread.persona_id,
+            notes=[PenPalNoteOut.of(heard.note, heard.audio_url) for heard in thread.notes],
+            unread=thread.unread,
+        )
+
+
+class PenPalReplyOut(ApiModel):
+    """The learner's voice note, written down, and the partner's answer still on its way."""
+
+    heard: PenPalNoteOut
+    answer: PenPalNoteOut
 
 
 class FlagResolution(ApiModel):

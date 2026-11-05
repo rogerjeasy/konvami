@@ -27,6 +27,11 @@ from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.memories import Memory as Remembered
 from konvami_api.domain.memories import MemoryRepository, memory_key
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
+from konvami_api.domain.penpal import Correction as PenPalCorrection
+from konvami_api.domain.penpal import Note as PenPalNote
+from konvami_api.domain.penpal import PenPalRepository
+from konvami_api.domain.penpal import Sender as PenPalSender
+from konvami_api.domain.penpal import Settings as PenPalSettings
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
 from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
@@ -74,6 +79,7 @@ from konvami_api.persistence.repositories import (
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
+    SqlPenPalRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
@@ -98,6 +104,7 @@ from tests.fakes import (
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryPenPalRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
@@ -2856,3 +2863,173 @@ def test_the_queue_lists_newest_first_by_status_and_closing_sets_the_time(
     assert flags.queue(None, 10) == [new, closed]
     assert flags.queue(None, 1) == [new]
     assert flags.resolve(uuid4(), "resolved", NOON) is None
+
+
+# --- Pen-pal voice notes ---------------------------------------------------------------------
+
+LENA_ID = persona(1, "Lena").id
+JONAS_ID = persona(2, "Jonas").id
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def penpals(request: pytest.FixtureRequest) -> PenPalRepository:
+    """Pen-pal storage, with the learner's partners Lena and Jonas there to write notes."""
+    if request.param == "memory":
+        return InMemoryPenPalRepository()
+    db = request.getfixturevalue("db")
+    SqlPersonaRepository(db).add(USER, "de", [persona(1, "Lena"), persona(2, "Jonas")])
+    return SqlPenPalRepository(db)
+
+
+def a_note(
+    sender: PenPalSender = "partner",
+    *,
+    persona_id: UUID = LENA_ID,
+    at: datetime = NOON,
+    **changes: Any,
+) -> PenPalNote:
+    note = PenPalNote(
+        id=uuid4(),
+        user_id=USER,
+        persona_id=persona_id,
+        sender=sender,
+        status="ready",
+        text="Hallo! Wie war dein Tag?" if sender == "partner" else "Mein Tag war gut",
+        created_at=at,
+    )
+    return replace(note, **changes)
+
+
+def test_settings_are_kept_and_only_the_enabled_are_listed(penpals: PenPalRepository) -> None:
+    assert penpals.settings(USER) is None
+
+    chosen = PenPalSettings(
+        enabled=True, per_week=5, quiet_from=22, quiet_to=7, timezone="Europe/Zurich"
+    )
+    penpals.save_settings(USER, chosen, NOON)
+    penpals.save_settings(OTHER_USER, PenPalSettings(enabled=False), NOON)
+
+    assert penpals.settings(USER) == chosen
+    assert penpals.enabled(10) == [(USER, chosen)]
+
+    penpals.save_settings(USER, replace(chosen, enabled=False), NOON + HOUR)
+    assert penpals.enabled(10) == []
+
+
+def test_a_thread_is_read_back_in_order_with_its_corrections(penpals: PenPalRepository) -> None:
+    first = a_note()
+    heard = a_note("learner", at=NOON + HOUR)
+    correction = PenPalCorrection("ein Film", "einen Film", "Accusatif.", "case", certain=False)
+    answer = a_note(
+        at=NOON + 2 * HOUR,
+        reply_to=heard.id,
+        audio_key=f"users/{USER}/penpal/x.mp3",
+        corrections=(correction,),
+    )
+    other = a_note(persona_id=JONAS_ID)
+    for note in (first, heard, answer, other):
+        penpals.add(note)
+
+    thread = penpals.thread(USER, LENA_ID, 10)
+
+    assert thread == [first, heard, answer]
+    assert thread[2].corrections == (correction,)
+    assert penpals.thread(USER, LENA_ID, 2) == [heard, answer]
+    assert penpals.thread(OTHER_USER, LENA_ID, 10) == []
+    assert penpals.get(answer.id) == answer
+    assert penpals.get(uuid4()) is None
+    assert penpals.last_of(USER, LENA_ID) == answer
+    assert penpals.last_of(USER, None) == other
+
+
+def test_notes_are_counted_from_a_time_on_without_answers_or_failures(
+    penpals: PenPalRepository,
+) -> None:
+    on_its_own = a_note(at=NOON)
+    penpals.add(on_its_own)
+    penpals.add(a_note(at=NOON + HOUR, reply_to=on_its_own.id))
+    penpals.add(a_note(at=NOON + HOUR, status="failed"))
+    penpals.add(a_note("learner", at=NOON + 2 * HOUR))
+
+    assert penpals.partner_notes_since(USER, NOON - HOUR) == 1
+    assert penpals.partner_notes_since(USER, NOON + HOUR) == 0
+    assert penpals.learner_notes_since(USER, NOON + HOUR) == 1
+    assert penpals.learner_notes_since(USER, NOON + 3 * HOUR) == 0
+    assert penpals.partner_notes_since(OTHER_USER, NOON - HOUR) == 0
+
+
+def test_a_partner_waits_for_notes_the_learner_has_not_answered(penpals: PenPalRepository) -> None:
+    penpals.add(a_note(at=NOON))
+    penpals.add(a_note(at=NOON + HOUR))
+    penpals.add(a_note(persona_id=JONAS_ID))
+    assert penpals.unanswered(USER, LENA_ID) == 2
+    assert penpals.unanswered(USER, JONAS_ID) == 1
+
+    penpals.add(a_note("learner", at=NOON + 2 * HOUR))
+    penpals.add(a_note(at=NOON + 3 * HOUR))
+
+    assert penpals.unanswered(USER, LENA_ID) == 1
+
+
+def test_what_a_partner_sent_is_unread_until_the_thread_is_opened(
+    penpals: PenPalRepository,
+) -> None:
+    penpals.add(a_note(at=NOON))
+    penpals.add(a_note(at=NOON + HOUR))
+    penpals.add(a_note(persona_id=JONAS_ID))
+    penpals.add(a_note("learner", read=True))
+    penpals.add(a_note(status="pending"))
+
+    assert penpals.unread(USER) == {LENA_ID: 2, JONAS_ID: 1}
+
+    penpals.mark_read(USER, LENA_ID)
+
+    assert penpals.unread(USER) == {JONAS_ID: 1}
+    assert penpals.unread(OTHER_USER) == {}
+
+
+def test_a_pending_note_is_taken_by_one_worker_until_it_is_lost(penpals: PenPalRepository) -> None:
+    note = a_note(status="pending", text="")
+    penpals.add(note)
+    stale = NOON + 5 * HOUR
+
+    assert penpals.claim(note.id, NOON, stale - 6 * HOUR, 3) is True
+    assert penpals.claim(note.id, NOON, stale - 6 * HOUR, 3) is False
+    taken = penpals.get(note.id)
+    assert taken is not None
+    assert (taken.attempts, taken.claimed_at) == (1, NOON)
+    # Lost with its worker: older than the limit, so another may take it.
+    assert penpals.claim(note.id, stale, stale - HOUR, 3) is True
+    assert penpals.claim(note.id, stale + HOUR, stale + 2 * HOUR, 1) is False
+
+
+def test_a_finished_note_cannot_be_taken_and_a_failed_one_can_be_reopened(
+    penpals: PenPalRepository,
+) -> None:
+    note = a_note(status="pending", text="")
+    penpals.add(note)
+    penpals.claim(note.id, NOON, NOON, 3)
+    correction = PenPalCorrection("ein Film", "einen Film", "Accusatif.", "case", certain=True)
+
+    penpals.finish(note.id, "ready", "Schön!", "k.mp3", [correction])
+
+    done = penpals.get(note.id)
+    assert done is not None
+    assert (done.status, done.text, done.audio_key, done.corrections) == (
+        "ready",
+        "Schön!",
+        "k.mp3",
+        (correction,),
+    )
+    assert penpals.claim(note.id, NOON + HOUR, NOON + HOUR, 3) is False
+    assert penpals.reopen(note.id, NOON + HOUR, 3) is False
+
+    penpals.finish(note.id, "failed", "", None, [])
+    assert penpals.reopen(note.id, NOON + HOUR, 3) is True
+    again = penpals.get(note.id)
+    assert again is not None
+    assert (again.status, again.claimed_at, again.attempts) == ("pending", None, 1)
+    # Three attempts in all: a note that used them up stays failed.
+    penpals.claim(note.id, NOON + 2 * HOUR, NOON + 2 * HOUR, 3)
+    penpals.finish(note.id, "failed", "", None, [])
+    assert penpals.reopen(note.id, NOON + 3 * HOUR, 2) is False

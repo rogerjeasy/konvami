@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from typing import Any, cast
 from uuid import UUID
 
-from konvami_api.domain import memories, push
+from konvami_api.domain import memories, penpal, push
 from konvami_api.domain.accounts import DELETION_MEMORY
 from konvami_api.domain.cards import Card, CardTotals, Kind, WordDetails
 from konvami_api.domain.conversations import (
@@ -2410,3 +2410,294 @@ class SqlFlagRepository:
             _RESOLVE_FLAG, {"id": str(flag_id), "status": status, "at": at.isoformat()}
         )
         return _flag(rows[0]) if rows else None
+
+
+# --- Pen-pal voice notes -----------------------------------------------------------------------
+
+_PEN_PAL_SETTINGS = """
+    SELECT CAST(user_id AS text) AS user_id, enabled, per_week, quiet_from, quiet_to, timezone
+    FROM penpal_settings
+"""
+
+_SAVE_PEN_PAL_SETTINGS = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO penpal_settings
+        (user_id, enabled, per_week, quiet_from, quiet_to, timezone, updated_at)
+    VALUES (CAST(:user_id AS uuid), :enabled, :per_week, :quiet_from, :quiet_to, :timezone,
+            CAST(:at AS timestamptz))
+    ON CONFLICT (user_id) DO UPDATE
+    SET enabled = EXCLUDED.enabled, per_week = EXCLUDED.per_week,
+        quiet_from = EXCLUDED.quiet_from, quiet_to = EXCLUDED.quiet_to,
+        timezone = EXCLUDED.timezone, updated_at = EXCLUDED.updated_at
+"""
+
+_PEN_PAL_COLUMNS = f"""
+    CAST(id AS text) AS id, CAST(user_id AS text) AS user_id,
+    CAST(persona_id AS text) AS persona_id, sender, status, body,
+    CAST(reply_to AS text) AS reply_to, audio_key, CAST(corrections AS text) AS corrections,
+    attempts, opened,
+    {epoch_micros("created_at")} AS created_at, {epoch_micros("claimed_at")} AS claimed_at
+"""
+
+_ADD_PEN_PAL_NOTE = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO penpal_note
+        (id, user_id, persona_id, sender, status, body, reply_to, audio_key, corrections,
+         attempts, opened, created_at)
+    VALUES (CAST(:id AS uuid), CAST(:user_id AS uuid), CAST(:persona_id AS uuid), :sender,
+            :status, :body, CAST(:reply_to AS uuid), :audio_key, CAST(:corrections AS jsonb),
+            :attempts, :opened, CAST(:created_at AS timestamptz))
+"""
+
+_PEN_PAL_NOTE = f"SELECT {_PEN_PAL_COLUMNS} FROM penpal_note WHERE id = CAST(:id AS uuid)"
+
+# The newest notes of a thread, back in the order they were written.
+_PEN_PAL_THREAD = f"""
+    SELECT * FROM (
+        SELECT {_PEN_PAL_COLUMNS}, seq FROM penpal_note
+        WHERE user_id = CAST(:user_id AS uuid) AND persona_id = CAST(:persona_id AS uuid)
+        ORDER BY seq DESC LIMIT :limit
+    ) AS newest ORDER BY seq
+"""
+
+_PEN_PAL_LAST = f"""
+    SELECT {_PEN_PAL_COLUMNS} FROM penpal_note
+    WHERE user_id = CAST(:user_id AS uuid)
+      AND (CAST(:persona_id AS text) IS NULL OR persona_id = CAST(:persona_id AS uuid))
+    ORDER BY seq DESC LIMIT 1
+"""
+
+# A note a partner wrote on its own, not one that failed, counts towards the week's notes.
+_PEN_PAL_PARTNER_SINCE = """
+    SELECT count(*) AS made FROM penpal_note
+    WHERE user_id = CAST(:user_id AS uuid) AND sender = 'partner' AND reply_to IS NULL
+      AND status <> 'failed' AND created_at >= CAST(:since AS timestamptz)
+"""
+
+_PEN_PAL_LEARNER_SINCE = """
+    SELECT count(*) AS made FROM penpal_note
+    WHERE user_id = CAST(:user_id AS uuid) AND sender = 'learner'
+      AND created_at >= CAST(:since AS timestamptz)
+"""
+
+_PEN_PAL_UNANSWERED = """
+    SELECT count(*) AS waiting FROM penpal_note
+    WHERE user_id = CAST(:user_id AS uuid) AND persona_id = CAST(:persona_id AS uuid)
+      AND sender = 'partner' AND reply_to IS NULL AND status <> 'failed'
+      AND seq > COALESCE((SELECT max(seq) FROM penpal_note
+                          WHERE user_id = CAST(:user_id AS uuid)
+                            AND persona_id = CAST(:persona_id AS uuid)
+                            AND sender = 'learner'), 0)
+"""
+
+_PEN_PAL_UNREAD = """
+    SELECT CAST(persona_id AS text) AS persona_id, count(*) AS waiting FROM penpal_note
+    WHERE user_id = CAST(:user_id AS uuid) AND sender = 'partner' AND status = 'ready'
+      AND NOT opened
+    GROUP BY persona_id
+"""
+
+_PEN_PAL_OPEN = """
+    UPDATE penpal_note SET opened = true
+    WHERE user_id = CAST(:user_id AS uuid) AND persona_id = CAST(:persona_id AS uuid)
+      AND sender = 'partner' AND NOT opened
+"""
+
+_PEN_PAL_CLAIM = """
+    UPDATE penpal_note SET claimed_at = CAST(:at AS timestamptz), attempts = attempts + 1
+    WHERE id = CAST(:id AS uuid) AND sender = 'partner' AND status = 'pending'
+      AND attempts < :max_attempts
+      AND (claimed_at IS NULL OR claimed_at < CAST(:stale_before AS timestamptz))
+    RETURNING id
+"""
+
+_PEN_PAL_REOPEN = """
+    UPDATE penpal_note SET status = 'pending', claimed_at = NULL
+    WHERE id = CAST(:id AS uuid) AND sender = 'partner' AND attempts < :max_attempts
+      AND (status = 'failed'
+           OR (status = 'pending'
+               AND COALESCE(claimed_at, created_at) < CAST(:stale_before AS timestamptz)))
+    RETURNING id
+"""
+
+_PEN_PAL_FINISH = """
+    UPDATE penpal_note
+    SET status = :status, body = :body, audio_key = :audio_key,
+        corrections = CAST(:corrections AS jsonb)
+    WHERE id = CAST(:id AS uuid)
+"""
+
+
+class SqlPenPalRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def settings(self, user_id: UUID) -> penpal.Settings | None:
+        rows = self._client.execute(
+            f"{_PEN_PAL_SETTINGS} WHERE user_id = CAST(:user_id AS uuid)",
+            {"user_id": str(user_id)},
+        )
+        return _pen_pal_settings(rows[0]) if rows else None
+
+    def save_settings(self, user_id: UUID, settings: penpal.Settings, at: dt.datetime) -> None:
+        self._client.execute(
+            _SAVE_PEN_PAL_SETTINGS,
+            {
+                "user_id": str(user_id),
+                "enabled": settings.enabled,
+                "per_week": settings.per_week,
+                "quiet_from": settings.quiet_from,
+                "quiet_to": settings.quiet_to,
+                "timezone": settings.timezone,
+                "at": at.isoformat(),
+            },
+        )
+
+    def enabled(self, limit: int) -> list[tuple[UUID, penpal.Settings]]:
+        rows = self._client.execute(
+            f"{_PEN_PAL_SETTINGS} WHERE enabled ORDER BY user_id LIMIT :limit", {"limit": limit}
+        )
+        return [(UUID(row["user_id"]), _pen_pal_settings(row)) for row in rows]
+
+    def add(self, note: penpal.Note) -> None:
+        self._client.execute(
+            _ADD_PEN_PAL_NOTE,
+            {
+                "id": str(note.id),
+                "user_id": str(note.user_id),
+                "persona_id": str(note.persona_id),
+                "sender": note.sender,
+                "status": note.status,
+                "body": note.text,
+                "reply_to": str(note.reply_to) if note.reply_to else None,
+                "audio_key": note.audio_key,
+                "corrections": json.dumps(_pen_pal_corrections_out(note.corrections)),
+                "attempts": note.attempts,
+                "opened": note.read,
+                "created_at": note.created_at.isoformat(),
+            },
+        )
+
+    def get(self, note_id: UUID) -> penpal.Note | None:
+        rows = self._client.execute(_PEN_PAL_NOTE, {"id": str(note_id)})
+        return _pen_pal_note(rows[0]) if rows else None
+
+    def thread(self, user_id: UUID, persona_id: UUID, limit: int) -> list[penpal.Note]:
+        rows = self._client.execute(
+            _PEN_PAL_THREAD,
+            {"user_id": str(user_id), "persona_id": str(persona_id), "limit": limit},
+        )
+        return [_pen_pal_note(row) for row in rows]
+
+    def last_of(self, user_id: UUID, persona_id: UUID | None) -> penpal.Note | None:
+        rows = self._client.execute(
+            _PEN_PAL_LAST,
+            {"user_id": str(user_id), "persona_id": str(persona_id) if persona_id else None},
+        )
+        return _pen_pal_note(rows[0]) if rows else None
+
+    def partner_notes_since(self, user_id: UUID, since: dt.datetime) -> int:
+        rows = self._client.execute(
+            _PEN_PAL_PARTNER_SINCE, {"user_id": str(user_id), "since": since.isoformat()}
+        )
+        return int(rows[0]["made"])
+
+    def learner_notes_since(self, user_id: UUID, since: dt.datetime) -> int:
+        rows = self._client.execute(
+            _PEN_PAL_LEARNER_SINCE, {"user_id": str(user_id), "since": since.isoformat()}
+        )
+        return int(rows[0]["made"])
+
+    def unanswered(self, user_id: UUID, persona_id: UUID) -> int:
+        rows = self._client.execute(
+            _PEN_PAL_UNANSWERED, {"user_id": str(user_id), "persona_id": str(persona_id)}
+        )
+        return int(rows[0]["waiting"])
+
+    def unread(self, user_id: UUID) -> dict[UUID, int]:
+        rows = self._client.execute(_PEN_PAL_UNREAD, {"user_id": str(user_id)})
+        return {UUID(row["persona_id"]): int(row["waiting"]) for row in rows}
+
+    def mark_read(self, user_id: UUID, persona_id: UUID) -> None:
+        self._client.execute(
+            _PEN_PAL_OPEN, {"user_id": str(user_id), "persona_id": str(persona_id)}
+        )
+
+    def claim(
+        self, note_id: UUID, at: dt.datetime, stale_before: dt.datetime, max_attempts: int
+    ) -> bool:
+        rows = self._client.execute(
+            _PEN_PAL_CLAIM,
+            {
+                "id": str(note_id),
+                "at": at.isoformat(),
+                "stale_before": stale_before.isoformat(),
+                "max_attempts": max_attempts,
+            },
+        )
+        return bool(rows)
+
+    def reopen(self, note_id: UUID, stale_before: dt.datetime, max_attempts: int) -> bool:
+        rows = self._client.execute(
+            _PEN_PAL_REOPEN,
+            {
+                "id": str(note_id),
+                "stale_before": stale_before.isoformat(),
+                "max_attempts": max_attempts,
+            },
+        )
+        return bool(rows)
+
+    def finish(
+        self,
+        note_id: UUID,
+        status: penpal.Status,
+        text: str,
+        audio_key: str | None,
+        corrections: Sequence[penpal.Correction],
+    ) -> None:
+        self._client.execute(
+            _PEN_PAL_FINISH,
+            {
+                "id": str(note_id),
+                "status": status,
+                "body": text,
+                "audio_key": audio_key,
+                "corrections": json.dumps(_pen_pal_corrections_out(corrections)),
+            },
+        )
+
+
+def _pen_pal_settings(row: dict[str, Any]) -> penpal.Settings:
+    return penpal.Settings(
+        enabled=bool(row["enabled"]),
+        per_week=int(row["per_week"]),
+        quiet_from=int(row["quiet_from"]),
+        quiet_to=int(row["quiet_to"]),
+        timezone=row["timezone"],
+    )
+
+
+def _pen_pal_corrections_out(corrections: Sequence[penpal.Correction]) -> list[dict[str, Any]]:
+    return [dataclasses.asdict(correction) for correction in corrections]
+
+
+def _pen_pal_note(row: dict[str, Any]) -> penpal.Note:
+    claimed = row["claimed_at"]
+    return penpal.Note(
+        id=UUID(row["id"]),
+        user_id=UUID(row["user_id"]),
+        persona_id=UUID(row["persona_id"]),
+        sender=row["sender"],
+        status=row["status"],
+        text=row["body"],
+        created_at=from_epoch_micros(row["created_at"]),
+        reply_to=UUID(row["reply_to"]) if row["reply_to"] else None,
+        audio_key=row["audio_key"],
+        corrections=tuple(
+            penpal.Correction(**correction) for correction in json.loads(row["corrections"])
+        ),
+        attempts=int(row["attempts"]),
+        claimed_at=from_epoch_micros(claimed) if claimed is not None else None,
+        read=bool(row["opened"]),
+    )
