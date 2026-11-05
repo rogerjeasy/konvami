@@ -3208,6 +3208,83 @@
         "title": "PlanWordOut",
         "type": "object"
       },
+      "ProfileAnswerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "option": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Option",
+            "type": "string"
+          }
+        },
+        "required": [
+          "option"
+        ],
+        "title": "ProfileAnswerIn",
+        "type": "object"
+      },
+      "ProfileChangeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "changedAt": {
+            "format": "date-time",
+            "title": "Changedat",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "newValue": {
+            "title": "Newvalue"
+          },
+          "oldValue": {
+            "title": "Oldvalue"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "undoable": {
+            "title": "Undoable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "field",
+          "scope",
+          "oldValue",
+          "newValue",
+          "changedAt",
+          "undoable"
+        ],
+        "title": "ProfileChangeOut",
+        "type": "object"
+      },
+      "ProfileChangesOut": {
+        "additionalProperties": false,
+        "description": "What a partner changed by voice, newest first (spec \u00a76.1.3).",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileChangeOut"
+            },
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "ProfileChangesOut",
+        "type": "object"
+      },
       "ProfileOut": {
         "additionalProperties": false,
         "properties": {
@@ -3265,6 +3342,49 @@
           "changes"
         ],
         "title": "ProfilePatch",
+        "type": "object"
+      },
+      "ProfileQuestionBody": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "options"
+        ],
+        "title": "ProfileQuestionBody",
+        "type": "object"
+      },
+      "ProfileQuestionOut": {
+        "additionalProperties": false,
+        "description": "The question about a setting that is due now (spec \u00a76.1.2); null when none is.",
+        "properties": {
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProfileQuestionBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "ProfileQuestionOut",
         "type": "object"
       },
       "ProgressOut": {
@@ -8384,6 +8504,264 @@
           }
         },
         "summary": "Update Profile"
+      }
+    },
+    "/v1/profile/changes": {
+      "get": {
+        "description": "What a partner changed by voice, newest first (spec \u00a76.1.3).",
+        "operationId": "getProfileChanges",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChangesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Profile Changes"
+      }
+    },
+    "/v1/profile/changes/{change_id}/undo": {
+      "post": {
+        "description": "Puts a setting back to what it was before a change made by voice.",
+        "operationId": "undoProfileChange",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "title": "Change Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileChangesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Undo Profile Change"
+      }
+    },
+    "/v1/profile/question": {
+      "get": {
+        "description": "The question about a setting that is due now, if one is (spec \u00a76.1.2).",
+        "operationId": "getProfileQuestion",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileQuestionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Profile Question"
+      }
+    },
+    "/v1/profile/questions/{question}/answer": {
+      "post": {
+        "description": "Applies the learner's answer to a question about a setting.",
+        "operationId": "answerProfileQuestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question",
+            "required": true,
+            "schema": {
+              "title": "Question",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileAnswerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileQuestionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Answer Profile Question"
+      }
+    },
+    "/v1/profile/questions/{question}/dismiss": {
+      "post": {
+        "description": "The learner does not want to answer now: the question comes back once, later.",
+        "operationId": "dismissProfileQuestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "question",
+            "required": true,
+            "schema": {
+              "title": "Question",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileQuestionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Profile Question"
       }
     },
     "/v1/progress": {

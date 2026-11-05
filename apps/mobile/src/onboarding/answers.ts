@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { ProfileField } from '@konvami/api-client';
 import type { IconName } from '@/components/icon';
-import { formatDate } from '@/lib/format';
+import { courseLabel, examLabel, SEPARATOR } from './describe';
 import type { EssentialStep, StartingLevel } from './essentials';
 import { languageName, nativeLanguageName } from './names';
 import type { OnboardingData } from './store';
@@ -11,11 +11,6 @@ import type { OnboardingData } from './store';
  * the end of the setup (4.3) and for the profile (6.3), where they can be changed at any time
  * (spec §6.1.3).
  */
-
-// The exam the pack does not list (services/api: OTHER_EXAM).
-const OTHER_EXAM = 'other';
-// Joins the parts of one answer on a line ("English · Only when I’m stuck").
-const SEPARATOR = ' · ';
 
 export interface AnswerRow {
   step: EssentialStep;
@@ -55,17 +50,7 @@ export function useAnswerRows(
   const level = practice ? practiceLevel(data) : essentials.selfAssessedLevel;
   const exams = catalog.languages.find(({ code }) => code === essentials.targetLanguage)?.exams;
 
-  const examLine = exam
-    ? [
-        exam.type === OTHER_EXAM
-          ? t('onboarding.goals.examOther')
-          : (exams?.find(({ id }) => id === exam.type)?.name ?? exam.type),
-        exam.targetLevel,
-        exam.date ? formatDate(i18n.language, exam.date) : null,
-      ]
-        .filter(Boolean)
-        .join(SEPARATOR)
-    : t('onboarding.review.noExam');
+  const examLine = exam ? examLabel(exam, exams, t, i18n.language) : t('onboarding.review.noExam');
 
   return [
     {
@@ -109,14 +94,7 @@ export function useAnswerRows(
       step: 'course',
       icon: 'book',
       field: 'course',
-      value: course
-        ? [
-            course.name,
-            course.chapter ? t('onboarding.review.chapter', { chapter: course.chapter }) : null,
-          ]
-            .filter(Boolean)
-            .join(SEPARATOR)
-        : t('onboarding.review.noCourse'),
+      value: course ? courseLabel(course, t) : t('onboarding.review.noCourse'),
       details: [],
     },
   ];

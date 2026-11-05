@@ -22,6 +22,7 @@ from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.phrasebook import PhrasebookError
 from konvami_api.domain.profile import ProfileError
+from konvami_api.domain.profile_questions import QuestionError
 from konvami_api.domain.reports import ReportError
 from konvami_api.domain.retries import RetryError
 from konvami_api.domain.scenarios import ScenarioError
@@ -74,6 +75,10 @@ _CARD_STATUS = {
     "no_such_item": 422,
     "not_certain": 422,
 }
+# Undoing a change by voice: none such, or something changed the same setting since. Every
+# other refusal of a profile change is a value that does not fit.
+_PROFILE_STATUS = {"not_found": 404, "superseded": 409}
+_QUESTION_STATUS = {"not_found": 404, "invalid_option": 422}
 _MEMORY_STATUS = {"not_found": 404, "duplicate": 409}
 _EXAM_STATUS = {"not_found": 404, "score_limit": 429}
 _WEEK_STATUS = {"not_found": 404, "nothing_to_report": 409, "consent_required": 403}
@@ -117,7 +122,11 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(ProfileError)
     async def _profile_error(_: Request, error: ProfileError) -> JSONResponse:
-        return _response(422, error.code, error.field)
+        return _response(_PROFILE_STATUS.get(error.code, 422), error.code, error.field)
+
+    @app.exception_handler(QuestionError)
+    async def _question_error(_: Request, error: QuestionError) -> JSONResponse:
+        return _response(_QUESTION_STATUS.get(error.code, 422), error.code)
 
     @app.exception_handler(OnboardingError)
     async def _onboarding_error(_: Request, error: OnboardingError) -> JSONResponse:

@@ -827,6 +827,106 @@ export interface paths {
         patch: operations["updateProfile"];
         trace?: never;
     };
+    "/v1/profile/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Profile Changes
+         * @description What a partner changed by voice, newest first (spec §6.1.3).
+         */
+        get: operations["getProfileChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/changes/{change_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Profile Change
+         * @description Puts a setting back to what it was before a change made by voice.
+         */
+        post: operations["undoProfileChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/question": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Profile Question
+         * @description The question about a setting that is due now, if one is (spec §6.1.2).
+         */
+        get: operations["getProfileQuestion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/questions/{question}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer Profile Question
+         * @description Applies the learner's answer to a question about a setting.
+         */
+        post: operations["answerProfileQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/questions/{question}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Profile Question
+         * @description The learner does not want to answer now: the question comes back once, later.
+         */
+        post: operations["dismissProfileQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/progress": {
         parameters: {
             query?: never;
@@ -2151,6 +2251,39 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** ProfileAnswerIn */
+        ProfileAnswerIn: {
+            /** Option */
+            option: string;
+        };
+        /** ProfileChangeOut */
+        ProfileChangeOut: {
+            /**
+             * Changedat
+             * Format: date-time
+             */
+            changedAt: string;
+            /** Field */
+            field: string;
+            /** Id */
+            id: number;
+            /** Newvalue */
+            newValue: unknown;
+            /** Oldvalue */
+            oldValue: unknown;
+            /** Scope */
+            scope: string;
+            /** Undoable */
+            undoable: boolean;
+        };
+        /**
+         * ProfileChangesOut
+         * @description What a partner changed by voice, newest first (spec §6.1.3).
+         */
+        ProfileChangesOut: {
+            /** Changes */
+            changes: components["schemas"]["ProfileChangeOut"][];
+        };
         /** ProfileOut */
         ProfileOut: {
             /** Global */
@@ -2170,6 +2303,20 @@ export interface components {
         ProfilePatch: {
             /** Changes */
             changes: components["schemas"]["ChangeIn"][];
+        };
+        /** ProfileQuestionBody */
+        ProfileQuestionBody: {
+            /** Id */
+            id: string;
+            /** Options */
+            options: string[];
+        };
+        /**
+         * ProfileQuestionOut
+         * @description The question about a setting that is due now (spec §6.1.2); null when none is.
+         */
+        ProfileQuestionOut: {
+            question: components["schemas"]["ProfileQuestionBody"] | null;
         };
         /**
          * ProgressOut
@@ -5450,6 +5597,224 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getProfileChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChangesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    undoProfileChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                change_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileChangesOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getProfileQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileQuestionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    answerProfileQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileQuestionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    dismissProfileQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                question: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileQuestionOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

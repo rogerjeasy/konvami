@@ -4,6 +4,8 @@ import type {
   Costs,
   PersonaDraft,
   PersonaVoice,
+  ProfileChanges,
+  ProfileQuestionState,
   Recordings,
   VoiceAllowance,
 } from '@konvami/api-client';
@@ -17,9 +19,11 @@ import {
   type ResourceStore,
 } from '@/practice/resource-store';
 import { createAccountStore, type AccountState, type AccountStore } from './account-store';
+import { createChangesStore, type ChangesStore } from './changes-store';
 import { createMemoryStore, type MemoryState, type MemoryStore } from './memory-store';
 import { createPartnersStore, type PartnersState, type PartnersStore } from './partners-store';
 import type { PictureDevice } from './pictures';
+import { createQuestionStore, type QuestionStore } from './question-store';
 
 /**
  * Everything the Profile screens (section 6) need beyond the session and the learner's
@@ -38,6 +42,10 @@ export interface ProfileServices {
    * `ApiError`, and then what is shown stays as it was.
    */
   keepRecordings: (kept: boolean) => Promise<Recordings>;
+  /** What partners changed in the learner's settings by voice (6.14), with undo. */
+  changes: ChangesStore;
+  /** The question about a setting that is due now, shown on Today (spec §6.1.2). */
+  question: QuestionStore;
   /** The learner's voice minutes this week (spec §6.19). */
   allowance: ResourceStore<VoiceAllowance>;
   /**
@@ -72,21 +80,34 @@ export function createProfileServices(
     samples: ClipPlayer;
     /** Called after partners changed, so Today and Talk read theirs again. */
     onPartnersChanged: () => void;
+    /**
+     * Called after a setting changed behind a screen's back (undone, or answered on Today), so
+     * what shows it reads it again.
+     */
+    onSettingsChanged: () => void;
   },
 ): ProfileServices {
   let studioStart: PersonaDraft | null = null;
   const recordings = createResourceStore(() => api.getRecordings(), Date.now);
   const allowance = createResourceStore(() => api.getVoiceAllowance(), Date.now);
+  const memory = createMemoryStore(api, Date.now);
   return {
     account: createAccountStore(api, device.pictures.send),
     partners: createPartnersStore(api, device.onPartnersChanged),
-    memory: createMemoryStore(api, Date.now),
+    memory,
     recordings,
     keepRecordings: (kept) =>
       recordings.mutate(
         () => api.configureRecordings(kept),
         (_, answer) => answer,
       ),
+    changes: createChangesStore(api, Date.now, device.onSettingsChanged),
+    question: createQuestionStore(api, Date.now, () => {
+      // An answer may have switched the audio or the memory on or off.
+      recordings.reset();
+      memory.reset();
+      device.onSettingsChanged();
+    }),
     allowance,
     costs: (month) => api.getCosts(month),
     pictures: device.pictures,
@@ -126,6 +147,8 @@ export function ProfileProvider({
     services.partners.reset();
     services.memory.reset();
     services.recordings.reset();
+    services.changes.reset();
+    services.question.reset();
     services.allowance.reset();
   }, [status, services]);
   return <ProfileContext.Provider value={services}>{children}</ProfileContext.Provider>;
@@ -183,4 +206,16 @@ export function useMinutesBack(wanted: boolean): string | null {
   return t('call.minutesBack', {
     day: formatDayLine(i18n.language, new Date(state.data.resetsAt)),
   });
+}
+
+/** What partners changed by voice; re-renders when it changes. */
+export function useProfileChanges(): ResourceState<ProfileChanges> {
+  const { changes } = useProfileServices();
+  return useSyncExternalStore(changes.subscribe, changes.getState, changes.getState);
+}
+
+/** The question about a setting that is due; re-renders when it changes. */
+export function useProfileQuestion(): ResourceState<ProfileQuestionState> {
+  const { question } = useProfileServices();
+  return useSyncExternalStore(question.subscribe, question.getState, question.getState);
 }

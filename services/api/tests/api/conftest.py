@@ -30,6 +30,7 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
@@ -66,6 +67,7 @@ from tests.fakes import (
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
+    InMemoryQuestionRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryRetryRepository,
@@ -479,6 +481,14 @@ def services(
     return Services(
         catalog=CATALOG,
         profiles=profiles,
+        questions=ProfileQuestionService(
+            profiles=profiles,
+            recordings=recordings,
+            memories=memories,
+            conversations=conversations,
+            repository=InMemoryQuestionRepository(),
+            clock=clock,
+        ),
         onboarding=onboarding,
         voice=voice,
         placement=placement,

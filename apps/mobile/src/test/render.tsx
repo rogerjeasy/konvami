@@ -98,6 +98,10 @@ export async function renderScreen(
     samples: profileDevice.samples,
     // As in the app: Today and Talk read their partners again.
     onPartnersChanged: () => void practice.home.refresh(),
+    onSettingsChanged: () => {
+      void onboarding.refresh().catch(() => undefined);
+      void practice.home.refresh();
+    },
   });
   profile.studioStart.set(studioStart ?? null);
   const view = await render(

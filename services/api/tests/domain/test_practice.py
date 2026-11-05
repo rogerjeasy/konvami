@@ -233,7 +233,11 @@ def test_a_practice_call_needs_a_partner() -> None:
 def test_the_partner_can_end_the_conversation_when_the_learner_says_goodbye() -> None:
     tools = World().practice.tools(USER)
 
-    assert [tool["name"] for tool in tools.definitions()] == ["end_conversation", "ask_tutor"]
+    assert [tool["name"] for tool in tools.definitions()] == [
+        "end_conversation",
+        "ask_tutor",
+        "update_profile",
+    ]
     result = tools.run("end_conversation", {})
     assert result.finished
     # The same answer as the guide's finishing tools, so the app follows every call alike.

@@ -605,6 +605,29 @@ export const en = {
     },
   },
   today: {
+    question: {
+      later: 'Not now',
+      failed: 'That didn’t go through. Please try again.',
+      recordings: {
+        title: 'Keep your audio?',
+        body: 'Keep the audio of your conversations so you can hear yourself again, on any device. Stopping deletes what is saved. You can change this in Privacy.',
+        options: { keep: 'Keep my audio', stop: 'Don’t keep audio' },
+      },
+      memory: {
+        title: 'Should your partners remember?',
+        body: 'They just wrote something down that you told them, so next time they can ask how it went. You see everything they keep and can delete any of it.',
+        options: { remember: 'Yes, remember', forget: 'No, don’t remember' },
+      },
+      weekly_habit: {
+        title: 'How often would you like to practise?',
+        body: 'Konvami plans your week around this. You can change it any time in your goals.',
+        options: {
+          light: '2 days, 30 minutes a week',
+          steady: '3 days, 60 minutes a week',
+          daily: '5 days, 90 minutes a week',
+        },
+      },
+    },
     reminders: {
       title: 'A reminder on your practice days?',
       body: '{{name}} can send you a short note at {{time}} on the days you planned. At most one a day, and you can change it any time.',
@@ -739,6 +762,13 @@ export const en = {
     lessonsHint: 'Learn one topic step by step, then use it',
   },
   conversation: {
+    settings: {
+      changed: '{{setting}} changed',
+      undo: 'Undo',
+      undoLabel: 'Undo the change of {{setting}}',
+      restored: '{{setting}} is back as it was',
+      failed: 'That couldn’t be undone. You can do it under Changes made by voice in your profile.',
+    },
     goals: {
       chipDone: '{{goal}}: reached',
       chipOpen: '{{goal}}: still to do',
@@ -1675,6 +1705,8 @@ export const en = {
       newPartnerHint: 'Design someone new to talk to',
       memory: 'What my partners know',
       memoryHint: 'Read, correct or delete what they remember',
+      changes: 'Changes made by voice',
+      changesHint: 'What your partners changed, with Undo',
       privacy: 'Privacy and AI',
       privacyHint: 'What each AI provider receives',
       security: 'Security',
@@ -1696,11 +1728,41 @@ export const en = {
       language: 'App language',
       email: 'Email',
     },
+    changes: {
+      title: 'Changes made by voice',
+      body: 'When you ask a partner to change a setting in a conversation, it is listed here. You can put it back.',
+      empty:
+        'Nothing yet. In a conversation, try asking a partner to explain things in another language from now on.',
+      loadFailed: 'Your changes can’t be shown right now.',
+      none: 'None',
+      was: 'Was: {{value}}',
+      now: 'Now: {{value}}',
+      undo: 'Undo',
+      undoLabel: 'Undo: {{setting}}',
+      restored: 'Put back',
+      undoFailed: 'That couldn’t be undone. Please try again.',
+      superseded: 'You changed this setting again since, so it can’t be undone here.',
+      fields: {
+        explanation_language: 'Explanation language',
+        explanation_usage: 'How much to explain',
+        exam: 'Exam',
+        level_goal: 'Level goal',
+        weekly_habit: 'Weekly goal',
+        course: 'Course',
+      },
+    },
     learningScreen: {
       title: 'What I know about your learning',
       body: 'Your partners use this in every conversation. Change anything, anytime.',
       changed: 'Changed {{date}}',
       edit: 'Change: {{item}}',
+      askAgain: {
+        title: 'Ask me again',
+        body: 'A partner goes through these with you in a short call and changes what is no longer right.',
+        learning: 'About how I learn',
+        goals: 'About my goals',
+        unavailable: 'Ask me again needs a partner. Add one under Partners.',
+      },
       goals: 'Your goals',
     },
     reminders: {

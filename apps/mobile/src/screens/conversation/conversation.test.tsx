@@ -244,6 +244,55 @@ describe('5.3 Conversation', () => {
     expect(voice.openedPractise).toEqual(['dative']);
   });
 
+  describe('a setting the partner changed by voice', () => {
+    const changed = (change: number, field: string) => ({
+      type: 'conversation.item.done',
+      item: {
+        id: `item_change_${change}`,
+        type: 'function_call_output',
+        call_id: `call_${change}`,
+        output: JSON.stringify({ changed: true, change, field }),
+      },
+    });
+
+    it('is told to the learner with a way to undo it', async () => {
+      const api = inApp();
+      api.changedByVoice('explanation_language', 'en', 'fr');
+      const { voice } = await live({ api });
+
+      await play(voice, changed(1, 'explanation_language'));
+
+      expect(await screen.findByText('Explanation language changed')).toBeTruthy();
+      await fireEvent.press(
+        screen.getByRole('button', { name: 'Undo the change of Explanation language' }),
+      );
+
+      expect(await screen.findByText('Explanation language is back as it was')).toBeTruthy();
+      expect(api.calls).toContainEqual(['undoProfileChange', 1]);
+      expect(screen.queryByRole('button', { name: /^Undo/ })).toBeNull();
+    });
+
+    it('says so when the change cannot be undone any more', async () => {
+      const api = inApp();
+      api.changedByVoice('explanation_language', 'en', 'fr');
+      const { voice } = await live({ api });
+      await play(voice, changed(1, 'explanation_language'));
+      api.failNext('undoProfileChange', 'superseded');
+
+      await fireEvent.press(
+        await screen.findByRole('button', { name: 'Undo the change of Explanation language' }),
+      );
+
+      expect(await screen.findByText(/couldn’t be undone/)).toBeTruthy();
+    });
+
+    it('shows nothing before the partner changes anything', async () => {
+      await live();
+
+      expect(screen.queryByText(/changed$/)).toBeNull();
+    });
+  });
+
   it('shows no goals in a free conversation', async () => {
     const { voice } = await live();
 

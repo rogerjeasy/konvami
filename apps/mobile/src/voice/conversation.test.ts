@@ -221,6 +221,28 @@ describe('progress', () => {
   });
 });
 
+describe('a setting the partner changes by voice', () => {
+  it('notes the change, with its number in the server’s log, for the toast with Undo', () => {
+    const state = after(
+      SESSION_CREATED,
+      toolResult({ changed: true, change: 7, field: 'explanation_language' }),
+      toolResult({ changed: true, change: 8, field: 'exam', from_now_on: 'ignored' }),
+    );
+
+    expect(state.profileChanges).toEqual([
+      { change: 7, field: 'explanation_language' },
+      { change: 8, field: 'exam' },
+    ]);
+    expect(state.finished).toBe(false);
+  });
+
+  it('notes nothing when the change was refused', () => {
+    const state = after(toolResult({ changed: false, reason: 'not_confirmed' }));
+
+    expect(state.profileChanges).toEqual([]);
+  });
+});
+
 describe('an exam simulation', () => {
   it('shows no part before the examiner begins one', () => {
     expect(after(SESSION_CREATED).examPart).toBeNull();

@@ -38,6 +38,7 @@ from konvami_api.domain.phrasebook import Phrase
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile, Source
+from konvami_api.domain.profile_questions import QuestionState, QuestionStatus
 from konvami_api.domain.reports import (
     Mistake,
     Report,
@@ -95,12 +96,29 @@ _LOAD_PROFILE = f"""
     WHERE user_id = CAST(:user_id AS uuid)
 """
 
-_FIELD_CHANGES = f"""
-    SELECT scope, field, CAST(old_value AS text) AS old_value, CAST(new_value AS text) AS new_value,
-           source, origin, {epoch_micros("changed_at")} AS changed_at
+_CHANGE = f"""
+    SELECT id, scope, field, CAST(old_value AS text) AS old_value,
+           CAST(new_value AS text) AS new_value, source, origin,
+           {epoch_micros("changed_at")} AS changed_at
     FROM profile_change
+"""
+
+_FIELD_CHANGES = f"""
+    {_CHANGE}
     WHERE user_id = CAST(:user_id AS uuid) AND scope = :scope AND field = :field
     ORDER BY id
+"""
+
+_RECENT_CHANGES = f"""
+    {_CHANGE}
+    WHERE user_id = CAST(:user_id AS uuid) AND origin = :origin
+    ORDER BY id DESC
+    LIMIT :limit
+"""
+
+_ONE_CHANGE = f"""
+    {_CHANGE}
+    WHERE user_id = CAST(:user_id AS uuid) AND id = :id
 """
 
 # The changes arrive as one JSON array. All of them are logged in order; for a field changed
@@ -972,18 +990,30 @@ class SqlProfileRepository:
         rows = self._client.execute(
             _FIELD_CHANGES, {"user_id": str(user_id), "scope": scope, "field": field}
         )
-        return [
-            ChangeRecord(
-                scope=row["scope"],
-                field=row["field"],
-                old_value=None if row["old_value"] is None else json.loads(row["old_value"]),
-                new_value=json.loads(row["new_value"]),
-                source=Source(row["source"]),
-                origin=Origin(row["origin"]),
-                changed_at=from_epoch_micros(row["changed_at"]),
-            )
-            for row in rows
-        ]
+        return [_change_record(row) for row in rows]
+
+    def recent(self, user_id: UUID, origin: Origin, limit: int) -> list[ChangeRecord]:
+        rows = self._client.execute(
+            _RECENT_CHANGES, {"user_id": str(user_id), "origin": origin.value, "limit": limit}
+        )
+        return [_change_record(row) for row in rows]
+
+    def change(self, user_id: UUID, change_id: int) -> ChangeRecord | None:
+        rows = self._client.execute(_ONE_CHANGE, {"user_id": str(user_id), "id": change_id})
+        return _change_record(rows[0]) if rows else None
+
+
+def _change_record(row: dict[str, Any]) -> ChangeRecord:
+    return ChangeRecord(
+        id=row["id"],
+        scope=row["scope"],
+        field=row["field"],
+        old_value=None if row["old_value"] is None else json.loads(row["old_value"]),
+        new_value=json.loads(row["new_value"]),
+        source=Source(row["source"]),
+        origin=Origin(row["origin"]),
+        changed_at=from_epoch_micros(row["changed_at"]),
+    )
 
 
 class SqlOnboardingRepository:
@@ -1699,6 +1729,42 @@ class SqlPushDeviceRepository:
         self._client.execute(
             "UPDATE push_device SET nudged_at = CAST(:at AS timestamptz) WHERE token = :token",
             {"token": token, "at": at.isoformat()},
+        )
+
+
+class SqlQuestionRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def states(self, user_id: UUID) -> dict[str, QuestionState]:
+        rows = self._client.execute(
+            f"""SELECT question, status, dismissals, {epoch_micros("at")} AS at
+            FROM profile_question WHERE user_id = CAST(:user_id AS uuid)""",
+            {"user_id": str(user_id)},
+        )
+        return {
+            row["question"]: QuestionState(
+                QuestionStatus(row["status"]), row["dismissals"], from_epoch_micros(row["at"])
+            )
+            for row in rows
+        }
+
+    def answered(self, user_id: UUID, question: str, at: dt.datetime) -> None:
+        self._client.execute(
+            """INSERT INTO profile_question (user_id, question, status, at)
+            VALUES (CAST(:user_id AS uuid), :question, 'answered', CAST(:at AS timestamptz))
+            ON CONFLICT (user_id, question) DO UPDATE
+                SET status = 'answered', at = EXCLUDED.at""",
+            {"user_id": str(user_id), "question": question, "at": at.isoformat()},
+        )
+
+    def dismissed(self, user_id: UUID, question: str, at: dt.datetime) -> None:
+        self._client.execute(
+            """INSERT INTO profile_question (user_id, question, status, dismissals, at)
+            VALUES (CAST(:user_id AS uuid), :question, 'dismissed', 1, CAST(:at AS timestamptz))
+            ON CONFLICT (user_id, question) DO UPDATE
+                SET dismissals = profile_question.dismissals + 1, at = EXCLUDED.at""",
+            {"user_id": str(user_id), "question": question, "at": at.isoformat()},
         )
 
 

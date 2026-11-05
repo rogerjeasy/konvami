@@ -42,6 +42,15 @@ export interface LiveCorrection {
   focus: boolean;
 }
 
+/**
+ * A setting the partner changed by voice during the call (spec §12.7): the number of the change
+ * in the server's log, which an undo refers to, and the setting's name.
+ */
+export interface ProfileChangeNote {
+  change: number;
+  field: string;
+}
+
 export interface ConversationState {
   phase: ConversationPhase;
   /** The most recent lines, oldest first. */
@@ -62,6 +71,8 @@ export interface ConversationState {
   examPart: { id: string; seconds: number } | null;
   /** The parts begun so far, in order. */
   examParts: string[];
+  /** The settings the partner changed by voice, in order. */
+  profileChanges: ProfileChangeNote[];
 }
 
 export const INITIAL_CONVERSATION: ConversationState = {
@@ -75,6 +86,7 @@ export const INITIAL_CONVERSATION: ConversationState = {
   learnerLines: [],
   examPart: null,
   examParts: [],
+  profileChanges: [],
 };
 
 /**
@@ -116,7 +128,7 @@ function withLearnerLine(state: ConversationState, line: string): ConversationSt
   return line.trim() ? { ...state, learnerLines: [...state.learnerLines, line.trim()] } : state;
 }
 
-/** What a server-side tool reported: progress, or the end of the setup or the test. */
+/** What a server-side tool reported: progress, a changed setting, or the end of the call. */
 function withToolResult(state: ConversationState, output: unknown): ConversationState {
   let result: unknown;
   try {
@@ -131,13 +143,23 @@ function withToolResult(state: ConversationState, output: unknown): Conversation
     task,
     part,
     seconds,
+    changed,
+    change,
+    field,
   } = result as {
     done?: unknown;
     still_open?: unknown;
     task?: unknown;
     part?: unknown;
     seconds?: unknown;
+    changed?: unknown;
+    change?: unknown;
+    field?: unknown;
   };
+  // The partner changed a setting on the learner's word (services/api: domain/profile_voice.py).
+  if (changed === true && typeof change === 'number' && typeof field === 'string') {
+    return { ...state, profileChanges: [...state.profileChanges, { change, field }] };
+  }
   if (done === true) return { ...state, finished: true, stillOpen: [] };
   // An exam's examiner begins a part (services/api: domain/exam_centre.py `begin_part`).
   if (typeof part === 'string' && typeof seconds === 'number') {

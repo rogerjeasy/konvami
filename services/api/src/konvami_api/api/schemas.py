@@ -78,9 +78,11 @@ from konvami_api.domain.profile import (
     AVOID_TOPIC_MAX,
     GLOBAL_SCOPE,
     MAX_AVOID_TOPICS,
+    LoggedChange,
     Profile,
     Source,
 )
+from konvami_api.domain.profile_questions import Question
 from konvami_api.domain.progress import ProgressView
 from konvami_api.domain.push import Platform
 from konvami_api.domain.reminders import ReminderNotes
@@ -96,6 +98,8 @@ from konvami_api.domain.week_review import WeekReview
 
 # A request never needs more changes than the profile has fields.
 MAX_CHANGES = 20
+# An answer to a profile question is one of a few ids ("keep", "steady").
+MAX_OPTION_ID = 32
 
 
 class ApiModel(BaseModel):
@@ -141,6 +145,66 @@ class ChangeIn(ApiModel):
 
 class ProfilePatch(ApiModel):
     changes: list[ChangeIn] = Field(min_length=1, max_length=MAX_CHANGES)
+
+
+class ProfileChangeOut(ApiModel):
+    # The log's number for the change, which an undo refers to.
+    id: int
+    field: str
+    # The language it is for; "global" for what is about the person.
+    scope: str
+    # What the setting was and is now; null for none.
+    old_value: Any
+    new_value: Any
+    changed_at: dt.datetime
+    # True while nothing changed the same setting since.
+    undoable: bool
+
+
+class ProfileChangesOut(ApiModel):
+    """What a partner changed by voice, newest first (spec §6.1.3)."""
+
+    changes: list[ProfileChangeOut]
+
+    @classmethod
+    def of(cls, logged: Sequence[LoggedChange]) -> "ProfileChangesOut":
+        return cls(
+            changes=[
+                ProfileChangeOut(
+                    # A change read from the log always has its number.
+                    id=item.change.id or 0,
+                    field=item.change.field,
+                    scope=item.change.scope,
+                    old_value=item.change.old_value,
+                    new_value=item.change.new_value,
+                    changed_at=item.change.changed_at,
+                    undoable=item.undoable,
+                )
+                for item in logged
+            ]
+        )
+
+
+class ProfileQuestionBody(ApiModel):
+    id: str
+    # The answers to offer, by id: the app has the words for each.
+    options: list[str]
+
+
+class ProfileQuestionOut(ApiModel):
+    """The question about a setting that is due now (spec §6.1.2); null when none is."""
+
+    question: ProfileQuestionBody | None
+
+    @classmethod
+    def of(cls, question: Question | None) -> "ProfileQuestionOut":
+        if question is None:
+            return cls(question=None)
+        return cls(question=ProfileQuestionBody(id=question.id, options=list(question.options)))
+
+
+class ProfileAnswerIn(ApiModel):
+    option: str = Field(min_length=1, max_length=MAX_OPTION_ID)
 
 
 class ExamOut(ApiModel):
