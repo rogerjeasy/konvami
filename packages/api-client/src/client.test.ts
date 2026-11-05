@@ -715,6 +715,41 @@ describe('api client', () => {
     ]);
   });
 
+  it('reports an item, lists the reports and, for the owner, works the review queue', async () => {
+    const flag = {
+      id: 'f1',
+      conversationId: 'rtc/1',
+      kind: 'turn',
+      index: 2,
+      reason: 'wrong',
+      note: null,
+      status: 'open',
+      flaggedAt: '2026-11-05T10:00:00Z',
+    };
+    const queued = { ...flag, excerpt: 'Hallo!', resolvedAt: null };
+    const { fetch, calls } = fakeFetch(
+      json(200, flag),
+      json(200, { flags: [flag] }),
+      json(200, { flags: [queued] }),
+      json(200, { ...queued, status: 'dismissed' }),
+    );
+    const { api } = client(fetch);
+
+    await api.flagItem('rtc/1', { kind: 'turn', index: 2, reason: 'wrong' });
+    expect((await api.getFlags('rtc/1')).flags).toEqual([flag]);
+    expect((await api.getFlagQueue('open')).flags).toEqual([queued]);
+    await api.resolveFlag('f1', 'dismissed');
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'PUT https://api.example.test/v1/conversations/rtc%2F1/flags',
+      'GET https://api.example.test/v1/conversations/rtc%2F1/flags',
+      'GET https://api.example.test/v1/owner/flags?status=open',
+      'PUT https://api.example.test/v1/owner/flags/f1',
+    ]);
+    expect(calls[0]?.body).toEqual({ kind: 'turn', index: 2, reason: 'wrong' });
+    expect(calls[3]?.body).toEqual({ status: 'dismissed' });
+  });
+
   it('reads, sets, changes and forgets what partners know', async () => {
     const memory = { id: 'mem/1', kind: 'event', text: 'Has a job interview.', day: '2026-10-16' };
     const book = { enabled: true, avoidTopics: [], memories: [memory] };

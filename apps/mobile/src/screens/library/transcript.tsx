@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import type { Transcript } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { ChatBubble } from '@/components/chat';
+import { FlagButton } from '@/components/flag-button';
+import { FlagSheet } from '@/components/flag-sheet';
 import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
@@ -21,6 +23,7 @@ import { nextRecorded } from '@/lib/playlist';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { reportRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices } from '@/practice/services';
+import { useFlags } from '@/practice/use-flags';
 
 // Stands between the parts of the line under the title ("Today · 14:05 · 8 min").
 const SEPARATOR = ' · ';
@@ -83,6 +86,9 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
   const { conversation, turns } = transcript;
   const partner = conversation.partner?.name ?? t('conversations.formerPartner');
   const { playing, toggle } = usePlayback(turns);
+  const flags = useFlags(conversation.id);
+  // The partner's line being reported (its place in the transcript); null while none is.
+  const [reporting, setReporting] = useState<number | null>(null);
   const playLabel = (speaker: 'persona' | 'learner') =>
     speaker === 'learner'
       ? t('library.transcript.playYou')
@@ -136,15 +142,17 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                 }`}
               >
                 {/* A screen reader hears who said each line; sighted readers see it by the side. */}
-                <ChatBubble
-                  from={turn.speaker}
-                  accessibilityLabel={t('library.transcript.line', {
-                    speaker: turn.speaker === 'persona' ? partner : t('library.transcript.you'),
-                    text,
-                  })}
-                >
-                  {text}
-                </ChatBubble>
+                <View className="shrink">
+                  <ChatBubble
+                    from={turn.speaker}
+                    accessibilityLabel={t('library.transcript.line', {
+                      speaker: turn.speaker === 'persona' ? partner : t('library.transcript.you'),
+                      text,
+                    })}
+                  >
+                    {text}
+                  </ChatBubble>
+                </View>
                 {turn.audio ? (
                   <PlayButton
                     label={
@@ -154,11 +162,28 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                     onPress={() => toggle(i)}
                   />
                 ) : null}
+                {/* Every AI line can be reported (Google Play's AI-generated content policy). */}
+                {turn.speaker === 'persona' ? (
+                  <FlagButton
+                    label={t(flags.has('turn', i) ? 'flag.reported' : 'flag.openLine')}
+                    flagged={flags.has('turn', i)}
+                    onPress={() => setReporting(i)}
+                  />
+                ) : null}
               </View>
             );
           })}
         </View>
       )}
+      <FlagSheet
+        kind={reporting === null ? null : 'turn'}
+        onSend={(reason, note) =>
+          reporting === null
+            ? Promise.reject(new Error('closed'))
+            : flags.submit('turn', reporting, reason, note)
+        }
+        onClose={() => setReporting(null)}
+      />
     </>
   );
 }

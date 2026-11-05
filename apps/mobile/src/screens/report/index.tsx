@@ -6,6 +6,7 @@ import type { Conversation, SessionReport, TranscriptTurn } from '@konvami/api-c
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { FlagSheet } from '@/components/flag-sheet';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton } from '@/components/step-header';
@@ -19,6 +20,7 @@ import { practiceSentence } from '@/lib/practice-sentence';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { callRoute, conversationRoute, explainRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices, useReport } from '@/practice/services';
+import { useFlags } from '@/practice/use-flags';
 import { LevelStepNote } from './level-step';
 import { Keep, Natural, NextSteps, Polish, Wins, Words } from './sections';
 import { SayItBetterSheet } from './say-it-better';
@@ -92,7 +94,17 @@ function Report({
   /** What was said in the conversation, once it is read; for saying a correction better. */
   turns: readonly TranscriptTurn[];
 }) {
-  const saver = useCardSaver(id, report);
+  const flags = useFlags(id);
+  const [reporting, setReporting] = useState<number | null>(null);
+  const flagged = new Set(
+    report.mistakes.flatMap((_, i) => (flags.has('correction', i) ? [i] : [])),
+  );
+  // A correction the learner calls wrong is not offered as a card (they keep their numbers).
+  const keepable = {
+    ...report,
+    mistakes: report.mistakes.map((one, i) => (flagged.has(i) ? { ...one, certain: false } : one)),
+  };
+  const saver = useCardSaver(id, keepable);
   const [practised, markRight] = usePractised(id);
   const [retrying, setRetrying] = useState<number | null>(null);
   const mistake = retrying === null ? null : report.mistakes[retrying];
@@ -116,7 +128,7 @@ function Report({
     </Card>,
     <Keep
       key="keep"
-      mistakes={report.mistakes}
+      mistakes={keepable.mistakes}
       words={report.words}
       saver={saver}
       onOpenLearn={() => router.navigate(ROUTES.learn)}
@@ -126,6 +138,8 @@ function Report({
       mistakes={report.mistakes}
       saver={saver}
       practised={practised}
+      flagged={flagged}
+      onFlag={setReporting}
       onExplain={(index) => router.push(explainRoute(id, index))}
       onRetry={setRetrying}
     />,
@@ -143,6 +157,17 @@ function Report({
             {part}
           </Reveal>
         ))}
+      <FlagSheet
+        kind={reporting === null ? null : 'correction'}
+        // A hint the second check could not confirm is not shown again once reported.
+        hides={reporting !== null && report.mistakes[reporting]?.certain === false}
+        onSend={(reason, note) =>
+          reporting === null
+            ? Promise.reject(new Error('closed'))
+            : flags.submit('correction', reporting, reason, note)
+        }
+        onClose={() => setReporting(null)}
+      />
       <SayItBetterSheet
         conversationId={id}
         index={retrying}

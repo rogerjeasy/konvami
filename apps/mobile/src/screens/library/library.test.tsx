@@ -281,3 +281,72 @@ describe('5.6 Transcript', () => {
     expect(screen.getByText('Nothing was said in this conversation.')).toBeTruthy();
   });
 });
+
+describe('5.6 Reporting a partner’s line', () => {
+  async function open(api: FakeApi) {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ id: 'rtc_1' });
+    await renderScreen(<TranscriptScreen />, { api, signedIn: true });
+    await waitFor(() => expect(screen.queryByText('Opening the conversation')).toBeNull());
+  }
+
+  function talked(): FakeApi {
+    const api = inApp();
+    api.talked(0, { id: 'rtc_1', learnerSays: ['Gut, danke!', 'Und dir?'] });
+    return api;
+  }
+
+  it('offers the report on the partner’s lines only', async () => {
+    await open(talked());
+
+    // Lena speaks once; the two lines after hers are the learner's.
+    expect(screen.getAllByRole('button', { name: 'Report this line' })).toHaveLength(1);
+  });
+
+  it('sends the reason and the note, thanks the learner and marks the line', async () => {
+    const api = talked();
+    await open(api);
+
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Report this line' })[0]!);
+    expect(screen.getByText('What’s wrong with this line?')).toBeTruthy();
+    // Nothing is sent before a reason is chosen.
+    expect(screen.getByRole('button', { name: 'Send report' })).toBeDisabled();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Offensive or unsafe' }));
+    await fireEvent.changeText(screen.getByLabelText('Tell us more (optional)'), '  rude  ');
+    await fireEvent.press(screen.getByRole('button', { name: 'Send report' }));
+
+    expect(await screen.findByText('Thank you')).toBeTruthy();
+    expect(api.calls).toContainEqual([
+      'flagItem',
+      'rtc_1',
+      { kind: 'turn', index: 0, reason: 'offensive', note: 'rude' },
+    ]);
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getAllByRole('button', { name: 'Reported' })).toHaveLength(1);
+  });
+
+  it('shows a line reported earlier as reported', async () => {
+    const api = talked();
+    await api.flagItem('rtc_1', { kind: 'turn', index: 0, reason: 'wrong' });
+    await open(api);
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Reported' })).toHaveLength(1),
+    );
+  });
+
+  it('says why a report could not be sent and keeps the sheet open', async () => {
+    const api = talked();
+    await open(api);
+    api.failNext('flagItem', 'flag_limit');
+
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Report this line' })[0]!);
+    await fireEvent.press(screen.getByRole('radio', { name: 'Wrong or untrue' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Send report' }));
+
+    expect(
+      await screen.findByText('You’ve sent a lot of reports today. Try again tomorrow.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Thank you')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send report' })).toBeTruthy();
+  });
+});

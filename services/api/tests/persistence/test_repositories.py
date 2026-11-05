@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import psycopg
 import pytest
@@ -19,6 +19,7 @@ from konvami_api.domain.cards import Card, CardRepository, CardTotals, WordDetai
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.exam_centre import ExamRepository, Simulation, SimulationResult
 from konvami_api.domain.exams import PartScore
+from konvami_api.domain.flags import Flag, FlagRepository
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.grammar_map import Mastery
 from konvami_api.domain.levels import LevelFit, LevelRepository, LevelStep
@@ -69,6 +70,7 @@ from konvami_api.persistence.repositories import (
     SqlConversationRepository,
     SqlDraftLog,
     SqlExamRepository,
+    SqlFlagRepository,
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
@@ -92,6 +94,7 @@ from tests.fakes import (
     InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryExamRepository,
+    InMemoryFlagRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
@@ -2773,3 +2776,83 @@ def test_every_dismissal_is_counted(questions: QuestionRepository) -> None:
     assert questions.states(USER) == {
         "memory": QuestionState(QuestionStatus.DISMISSED, 2, NOON + 8 * DAY)
     }
+
+
+# --- Flags -----------------------------------------------------------------------------------
+
+FLAG_ID = UUID("f1a90000-0000-4000-8000-000000000001")
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def flags(request: pytest.FixtureRequest) -> FlagRepository:
+    """Flag storage, with the calls `rtc_1` and `rtc_2` there to flag turns of."""
+    if request.param == "memory":
+        return InMemoryFlagRepository()
+    db = request.getfixturevalue("db")
+    for call_id in ("rtc_1", "rtc_2"):
+        SqlVoiceSessionRepository(db).started(
+            VoiceSession(call_id, USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+        )
+    return SqlFlagRepository(db)
+
+
+def a_flag(index: int = 0, *, call_id: str = "rtc_1", at: datetime = NOON, **changes: Any) -> Flag:
+    flag = Flag(
+        id=uuid4(),
+        user_id=USER,
+        call_id=call_id,
+        kind="turn",
+        index=index,
+        reason="wrong",
+        note=None,
+        excerpt="Hallo!",
+        status="open",
+        flagged_at=at,
+    )
+    return replace(flag, **changes)
+
+
+def test_a_flag_is_kept_and_read_back_by_conversation(flags: FlagRepository) -> None:
+    saved = flags.save(a_flag(2, note="Not German", reason="other"))
+    flags.save(a_flag(0, call_id="rtc_2"))
+
+    assert flags.of_conversation(USER, "rtc_1") == [saved]
+    assert (saved.note, saved.reason, saved.status) == ("Not German", "other", "open")
+    assert flags.of_conversation(OTHER_USER, "rtc_1") == []
+
+
+def test_flagging_an_item_again_changes_that_flag_and_opens_it(flags: FlagRepository) -> None:
+    first = flags.save(a_flag(1))
+    flags.resolve(first.id, "dismissed", NOON + HOUR)
+
+    again = flags.save(a_flag(1, reason="offensive", at=NOON + 2 * HOUR))
+
+    assert again.id == first.id
+    assert (again.reason, again.status, again.resolved_at) == ("offensive", "open", None)
+    assert flags.of_conversation(USER, "rtc_1") == [again]
+
+
+def test_flags_are_counted_per_learner_from_a_time_on(flags: FlagRepository) -> None:
+    flags.save(a_flag(0, at=NOON))
+    flags.save(a_flag(1, at=NOON + 2 * HOUR))
+
+    assert flags.made_since(USER, NOON + HOUR) == 1
+    assert flags.made_since(USER, NOON - HOUR) == 2
+    assert flags.made_since(OTHER_USER, NOON - HOUR) == 0
+
+
+def test_the_queue_lists_newest_first_by_status_and_closing_sets_the_time(
+    flags: FlagRepository,
+) -> None:
+    old = flags.save(a_flag(0, at=NOON))
+    new = flags.save(a_flag(1, at=NOON + HOUR))
+
+    closed = flags.resolve(old.id, "resolved", NOON + 2 * HOUR)
+
+    assert closed is not None
+    assert (closed.status, closed.resolved_at) == ("resolved", NOON + 2 * HOUR)
+    assert flags.queue("open", 10) == [new]
+    assert flags.queue("resolved", 10) == [closed]
+    assert flags.queue(None, 10) == [new, closed]
+    assert flags.queue(None, 1) == [new]
+    assert flags.resolve(uuid4(), "resolved", NOON) is None

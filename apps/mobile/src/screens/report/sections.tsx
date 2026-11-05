@@ -21,11 +21,17 @@ import type { CardSaver } from './use-card-saver';
  * the Tutor about it and, for a confirmed one, to say it better. One the second check could not
  * confirm is marked as a hint; one said right since is marked as such. Without any, the report
  * says so in one line.
+ *
+ * Each can be reported as wrong (spec §16.1). A reported hint is not shown again; a reported
+ * confirmed correction stays, marked, with nothing to practise or save: drilling something the
+ * learner calls wrong could teach a mistake. The numbers the actions get stay the report's own.
  */
 export function Polish({
   mistakes,
   saver,
   practised,
+  flagged,
+  onFlag,
   onExplain,
   onRetry,
 }: {
@@ -33,6 +39,10 @@ export function Polish({
   saver: CardSaver;
   /** The mistakes the learner has said right since ("Say it better"). */
   practised: ReadonlySet<number>;
+  /** The mistakes the learner has reported. */
+  flagged: ReadonlySet<number>;
+  /** Reports mistake `index` (spec §16.1 "That's wrong"). */
+  onFlag: (index: number) => void;
   /** Asks the Tutor about mistake `index` (spec §6.5 "Explain my mistake"). */
   onExplain: (index: number) => void;
   /** Says mistake `index` again, put right (spec §6.5 "Say it better"). */
@@ -46,11 +56,19 @@ export function Polish({
       </NoticeBox>
     );
   }
+  // A hint the learner reported is not shown again; its place in the report stays taken.
+  const shown = mistakes.flatMap((mistake, i) =>
+    flagged.has(i) && !mistake.certain ? [] : [{ mistake, i }],
+  );
+  if (shown.length === 0) {
+    return <NoticeBox icon="info">{t('flag.allHidden')}</NoticeBox>;
+  }
   return (
-    <Section title={t('report.polish.title')} tone="warn" count={mistakes.length} collapsible>
+    <Section title={t('report.polish.title')} tone="warn" count={shown.length} collapsible>
       <View className="gap-2.5">
-        {mistakes.map((mistake, i) => {
+        {shown.map(({ mistake, i }) => {
           const { before, after } = diffWords(mistake.original, mistake.corrected);
+          const reported = flagged.has(i);
           return (
             <CorrectionCard
               key={i}
@@ -59,11 +77,13 @@ export function Polish({
                 defaultValue: t('report.category.other'),
               })}
               badge={
-                !mistake.certain
-                  ? t('report.polish.unsure')
-                  : practised.has(i)
-                    ? t('report.retry.practised')
-                    : undefined
+                reported
+                  ? t('flag.reported')
+                  : !mistake.certain
+                    ? t('report.polish.unsure')
+                    : practised.has(i)
+                      ? t('report.retry.practised')
+                      : undefined
               }
               saidLabel={t('report.said')}
               said={before}
@@ -74,7 +94,7 @@ export function Polish({
               action={
                 <View className="flex-row flex-wrap items-center gap-x-2">
                   {/* Only what the second check confirmed is worth learning by heart. */}
-                  {mistake.certain ? (
+                  {mistake.certain && !reported ? (
                     <>
                       <TextButton
                         tone="primary"
@@ -89,6 +109,9 @@ export function Polish({
                     </>
                   ) : null}
                   <TextButton label={t('report.polish.explain')} onPress={() => onExplain(i)} />
+                  {reported ? null : (
+                    <TextButton label={t('flag.openCorrection')} onPress={() => onFlag(i)} />
+                  )}
                 </View>
               }
               accessibilityLabel={t('report.cardLabel', {

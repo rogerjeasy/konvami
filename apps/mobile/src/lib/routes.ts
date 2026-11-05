@@ -102,6 +102,8 @@ export const ROUTES = {
   accountChanges: '/account/changes',
   /** 6.12 Costs: what Konvami spends, for the owner's account only (spec §6.19). */
   accountCosts: '/account/costs',
+  /** 6.15 Reports: what learners flagged, for the owner's account only (spec §16.1). */
+  accountFlags: '/account/flags',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;

@@ -46,6 +46,14 @@ export type AnsweredCard = Schemas['AnsweredOut'];
 export type AnswerOutcome = AnsweredCard['outcome'];
 /** The corrections of a report the learner said again, and whether they got one right. */
 export type Retries = Schemas['RetriesOut'];
+/** A partner's line or a correction the learner reported (spec §16.1). */
+export type Flag = Schemas['FlagOut'];
+export type FlagInput = Schemas['FlagIn'];
+export type FlagKind = FlagInput['kind'];
+export type FlagReason = FlagInput['reason'];
+export type FlagStatus = Flag['status'];
+/** A flag as the owner reads it in the review queue: with the text that was flagged. */
+export type QueuedFlag = Schemas['QueuedFlagOut'];
 /** Every grammar topic of the language learned, with how well the learner has it (spec §6.8). */
 export type GrammarMap = Schemas['GrammarMapOut'];
 export type GrammarTopic = Schemas['GrammarTopicOut'];
@@ -356,6 +364,17 @@ export interface ApiClient {
   ): Promise<Retried>;
   /** The corrections of a conversation's report the learner said again. */
   getRetries(conversationId: string): Promise<Retries>;
+  /**
+   * Reports a partner's line or a correction of a conversation; reporting one again changes the
+   * reason. Fails with `not_found`, `invalid_value`, `flag_limit`.
+   */
+  flagItem(conversationId: string, input: FlagInput): Promise<Flag>;
+  /** What the learner reported in a conversation. */
+  getFlags(conversationId: string): Promise<{ flags: Flag[] }>;
+  /** The owner's review queue (open flags unless `status` says otherwise); fails `not_owner`. */
+  getFlagQueue(status?: FlagStatus): Promise<{ flags: QueuedFlag[] }>;
+  /** Closes a flag as resolved or dismissed, or opens it again; the owner only. */
+  resolveFlag(id: string, status: FlagStatus): Promise<QueuedFlag>;
   /** Where a card's sound plays from (made the first time). Fails with `not_found`, `unavailable`. */
   getCardAudio(id: string): Promise<{ url: string }>;
   /** One of the learner's cards (a word of the day opens it). Rejects `not_found`. */
@@ -567,6 +586,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       ),
     getRetries: (conversationId) =>
       request('GET', `/v1/conversations/${encodeURIComponent(conversationId)}/retries`),
+    flagItem: (conversationId, input) =>
+      request('PUT', `/v1/conversations/${encodeURIComponent(conversationId)}/flags`, input),
+    getFlags: (conversationId) =>
+      request('GET', `/v1/conversations/${encodeURIComponent(conversationId)}/flags`),
+    getFlagQueue: (status) => request('GET', withQuery('/v1/owner/flags', { status })),
+    resolveFlag: (id, status) =>
+      request('PUT', `/v1/owner/flags/${encodeURIComponent(id)}`, { status }),
     getCardAudio: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}/audio`),
     getCard: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}`),
     registerPushDevice: (device) => request('PUT', '/v1/push/device', device),

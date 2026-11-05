@@ -565,3 +565,92 @@ describe('5.10 Say it better', () => {
     expect(await screen.findByText('Said better')).toBeTruthy();
   });
 });
+
+describe('5.10 Reporting a correction', () => {
+  const WRONG = 'That’s wrong';
+
+  async function report(index: number, reason: string, note?: string) {
+    await fireEvent.press(screen.getAllByRole('button', { name: WRONG })[index]!);
+    await fireEvent.press(screen.getByRole('radio', { name: reason }));
+    if (note) await fireEvent.changeText(screen.getByLabelText('Tell us more (optional)'), note);
+    await fireEvent.press(screen.getByRole('button', { name: 'Send report' }));
+    await screen.findByText('Thank you');
+  }
+
+  it('is offered on every correction', async () => {
+    await openReady();
+
+    expect(screen.getAllByRole('button', { name: WRONG })).toHaveLength(2);
+  });
+
+  it('offers “I didn’t say that” for a correction', async () => {
+    await openReady();
+
+    await fireEvent.press(screen.getAllByRole('button', { name: WRONG })[0]!);
+
+    expect(screen.getByRole('radio', { name: 'I didn’t say that' })).toBeTruthy();
+  });
+
+  it('does not show a reported hint again, and says so', async () => {
+    const api = await openReady();
+
+    await report(1, 'I didn’t say that', 'never said it');
+
+    expect(api.calls).toContainEqual([
+      'flagItem',
+      ID,
+      { kind: 'correction', index: 1, reason: 'not_said', note: 'never said it' },
+    ]);
+    expect(screen.getByText('This hint won’t be shown again.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByText('Not sure')).toBeNull();
+    expect(screen.getAllByRole('button', { name: WRONG })).toHaveLength(1);
+  });
+
+  it('keeps a reported confirmed correction, marked, with nothing to practise or save', async () => {
+    await openReady();
+    expect(screen.getAllByRole('button', { name: 'Say it better' })).toHaveLength(1);
+
+    await report(0, 'Wrong or untrue');
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+
+    expect(screen.getByText('Reported')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Say it better' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save as a card' })).toBeNull();
+    // The one left to report is the other correction.
+    expect(screen.getAllByRole('button', { name: WRONG })).toHaveLength(1);
+  });
+
+  it('does not offer a reported correction as a card', async () => {
+    const api = await openReady();
+
+    await report(0, 'Wrong or untrue');
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+
+    expect(screen.queryByRole('button', { name: 'Save as a card' })).toBeNull();
+    expect(api.calls.some(([method]) => method === 'saveCard')).toBe(false);
+  });
+
+  it('says so when every hint of the report was reported', async () => {
+    await openReady(talked(), {
+      ...FAKE_REPORT,
+      mistakes: [{ ...FAKE_REPORT.mistakes[1]!, saved: false }],
+    });
+
+    await report(0, 'Wrong or untrue');
+    await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+
+    expect(
+      screen.getByText('You reported the possible issues of this report, so they are hidden.'),
+    ).toBeTruthy();
+  });
+
+  it('remembers what was reported before', async () => {
+    const api = talked();
+    await api.flagItem(ID, { kind: 'correction', index: 1, reason: 'wrong' });
+
+    await openReady(api);
+
+    await waitFor(() => expect(screen.getAllByRole('button', { name: WRONG })).toHaveLength(1));
+  });
+});

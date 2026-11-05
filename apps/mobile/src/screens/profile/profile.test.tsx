@@ -139,6 +139,22 @@ describe('6.1 Profile', () => {
     expect(router.push).toHaveBeenCalledWith('/account/costs');
   });
 
+  it('leads the owner, and nobody else, to the reports learners made', async () => {
+    await open();
+    await screen.findByText(/minutes left/);
+    expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
+  });
+
+  it('leads the owner to the reports', async () => {
+    const api = inApp();
+    api.beOwner();
+    await open(api);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Reports' }));
+
+    expect(router.push).toHaveBeenCalledWith('/account/flags');
+  });
+
   it('still shows the account and its rows when the practice could not be loaded', async () => {
     const api = inApp();
     api.failNext('getHome', 'network');

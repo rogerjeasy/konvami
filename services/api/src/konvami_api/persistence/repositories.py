@@ -6,7 +6,7 @@ import dataclasses
 import datetime as dt
 import json
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from konvami_api.domain import memories, push
@@ -29,6 +29,7 @@ from konvami_api.domain.costs import (
 from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
 from konvami_api.domain.exams import PartScore
+from konvami_api.domain.flags import Flag, FlagStatus
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn, TurnAudio
@@ -2305,3 +2306,107 @@ def _phrase(row: dict[str, Any]) -> Phrase:
         explained_in=row["explained_in"],
         created_at=from_epoch_micros(row["created_at"]),
     )
+
+
+# --- Flags on AI turns and corrections --------------------------------------------------------
+
+_FLAG_COLUMNS = f"""
+    CAST(id AS text) AS id, CAST(user_id AS text) AS user_id, call_id, kind, item_index, reason,
+    note, excerpt, status, {epoch_micros("flagged_at")} AS flagged_at,
+    {epoch_micros("resolved_at")} AS resolved_at
+"""
+
+_SAVE_FLAG = f"""
+    INSERT INTO content_flag
+        (id, user_id, call_id, kind, item_index, reason, note, excerpt, status, flagged_at)
+    VALUES (CAST(:id AS uuid), CAST(:user_id AS uuid), :call_id, :kind, :item_index, :reason,
+            :note, :excerpt, 'open', CAST(:flagged_at AS timestamptz))
+    ON CONFLICT (user_id, call_id, kind, item_index) DO UPDATE
+    SET reason = EXCLUDED.reason, note = EXCLUDED.note, excerpt = EXCLUDED.excerpt,
+        status = 'open', flagged_at = EXCLUDED.flagged_at, resolved_at = NULL
+    RETURNING {_FLAG_COLUMNS}
+"""
+
+_FLAGS_MADE = """
+    SELECT count(*) AS made FROM content_flag
+    WHERE user_id = CAST(:user_id AS uuid) AND flagged_at >= CAST(:since AS timestamptz)
+"""
+
+_FLAGS_OF_CALL = f"""
+    SELECT {_FLAG_COLUMNS} FROM content_flag
+    WHERE user_id = CAST(:user_id AS uuid) AND call_id = :call_id
+    ORDER BY kind, item_index
+"""
+
+_FLAG_QUEUE = f"""
+    SELECT {_FLAG_COLUMNS} FROM content_flag
+    WHERE CAST(:status AS text) IS NULL OR status = :status
+    ORDER BY flagged_at DESC LIMIT :limit
+"""
+
+_RESOLVE_FLAG = f"""
+    UPDATE content_flag
+    SET status = :status,
+        resolved_at = CASE WHEN :status = 'open' THEN NULL ELSE CAST(:at AS timestamptz) END
+    WHERE id = CAST(:id AS uuid)
+    RETURNING {_FLAG_COLUMNS}
+"""
+
+
+def _flag(row: dict[str, Any]) -> Flag:
+    resolved = row["resolved_at"]
+    return Flag(
+        id=UUID(row["id"]),
+        user_id=UUID(row["user_id"]),
+        call_id=row["call_id"],
+        kind=cast(Any, row["kind"]),
+        index=int(row["item_index"]),
+        reason=cast(Any, row["reason"]),
+        note=row["note"],
+        excerpt=row["excerpt"],
+        status=cast(Any, row["status"]),
+        flagged_at=from_epoch_micros(int(row["flagged_at"])),
+        resolved_at=from_epoch_micros(int(resolved)) if resolved is not None else None,
+    )
+
+
+class SqlFlagRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def save(self, flag: Flag) -> Flag:
+        rows = self._client.execute(
+            _SAVE_FLAG,
+            {
+                "id": str(flag.id),
+                "user_id": str(flag.user_id),
+                "call_id": flag.call_id,
+                "kind": flag.kind,
+                "item_index": flag.index,
+                "reason": flag.reason,
+                "note": flag.note,
+                "excerpt": flag.excerpt,
+                "flagged_at": flag.flagged_at.isoformat(),
+            },
+        )
+        return _flag(rows[0])
+
+    def made_since(self, user_id: UUID, since: dt.datetime) -> int:
+        rows = self._client.execute(
+            _FLAGS_MADE, {"user_id": str(user_id), "since": since.isoformat()}
+        )
+        return int(rows[0]["made"])
+
+    def of_conversation(self, user_id: UUID, call_id: str) -> list[Flag]:
+        rows = self._client.execute(_FLAGS_OF_CALL, {"user_id": str(user_id), "call_id": call_id})
+        return [_flag(row) for row in rows]
+
+    def queue(self, status: FlagStatus | None, limit: int) -> list[Flag]:
+        rows = self._client.execute(_FLAG_QUEUE, {"status": status, "limit": limit})
+        return [_flag(row) for row in rows]
+
+    def resolve(self, flag_id: UUID, status: FlagStatus, at: dt.datetime) -> Flag | None:
+        rows = self._client.execute(
+            _RESOLVE_FLAG, {"id": str(flag_id), "status": status, "at": at.isoformat()}
+        )
+        return _flag(rows[0]) if rows else None

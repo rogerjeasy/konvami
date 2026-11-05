@@ -35,6 +35,7 @@ from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind, WeekPlan
 from konvami_api.domain.exam_centre import ExamCentre, Simulation
 from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
+from konvami_api.domain.flags import MAX_NOTE_LENGTH, Flag, FlagKind, FlagReason, FlagStatus
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.grammar_map import GrammarMap, Mastery, TopicPage, TopicState, Trend
 from konvami_api.domain.home import HomeView, LevelView
@@ -2052,3 +2053,69 @@ class PictureConfirm(ApiModel):
 
 class AccountDeletedOut(ApiModel):
     deleted: Literal[True] = True
+
+
+# A call lasts at most ten minutes, so its transcript is far shorter; the bound only refuses junk.
+MAX_TURN_INDEX = 1000
+
+
+class FlagIn(ApiModel):
+    """Reports a partner's line or a correction. The server reads the text from the conversation;
+    the app sends none."""
+
+    kind: FlagKind
+    # The turn of the transcript, or the correction of the report, counted from 0.
+    index: int = Field(ge=0, le=MAX_TURN_INDEX)
+    reason: FlagReason
+    note: str | None = Field(default=None, max_length=MAX_NOTE_LENGTH)
+
+
+class FlagOut(ApiModel):
+    id: UUID
+    conversation_id: str
+    kind: FlagKind
+    index: int
+    reason: FlagReason
+    note: str | None
+    status: FlagStatus
+    flagged_at: dt.datetime
+
+    @classmethod
+    def of(cls, flag: Flag) -> "FlagOut":
+        return cls(
+            id=flag.id,
+            conversation_id=flag.call_id,
+            kind=flag.kind,
+            index=flag.index,
+            reason=flag.reason,
+            note=flag.note,
+            status=flag.status,
+            flagged_at=flag.flagged_at,
+        )
+
+
+class FlagsOut(ApiModel):
+    flags: list[FlagOut]
+
+
+class QueuedFlagOut(FlagOut):
+    """A flag as the owner reads it: with the text that was flagged. Nobody is named."""
+
+    excerpt: str
+    resolved_at: dt.datetime | None
+
+    @classmethod
+    def of(cls, flag: Flag) -> "QueuedFlagOut":
+        return cls(
+            **FlagOut.of(flag).model_dump(),
+            excerpt=flag.excerpt,
+            resolved_at=flag.resolved_at,
+        )
+
+
+class FlagQueueOut(ApiModel):
+    flags: list[QueuedFlagOut]
+
+
+class FlagResolution(ApiModel):
+    status: FlagStatus
