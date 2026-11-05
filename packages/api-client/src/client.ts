@@ -170,6 +170,7 @@ export type PhraseSuggestion = Schemas['PhraseSuggestionOut'];
 export type PhraseDraft = { phrase: string; meaning: string; situation?: string | null };
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
+export type ThenVsNow = Schemas['ThenVsNowOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
 export type Costs = Schemas['CostsOut'];
 export type CostLevel = Costs['level'];
@@ -412,6 +413,8 @@ export interface ApiClient {
   makePhraseCard(id: string): Promise<Card>;
   /** Removes a kept phrase and answers with the phrasebook. Fails with `not_found`. */
   removePhrase(id: string): Promise<{ phrases: Phrase[] }>;
+  /** Two recorded conversations of one kind, weeks apart, to hear side by side (spec §7). */
+  getThenVsNow(): Promise<ThenVsNow>;
   /** Whether recordings are kept. */
   getRecordings(): Promise<Recordings>;
   /** Keeps recordings or stops; stopping deletes every recording kept so far. */
@@ -609,6 +612,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     suggestPhrases: (situation) => request('POST', '/v1/phrasebook/suggestions', { situation }),
     makePhraseCard: (id) => request('POST', `/v1/phrasebook/${encodeURIComponent(id)}/card`),
     removePhrase: (id) => request('DELETE', `/v1/phrasebook/${encodeURIComponent(id)}`),
+    getThenVsNow: () => request('GET', '/v1/then-vs-now'),
     getRecordings: () => request('GET', '/v1/recordings'),
     configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
     getVoiceAllowance: () => request('GET', '/v1/voice/allowance'),
