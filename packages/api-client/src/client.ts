@@ -9,6 +9,12 @@ export type Profile = Schemas['ProfileOut'];
 export type ProfileField = Schemas['FieldOut'];
 export type ProfileChange = Schemas['ChangeIn'];
 export type ProfileSource = Schemas['Source'];
+/** A setting a partner changed by voice, with whether it can still be undone. */
+export type ProfileChangeEntry = Schemas['ProfileChangeOut'];
+export type ProfileChanges = Schemas['ProfileChangesOut'];
+/** The question about a setting that is due now (spec §6.1.2); `question` is null when none is. */
+export type ProfileQuestionState = Schemas['ProfileQuestionOut'];
+export type ProfileQuestion = Schemas['ProfileQuestionBody'];
 export type Onboarding = Schemas['OnboardingOut'];
 export type OnboardingStage = Schemas['Stage'];
 export type CallPurpose = Schemas['CallPurpose'];
@@ -200,6 +206,19 @@ export interface ApiClient {
   getProfile(): Promise<Profile>;
   /** Applies all changes or none. Fails with `invalid_value` and the field for a refused one. */
   updateProfile(changes: ProfileChange[]): Promise<Profile>;
+  /** What a partner changed by voice, newest first (spec §6.1.3). */
+  getProfileChanges(): Promise<ProfileChanges>;
+  /**
+   * Puts a setting back to what it was before a change made by voice. Fails with `superseded`
+   * (409) when something changed the same setting since, and `not_found` (404).
+   */
+  undoProfileChange(id: number): Promise<ProfileChanges>;
+  /** The question about a setting that is due now (spec §6.1.2), if one is. */
+  getProfileQuestion(): Promise<ProfileQuestionState>;
+  /** Applies the learner's answer; `option` is one of the question's options. */
+  answerProfileQuestion(id: string, option: string): Promise<ProfileQuestionState>;
+  /** The learner does not want to answer now: the question comes back once, later. */
+  dismissProfileQuestion(id: string): Promise<ProfileQuestionState>;
   getOnboarding(): Promise<Onboarding>;
   confirmEssentials(): Promise<Onboarding>;
   /** Where the placement test stands and, once assessed, its result. */
@@ -449,6 +468,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getCatalog: () => request('GET', '/v1/catalog'),
     getProfile: () => request('GET', '/v1/profile'),
     updateProfile: (changes) => request('PATCH', '/v1/profile', { changes }),
+    getProfileChanges: () => request('GET', '/v1/profile/changes'),
+    undoProfileChange: (id) => request('POST', `/v1/profile/changes/${id}/undo`),
+    getProfileQuestion: () => request('GET', '/v1/profile/question'),
+    answerProfileQuestion: (id, option) =>
+      request('POST', `/v1/profile/questions/${encodeURIComponent(id)}/answer`, { option }),
+    dismissProfileQuestion: (id) =>
+      request('POST', `/v1/profile/questions/${encodeURIComponent(id)}/dismiss`),
     getOnboarding: () => request('GET', '/v1/onboarding'),
     confirmEssentials: () => request('POST', '/v1/onboarding/essentials/confirm'),
     getPlacement: () => request('GET', '/v1/placement'),

@@ -616,6 +616,55 @@ describe('api client', () => {
     expect(calls[1]?.body).toEqual({ kept: false });
   });
 
+  it('reads what a partner changed by voice and undoes it', async () => {
+    const entry = {
+      id: 7,
+      field: 'explanation_language',
+      scope: 'de',
+      oldValue: 'en',
+      newValue: 'fr',
+      changedAt: '2026-11-05T10:00:00Z',
+      undoable: true,
+    };
+    const { fetch, calls } = fakeFetch(
+      json(200, { changes: [entry] }),
+      json(200, { changes: [{ ...entry, undoable: false }] }),
+      json(409, { error: { code: 'superseded', field: 'explanation_language' } }),
+    );
+    const { api } = client(fetch);
+
+    expect((await api.getProfileChanges()).changes).toEqual([entry]);
+    expect((await api.undoProfileChange(7)).changes[0]?.undoable).toBe(false);
+    await expect(api.undoProfileChange(6)).rejects.toMatchObject({ code: 'superseded' });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/profile/changes',
+      'POST https://api.example.test/v1/profile/changes/7/undo',
+      'POST https://api.example.test/v1/profile/changes/6/undo',
+    ]);
+  });
+
+  it('asks the question about a setting that is due, and answers or dismisses it', async () => {
+    const question = { question: { id: 'recordings', options: ['keep', 'stop'] } };
+    const { fetch, calls } = fakeFetch(
+      json(200, question),
+      json(200, { question: null }),
+      json(200, { question: null }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getProfileQuestion()).toEqual(question);
+    await api.answerProfileQuestion('recordings', 'keep');
+    await api.dismissProfileQuestion('memory');
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/profile/question',
+      'POST https://api.example.test/v1/profile/questions/recordings/answer',
+      'POST https://api.example.test/v1/profile/questions/memory/dismiss',
+    ]);
+    expect(calls[1]?.body).toEqual({ option: 'keep' });
+  });
+
   it('reads the voice minutes and, for the owner, the costs of a month', async () => {
     const allowance = {
       weeklySeconds: 3600,

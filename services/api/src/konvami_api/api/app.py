@@ -48,8 +48,11 @@ from konvami_api.api.schemas import (
     PictureUploadOut,
     PlacementDecision,
     PlacementOut,
+    ProfileAnswerIn,
+    ProfileChangesOut,
     ProfileOut,
     ProfilePatch,
+    ProfileQuestionOut,
     ProgressOut,
     PushDeviceIn,
     PushDeviceOut,
@@ -94,6 +97,7 @@ from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
@@ -113,6 +117,7 @@ class Services:
 
     catalog: Catalog
     profiles: ProfileService
+    questions: ProfileQuestionService
     onboarding: OnboardingService
     voice: VoiceCallService
     placement: PlacementService
@@ -155,6 +160,8 @@ LIMITED: Responses = {429: {"model": ErrorBody}}
 UNAVAILABLE: Responses = {503: {"model": ErrorBody}}
 # An IANA time zone name is at most a few dozen characters ("America/Argentina/ComodRivadavia").
 MAX_TIME_ZONE_LENGTH = 64
+# The changes made by voice that the Profile lists: the latest ones, which are the ones to undo.
+MAX_CHANGES_SHOWN = 20
 
 
 FORBIDDEN: Responses = {403: {"model": ErrorBody}}
@@ -198,6 +205,48 @@ def _router(services: Services) -> APIRouter:
         # What the learner types or taps is, by definition, what they told us.
         profile = services.profiles.apply(user, changes, source=Source.ASKED, origin=Origin.FORM)
         return ProfileOut.of(profile)
+
+    @router.get("/profile/changes", operation_id="getProfileChanges")
+    def get_profile_changes(user: CurrentUser) -> ProfileChangesOut:
+        """What a partner changed by voice, newest first (spec §6.1.3)."""
+        return ProfileChangesOut.of(services.profiles.recent(user, Origin.VOICE, MAX_CHANGES_SHOWN))
+
+    @router.post(
+        "/profile/changes/{change_id}/undo",
+        operation_id="undoProfileChange",
+        responses=NOT_FOUND | CONFLICT | REFUSED,
+    )
+    def undo_profile_change(user: CurrentUser, change_id: int) -> ProfileChangesOut:
+        """Puts a setting back to what it was before a change made by voice."""
+        services.profiles.undo(user, change_id)
+        return ProfileChangesOut.of(services.profiles.recent(user, Origin.VOICE, MAX_CHANGES_SHOWN))
+
+    @router.get("/profile/question", operation_id="getProfileQuestion")
+    def get_profile_question(user: CurrentUser) -> ProfileQuestionOut:
+        """The question about a setting that is due now, if one is (spec §6.1.2)."""
+        return ProfileQuestionOut.of(services.questions.next(user))
+
+    @router.post(
+        "/profile/questions/{question}/answer",
+        operation_id="answerProfileQuestion",
+        responses=NOT_FOUND | REFUSED,
+    )
+    def answer_profile_question(
+        user: CurrentUser, question: str, answer: ProfileAnswerIn
+    ) -> ProfileQuestionOut:
+        """Applies the learner's answer to a question about a setting."""
+        services.questions.answer(user, question, answer.option)
+        return ProfileQuestionOut.of(None)
+
+    @router.post(
+        "/profile/questions/{question}/dismiss",
+        operation_id="dismissProfileQuestion",
+        responses=NOT_FOUND,
+    )
+    def dismiss_profile_question(user: CurrentUser, question: str) -> ProfileQuestionOut:
+        """The learner does not want to answer now: the question comes back once, later."""
+        services.questions.dismiss(user, question)
+        return ProfileQuestionOut.of(None)
 
     def onboarding_of(user: UUID) -> OnboardingOut:
         return OnboardingOut.of(

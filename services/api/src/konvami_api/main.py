@@ -35,6 +35,7 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
@@ -67,6 +68,7 @@ from konvami_api.persistence.repositories import (
     SqlPlacementRepository,
     SqlProfileRepository,
     SqlPushDeviceRepository,
+    SqlQuestionRepository,
     SqlRecordingRepository,
     SqlReportRepository,
     SqlRetryRepository,
@@ -369,6 +371,14 @@ def build_backend(
     services = Services(
         catalog=CATALOG,
         profiles=profiles,
+        questions=ProfileQuestionService(
+            profiles=profiles,
+            recordings=recordings,
+            memories=memories,
+            conversations=conversations,
+            repository=SqlQuestionRepository(sql),
+            clock=_now,
+        ),
         onboarding=onboarding,
         voice=voice,
         placement=placement,
