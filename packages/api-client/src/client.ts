@@ -168,6 +168,18 @@ export type Phrase = Schemas['PhraseOut'];
 export type PhraseSuggestion = Schemas['PhraseSuggestionOut'];
 /** A phrase to keep; `situation` is what it was suggested for, if anything. */
 export type PhraseDraft = { phrase: string; meaning: string; situation?: string | null };
+/** What the learner brought (course companion): one import worked out, and its list entry. */
+export type CourseImport = Schemas['ImportOut'];
+export type CourseImportSummary = Schemas['ImportSummaryOut'];
+export type CourseImports = Schemas['ImportsOut'];
+/** The form to send a photo to read with; the same shape as the profile photo's. */
+export type ImportUpload = Schemas['ImportUploadOut'];
+/** What to work out: a pasted text, a web address, or a photo sent with `startImportUpload`'s form. */
+export type CourseImportDraft = { textbook?: string | null; chapter?: string | null } & (
+  | { kind: 'text'; text: string }
+  | { kind: 'link'; url: string }
+  | { kind: 'photo'; uploadId: string }
+);
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
@@ -412,6 +424,23 @@ export interface ApiClient {
   makePhraseCard(id: string): Promise<Card>;
   /** Removes a kept phrase and answers with the phrasebook. Fails with `not_found`. */
   removePhrase(id: string): Promise<{ phrases: Phrase[] }>;
+  /** What the learner brought for the language they are learning, newest first. */
+  getImports(): Promise<CourseImports>;
+  /** A form to send one photo (a JPEG) to read with. */
+  startImportUpload(): Promise<ImportUpload>;
+  /**
+   * Works out a text, a web page or an uploaded photo. Fails with `invalid_value`,
+   * `consent_required`, `no_language`, `too_many` (remove an import), `import_limit`,
+   * `unavailable`, `not_in_language`, `no_text`, `not_text` or `blocked` and `unreachable` (a
+   * page), or `upload_not_found` and `invalid_photo` (a photo).
+   */
+  createImport(draft: CourseImportDraft): Promise<CourseImport>;
+  /** One import. Fails with `not_found`. */
+  getImport(id: string): Promise<CourseImport>;
+  /** Removes an import and answers with the list. Fails with `not_found`. */
+  removeImport(id: string): Promise<CourseImports>;
+  /** Makes a flashcard of word `index` of an import. Fails with `not_found` or `too_many`. */
+  makeImportWordCard(id: string, index: number): Promise<Card>;
   /** Whether recordings are kept. */
   getRecordings(): Promise<Recordings>;
   /** Keeps recordings or stops; stopping deletes every recording kept so far. */
@@ -609,6 +638,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     suggestPhrases: (situation) => request('POST', '/v1/phrasebook/suggestions', { situation }),
     makePhraseCard: (id) => request('POST', `/v1/phrasebook/${encodeURIComponent(id)}/card`),
     removePhrase: (id) => request('DELETE', `/v1/phrasebook/${encodeURIComponent(id)}`),
+    getImports: () => request('GET', '/v1/imports'),
+    startImportUpload: () => request('POST', '/v1/imports/upload'),
+    createImport: (draft) => request('POST', '/v1/imports', draft),
+    getImport: (id) => request('GET', `/v1/imports/${encodeURIComponent(id)}`),
+    removeImport: (id) => request('DELETE', `/v1/imports/${encodeURIComponent(id)}`),
+    makeImportWordCard: (id, index) =>
+      request('POST', `/v1/imports/${encodeURIComponent(id)}/words/${index}/card`),
     getRecordings: () => request('GET', '/v1/recordings'),
     configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
     getVoiceAllowance: () => request('GET', '/v1/voice/allowance'),

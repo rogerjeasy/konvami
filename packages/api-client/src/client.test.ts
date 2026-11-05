@@ -550,6 +550,38 @@ describe('api client', () => {
     expect(calls[1]?.body).toEqual({ phrase: 'Guten Tag.', meaning: 'Hello.' });
   });
 
+  it('brings, reads, cards and removes imports', async () => {
+    const item = { id: 'i/1', title: 'Brief', vocabulary: [{ word: 'Vertrag', inDeck: false }] };
+    const { fetch, calls } = fakeFetch(
+      json(200, { uploadId: 'u1', url: 'https://files.test/', fields: {} }),
+      json(200, item),
+      json(200, item),
+      json(200, { imports: [{ id: 'i/1' }], limit: 30 }),
+      json(200, { id: 'card1' }),
+      json(200, { imports: [], limit: 30 }),
+    );
+    const { api } = client(fetch);
+
+    expect((await api.startImportUpload()).uploadId).toBe('u1');
+    expect(
+      await api.createImport({ kind: 'photo', uploadId: 'u1', textbook: 'Menschen A2' }),
+    ).toEqual(item);
+    expect(await api.getImport('i/1')).toEqual(item);
+    expect((await api.getImports()).imports).toHaveLength(1);
+    expect((await api.makeImportWordCard('i/1', 0)).id).toBe('card1');
+    expect((await api.removeImport('i/1')).imports).toEqual([]);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/imports/upload',
+      'POST https://api.example.test/v1/imports',
+      'GET https://api.example.test/v1/imports/i%2F1',
+      'GET https://api.example.test/v1/imports',
+      'POST https://api.example.test/v1/imports/i%2F1/words/0/card',
+      'DELETE https://api.example.test/v1/imports/i%2F1',
+    ]);
+    expect(calls[1]?.body).toEqual({ kind: 'photo', uploadId: 'u1', textbook: 'Menschen A2' });
+  });
+
   it('reads the grammar map and one of its topics', async () => {
     const map = { language: 'de', level: 'A2', topics: [] };
     const page = { topic: { id: 'dative' }, examples: [], typicalMistakes: [], mistakes: [] };
