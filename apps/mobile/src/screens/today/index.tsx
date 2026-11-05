@@ -21,10 +21,11 @@ import { staggerDelay } from '@/lib/motion';
 import { sessionRoute } from '@/lib/plan';
 import { callRoute, conversationRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
-import { useAccount } from '@/profile/services';
+import { useAccount, useProfileQuestion, useProfileServices } from '@/profile/services';
 import { useReminderSchedule } from '@/reminders/use-reminders';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
+import { isKnownQuestion, ProfileQuestion } from './profile-question';
 import { ReminderOffer } from './reminder-offer';
 import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
@@ -60,6 +61,12 @@ function Day({ home, now }: { home: Home; now: Date }) {
   useReminderSchedule(home, now);
   const partner =
     home.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ?? home.partners[0];
+  // A question about a setting, when the server finds one due (progressive profiling).
+  const question = useProfileQuestion();
+  const asking =
+    question.phase === 'ready' &&
+    question.data.question !== null &&
+    isKnownQuestion(question.data.question.id);
 
   // The cards in reading order; each one enters a beat after the one before it.
   const talk = [
@@ -104,6 +111,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
     ) : null,
   ];
   const about = [
+    asking ? <ProfileQuestion key="question" /> : null,
     home.level ? <LevelCard key="level" level={home.level} /> : null,
     home.focus.length ? (
       <FocusCard key="focus" focus={home.focus} source={home.focusSource} />
@@ -174,18 +182,22 @@ export function TodayScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
   const { home: store, clock } = usePracticeServices();
+  const { question } = useProfileServices();
   const home = useHome();
   const signedIn = status === 'signedIn';
 
   useEffect(() => {
-    if (signedIn) void store.load();
-  }, [signedIn, store]);
+    if (!signedIn) return;
+    void store.load();
+    void question.load();
+  }, [signedIn, store, question]);
 
   // Coming back to the tab after a while (a new day, a conversation on another device).
   useFocusEffect(
     useCallback(() => {
       void store.revisit();
-    }, [store]),
+      void question.revisit();
+    }, [store, question]),
   );
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;

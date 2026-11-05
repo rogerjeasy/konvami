@@ -456,6 +456,65 @@ describe('5.1 Today', () => {
     });
   });
 
+  describe('a question about a setting (progressive profiling, spec §6.1.2)', () => {
+    const RECORDINGS = { id: 'recordings', options: ['keep', 'stop'] };
+
+    it('is asked when the server finds it due, and the answer is applied', async () => {
+      const api = inApp();
+      api.asking(RECORDINGS);
+      await open(api);
+
+      expect(await screen.findByRole('header', { name: 'Keep your audio?' })).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Don’t keep audio' }));
+
+      await waitFor(() => expect(screen.queryByText('Keep your audio?')).toBeNull());
+      expect(api.calls).toContainEqual(['answerProfileQuestion', 'recordings', 'stop']);
+      expect(await api.getRecordings()).toEqual({ kept: false });
+    });
+
+    it('can be put off with Not now', async () => {
+      const api = inApp();
+      api.asking({ id: 'weekly_habit', options: ['light', 'steady', 'daily'] });
+      await open(api);
+
+      expect(await screen.findByText('How often would you like to practise?')).toBeTruthy();
+      expect(screen.getByRole('button', { name: '3 days, 60 minutes a week' })).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
+
+      await waitFor(() =>
+        expect(screen.queryByText('How often would you like to practise?')).toBeNull(),
+      );
+      expect(api.calls).toContainEqual(['dismissProfileQuestion', 'weekly_habit']);
+    });
+
+    it('stays, with a note, when the answer does not go through', async () => {
+      const api = inApp();
+      api.asking({ id: 'memory', options: ['remember', 'forget'] });
+      await open(api);
+      await screen.findByText('Should your partners remember?');
+      api.failNext('answerProfileQuestion', 'network');
+
+      await fireEvent.press(screen.getByRole('button', { name: 'No, don’t remember' }));
+
+      expect(await screen.findByText(/Can’t reach Konvami/)).toBeTruthy();
+      expect(screen.getByText('Should your partners remember?')).toBeTruthy();
+    });
+
+    it('is not shown when nothing is due', async () => {
+      await open();
+
+      expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull();
+    });
+
+    it('is not shown when this version of the app has no words for it', async () => {
+      const api = inApp();
+      api.asking({ id: 'favourite_colour', options: ['red'] });
+      await open(api);
+
+      expect(screen.queryByRole('button', { name: 'red' })).toBeNull();
+    });
+  });
+
   describe('reminders (spec §6.18)', () => {
     // A learner who has talked once: reminders are worth offering.
     function talkedOnce() {
