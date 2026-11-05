@@ -128,6 +128,15 @@ class ChangeRecord:
     source: Source
     origin: Origin
     changed_at: dt.datetime
+    # The log's own number for the change, once it is stored; what an undo refers to.
+    id: int | None = None
+
+
+@dataclass(frozen=True)
+class LoggedChange:
+    change: ChangeRecord
+    # Whether it is the latest change of its field, and so can be undone.
+    undoable: bool
 
 
 class ProfileError(Exception):
@@ -147,6 +156,14 @@ class ProfileRepository(Protocol):
 
     def changes(self, user_id: UUID, scope: str, field: str) -> list[ChangeRecord]:
         """The logged changes of one field, the oldest first."""
+        ...
+
+    def recent(self, user_id: UUID, origin: Origin, limit: int) -> list[ChangeRecord]:
+        """The latest changes made by one part of the product, the newest first."""
+        ...
+
+    def change(self, user_id: UUID, change_id: int) -> ChangeRecord | None:
+        """One logged change, or None when the learner has no such change."""
         ...
 
 
@@ -353,6 +370,43 @@ class ProfileService:
     def history(self, user_id: UUID, scope: str, field: str) -> list[ChangeRecord]:
         """Every change of one field, by anyone, the oldest first."""
         return self._repository.changes(user_id, scope, field)
+
+    def recent(self, user_id: UUID, origin: Origin, limit: int) -> list[LoggedChange]:
+        """The latest changes made by one part of the product, the newest first, each with
+        whether it can still be undone."""
+        latest: dict[tuple[str, str], int | None] = {}
+        logged: list[LoggedChange] = []
+        for record in self._repository.recent(user_id, origin, limit):
+            key = (record.scope, record.field)
+            if key not in latest:
+                history = self._repository.changes(user_id, record.scope, record.field)
+                latest[key] = history[-1].id if history else None
+            logged.append(LoggedChange(record, undoable=record.id == latest[key]))
+        return logged
+
+    def undo(self, user_id: UUID, change_id: int) -> ChangeRecord:
+        """Puts a field back to what it was before a change made by voice. Only the latest
+        change of a field can be undone: an older one would also undo what came after it.
+        Raises `ProfileError` (`not_found`, `superseded`, `cannot_undo`) and then changes
+        nothing."""
+        record = self._repository.change(user_id, change_id)
+        if record is None or record.origin is not Origin.VOICE:
+            raise ProfileError("not_found", "change")
+        history = self._repository.changes(user_id, record.scope, record.field)
+        if not history or history[-1].id != change_id:
+            raise ProfileError("superseded", record.field)
+        # A field that had no value before has none to go back to, unless an empty value is one
+        # it accepts (no exam, no course).
+        try:
+            self.apply(
+                user_id,
+                [Change(record.field, record.old_value, record.scope)],
+                source=Source.ASKED,
+                origin=Origin.FORM,
+            )
+        except ProfileError as error:
+            raise ProfileError("cannot_undo", record.field) from error
+        return record
 
     def apply(
         self, user_id: UUID, changes: Sequence[Change], *, source: Source, origin: Origin

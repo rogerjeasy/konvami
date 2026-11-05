@@ -30,6 +30,7 @@ from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
 from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
 from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
+from konvami_api.domain.profile_questions import QuestionRepository, QuestionState, QuestionStatus
 from konvami_api.domain.push import PushDevice, PushDeviceRepository
 from konvami_api.domain.recordings import RecordingRepository
 from konvami_api.domain.reports import (
@@ -75,6 +76,7 @@ from konvami_api.persistence.repositories import (
     SqlPlacementRepository,
     SqlProfileRepository,
     SqlPushDeviceRepository,
+    SqlQuestionRepository,
     SqlRecordingRepository,
     SqlReportRepository,
     SqlRetryRepository,
@@ -97,6 +99,7 @@ from tests.fakes import (
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
+    InMemoryQuestionRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryRetryRepository,
@@ -258,6 +261,37 @@ def test_a_fields_changes_are_read_back_oldest_first(profiles: Profiles) -> None
     assert changes[0].changed_at == NOON
     assert profiles.repository.changes(USER, "fr", "self_assessed_level") == []
     assert profiles.repository.changes(OTHER_USER, "de", "self_assessed_level") == []
+
+
+def test_logged_changes_carry_their_number(profiles: Profiles) -> None:
+    profiles.repository.save(USER, [change("course", None), change("exam", None)])
+
+    first, second = (
+        profiles.repository.changes(USER, "de", field)[0] for field in ("course", "exam")
+    )
+
+    assert first.id is not None
+    assert second.id is not None
+    assert first.id < second.id
+    assert profiles.repository.change(USER, first.id) == first
+    assert profiles.repository.change(OTHER_USER, first.id) is None
+
+
+def test_the_latest_changes_of_one_origin_are_read_back_newest_first(profiles: Profiles) -> None:
+    profiles.repository.save(
+        USER,
+        [
+            change("explanation_language", "fr", origin=Origin.VOICE),
+            change("course", None, origin=Origin.FORM),
+            change("exam", None, origin=Origin.VOICE),
+            change("weekly_habit", None, origin=Origin.VOICE),
+        ],
+    )
+
+    recent = profiles.repository.recent(USER, Origin.VOICE, 2)
+
+    assert [c.field for c in recent] == ["weekly_habit", "exam"]
+    assert profiles.repository.recent(OTHER_USER, Origin.VOICE, 2) == []
 
 
 def test_profiles_do_not_leak_between_users(profiles: Profiles) -> None:
@@ -2706,3 +2740,36 @@ def test_the_nudge_reads_only_phones_not_nudged_lately(phones: PushDeviceReposit
 
     # Never nudged first, then the longest waiting.
     assert [phone.token for phone in waiting] == ["ExponentPushToken[3]", "ExponentPushToken[1]"]
+
+
+# --- Profile questions --------------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def questions(request: pytest.FixtureRequest) -> QuestionRepository:
+    if request.param == "memory":
+        return InMemoryQuestionRepository()
+    db: SqlClient = request.getfixturevalue("db")
+    # The question hangs on the learner's row, which saving a profile creates.
+    SqlProfileRepository(db).save(USER, [change("goals", {"reasons": ["work"]})])
+    return SqlQuestionRepository(db)
+
+
+def test_a_question_nobody_acted_on_has_no_state(questions: QuestionRepository) -> None:
+    assert questions.states(USER) == {}
+
+
+def test_an_answer_is_kept_with_its_time(questions: QuestionRepository) -> None:
+    questions.answered(USER, "recordings", NOON)
+
+    assert questions.states(USER) == {"recordings": QuestionState(QuestionStatus.ANSWERED, 0, NOON)}
+    assert questions.states(OTHER_USER) == {}
+
+
+def test_every_dismissal_is_counted(questions: QuestionRepository) -> None:
+    questions.dismissed(USER, "memory", NOON)
+    questions.dismissed(USER, "memory", NOON + 8 * DAY)
+
+    assert questions.states(USER) == {
+        "memory": QuestionState(QuestionStatus.DISMISSED, 2, NOON + 8 * DAY)
+    }

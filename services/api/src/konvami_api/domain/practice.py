@@ -31,7 +31,14 @@ from konvami_api.domain.personas import (
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.plan import FocusPoint, SessionPlan
 from konvami_api.domain.planner import SessionPlanner
-from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.profile import Json, ProfileService
+from konvami_api.domain.profile_voice import (
+    CHECK_GROUPS,
+    CHECK_PREFIX,
+    UPDATE_PROFILE,
+    ProfileVoice,
+    check_lines,
+)
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reports import Focus, ReportService, what_to_practise
 from konvami_api.domain.scenarios import (
@@ -83,16 +90,26 @@ class Learner:
     avoid_topics: tuple[str, ...] = ()
     # What this conversation sets out to practise (the Session Planner).
     plan: SessionPlan = field(default_factory=SessionPlan)
+    # The settings the learner asked to be asked about again, each with its value now ("Ask me
+    # again", spec §14.2); None in an ordinary conversation.
+    check: tuple[str, ...] | None = None
 
 
 class PracticeTools:
     """A partner's tools, for one learner's call. In a role-play, they also keep the goals the
     learner reached."""
 
-    def __init__(self, tutor: TutorService, user_id: UUID, goals: tuple[Goal, ...] = ()) -> None:
+    def __init__(
+        self,
+        tutor: TutorService,
+        user_id: UUID,
+        goals: tuple[Goal, ...] = (),
+        profile_voice: ProfileVoice | None = None,
+    ) -> None:
         self._tutor = tutor
         self._user_id = user_id
         self._goals = goals
+        self._profile_voice = profile_voice
         self._reached: set[str] = set()
 
     @property
@@ -140,6 +157,7 @@ class PracticeTools:
                 },
             },
             *self._goal_tool(),
+            *([self._profile_voice.definition()] if self._profile_voice else []),
         ]
 
     def _goal_tool(self) -> list[dict[str, Any]]:
@@ -174,6 +192,8 @@ class PracticeTools:
             return ToolResult({"done": True}, finished=True)
         if name == MARK_GOAL and self._goals:
             return self._mark(arguments.get("goal"))
+        if name == UPDATE_PROFILE and self._profile_voice:
+            return self._profile_voice.run(arguments)
         if name == ASK_TUTOR:
             question, about = arguments.get("question"), arguments.get("about")
             if not isinstance(question, str) or not question.strip():
@@ -700,7 +720,33 @@ The learner can tap for help. You then get a system note, which they did not say
   {target} and go on in {target}.
 - "{HELP_NOTE}explain": they did not understand something in your last reply. Explain it
   briefly in {explanation} (call {ASK_TUTOR} if it is about grammar), then go on in {target}.
+{_settings(learner, explanation)}"""
+
+
+def _settings(learner: Learner, explanation: str) -> str:
+    """The section on changing the learner's settings by voice (spec §6.1.3), and in a re-check
+    ("Ask me again", spec §14.2) the settings to go through."""
+    check = ""
+    if learner.check is not None:
+        listed = "\n".join(learner.check)
+        check = f"""
+# This conversation is a short check-in
+The learner asked to be asked again about their settings. Do not practise; this takes a few
+minutes and is spoken in {explanation}. Go through these one at a time: say what it is now in
+plain words and ask whether it is still right. Where it is not, change it as described above.
+When you have been through all of them, thank them and call {END}, then say goodbye.
+{listed}
 """
+    return f"""
+# Changing their settings
+They may ask you to change how the app works for them: how you explain things, how much you use
+{explanation}, their exam or its date, their goal level, how often they practise, or the course
+they follow. When they do: say in one short sentence what you understood and ask whether that is
+right. Only when they clearly say yes, call {UPDATE_PROFILE} with confirmed true, then say in one
+short sentence that it is done and go back to where you were. If the result says it was not
+possible, say so honestly. Never change anything on your own idea, and never for anything else
+(privacy, recordings, memory, their account, their level): those they change in the app's profile.
+{check}"""
 
 
 # --- The call ------------------------------------------------------------------------------------
@@ -773,6 +819,14 @@ class PracticeScript:
         language = profile.target_language or ""
         result = self._placement.view(user_id).result
         history = self._conversations.partner_history(user_id).get(persona.id)
+        # A re-check ("Ask me again") has no plan: it is about the settings, not about practice.
+        group = (
+            practise[len(CHECK_PREFIX) :]
+            if practise and practise.startswith(CHECK_PREFIX)
+            else None
+        )
+        if group is not None and group not in CHECK_GROUPS:
+            raise ScenarioError("not_found")
         return Learner(
             first_name=account.first_name,
             target=catalog.english_name(language),
@@ -792,7 +846,12 @@ class PracticeScript:
                 user_id, persona.id, today, history.last_at.date() if history else None
             ),
             avoid_topics=profile.avoid_topics,
-            plan=self._planner.plan(user_id, practise, today),
+            plan=(
+                SessionPlan(language=language)
+                if group is not None
+                else self._planner.plan(user_id, practise, today)
+            ),
+            check=None if group is None else check_lines(catalog, profile, group),
         )
 
     def _exam(self, language: str, exam: dict[str, Any] | None) -> str | None:
@@ -824,7 +883,19 @@ class PracticeScript:
         except ScenarioError:
             # Checked when the call started; a pack changed since leaves the call without goals.
             role_play = None
-        return PracticeTools(self._tutor, user_id, role_play.goals if role_play else ())
+        voice = ProfileVoice(self._profiles, user_id, self._live_effect)
+        return PracticeTools(self._tutor, user_id, role_play.goals if role_play else (), voice)
+
+    def _live_effect(self, field: str, value: Json) -> str | None:
+        """What a setting changed by voice means for the rest of this call (spec §12.7 step 4):
+        the instructions were written when the call began, so the partner is told again."""
+        if field == "explanation_language" and isinstance(value, str):
+            return f"Explain things in {self._profiles.catalog.english_name(value)} from now on."
+        if field == "explanation_usage" and value in _EXPLANATION_USE:
+            # The languages are named in the instructions already; only the rule changes.
+            use = _EXPLANATION_USE[str(value)]
+            return use.format(explanation="the explanation language", target="the target language")
+        return None
 
     def started(self, user_id: UUID) -> None:
         return None

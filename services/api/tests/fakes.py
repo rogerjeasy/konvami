@@ -31,7 +31,8 @@ from konvami_api.domain.memories import Memory
 from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.placement import PlacementResult
-from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
+from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile
+from konvami_api.domain.profile_questions import QuestionState, QuestionStatus
 from konvami_api.domain.push import PushDevice, PushError, PushMessage
 from konvami_api.domain.reports import (
     Report,
@@ -70,6 +71,7 @@ class InMemoryProfileRepository:
     def __init__(self) -> None:
         self._fields: dict[UUID, dict[tuple[str, str], FieldValue]] = {}
         self._history: dict[UUID, list[ChangeRecord]] = {}
+        self._next_id = 1
 
     def load(self, user_id: UUID) -> Profile:
         return Profile(dict(self._fields.get(user_id, {})))
@@ -83,7 +85,10 @@ class InMemoryProfileRepository:
                 # PostgreSQL hands every time back in UTC.
                 updated_at=change.changed_at.astimezone(UTC),
             )
-        self._history.setdefault(user_id, []).extend(changes)
+        # The database numbers every logged change; so does this.
+        for change in changes:
+            self._history.setdefault(user_id, []).append(replace(change, id=self._next_id))
+            self._next_id += 1
 
     def history(self, user_id: UUID) -> list[ChangeRecord]:
         return list(self._history.get(user_id, []))
@@ -94,6 +99,13 @@ class InMemoryProfileRepository:
             for change in self._history.get(user_id, [])
             if (change.scope, change.field) == (scope, field)
         ]
+
+    def recent(self, user_id: UUID, origin: Origin, limit: int) -> list[ChangeRecord]:
+        made = [change for change in self._history.get(user_id, []) if change.origin is origin]
+        return made[::-1][:limit]
+
+    def change(self, user_id: UUID, change_id: int) -> ChangeRecord | None:
+        return next((c for c in self._history.get(user_id, []) if c.id == change_id), None)
 
 
 class InMemoryOnboardingRepository:
@@ -1096,6 +1108,27 @@ class InMemoryPushDeviceRepository:
     def nudged(self, token: str, at: datetime) -> None:
         if token in self.devices:
             self.devices[token] = replace(self.devices[token], nudged_at=at)
+
+
+class InMemoryQuestionRepository:
+    def __init__(self) -> None:
+        self._states: dict[UUID, dict[str, QuestionState]] = {}
+
+    def states(self, user_id: UUID) -> dict[str, QuestionState]:
+        return dict(self._states.get(user_id, {}))
+
+    def answered(self, user_id: UUID, question: str, at: datetime) -> None:
+        before = self._states.get(user_id, {}).get(question)
+        dismissals = before.dismissals if before else 0
+        self._states.setdefault(user_id, {})[question] = QuestionState(
+            QuestionStatus.ANSWERED, dismissals, at
+        )
+
+    def dismissed(self, user_id: UUID, question: str, at: datetime) -> None:
+        before = self._states.get(user_id, {}).get(question)
+        self._states.setdefault(user_id, {})[question] = QuestionState(
+            QuestionStatus.DISMISSED, (before.dismissals if before else 0) + 1, at
+        )
 
 
 class RecordingPushSender:

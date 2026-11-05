@@ -28,6 +28,7 @@ from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
+from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
@@ -79,6 +80,7 @@ from tests.fakes import (
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
+    InMemoryQuestionRepository,
     InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryRetryRepository,
@@ -347,6 +349,14 @@ class World:
             tutor=self.tutor,
             sessions=self.sessions,
             planner=self.planner,
+        )
+        self.questions = ProfileQuestionService(
+            profiles=self.profiles,
+            recordings=self.recordings,
+            memories=self.memories,
+            conversations=self.conversations,
+            repository=InMemoryQuestionRepository(),
+            clock=self.clock,
         )
         # The live checks write turns down from audio that is never stored as a file.
         self.live_transcriber = ScriptedTranscriber()
