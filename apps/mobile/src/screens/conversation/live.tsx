@@ -202,9 +202,9 @@ function Call({
         <>
           {rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : null}
           {plan ? <CallPlanStrip plan={plan} learnerLines={conversation.learnerLines} /> : null}
-          <SettingsToast changes={conversation.profileChanges} />
         </>
       }
+      notice={<SettingsToast changes={conversation.profileChanges} />}
       belowLearner={
         liveCorrections ? (
           <LiveCorrections corrections={conversation.corrections} onOpen={setExplaining} />

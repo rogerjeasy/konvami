@@ -90,6 +90,7 @@ export function CallStage({
   hint,
   finishedLabel,
   progress,
+  notice,
   mainAction,
   sideAction,
   hiddenPersonaText = null,
@@ -109,6 +110,11 @@ export function CallStage({
   finishedLabel: string;
   /** What is done so far (`ProgressChips`), for a call that works through a list. */
   progress?: ReactNode;
+  /**
+   * Something the learner must see the moment it happens (a setting the partner changed): shown
+   * above the actions, which stay on screen, because the lines above scroll on a small window.
+   */
+  notice?: ReactNode;
   /**
    * The action this call is mostly used with, when it has one ("I don't know" in the test). It
    * takes the button's place, and the microphone control becomes a quiet text action under it.
@@ -239,6 +245,7 @@ export function CallStage({
           </>
         ) : (
           <>
+            {notice}
             {mainAction}
             {mainAction ? (
               <View className="flex-row flex-wrap justify-center gap-x-2">
