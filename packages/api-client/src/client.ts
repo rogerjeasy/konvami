@@ -168,6 +168,18 @@ export type Phrase = Schemas['PhraseOut'];
 export type PhraseSuggestion = Schemas['PhraseSuggestionOut'];
 /** A phrase to keep; `situation` is what it was suggested for, if anything. */
 export type PhraseDraft = { phrase: string; meaning: string; situation?: string | null };
+/**
+ * Pen-pal voice notes (5.21): the learner's settings with a line per partner, one partner's
+ * thread, one note (a partner's, with its sound and corrections, or the learner's own, written
+ * down), and what the learner may change.
+ */
+export type PenPal = Schemas['PenPalOut'];
+export type PenPalSettings = Schemas['PenPalSettingsOut'];
+export type PenPalSettingsChange = Schemas['PenPalSettingsIn'];
+export type PenPalThread = Schemas['PenPalThreadOut'];
+export type PenPalNote = Schemas['PenPalNoteOut'];
+export type PenPalCorrection = Schemas['PenPalCorrectionOut'];
+export type PenPalReply = Schemas['PenPalReplyOut'];
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
@@ -364,6 +376,27 @@ export interface ApiClient {
   ): Promise<Retried>;
   /** The corrections of a conversation's report the learner said again. */
   getRetries(conversationId: string): Promise<Retries>;
+  /** The learner's pen-pal settings and a line per partner (5.21). */
+  getPenPal(): Promise<PenPal>;
+  /** Changes the settings left in `changes`. Fails with `invalid_value`. */
+  updatePenPalSettings(changes: PenPalSettingsChange): Promise<PenPalSettings>;
+  /** One partner's thread, oldest note first. Fails with `not_found`. */
+  getPenPalThread(personaId: string): Promise<PenPalThread>;
+  /** The learner opened a thread: what the partner sent is read. Answers the overview. */
+  openPenPalThread(personaId: string): Promise<PenPal>;
+  /**
+   * Asks a partner for a voice note now; it is pending until the thread shows it ready. Fails
+   * with `limit`, `consent_required`, `not_found` or `unavailable`.
+   */
+  askForPenPalNote(personaId: string): Promise<PenPalNote>;
+  /**
+   * Answers a partner with a voice note: it is written down at once, and the partner's answer is
+   * pending. Fails with `too_short`, `invalid_value`, `limit`, `consent_required`, `not_found` or
+   * `unavailable`.
+   */
+  sendPenPalReply(personaId: string, note: SpokenRecording): Promise<PenPalReply>;
+  /** Has a note or an answer that failed written again. Fails with `not_found`, `retry_limit`. */
+  retryPenPalNote(noteId: string): Promise<PenPalNote>;
   /**
    * Reports a partner's line or a correction of a conversation; reporting one again changes the
    * reason. Fails with `not_found`, `invalid_value`, `flag_limit`.
@@ -586,6 +619,17 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       ),
     getRetries: (conversationId) =>
       request('GET', `/v1/conversations/${encodeURIComponent(conversationId)}/retries`),
+    getPenPal: () => request('GET', '/v1/pen-pal'),
+    updatePenPalSettings: (changes) => request('PUT', '/v1/pen-pal/settings', changes),
+    getPenPalThread: (personaId) => request('GET', `/v1/pen-pal/${encodeURIComponent(personaId)}`),
+    openPenPalThread: (personaId) =>
+      request('POST', `/v1/pen-pal/${encodeURIComponent(personaId)}/opened`),
+    askForPenPalNote: (personaId) =>
+      request('POST', `/v1/pen-pal/${encodeURIComponent(personaId)}/notes`),
+    sendPenPalReply: (personaId, note) =>
+      request('POST', `/v1/pen-pal/${encodeURIComponent(personaId)}/replies`, note),
+    retryPenPalNote: (noteId) =>
+      request('POST', `/v1/pen-pal/notes/${encodeURIComponent(noteId)}/retry`),
     flagItem: (conversationId, input) =>
       request('PUT', `/v1/conversations/${encodeURIComponent(conversationId)}/flags`, input),
     getFlags: (conversationId) =>
