@@ -20,6 +20,7 @@ from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
+from konvami_api.domain.phrasebook import PhrasebookError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.reports import ReportError
 from konvami_api.domain.retries import RetryError
@@ -83,6 +84,14 @@ _TUTOR_STATUS = {
     "not_found": 404,
     "no_language": 409,
     "tutor_limit": 429,
+}
+_PHRASEBOOK_STATUS = {
+    "invalid_value": 422,
+    "consent_required": 403,
+    "not_found": 404,
+    "no_language": 409,
+    "too_many": 409,
+    "suggestion_limit": 429,
 }
 _RETRY_STATUS = {
     "not_found": 404,
@@ -165,6 +174,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(TutorError)
     async def _tutor_error(_: Request, error: TutorError) -> JSONResponse:
         return _response(_TUTOR_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(PhrasebookError)
+    async def _phrasebook_error(_: Request, error: PhrasebookError) -> JSONResponse:
+        return _response(_PHRASEBOOK_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(CostError)
     async def _cost_error(_: Request, error: CostError) -> JSONResponse:

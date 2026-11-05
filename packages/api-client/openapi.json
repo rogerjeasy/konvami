@@ -2782,6 +2782,165 @@
         "title": "PersonasOut",
         "type": "object"
       },
+      "PhraseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "meaning": {
+            "maxLength": 300,
+            "title": "Meaning",
+            "type": "string"
+          },
+          "phrase": {
+            "maxLength": 200,
+            "title": "Phrase",
+            "type": "string"
+          },
+          "situation": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Situation"
+          }
+        },
+        "required": [
+          "phrase",
+          "meaning"
+        ],
+        "title": "PhraseIn",
+        "type": "object"
+      },
+      "PhraseOut": {
+        "additionalProperties": false,
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "explainedIn": {
+            "title": "Explainedin",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "inDeck": {
+            "title": "Indeck",
+            "type": "boolean"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "phrase": {
+            "title": "Phrase",
+            "type": "string"
+          },
+          "situation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Situation"
+          }
+        },
+        "required": [
+          "id",
+          "phrase",
+          "meaning",
+          "situation",
+          "explainedIn",
+          "createdAt",
+          "inDeck"
+        ],
+        "title": "PhraseOut",
+        "type": "object"
+      },
+      "PhraseSuggestionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "phrase": {
+            "title": "Phrase",
+            "type": "string"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "phrase",
+          "meaning",
+          "saved"
+        ],
+        "title": "PhraseSuggestionOut",
+        "type": "object"
+      },
+      "PhraseSuggestionsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "situation": {
+            "maxLength": 200,
+            "title": "Situation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "situation"
+        ],
+        "title": "PhraseSuggestionsIn",
+        "type": "object"
+      },
+      "PhraseSuggestionsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/PhraseSuggestionOut"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggestions"
+        ],
+        "title": "PhraseSuggestionsOut",
+        "type": "object"
+      },
+      "PhrasebookOut": {
+        "additionalProperties": false,
+        "properties": {
+          "phrases": {
+            "items": {
+              "$ref": "#/components/schemas/PhraseOut"
+            },
+            "title": "Phrases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "phrases"
+        ],
+        "title": "PhrasebookOut",
+        "type": "object"
+      },
       "PictureConfirm": {
         "additionalProperties": false,
         "properties": {
@@ -7711,6 +7870,322 @@
           }
         },
         "summary": "Duplicate Persona"
+      }
+    },
+    "/v1/phrasebook": {
+      "get": {
+        "description": "The learner's phrases for the language they are learning, newest first (spec \u00a76.7).",
+        "operationId": "getPhrasebook",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhrasebookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Phrasebook"
+      },
+      "post": {
+        "description": "Keeps a phrase in the phrasebook. Keeping one that is kept already answers with it.",
+        "operationId": "savePhrase",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhraseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhraseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Save Phrase"
+      }
+    },
+    "/v1/phrasebook/suggestions": {
+      "post": {
+        "description": "Phrases for a situation the learner describes, nothing kept until they choose.",
+        "operationId": "suggestPhrases",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhraseSuggestionsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhraseSuggestionsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Suggest Phrases"
+      }
+    },
+    "/v1/phrasebook/{phrase_id}": {
+      "delete": {
+        "operationId": "removePhrase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "phrase_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Phrase Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhrasebookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Remove Phrase"
+      }
+    },
+    "/v1/phrasebook/{phrase_id}/card": {
+      "post": {
+        "description": "Makes a flashcard of a kept phrase. One that is a card already answers with it.",
+        "operationId": "makePhraseCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "phrase_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Phrase Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Make Phrase Card"
       }
     },
     "/v1/placement": {

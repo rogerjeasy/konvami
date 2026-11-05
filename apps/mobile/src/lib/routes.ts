@@ -66,6 +66,8 @@ export const ROUTES = {
   review: '/review',
   /** 5.12 Ask the tutor (a question about a report's correction is `explainRoute`). */
   tutor: '/tutor',
+  /** 5.19 Phrasebook: the phrases the learner needs in their life, to keep and to learn. */
+  phrasebook: '/phrasebook',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */

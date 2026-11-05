@@ -24,6 +24,9 @@ import type {
   CardSource,
   Progress,
   Transcript,
+  Phrase,
+  PhraseDraft,
+  PhraseSuggestion,
   TutorQuestion,
 } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
@@ -84,6 +87,22 @@ export interface PracticeServices {
   reviewCards: () => ReviewSession;
   /** What can be learned and practised: here, the role-plays of each language (5.13). */
   catalog: ResourceStore<Catalog>;
+  /** The learner's phrasebook, newest first (5.19). */
+  phrasebook: ResourceStore<{ phrases: Phrase[] }>;
+  /**
+   * Phrases for a situation; nothing is kept. Rejects with an `ApiError` (`suggestion_limit`,
+   * `consent_required`, `unavailable`, …).
+   */
+  suggestPhrases: (situation: string) => Promise<PhraseSuggestion[]>;
+  /** Keeps a phrase and puts it first in the phrasebook. Rejects with an `ApiError`. */
+  keepPhrase: (draft: PhraseDraft) => Promise<Phrase>;
+  /**
+   * Makes a flashcard of a kept phrase, then brings the deck and Today's count of due cards up to
+   * date. Rejects with an `ApiError` (`not_found`, `too_many`, …).
+   */
+  makePhraseCard: (id: string) => Promise<Card>;
+  /** Removes a kept phrase. Rejects with an `ApiError` (`not_found`, …). */
+  removePhrase: (id: string) => Promise<void>;
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
   /**
@@ -151,6 +170,11 @@ export function createPracticeServices(
     | 'getTutorQuestions'
     | 'getCatalog'
     | 'askTutor'
+    | 'getPhrasebook'
+    | 'savePhrase'
+    | 'suggestPhrases'
+    | 'makePhraseCard'
+    | 'removePhrase'
     | 'explainCorrection'
     | 'getGrammarMap'
     | 'getGrammarTopic'
@@ -177,6 +201,7 @@ export function createPracticeServices(
   const deck = createDeckStore(api);
   const tutor = createResourceStore(() => api.getTutorQuestions(), clock.now);
   const catalog = createResourceStore(() => api.getCatalog(), clock.now);
+  const phrasebook = createResourceStore(() => api.getPhrasebook(), clock.now);
   return {
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
@@ -198,6 +223,30 @@ export function createPracticeServices(
     },
     reviewCards: () => createReviewSession(api),
     catalog,
+    phrasebook,
+    async suggestPhrases(situation) {
+      return (await api.suggestPhrases(situation)).suggestions;
+    },
+    keepPhrase: (draft) =>
+      phrasebook.mutate(
+        () => api.savePhrase(draft),
+        (shown, kept) => ({
+          phrases: [kept, ...shown.phrases.filter((phrase) => phrase.id !== kept.id)],
+        }),
+      ),
+    async makePhraseCard(id) {
+      const card = await api.makePhraseCard(id);
+      void phrasebook.refresh();
+      void deck.refresh();
+      void home.refresh();
+      return card;
+    },
+    async removePhrase(id) {
+      await phrasebook.mutate(
+        () => api.removePhrase(id),
+        (_, answer) => answer,
+      );
+    },
     tutor,
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
     readGrammarTopic: (id) => api.getGrammarTopic(id),
@@ -246,6 +295,7 @@ export function PracticeProvider({
     services.progress.reset();
     services.exams.reset();
     services.tutor.reset();
+    services.phrasebook.reset();
     services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
@@ -405,6 +455,12 @@ export function useGrammarTopic(id: string): TopicReading & { retry: () => void 
       setAttempt((count) => count + 1);
     },
   };
+}
+
+/** The learner's phrasebook; re-renders when it changes. */
+export function usePhrasebook(): ResourceState<{ phrases: Phrase[] }> {
+  const { phrasebook } = usePracticeServices();
+  return useSyncExternalStore(phrasebook.subscribe, phrasebook.getState, phrasebook.getState);
 }
 
 /** The questions asked to the Tutor; re-renders when they change. */

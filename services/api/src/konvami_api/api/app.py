@@ -44,6 +44,12 @@ from konvami_api.api.schemas import (
     PersonaPatch,
     PersonasOut,
     PersonaTemplatesOut,
+    PhrasebookOut,
+    PhraseIn,
+    PhraseOut,
+    PhraseSuggestionOut,
+    PhraseSuggestionsIn,
+    PhraseSuggestionsOut,
     PictureConfirm,
     PictureUploadOut,
     PlacementDecision,
@@ -92,6 +98,7 @@ from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import Persona, PersonaService
+from konvami_api.domain.phrasebook import PhrasebookEntry, PhrasebookService
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.progress import ProgressService
@@ -129,6 +136,7 @@ class Services:
     accounts: AccountService
     recordings: RecordingService
     tutor: TutorService
+    phrasebook: PhrasebookService
     voices: VoiceSampleService
     costs: CostService
     grammar: GrammarMapService
@@ -587,6 +595,43 @@ def _router(services: Services) -> APIRouter:
         """Asks the Tutor about one correction of a conversation's report (spec §6.5)."""
         question = services.tutor.explain_correction(user, asked.conversation_id, asked.index)
         return TutorQuestionOut.of(question)
+
+    @router.get("/phrasebook", operation_id="getPhrasebook", responses=REFUSED)
+    def get_phrasebook(user: CurrentUser) -> PhrasebookOut:
+        """The learner's phrases for the language they are learning, newest first (spec §6.7)."""
+        return PhrasebookOut(phrases=[PhraseOut.of(e) for e in services.phrasebook.phrases(user)])
+
+    @router.post("/phrasebook", operation_id="savePhrase", responses=REFUSED | CONFLICT)
+    def save_phrase(user: CurrentUser, item: PhraseIn) -> PhraseOut:
+        """Keeps a phrase in the phrasebook. Keeping one that is kept already answers with it."""
+        kept = services.phrasebook.save(user, item.phrase, item.meaning, item.situation)
+        return PhraseOut.of(PhrasebookEntry(kept, in_deck=False))
+
+    @router.post(
+        "/phrasebook/suggestions",
+        operation_id="suggestPhrases",
+        responses=REFUSED | CONFLICT | TUTOR_REFUSED,
+    )
+    def suggest_phrases(user: CurrentUser, asked: PhraseSuggestionsIn) -> PhraseSuggestionsOut:
+        """Phrases for a situation the learner describes, nothing kept until they choose."""
+        found = services.phrasebook.suggest(user, asked.situation)
+        return PhraseSuggestionsOut(suggestions=[PhraseSuggestionOut.of(s) for s in found])
+
+    @router.post(
+        "/phrasebook/{phrase_id}/card",
+        operation_id="makePhraseCard",
+        responses=NOT_FOUND | CONFLICT | REFUSED,
+    )
+    def make_phrase_card(user: CurrentUser, phrase_id: UUID) -> CardOut:
+        """Makes a flashcard of a kept phrase. One that is a card already answers with it."""
+        return CardOut.of(services.phrasebook.make_card(user, phrase_id))
+
+    @router.delete(
+        "/phrasebook/{phrase_id}", operation_id="removePhrase", responses=NOT_FOUND | REFUSED
+    )
+    def remove_phrase(user: CurrentUser, phrase_id: UUID) -> PhrasebookOut:
+        services.phrasebook.remove(user, phrase_id)
+        return PhrasebookOut(phrases=[PhraseOut.of(e) for e in services.phrasebook.phrases(user)])
 
     @router.get("/recordings", operation_id="getRecordings")
     def get_recordings(user: CurrentUser) -> RecordingsOut:

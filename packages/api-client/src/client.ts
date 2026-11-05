@@ -149,6 +149,11 @@ export type MemorySettings = { enabled?: boolean; avoidTopics?: string[] };
 /** A question asked to the Tutor and its answer. */
 export type TutorQuestion = Schemas['TutorQuestionOut'];
 export type TutorAnswer = Schemas['TutorAnswerOut'];
+/** The phrases the learner keeps (the phrasebook), one phrase, and a phrase suggested for them. */
+export type Phrase = Schemas['PhraseOut'];
+export type PhraseSuggestion = Schemas['PhraseSuggestionOut'];
+/** A phrase to keep; `situation` is what it was suggested for, if anything. */
+export type PhraseDraft = { phrase: string; meaning: string; situation?: string | null };
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
@@ -356,6 +361,19 @@ export interface ApiClient {
   askTutor(question: string): Promise<TutorQuestion>;
   /** Asks the Tutor about correction `index` of a conversation's report. Fails as `askTutor`, or `not_found`. */
   explainCorrection(conversationId: string, index: number): Promise<TutorQuestion>;
+  /** The learner's phrasebook for the language they are learning, newest first. */
+  getPhrasebook(): Promise<{ phrases: Phrase[] }>;
+  /** Keeps a phrase. Keeping one that is kept already answers with it. Fails with `invalid_value`, `too_many` or `no_language`. */
+  savePhrase(draft: PhraseDraft): Promise<Phrase>;
+  /**
+   * Phrases for a situation the learner describes; nothing is kept. Fails with `invalid_value`,
+   * `suggestion_limit`, `consent_required` or `unavailable`.
+   */
+  suggestPhrases(situation: string): Promise<{ suggestions: PhraseSuggestion[] }>;
+  /** Makes a flashcard of a kept phrase. Fails with `not_found` or `too_many`. */
+  makePhraseCard(id: string): Promise<Card>;
+  /** Removes a kept phrase and answers with the phrasebook. Fails with `not_found`. */
+  removePhrase(id: string): Promise<{ phrases: Phrase[] }>;
   /** Whether recordings are kept. */
   getRecordings(): Promise<Recordings>;
   /** Keeps recordings or stops; stopping deletes every recording kept so far. */
@@ -534,6 +552,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     askTutor: (question) => request('POST', '/v1/tutor/questions', { question }),
     explainCorrection: (conversationId, index) =>
       request('POST', '/v1/tutor/corrections', { conversationId, index }),
+    getPhrasebook: () => request('GET', '/v1/phrasebook'),
+    savePhrase: (draft) => request('POST', '/v1/phrasebook', draft),
+    suggestPhrases: (situation) => request('POST', '/v1/phrasebook/suggestions', { situation }),
+    makePhraseCard: (id) => request('POST', `/v1/phrasebook/${encodeURIComponent(id)}/card`),
+    removePhrase: (id) => request('DELETE', `/v1/phrasebook/${encodeURIComponent(id)}`),
     getRecordings: () => request('GET', '/v1/recordings'),
     configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
     getVoiceAllowance: () => request('GET', '/v1/voice/allowance'),

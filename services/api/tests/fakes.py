@@ -30,6 +30,7 @@ from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
 from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
+from konvami_api.domain.phrasebook import Phrase
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Profile
 from konvami_api.domain.push import PushDevice, PushError, PushMessage
@@ -520,6 +521,41 @@ class InMemoryTutorRepository:
     def listed(self, user_id: UUID, limit: int) -> list[TutorQuestion]:
         newest = sorted(self.questions.get(user_id, []), key=lambda q: q.asked_at, reverse=True)
         return newest[:limit]
+
+
+class InMemoryPhraseRepository:
+    def __init__(self) -> None:
+        # (user, language, key) -> phrase
+        self.phrases: dict[tuple[UUID, str, str], Phrase] = {}
+
+    def add(self, user_id: UUID, language: str, key: str, phrase: Phrase, limit: int) -> bool:
+        mine = [k for k in self.phrases if k[0] == user_id and k[1] == language]
+        if (user_id, language, key) in self.phrases or len(mine) >= limit:
+            return False
+        self.phrases[(user_id, language, key)] = phrase
+        return True
+
+    def by_key(self, user_id: UUID, language: str, key: str) -> Phrase | None:
+        return self.phrases.get((user_id, language, key))
+
+    def get(self, user_id: UUID, phrase_id: UUID) -> Phrase | None:
+        return next(
+            (p for (u, _, _), p in self.phrases.items() if u == user_id and p.id == phrase_id), None
+        )
+
+    def listed(self, user_id: UUID, language: str) -> list[Phrase]:
+        mine = [p for (u, lang, _), p in self.phrases.items() if u == user_id and lang == language]
+        return sorted(mine, key=lambda p: (p.created_at, str(p.id)), reverse=True)
+
+    def remove(self, user_id: UUID, phrase_id: UUID) -> bool:
+        for key, phrase in list(self.phrases.items()):
+            if key[0] == user_id and phrase.id == phrase_id:
+                del self.phrases[key]
+                return True
+        return False
+
+    def known(self, user_id: UUID, language: str, keys: Sequence[str]) -> set[str]:
+        return {key for key in keys if (user_id, language, key) in self.phrases}
 
 
 class InMemoryLevelRepository:

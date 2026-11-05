@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
-from konvami_api.domain.catalog import LanguagePack
+from konvami_api.domain.catalog import Catalog, LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.profile import Profile, ProfileService
@@ -305,14 +305,17 @@ class TutorService:
         return kept
 
     def _languages(self, profile: Profile, language: str) -> tuple[str, str]:
-        """The language learned and the one the explanation is written in, by English name."""
-        catalog = self._profiles.catalog
-        target = catalog.english_name(language)
-        # A learner who wants no explanations in their own language gets them in simple target.
-        if profile.value(language, "explanation_usage") == "never":
-            return target, target
-        explained_in = profile.value(language, "explanation_language") or "en"
-        return target, catalog.english_name(explained_in)
+        return explanation_languages(profile, self._profiles.catalog, language)
+
+
+def explanation_languages(profile: Profile, catalog: Catalog, language: str) -> tuple[str, str]:
+    """The language learned and the one explanations are written in, by English name."""
+    target = catalog.english_name(language)
+    # A learner who wants no explanations in their own language gets them in simple target.
+    if profile.value(language, "explanation_usage") == "never":
+        return target, target
+    explained_in = profile.value(language, "explanation_language") or "en"
+    return target, catalog.english_name(explained_in)
 
 
 def _answer(found: _Answer, pack: LanguagePack | None) -> TutorAnswer:
