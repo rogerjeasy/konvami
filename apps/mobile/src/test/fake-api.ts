@@ -30,6 +30,8 @@ import {
   type TranscriptTurn,
   type TurnAudio,
   type TutorAnswer,
+  type Phrase,
+  type PhraseSuggestion,
   type TutorQuestion,
   type ExamCard,
   type ExamCentre,
@@ -354,6 +356,12 @@ export const FAKE_TUTOR_ANSWER: TutorAnswer = {
   topic: 'case_dative',
   unsure: false,
 };
+
+/** What the fake phrasebook suggests for any situation. */
+export const FAKE_PHRASE_SUGGESTIONS: PhraseSuggestion[] = [
+  { phrase: 'Ich hätte gern einen Termin.', meaning: 'I would like an appointment.', saved: false },
+  { phrase: 'Könnten Sie das bitte wiederholen?', meaning: 'Could you repeat that?', saved: false },
+];
 
 export const FAKE_REPORT_SAYS = [
   'Gut. Ich habe nach Berlin gefahren mit der Bus.',
@@ -750,6 +758,10 @@ export interface FakeApi extends ApiClient {
   ): void;
   /** What the Tutor answers next (by default `FAKE_TUTOR_ANSWER`). */
   nextTutorAnswer(answer: Partial<TutorAnswer>): void;
+  /** Phrases the phrasebook suggests next (by default `FAKE_PHRASE_SUGGESTIONS`). */
+  nextPhraseSuggestions(suggestions: PhraseSuggestion[]): void;
+  /** Phrases the learner kept earlier, oldest first. */
+  keptPhrases(phrases: { phrase: string; meaning: string; situation?: string }[]): void;
   /** Ends a call recorded with `ended: false`. */
   finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
   /**
@@ -859,6 +871,27 @@ export function createFakeApi(): FakeApi {
     };
     tutorAnswer = FAKE_TUTOR_ANSWER;
     tutorQuestions = [kept, ...tutorQuestions];
+    return kept;
+  };
+  // The phrasebook, newest first, and what is suggested next.
+  let phrases: Phrase[] = [];
+  let phraseSuggestions: PhraseSuggestion[] = FAKE_PHRASE_SUGGESTIONS;
+  const keepPhrase = (draft: { phrase: string; meaning: string; situation?: string | null }) => {
+    const text = draft.phrase.trim();
+    const meaning = draft.meaning.trim();
+    if (!text || !meaning) throw new ApiError('invalid_value', 422);
+    const known = phrases.find((phrase) => cardKey(phrase.phrase) === cardKey(text));
+    if (known) return known;
+    const kept: Phrase = {
+      id: `phrase_${phrases.length + 1}`,
+      phrase: text,
+      meaning,
+      situation: draft.situation ?? null,
+      explainedIn: 'en',
+      createdAt: new Date(now + phrases.length * 1000).toISOString(),
+      inDeck: false,
+    };
+    phrases = [kept, ...phrases];
     return kept;
   };
   let recordingsKept = true;
@@ -1707,6 +1740,12 @@ export function createFakeApi(): FakeApi {
     nextTutorAnswer(answer) {
       tutorAnswer = { ...FAKE_TUTOR_ANSWER, ...answer };
     },
+    nextPhraseSuggestions(suggestions) {
+      phraseSuggestions = suggestions;
+    },
+    keptPhrases(kept) {
+      for (const draft of kept) keepPhrase(draft);
+    },
     async getTutorQuestions() {
       await record('getTutorQuestions');
       return { questions: tutorQuestions };
@@ -1795,6 +1834,53 @@ export function createFakeApi(): FakeApi {
       const mistake = reports.get(conversationId)?.report?.mistakes[index];
       if (!mistake) throw new ApiError('not_found', 404);
       return keepQuestion(`${mistake.original} → ${mistake.corrected}`, 'report', now);
+    },
+    async getPhrasebook() {
+      await record('getPhrasebook');
+      return { phrases };
+    },
+    async savePhrase(draft) {
+      await record('savePhrase', draft);
+      return keepPhrase(draft);
+    },
+    async suggestPhrases(situation) {
+      await record('suggestPhrases', situation);
+      if (!situation.trim()) throw new ApiError('invalid_value', 422);
+      const kept = new Set(phrases.map((phrase) => cardKey(phrase.phrase)));
+      return {
+        suggestions: phraseSuggestions.map((s) => ({ ...s, saved: kept.has(cardKey(s.phrase)) })),
+      };
+    },
+    async makePhraseCard(id) {
+      await record('makePhraseCard', id);
+      const phrase = phrases.find((candidate) => candidate.id === id);
+      if (!phrase) throw new ApiError('not_found', 404);
+      const known = cards.find((card) => cardKey(card.front) === cardKey(phrase.phrase));
+      phrases = phrases.map((p) => (p.id === id ? { ...p, inDeck: true } : p));
+      if (known) return known;
+      const card: Card = {
+        id: `card_${cards.length + 1}`,
+        kind: 'word',
+        front: phrase.phrase,
+        back: phrase.meaning,
+        note: null,
+        explainedIn: phrase.explainedIn,
+        conversationId: null,
+        createdAt: new Date(now + cards.length * 1000).toISOString(),
+        dueAt: new Date(now).toISOString(),
+        reviewedAt: null,
+        reviews: 0,
+        lapses: 0,
+        details: null,
+      };
+      cards.push(card);
+      return card;
+    },
+    async removePhrase(id) {
+      await record('removePhrase', id);
+      if (!phrases.some((phrase) => phrase.id === id)) throw new ApiError('not_found', 404);
+      phrases = phrases.filter((phrase) => phrase.id !== id);
+      return { phrases };
     },
     async getRecordings() {
       await record('getRecordings');

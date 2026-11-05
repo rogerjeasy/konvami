@@ -72,6 +72,16 @@ describe('5.7 Learn', () => {
     expect(router.push).toHaveBeenCalledWith('/tutor');
   });
 
+  it('leads to the phrasebook', async () => {
+    await open(inApp());
+
+    const row = screen.getByRole('button', { name: 'Phrasebook' });
+    expect(row.props.accessibilityHint).toBe('Phrases you need in your life');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/phrasebook');
+  });
+
   it('leads to the grammar map', async () => {
     await open(inApp());
 

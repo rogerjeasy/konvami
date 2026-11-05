@@ -34,8 +34,8 @@ function nextDue(cards: readonly Flashcard[], now: Date): string | null {
  * 5.7 Learn: the learner's flashcards (spec §6.7). On top, how many are due and the button that
  * starts a review; under it the deck, newest first. Cards are made from a conversation's
  * report, so a learner without any is told where they come from. Above them, the way to the
- * grammar map (5.14), the Tutor (5.12) and the exam centre (5.16). The phrasebook of spec §14.1
- * is not built.
+ * grammar map (5.14), the Tutor (5.12) and the exam centre (5.16). The phrasebook
+ * (5.19) is a row of that list.
  */
 export function LearnScreen() {
   const { t, i18n } = useTranslation();
@@ -90,6 +90,12 @@ export function LearnScreen() {
               title={t('learn.grammarRow')}
               detail={t('learn.grammarHint')}
               onPress={() => router.push(ROUTES.grammar)}
+            />
+            <ListRow
+              icon="book"
+              title={t('learn.phrasebookRow')}
+              detail={t('learn.phrasebookHint')}
+              onPress={() => router.push(ROUTES.phrasebook)}
             />
             <ListRow
               icon="message"
