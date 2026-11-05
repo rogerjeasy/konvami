@@ -9,6 +9,9 @@ Before every conversation it picks, from what is known of the learner:
   conversation");
 - what they talked about lately, so that the partner finds something new.
 
+A guided lesson (spec §6.3, `practise="lesson:<topic>"`) teaches that one topic: its rules and
+sentences, and nothing else to compete with it.
+
 A review conversation (spec §6.7, `practise=PRACTISE_WORDS`) is built around the words instead:
 more of them, the due ones only (or the next ones when none is due), and no structure to
 compete with them.
@@ -25,7 +28,7 @@ from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.grammar_topics import GrammarTopic
-from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
+from konvami_api.domain.plan import FocusPoint, LessonMaterial, PlanWord, SessionPlan
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import Report, ReportService, Severity
 
@@ -37,6 +40,8 @@ MAX_PLAN_WORDS = 4
 MAX_REVIEW_WORDS = 6
 # What a learner asks to practise for a review conversation, instead of a grammar topic.
 PRACTISE_WORDS = "words"
+# What precedes a grammar topic's id when a learner asks for a guided lesson on it (spec §6.3).
+LESSON_PREFIX = "lesson:"
 # The conversations whose mistakes count; older ones are what the learner may since have learnt.
 RECENT_REPORTS = 5
 RECENT_TOPICS = 3
@@ -49,6 +54,19 @@ _RECENCY_WEIGHT = (1.0, 0.8, 0.6, 0.4, 0.2)
 def _topic_of(pack: LanguagePack, category: str) -> GrammarTopic | None:
     """The grammar topic a kind of mistake belongs to; None for one about single words."""
     return next((topic for topic in pack.grammar_map if category in topic.categories), None)
+
+
+def lesson_material(pack: LanguagePack, topic: GrammarTopic) -> LessonMaterial:
+    """What a guided lesson on a topic teaches: the pack's rule notes for its kinds of mistake,
+    then the topic's own sentences."""
+    notes = [note for category in topic.categories if (note := pack.note(category)) is not None]
+    return LessonMaterial(
+        topic=topic.id,
+        title=topic.title,
+        rules=tuple(note.rule for note in notes),
+        right=(*topic.examples, *(sentence for note in notes for sentence in note.right)),
+        wrong=tuple(sentence for note in notes for sentence in note.wrong),
+    )
 
 
 def choose_focus(
@@ -114,6 +132,9 @@ class SessionPlanner:
         language = self._profiles.get(user_id).target_language or ""
         pack = self._profiles.catalog.available_pack(language)
         review = practise == PRACTISE_WORDS
+        lesson = practise is not None and practise.startswith(LESSON_PREFIX)
+        if lesson and practise is not None:
+            practise = practise[len(LESSON_PREFIX) :]
         chosen = pack.topic(practise) if pack and practise and not review else None
         if practise is not None and not review and chosen is None:
             raise GrammarMapError("not_found")
@@ -121,6 +142,14 @@ class SessionPlanner:
             week_topic = self._week_topic(user_id, today)
             chosen = pack.topic(week_topic) if week_topic else None
         reports = self._reports.recent(user_id, RECENT_REPORTS)
+        if lesson and pack and chosen:
+            # The lesson is the topic alone: the learner's own mistakes on it still show, but the
+            # words and earlier talk would only crowd a ten-minute call.
+            return SessionPlan(
+                language=language,
+                focus=choose_focus(reports, pack, chosen)[:1],
+                lesson=lesson_material(pack, chosen),
+            )
         if review:
             due = self._cards.words_due(user_id, MAX_REVIEW_WORDS)
             cards = due or self._cards.words_to_bring_back(user_id, MAX_REVIEW_WORDS)

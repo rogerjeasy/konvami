@@ -23,9 +23,9 @@ function useWordsUsed(plan: CallPlan, said: readonly string[]): ReadonlySet<stri
 /**
  * What the conversation sets out to practise (the Session Planner, spec §8.2): the grammar
  * topics the partner steers towards, and the learner's saved words, each ticked off once they
- * have used it (spec §6.4 "3 of 5 target words used"). In a review conversation (spec §6.7) the
- * words are the point: each one said counts as reviewed after the call. Nothing to plan,
- * nothing shown.
+ * have used it (spec §6.4 "3 of 5 target words used"). A guided lesson (spec §6.3) names its
+ * topic as the lesson. In a review conversation (spec §6.7) the words are the point: each one
+ * said counts as reviewed after the call. Nothing to plan, nothing shown.
  */
 export function CallPlanStrip({
   plan,
@@ -45,7 +45,9 @@ export function CallPlanStrip({
     <View className="items-center gap-2 pt-1">
       {topics.length ? (
         <Text variant="caption" tone="subtle" className="text-center">
-          {t('conversation.plan.focus', { topics: formatList(i18n.language, topics) })}
+          {t(plan.lesson ? 'conversation.plan.lesson' : 'conversation.plan.focus', {
+            topics: formatList(i18n.language, topics),
+          })}
         </Text>
       ) : null}
       {plan.words.length ? (

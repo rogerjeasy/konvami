@@ -5,8 +5,14 @@ import pytest
 
 from konvami_api.domain.cards import Card
 from konvami_api.domain.grammar_map import GrammarMapError
-from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
-from konvami_api.domain.planner import MAX_FOCUS, MAX_PLAN_WORDS, MAX_REVIEW_WORDS, PRACTISE_WORDS
+from konvami_api.domain.plan import FocusPoint, LessonMaterial, PlanWord, SessionPlan
+from konvami_api.domain.planner import (
+    LESSON_PREFIX,
+    MAX_FOCUS,
+    MAX_PLAN_WORDS,
+    MAX_REVIEW_WORDS,
+    PRACTISE_WORDS,
+)
 from konvami_api.domain.reports import Mistake, Severity, Word
 from tests.world import NOON, OTHER_USER, USER, World
 
@@ -389,3 +395,49 @@ def test_a_plan_is_stored_with_its_cards_and_whether_it_reviews() -> None:
     assert stored == plan
     assert stored.words[0].card_id == "c1"
     assert stored.review
+
+
+# --- Guided lessons (spec §6.3) --------------------------------------------------------------
+
+
+def test_a_guided_lesson_teaches_the_topic_alone_with_the_rule_and_sentences() -> None:
+    world = World()
+    world.onboard()
+    report(world, mistake("case_dative"))
+
+    plan = world.planner.plan(USER, practise=f"{LESSON_PREFIX}dative")
+
+    assert plan.lesson is not None
+    assert plan.lesson.topic == "dative"
+    assert any("dative" in rule.lower() for rule in plan.lesson.rules)
+    assert plan.lesson.right
+    assert plan.lesson.wrong
+    # Only the lesson's topic, and nothing to compete with it.
+    assert [point.topic for point in plan.focus] == ["dative"]
+    assert plan.words == ()
+    assert plan.recent_topics == ()
+
+
+def test_a_guided_lesson_on_a_topic_the_language_does_not_have_is_refused() -> None:
+    world = World()
+    world.onboard()
+
+    with pytest.raises(GrammarMapError):
+        world.planner.plan(USER, practise=f"{LESSON_PREFIX}klingon")
+
+
+def test_an_ordinary_plan_is_no_lesson() -> None:
+    world = World()
+    world.onboard()
+
+    assert world.planner.plan(USER, practise="dative").lesson is None
+
+
+def test_a_lesson_is_stored_with_its_plan() -> None:
+    plan = SessionPlan(
+        language="de",
+        lesson=LessonMaterial("dative", "Dative", rules=("rule",), right=("a",), wrong=("b",)),
+    )
+
+    assert SessionPlan.from_document(plan.document()) == plan
+    assert SessionPlan.from_document({"language": "de"}).lesson is None

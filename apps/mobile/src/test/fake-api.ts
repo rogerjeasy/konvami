@@ -1422,13 +1422,16 @@ export function createFakeApi(): FakeApi {
       // Nothing to plan from yet: no reports in the fake. A review brings the due words.
       const review = practise === 'words';
       const words = review ? dueCards().filter(({ kind }) => kind === 'word') : [];
+      // A guided lesson is `lesson:<topic>`: the topic alone, with no words.
+      const lessonTopic = practise?.startsWith('lesson:') ? practise.slice('lesson:'.length) : null;
       const plan =
         purpose === 'practice'
           ? {
               language: 'de',
-              focus: [],
+              focus: lessonTopic ? [lessonTopic] : [],
               words: words.map(({ front, back }) => ({ text: front, meaning: back })),
               review,
+              lesson: lessonTopic !== null,
             }
           : null;
       return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds, plan };

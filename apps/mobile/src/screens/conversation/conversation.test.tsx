@@ -310,6 +310,7 @@ describe('5.3 Conversation', () => {
         { text: 'umsteigen', meaning: 'to change trains' },
       ],
       review: false,
+      lesson: false,
     };
     await live({ voice });
 
@@ -331,6 +332,7 @@ describe('5.3 Conversation', () => {
       focus: [],
       words: [{ text: 'der Termin', meaning: 'appointment' }],
       review: true,
+      lesson: false,
     };
     await live({ voice });
 
@@ -339,9 +341,18 @@ describe('5.3 Conversation', () => {
     expect(screen.getByText('Review: say each word yourself · 1 of 1')).toBeTruthy();
   });
 
+  it('names the topic of a guided lesson as the lesson', async () => {
+    const voice = createFakeVoiceEngine();
+    voice.plan = { language: 'de', focus: ['dative'], words: [], review: false, lesson: true };
+    await live({ voice });
+
+    expect(screen.getByText('Lesson: Dative')).toBeTruthy();
+    expect(screen.queryByText(/^Practising today/)).toBeNull();
+  });
+
   it('shows no plan when there is nothing to practise yet', async () => {
     const voice = createFakeVoiceEngine();
-    voice.plan = { language: 'de', focus: [], words: [], review: false };
+    voice.plan = { language: 'de', focus: [], words: [], review: false, lesson: false };
     await live({ voice });
 
     expect(screen.queryByText(/^Practising today/)).toBeNull();

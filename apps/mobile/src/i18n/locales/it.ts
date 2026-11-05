@@ -745,6 +745,8 @@ export const it: Translation = {
     last: 'Ultima conversazione: {{when}}',
     newPartner: 'Nuovo partner',
     manage: 'Modifica i miei partner',
+    lessons: 'Lezioni guidate',
+    lessonsHint: 'Impara un argomento passo dopo passo, poi usalo',
   },
   conversation: {
     goals: {
@@ -773,6 +775,7 @@ export const it: Translation = {
     },
     plan: {
       focus: 'Oggi si allena: {{topics}}',
+      lesson: 'Lezione: {{topics}}',
       review: 'Ripasso: di’ tu ogni parola · {{used}} di {{count}}',
       words: 'Parole da usare: {{used}} su {{count}}',
       wordDone: '{{word}}: usata',
@@ -1031,6 +1034,7 @@ export const it: Translation = {
       uses_other: '{{correct}} usi giusti su {{uses}}, in {{count}} conversazioni',
       notStarted: 'Non l’hai ancora usato in una conversazione. Esercitati e la mappa si riempirà.',
       practise: 'Esercitati in conversazione',
+      lesson: 'Fai una breve lezione su questo',
       ask: 'Chiedi al tutor',
       question: 'Come funziona «{{topic}}»? Spiegamelo con degli esempi.',
       examples: 'Detto bene',

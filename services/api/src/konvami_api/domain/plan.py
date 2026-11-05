@@ -31,6 +31,22 @@ class PlanWord:
 
 
 @dataclass(frozen=True)
+class LessonMaterial:
+    """What a guided lesson (spec §6.3) teaches: one grammar topic, from the language pack's
+    rule notes (`grammar.py`) and the topic's own sentences."""
+
+    topic: str
+    # Its title (English, as the partner's instructions are).
+    title: str
+    # The rules of the topic's kinds of mistake, in plain English; empty when the pack has none.
+    rules: tuple[str, ...] = ()
+    # Sentences in the language learned that follow the rule, and typical learner sentences that
+    # break it.
+    right: tuple[str, ...] = ()
+    wrong: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class SessionPlan:
     # The language practised (an ISO 639-1 code): what the words are in.
     language: str = ""
@@ -40,6 +56,8 @@ class SessionPlan:
     recent_topics: tuple[str, ...] = ()
     # A review conversation (spec §6.7): the words are its point, and the learner is to say them.
     review: bool = False
+    # A guided lesson (spec §6.3): the topic taught, in place of the conversation's other plans.
+    lesson: LessonMaterial | None = None
 
     def document(self) -> dict[str, Any]:
         """The plan as JSON, as it is stored with the call."""
@@ -61,6 +79,17 @@ class SessionPlan:
             ],
             "recent_topics": list(self.recent_topics),
             "review": self.review,
+            "lesson": (
+                {
+                    "topic": self.lesson.topic,
+                    "title": self.lesson.title,
+                    "rules": list(self.lesson.rules),
+                    "right": list(self.lesson.right),
+                    "wrong": list(self.lesson.wrong),
+                }
+                if self.lesson
+                else None
+            ),
         }
 
     @classmethod
@@ -83,4 +112,15 @@ class SessionPlan:
             ),
             recent_topics=tuple(document.get("recent_topics", [])),
             review=document.get("review", False),
+            lesson=(
+                LessonMaterial(
+                    topic=lesson["topic"],
+                    title=lesson["title"],
+                    rules=tuple(lesson.get("rules", ())),
+                    right=tuple(lesson.get("right", ())),
+                    wrong=tuple(lesson.get("wrong", ())),
+                )
+                if (lesson := document.get("lesson"))
+                else None
+            ),
         )

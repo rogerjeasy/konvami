@@ -735,6 +735,8 @@ export const en = {
     last: 'Last talked {{when}}',
     newPartner: 'New partner',
     manage: 'Edit my partners',
+    lessons: 'Guided lessons',
+    lessonsHint: 'Learn one topic step by step, then use it',
   },
   conversation: {
     goals: {
@@ -763,6 +765,7 @@ export const en = {
     },
     plan: {
       focus: 'Practising today: {{topics}}',
+      lesson: 'Lesson: {{topics}}',
       review: 'Review: say each word yourself · {{used}} of {{count}}',
       words: 'Words to use: {{used}} of {{count}}',
       wordDone: '{{word}}: used',
@@ -1018,6 +1021,7 @@ export const en = {
       notStarted:
         'You haven’t used this in a conversation yet. Practise it and it starts to fill in.',
       practise: 'Practise this in conversation',
+      lesson: 'Take a short lesson on this',
       ask: 'Ask the tutor about it',
       question: 'How does “{{topic}}” work? Explain it with examples.',
       examples: 'Said well',

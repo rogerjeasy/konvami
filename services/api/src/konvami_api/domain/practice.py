@@ -533,9 +533,62 @@ def _focus_point(point: FocusPoint) -> str:
     return f"- {point.title}: {point.elicit}{example}"
 
 
+def _lesson(plan: SessionPlan, target: str, explanation: str) -> str:
+    """The section of a guided lesson (spec §6.3); empty for any other conversation. The five
+    steps are timed to fit the call's ten minutes, and the partner is told not to announce them."""
+    lesson = plan.lesson
+    if lesson is None:
+        return ""
+    rules = "\n".join(f"- {rule}" for rule in lesson.rules) or (
+        f"- The pack has no rule note for this topic: call {ASK_TUTOR} for the rule before "
+        "explaining it, and say only what you are sure of."
+    )
+    right = "\n".join(f"- {sentence}" for sentence in lesson.right)
+    wrong = "\n".join(f"- {sentence}" for sentence in lesson.wrong)
+    breaks = (
+        f"\nTypical sentences that break it (never say these as if right):\n{wrong}"
+        if wrong
+        else ""
+    )
+    own = ""
+    if plan.focus and plan.focus[0].examples:
+        said = "; ".join(
+            f'"{original}" (right: "{better}")' for original, better in plan.focus[0].examples
+        )
+        own = f"\nThe learner has said, for example: {said}. Use these in the feedback step."
+    return f"""
+# This conversation is a guided lesson
+The learner chose a short lesson on one topic: {lesson.title}. You are their teacher for
+these ten minutes: warm, clear and brisk. Go through the steps in order, spend about the time
+given, and never announce a step, its name or its time.
+1. Explain (about 1 minute). In {explanation}, state the rule in two or three plain sentences, as
+   if to a friend. Then go on in {target}.
+2. Examples (about 1 minute). Say two of the sentences below, slowly. After each, ask what they
+   noticed or have them repeat it. Never list them all.
+3. They produce (about 3 minutes). Ask a short question, one at a time, that needs the structure
+   (you may give the first words). They answer in a full sentence. Four or five tries.
+4. Feedback (during step 3). If the structure is wrong, say the right sentence once, naturally,
+   and have them say it again. If it is right, say so in a few words and go on. Never say
+   "wrong", and never give more than one correction at a time. If they are stuck twice in a
+   row, say the rule once more in {explanation}, with one example, and try an easier question.
+5. Free use (the rest, about 3 minutes). Drop the lesson voice. Talk about something that
+   interests them, and keep steering so the structure comes up. Correct only as in step 4.
+Close with one sentence on what they did well, in {explanation}, then say goodbye warmly.
+
+The rule:
+{rules}
+
+Sentences that follow it:
+{right}{breaks}{own}
+"""
+
+
 def _plan(plan: SessionPlan, role_play: bool) -> str:
     """The section on what this conversation sets out to practise; empty when that is nothing.
-    A role-play has a situation of its own, so it is not told what to talk about."""
+    A role-play has a situation of its own, so it is not told what to talk about; a guided lesson
+    has its own section (`_lesson`)."""
+    if plan.lesson is not None:
+        return ""
     topics = () if role_play else plan.recent_topics
     if not (plan.focus or plan.words or topics):
         return ""
@@ -637,6 +690,10 @@ def practice_instructions(
 {chr(10).join(practise)}
 """
     plan = _plan(learner.plan, scenario is not None)
+    lesson = _lesson(learner.plan, target, explanation)
+    if learner.plan.lesson is not None:
+        # A lesson teaches its one topic: other things to steer towards would compete with it.
+        weak = ""
     usage = teaching.explanation_usage or learner.explanation_usage
     use = _EXPLANATION_USE.get(usage, _EXPLANATION_USE["when_stuck"])
 
@@ -663,7 +720,7 @@ continue. Do not translate it into another language.
 
 # How to speak
 Their level is {level}. {_SPEAKING.get(level, _SPEAKING[DEFAULT_LEVEL])}
-{weak}{plan}
+{weak}{plan}{lesson}
 # Rules
 - Keep it short. Each time you speak: {_TURN.get(level, _SHORT)}, the last of them
   exactly one question or prompt. Do not list possible answers or examples: ask, then wait.
