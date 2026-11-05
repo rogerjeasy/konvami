@@ -175,6 +175,10 @@ export const reportRoute = (id: string) =>
 export const studioRoute = (id: string) =>
   ({ pathname: '/account/partners/[id]', params: { id } }) as const satisfies Href;
 
+/** 6.16 The avatar editor for one of the learner's partners (reached from 6.6 Look). */
+export const avatarRoute = (id: string) =>
+  ({ pathname: '/account/partners/avatar/[id]', params: { id } }) as const satisfies Href;
+
 /** 6.11 One thing the learner's partners know, to reword or forget. */
 export const memoryRoute = (id: string) =>
   ({ pathname: '/account/memory/[id]', params: { id } }) as const satisfies Href;

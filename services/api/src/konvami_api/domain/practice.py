@@ -10,7 +10,7 @@ its report is written (`domain/reports.py`) and what it told about the learner i
 
 import datetime as dt
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, get_args
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account
@@ -18,7 +18,14 @@ from konvami_api.domain.conversations import ConversationService, PartnerHistory
 from konvami_api.domain.live_call import LIVE_CORRECTION_NOTE
 from konvami_api.domain.memories import Memory, MemoryService, Recall
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
-from konvami_api.domain.persona_parts import FormOfAddress, Role, Strictness, Style
+from konvami_api.domain.persona_parts import (
+    Expression,
+    FormOfAddress,
+    Gesture,
+    Role,
+    Strictness,
+    Style,
+)
 from konvami_api.domain.personas import (
     Persona,
     PersonaError,
@@ -55,6 +62,7 @@ from konvami_api.domain.voice import Briefing, FinishedCall, Hearing, VoiceSessi
 
 END = "end_conversation"
 ASK_TUTOR = "ask_tutor"
+SET_EXPRESSION = "set_expression"
 # How the app's help buttons reach the partner (spec §6.4): a system note `learner_help: <kind>`
 # sent on the call's data channel. The note is not something the learner said: it is not a
 # turn, and the transcript and the report never see it. What each kind means is told here, on
@@ -156,6 +164,23 @@ class PracticeTools:
                     "additionalProperties": False,
                 },
             },
+            {
+                "type": "function",
+                "name": SET_EXPRESSION,
+                "description": (
+                    "Show a feeling on your face while you talk. It changes your portrait for a "
+                    "few seconds and needs no words."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {"type": "string", "enum": list(get_args(Expression))},
+                        "gesture": {"type": "string", "enum": list(get_args(Gesture))},
+                    },
+                    "required": ["expression", "gesture"],
+                    "additionalProperties": False,
+                },
+            },
             *self._goal_tool(),
             *([self._profile_voice.definition()] if self._profile_voice else []),
         ]
@@ -194,6 +219,8 @@ class PracticeTools:
             return self._mark(arguments.get("goal"))
         if name == UPDATE_PROFILE and self._profile_voice:
             return self._profile_voice.run(arguments)
+        if name == SET_EXPRESSION:
+            return _expression(arguments)
         if name == ASK_TUTOR:
             question, about = arguments.get("question"), arguments.get("about")
             if not isinstance(question, str) or not question.strip():
@@ -201,6 +228,15 @@ class PracticeTools:
             about_text = about if isinstance(about, str) else None
             return ToolResult(self._tutor.in_call(self._user_id, question, about_text))
         return ToolResult({"done": False, "reason": "unknown_tool"})
+
+
+def _expression(arguments: dict[str, Any]) -> ToolResult:
+    """`set_expression`: what the portrait shows next. Cosmetic, so the partner is not asked to
+    reply to it, and an unknown word shows nothing instead of failing the call."""
+    expression, gesture = arguments.get("expression"), arguments.get("gesture", "none")
+    if expression not in get_args(Expression) or gesture not in get_args(Gesture):
+        return ToolResult({"shown": False, "reason": "invalid_arguments"}, silent=True)
+    return ToolResult({"expression": expression, "gesture": gesture}, silent=True)
 
 
 # --- Instructions --------------------------------------------------------------------------------
@@ -761,6 +797,10 @@ Their level is {level}. {_SPEAKING.get(level, _SPEAKING[DEFAULT_LEVEL])}
   your own words, briefly and in the language it is written in, say its example, ask them to
   make one sentence of their own with it, and go back to where you were. If it has no answer,
   say only what you are sure of.
+- Let your face show how you react: now and then, not every turn, call {SET_EXPRESSION} with
+  happy, surprised, empathetic, encouraging, confused or amused (neutral to go back to rest).
+  Use the gesture thumbs_up only when they have just used correctly what they are practising,
+  otherwise none. It needs no words, and you go on speaking as if you had not called it.
 - When they say goodbye or want to stop, call {END}, then say a short warm goodbye.
 - Never announce what you are about to say ("a short goodbye", "a small grammar note"): just
   say it.

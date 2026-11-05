@@ -1891,12 +1891,29 @@ export interface components {
          */
         LookModel: {
             /**
+             * Aged
+             * @default false
+             */
+            aged: boolean;
+            /**
              * Backdrop
              * @enum {string}
              */
             backdrop: "stone" | "mist" | "sand" | "slate";
             /** Beard */
             beard: boolean;
+            /**
+             * Eyes
+             * @default brown
+             * @enum {string}
+             */
+            eyes: "brown" | "hazel" | "green" | "blue" | "grey";
+            /**
+             * Face
+             * @default oval
+             * @enum {string}
+             */
+            face: "oval" | "round" | "narrow";
             /** Glasses */
             glasses: boolean;
             /**

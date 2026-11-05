@@ -532,6 +532,21 @@ export const fr: Translation = {
       backdrop: 'Arrière-plan',
       glasses: 'Lunettes',
       beard: 'Barbe',
+      face: 'Visage',
+      eyes: 'Yeux',
+      aged: 'Rides',
+      faces: {
+        oval: 'Ovale',
+        round: 'Rond',
+        narrow: 'Étroit',
+      },
+      eyeColors: {
+        brown: 'Marron',
+        hazel: 'Noisette',
+        green: 'Vert',
+        blue: 'Bleu',
+        grey: 'Gris',
+      },
       skins: {
         porcelain: 'Porcelaine',
         sand: 'Sable',
@@ -2006,6 +2021,27 @@ export const fr: Translation = {
       scratchTitle: 'Construire toi-même',
       scratch: 'Partir de zéro',
     },
+    avatar: {
+      title: 'L’apparence de {{name}}',
+      body: 'Change un détail et regarde le portrait suivre.',
+      preview: 'Le voir bouger',
+      expression: 'Expression',
+      expressions: {
+        neutral: 'Calme',
+        happy: 'Content',
+        surprised: 'Surpris',
+        empathetic: 'Attentionné',
+        encouraging: 'Encourageant',
+        confused: 'Perplexe',
+        amused: 'Amusé',
+      },
+      thumbsUp: 'Pouce levé',
+      speak: 'Le faire parler',
+      stopSpeaking: 'Arrêter de parler',
+      save: 'Enregistrer l’apparence',
+      saved: 'Enregistré',
+      notFound: 'Ce partenaire n’existe plus.',
+    },
     studio: {
       steps: {
         identity: 'Identité',
@@ -2048,6 +2084,8 @@ export const fr: Translation = {
       look: {
         title: 'À quoi ressemble cette personne ?',
         body: 'Son portrait change au fil de tes choix.',
+        editor: 'Ouvrir l’éditeur d’avatar',
+        editorHint: 'Vois-le sourire, parler et réagir pendant que tu le dessines.',
       },
       voice: {
         title: 'Quelle est sa voix ?',

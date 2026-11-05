@@ -24,8 +24,12 @@ from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.moderation import Screen
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.persona_parts import (
+    DEFAULT_EYES,
+    DEFAULT_FACE,
     Backdrop,
     CorrectionTiming,
+    EyeColor,
+    Face,
     FormOfAddress,
     Gender,
     Hair,
@@ -75,6 +79,10 @@ class Look(_Model):
     backdrop: Backdrop
     glasses: bool
     beard: bool
+    face: Face = DEFAULT_FACE
+    eyes: EyeColor = DEFAULT_EYES
+    # Age lines around the eyes and mouth (spec §6.20: "age features such as wrinkles").
+    aged: bool = False
 
 
 class _Written(_Model):

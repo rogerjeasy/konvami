@@ -24,6 +24,7 @@ import { stepFeedback } from '@/lib/haptics';
 import { heroDrawingSize } from '@/lib/layout';
 import { useTheme } from '@/theme';
 import type { ConversationPhase } from '@/voice/conversation';
+import { useAvatarFace } from '@/voice/use-avatar-face';
 import type { VoiceCall } from '@/voice/use-voice-call';
 
 // The avatar on the design's frame (pt), and the share of a tall window its panel takes.
@@ -138,6 +139,7 @@ export function CallStage({
 }) {
   const heroShare = compact ? COMPACT_HERO_SHARE : HERO_SHARE;
   const { t } = useTranslation();
+  const face = useAvatarFace(call.conversation);
   const { color } = useTheme();
   const { illustrationWidth } = useScreenLayout(heroShare);
   const { height: windowHeight } = useWindowDimensions();
@@ -176,6 +178,9 @@ export function CallStage({
               size={avatarSize}
               mood={failed ? 'waiting' : MOOD[phase]}
               mouth={call.mouth}
+              viseme={call.viseme}
+              expression={face.expression}
+              gesture={face.gesture}
             />
           </View>
           <View className="items-center gap-1.5">

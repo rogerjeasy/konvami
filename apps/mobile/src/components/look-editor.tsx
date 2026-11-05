@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { avatar } from '@konvami/design-tokens';
 import type { PersonaLook } from '@konvami/api-client';
-import { HAIR_STYLES } from '@/components/avatar/look';
+import { FACE_SHAPES, HAIR_STYLES } from '@/components/avatar/look';
 import { ChoiceChip } from '@/components/choice-chip';
 import { ChoiceGroup, ToggleRow } from '@/components/choice-group';
 import { Swatch } from '@/components/swatch';
@@ -13,6 +13,7 @@ const SKINS = keysOf(avatar.skin);
 const HAIR_COLORS = keysOf(avatar.hair);
 const TOPS = keysOf(avatar.top);
 const BACKDROPS = keysOf(avatar.backdrop);
+const EYE_COLORS = keysOf(avatar.eyes);
 
 /**
  * The parts and colors of a partner's portrait (spec §6.20), each a group of choices. The
@@ -41,6 +42,27 @@ export function LookEditor({
             color={avatar.skin[skin].base}
             selected={look.skin === skin}
             onPress={() => choose({ skin })}
+          />
+        ))}
+      </ChoiceGroup>
+      <ChoiceGroup chips label={t('onboarding.partner.face')}>
+        {FACE_SHAPES.map((face) => (
+          <ChoiceChip
+            key={face}
+            label={t(`onboarding.partner.faces.${face}`)}
+            selected={look.face === face}
+            onPress={() => choose({ face })}
+          />
+        ))}
+      </ChoiceGroup>
+      <ChoiceGroup label={t('onboarding.partner.eyes')}>
+        {EYE_COLORS.map((eyes) => (
+          <Swatch
+            key={eyes}
+            label={t(`onboarding.partner.eyeColors.${eyes}`)}
+            color={avatar.eyes[eyes]}
+            selected={look.eyes === eyes}
+            onPress={() => choose({ eyes })}
           />
         ))}
       </ChoiceGroup>
@@ -97,6 +119,11 @@ export function LookEditor({
           label={t('onboarding.partner.beard')}
           value={look.beard}
           onChange={(beard) => setLook((current) => ({ ...current, beard }))}
+        />
+        <ToggleRow
+          label={t('onboarding.partner.aged')}
+          value={look.aged}
+          onChange={(aged) => setLook((current) => ({ ...current, aged }))}
         />
       </View>
     </View>

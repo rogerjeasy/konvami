@@ -94,6 +94,9 @@ const DEFAULT_LOOK: PersonaLook = {
   backdrop: 'mist',
   glasses: false,
   beard: false,
+  face: 'oval',
+  eyes: 'brown',
+  aged: false,
 };
 
 /** A partner started from scratch: a friend, with who they are still to be written. */

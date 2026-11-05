@@ -19,6 +19,9 @@ LOOK = {
     "backdrop": "sand",
     "glasses": True,
     "beard": False,
+    "face": "oval",
+    "eyes": "brown",
+    "aged": False,
 }
 PERSONALITY = {
     "warmth": 5,

@@ -16,6 +16,21 @@ Hair = Literal["short", "parted", "bob", "long", "bun", "curls", "bald"]
 HairColor = Literal["black", "espresso", "chestnut", "auburn", "blond", "silver"]
 Top = Literal["teal", "graphite", "stone", "amber"]
 Backdrop = Literal["stone", "mist", "sand", "slate"]
+# Parts added with the avatar editor (spec §6.20.1: face shapes, eyes, age features). A look stored
+# before they existed has none of them, so each has a default that draws the original portrait.
+Face = Literal["oval", "round", "narrow"]
+EyeColor = Literal["brown", "hazel", "green", "blue", "grey"]
+DEFAULT_FACE: Face = "oval"
+DEFAULT_EYES: EyeColor = "brown"
+
+# What a persona's face can show (spec §6.20.1 "Expressions"); "neutral" is the face at rest. The
+# partner picks one with the `set_expression` tool, and the app draws it for a few seconds.
+Expression = Literal[
+    "neutral", "happy", "surprised", "empathetic", "encouraging", "confused", "amused"
+]
+# A teaching gesture the face can make on top of an expression: "thumbs_up" for a correct use of
+# a structure the learner is practising.
+Gesture = Literal["none", "thumbs_up"]
 
 # The voice provider's voices a persona can have (OpenAI Realtime).
 Voice = Literal["marin", "cedar", "coral", "sage", "shimmer", "ash", "echo", "verse"]

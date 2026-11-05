@@ -521,6 +521,21 @@ export const en = {
       backdrop: 'Background',
       glasses: 'Glasses',
       beard: 'Beard',
+      face: 'Face',
+      eyes: 'Eyes',
+      aged: 'Age lines',
+      faces: {
+        oval: 'Oval',
+        round: 'Round',
+        narrow: 'Narrow',
+      },
+      eyeColors: {
+        brown: 'Brown',
+        hazel: 'Hazel',
+        green: 'Green',
+        blue: 'Blue',
+        grey: 'Grey',
+      },
       skins: {
         porcelain: 'Porcelain',
         sand: 'Sand',
@@ -1981,6 +1996,27 @@ export const en = {
       scratchTitle: 'Build one yourself',
       scratch: 'Start from scratch',
     },
+    avatar: {
+      title: 'How {{name}} looks',
+      body: 'Change a part and watch the portrait follow.',
+      preview: 'See them move',
+      expression: 'Expression',
+      expressions: {
+        neutral: 'Calm',
+        happy: 'Happy',
+        surprised: 'Surprised',
+        empathetic: 'Caring',
+        encouraging: 'Encouraging',
+        confused: 'Puzzled',
+        amused: 'Amused',
+      },
+      thumbsUp: 'Thumbs-up',
+      speak: 'Make them speak',
+      stopSpeaking: 'Stop speaking',
+      save: 'Save look',
+      saved: 'Saved',
+      notFound: 'This partner is no longer there.',
+    },
     studio: {
       steps: {
         identity: 'Who they are',
@@ -2022,6 +2058,8 @@ export const en = {
       look: {
         title: 'How do they look?',
         body: 'Their portrait changes as you choose.',
+        editor: 'Open the avatar editor',
+        editorHint: 'See them smile, speak and react while you design.',
       },
       voice: {
         title: 'How do they sound?',

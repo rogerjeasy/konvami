@@ -4,6 +4,8 @@
  * every rule is unit tested without a call.
  */
 
+import { isExpression, type AvatarExpression, type AvatarGesture } from '@/components/avatar/look';
+
 export type ConversationPhase =
   /** The call is being set up. */
   | 'connecting'
@@ -51,6 +53,18 @@ export interface ProfileChangeNote {
   field: string;
 }
 
+/**
+ * What the partner asked its face to show (the `set_expression` tool, spec §6.20.1). `seq` counts
+ * the requests, so asking for the same face twice shows it for a fresh while.
+ */
+export interface ExpressionRequest {
+  expression: AvatarExpression;
+  gesture: AvatarGesture;
+  seq: number;
+  /** The tool call it came from, so the early and the late report of one call count once. */
+  callId: string;
+}
+
 export interface ConversationState {
   phase: ConversationPhase;
   /** The most recent lines, oldest first. */
@@ -73,6 +87,8 @@ export interface ConversationState {
   examParts: string[];
   /** The settings the partner changed by voice, in order. */
   profileChanges: ProfileChangeNote[];
+  /** The face the partner asked for last; null before it asked for one. */
+  expression: ExpressionRequest | null;
 }
 
 export const INITIAL_CONVERSATION: ConversationState = {
@@ -87,7 +103,33 @@ export const INITIAL_CONVERSATION: ConversationState = {
   examPart: null,
   examParts: [],
   profileChanges: [],
+  expression: null,
 };
+
+/** The tool the partner shows its face with (services/api: `domain/practice.py`). */
+const SET_EXPRESSION = 'set_expression';
+
+/**
+ * The face a `set_expression` call asks for, or the state unchanged when the call is not one, is
+ * not understood, or was already counted (the provider reports a call early, as its arguments
+ * are complete, and again with the server's answer).
+ */
+function withExpression(
+  state: ConversationState,
+  callId: string,
+  asked: { expression?: unknown; gesture?: unknown },
+): ConversationState {
+  if (!isExpression(asked.expression) || state.expression?.callId === callId) return state;
+  return {
+    ...state,
+    expression: {
+      expression: asked.expression,
+      gesture: asked.gesture === 'thumbs_up' ? 'thumbsUp' : 'none',
+      seq: (state.expression?.seq ?? 0) + 1,
+      callId,
+    },
+  };
+}
 
 /**
  * How the server tells a live correction: a system note `live_correction: <JSON>` added to the
@@ -245,10 +287,33 @@ export function conversationReducer(state: ConversationState, event: unknown): C
     case 'learner.help':
       // Sent by the app itself (`VoiceEngine.help`): the partner answers it next.
       return { ...state, phase: 'thinking' };
+    case 'response.function_call_arguments.done': {
+      // Early: the arguments are complete while the partner is still speaking.
+      if (e.name !== SET_EXPRESSION) return state;
+      try {
+        return withExpression(state, text(e.call_id), JSON.parse(text(e.arguments)));
+      } catch {
+        return state;
+      }
+    }
     case 'conversation.item.done': {
       const item = e.item as
-        { type?: unknown; output?: unknown; role?: unknown; content?: unknown } | undefined;
-      if (item?.type === 'function_call_output') return withToolResult(state, item.output);
+        | { type?: unknown; output?: unknown; role?: unknown; content?: unknown; call_id?: unknown }
+        | undefined;
+      if (item?.type === 'function_call_output') {
+        const asked = (() => {
+          try {
+            return JSON.parse(text(item.output)) as { expression?: unknown; gesture?: unknown };
+          } catch {
+            return null;
+          }
+        })();
+        // The server's answer to `set_expression`: `{expression, gesture}`.
+        if (asked && isExpression(asked.expression)) {
+          return withExpression(state, text(item.call_id), asked);
+        }
+        return withToolResult(state, item.output);
+      }
       const found = item?.type === 'message' ? noteCorrections(item) : [];
       return found.length ? { ...state, corrections: [...state.corrections, ...found] } : state;
     }

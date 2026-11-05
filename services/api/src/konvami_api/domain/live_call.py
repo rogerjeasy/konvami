@@ -21,7 +21,7 @@ import json
 from dataclasses import dataclass, replace
 from typing import Any, Literal
 
-from konvami_api.domain.tools import ToolSet
+from konvami_api.domain.tools import ToolResult, ToolSet
 
 Speaker = Literal["learner", "persona"]
 Outcome = Literal["finished", "timed_out", "closed"]
@@ -373,28 +373,31 @@ class LiveCall:
                 self._goodbye_at = elapsed
             return []
         actions: list[Action] = []
+        reply_needed = False
         for call in calls:
-            output = self._run(call.get("name", ""), call.get("arguments", ""))
+            result = self._run(call.get("name", ""), call.get("arguments", ""))
+            reply_needed = reply_needed or not result.silent
             item = {
                 "type": "function_call_output",
                 "call_id": call.get("call_id"),
-                "output": json.dumps(output),
+                "output": json.dumps(result.output),
             }
             actions.append(Send({"type": "conversation.item.create", "item": item}))
-        actions.append(Send(_CONTINUE))
+        if reply_needed:
+            actions.append(Send(_CONTINUE))
         return actions
 
-    def _run(self, name: str, raw_arguments: str) -> dict[str, Any]:
+    def _run(self, name: str, raw_arguments: str) -> ToolResult:
         try:
             arguments = json.loads(raw_arguments or "{}")
         except json.JSONDecodeError:
             arguments = None
         if not isinstance(arguments, dict):
-            return {"saved": False, "reason": "invalid_arguments"}
+            return ToolResult({"saved": False, "reason": "invalid_arguments"})
         result = self._tools.run(name, arguments)
         if result.finished:
             self._finishing = True
-        return result.output
+        return result
 
     def _count(self, usage: dict[str, Any]) -> None:
         taken = usage.get("input_token_details") or {}

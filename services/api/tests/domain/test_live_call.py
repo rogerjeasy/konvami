@@ -163,6 +163,32 @@ def test_several_tool_calls_in_one_reply_get_one_continuation(
     ]
 
 
+def test_a_silent_tool_call_is_answered_without_asking_for_a_new_reply(
+    tools: ScriptedTools, call: LiveCall
+) -> None:
+    tools.results["set_expression"] = ToolResult({"expression": "happy"}, silent=True)
+
+    actions = call.handle(response_done(function_call("set_expression", "{}")), 30)
+
+    assert [a.event["type"] for a in actions if isinstance(a, Send)] == ["conversation.item.create"]
+
+
+def test_a_silent_call_beside_an_ordinary_one_still_gets_the_continuation(
+    tools: ScriptedTools, call: LiveCall
+) -> None:
+    tools.results["set_expression"] = ToolResult({"expression": "happy"}, silent=True)
+
+    actions = call.handle(
+        response_done(
+            function_call("set_expression", "{}", "call_1"),
+            function_call("save_level", '{"level": "A2"}', "call_2"),
+        ),
+        30,
+    )
+
+    assert [a.event["type"] for a in actions if isinstance(a, Send)][-1] == "response.create"
+
+
 def test_arguments_that_are_not_json_are_reported_back_without_running_the_tool(
     call: LiveCall, tools: ScriptedTools
 ) -> None:
