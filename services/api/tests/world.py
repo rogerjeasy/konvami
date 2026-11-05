@@ -13,6 +13,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
+from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.flags import FlagService
@@ -62,6 +63,7 @@ from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.week_review import WeekReviewService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakePageFetcher,
     FakeSpeechModel,
     FakeTranscriber,
     FakeVoiceProvider,
@@ -76,6 +78,7 @@ from tests.fakes import (
     InMemoryExamRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
+    InMemoryImportRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
@@ -299,6 +302,10 @@ class World:
             cards=self.cards,
             # The Director is built after the calls it reads the voice minutes from.
             week_topic=lambda user_id, today: self.director.topic_for_call(user_id, today),
+            # The imports are built after the file store they read photos from.
+            imports=lambda user_id, import_id, rehearse: self.course_imports.material(
+                user_id, import_id, rehearse
+            ),
         )
         self.memory_store = InMemoryMemoryRepository(self.sessions)
         # Memory ids in the order they are handed out: ...0001, ...0002, and so on.
@@ -361,6 +368,22 @@ class World:
             model="gpt-6.1-sol",
             clock=self.clock,
             new_id=lambda: next(phrase_ids),
+        )
+        # Import ids in the order they are handed out: ...0001, ...0002, and so on.
+        import_ids = (UUID(f"ffffffff-ffff-4fff-8fff-{n:012d}") for n in range(1, 10_000))
+        self.pages = FakePageFetcher()
+        self.course_imports = CourseImportService(
+            profiles=self.profiles,
+            accounts=self.accounts,
+            cards=self.cards,
+            repository=InMemoryImportRepository(),
+            limit=self.tutor_store,
+            files=self.files,
+            fetcher=self.pages,
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            clock=self.clock,
+            new_id=lambda: next(import_ids),
         )
         self.practice = PracticeScript(
             profiles=self.profiles,

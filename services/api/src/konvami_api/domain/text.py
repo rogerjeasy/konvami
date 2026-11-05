@@ -9,6 +9,14 @@ from konvami_api.domain.costs import Charge
 
 
 @dataclass(frozen=True)
+class TextImage:
+    """A picture the model reads along with the task (a photographed page, spec §6.17)."""
+
+    media_type: str
+    data: bytes
+
+
+@dataclass(frozen=True)
 class TextTask:
     """One question to a text model, answered as JSON in a given shape."""
 
@@ -25,6 +33,8 @@ class TextTask:
     max_seconds: float | None = None
     # Who the request is for and why, for metering; None: not metered.
     charge: Charge | None = None
+    # Pictures the model is to read with `content`; none for a task on text alone.
+    images: tuple[TextImage, ...] = ()
 
 
 class TextModelError(Exception):

@@ -47,6 +47,40 @@ class LessonMaterial:
 
 
 @dataclass(frozen=True)
+class LetterMaterial:
+    """What an official letter asks of the learner (the letters helper, spec §6.17)."""
+
+    sender: str
+    says: str
+    to_do: tuple[str, ...]
+    # What a reply or a call to the sender has to achieve.
+    reply_goal: str
+
+
+@dataclass(frozen=True)
+class ImportMaterial:
+    """What a practice call on something the learner imported talks about (spec §6.17): a
+    text, a page, a photographed menu or letter. With `rehearse`, a letter's reply or phone call
+    is rehearsed instead."""
+
+    # The import's id as 32 hex digits (it fits the call's `practise`, which is at most 40).
+    import_id: str
+    title: str
+    genre: str
+    # The material itself, at most a few thousand characters; untrusted text.
+    text: str
+    # Its words worth using, as (word, meaning).
+    words: tuple[tuple[str, str], ...] = ()
+    # The names of the grammar points in it.
+    points: tuple[str, ...] = ()
+    # The textbook and chapter the learner named, if any.
+    textbook: str | None = None
+    chapter: str | None = None
+    letter: LetterMaterial | None = None
+    rehearse: bool = False
+
+
+@dataclass(frozen=True)
 class SessionPlan:
     # The language practised (an ISO 639-1 code): what the words are in.
     language: str = ""
@@ -58,6 +92,8 @@ class SessionPlan:
     review: bool = False
     # A guided lesson (spec §6.3): the topic taught, in place of the conversation's other plans.
     lesson: LessonMaterial | None = None
+    # Something the learner imported (spec §6.17): the conversation is about it.
+    material: ImportMaterial | None = None
 
     def document(self) -> dict[str, Any]:
         """The plan as JSON, as it is stored with the call."""
@@ -88,6 +124,31 @@ class SessionPlan:
                     "wrong": list(self.lesson.wrong),
                 }
                 if self.lesson
+                else None
+            ),
+            "material": (
+                {
+                    "import_id": self.material.import_id,
+                    "title": self.material.title,
+                    "genre": self.material.genre,
+                    "text": self.material.text,
+                    "words": [list(word) for word in self.material.words],
+                    "points": list(self.material.points),
+                    "textbook": self.material.textbook,
+                    "chapter": self.material.chapter,
+                    "letter": (
+                        {
+                            "sender": self.material.letter.sender,
+                            "says": self.material.letter.says,
+                            "to_do": list(self.material.letter.to_do),
+                            "reply_goal": self.material.letter.reply_goal,
+                        }
+                        if self.material.letter
+                        else None
+                    ),
+                    "rehearse": self.material.rehearse,
+                }
+                if self.material
                 else None
             ),
         }
@@ -121,6 +182,31 @@ class SessionPlan:
                     wrong=tuple(lesson.get("wrong", ())),
                 )
                 if (lesson := document.get("lesson"))
+                else None
+            ),
+            material=(
+                ImportMaterial(
+                    import_id=material["import_id"],
+                    title=material["title"],
+                    genre=material["genre"],
+                    text=material["text"],
+                    words=tuple((word, meaning) for word, meaning in material.get("words", [])),
+                    points=tuple(material.get("points", ())),
+                    textbook=material.get("textbook"),
+                    chapter=material.get("chapter"),
+                    letter=(
+                        LetterMaterial(
+                            sender=letter["sender"],
+                            says=letter["says"],
+                            to_do=tuple(letter["to_do"]),
+                            reply_goal=letter["reply_goal"],
+                        )
+                        if (letter := material.get("letter"))
+                        else None
+                    ),
+                    rehearse=material.get("rehearse", False),
+                )
+                if (material := document.get("material"))
                 else None
             ),
         )

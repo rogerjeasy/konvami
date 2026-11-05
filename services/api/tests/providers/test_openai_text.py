@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from konvami_api.domain.costs import Charge, Feature
-from konvami_api.domain.text import TextModelError, TextTask
+from konvami_api.domain.text import TextImage, TextModelError, TextTask
 from konvami_api.providers.openai_text import OpenAiText
 
 KEY = "sk-test-key"
@@ -80,6 +80,27 @@ def test_a_task_is_answered_as_json_in_the_asked_shape() -> None:
         },
         "store": False,
     }
+
+
+def test_a_picture_goes_with_the_text_as_one_message() -> None:
+    seen: dict[str, httpx.Request] = {}
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        seen["request"] = request
+        return httpx.Response(200, json=completed('{"grammar":"A1"}'))
+
+    picture = TextImage("image/jpeg", b"\xff\xd8\xff-photo")
+    model(respond).answer(replace(TASK, images=(picture,)))
+
+    assert json.loads(seen["request"].content)["input"] == [
+        {
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": TASK.content},
+                {"type": "input_image", "image_url": "data:image/jpeg;base64,/9j/LXBob3Rv"},
+            ],
+        }
+    ]
 
 
 @pytest.mark.parametrize(

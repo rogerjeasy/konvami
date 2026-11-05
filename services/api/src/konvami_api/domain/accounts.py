@@ -123,7 +123,8 @@ class PictureUpload:
     form: UploadForm
 
 
-def _upload_folder(user_id: UUID) -> str:
+def upload_folder(user_id: UUID) -> str:
+    """Where a learner's unconfirmed uploads wait; the bucket deletes what stays for a day."""
     return f"uploads/{user_id}/"
 
 
@@ -157,7 +158,7 @@ class AccountService:
         """A form for one photo. It becomes the learner's photo only with `confirm_picture`."""
         upload_id = self._new_id()
         form = self._files.upload_form(
-            f"{_upload_folder(user_id)}{upload_id}.jpg",
+            f"{upload_folder(user_id)}{upload_id}.jpg",
             content_type=PICTURE_TYPE,
             max_bytes=PICTURE_MAX_BYTES,
             expires_seconds=UPLOAD_SECONDS,
@@ -167,7 +168,7 @@ class AccountService:
     def confirm_picture(self, user_id: UUID, upload_id: UUID) -> AccountView:
         """Makes an uploaded file the learner's photo, after checking that it is one."""
         # The folder is the caller's own, so an id from someone else's upload finds nothing.
-        uploaded = f"{_upload_folder(user_id)}{upload_id}.jpg"
+        uploaded = f"{upload_folder(user_id)}{upload_id}.jpg"
         stored = self._files.stat(uploaded)
         if stored is None:
             raise AccountError("upload_not_found")
@@ -203,7 +204,7 @@ class AccountService:
         sign in and ask again, and every step can be repeated.
         """
         self._files.remove_all(_user_folder(user_id))
-        self._files.remove_all(_upload_folder(user_id))
+        self._files.remove_all(upload_folder(user_id))
         self._records.delete(user_id, self._clock())
         try:
             self._directory.delete(user_id)

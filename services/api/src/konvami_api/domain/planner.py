@@ -12,6 +12,10 @@ Before every conversation it picks, from what is known of the learner:
 A guided lesson (spec §6.3, `practise="lesson:<topic>"`) teaches that one topic: its rules and
 sentences, and nothing else to compete with it.
 
+A conversation about something the learner imported (spec §6.17, `practise="import:<id>"`, or
+`"letter:<id>"` to rehearse a letter's reply) is the material alone, with the learner's own
+mistakes still showing.
+
 A review conversation (spec §6.7, `practise=PRACTISE_WORDS`) is built around the words instead:
 more of them, the due ones only (or the next ones when none is due), and no structure to
 compete with them.
@@ -28,7 +32,13 @@ from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.grammar_topics import GrammarTopic
-from konvami_api.domain.plan import FocusPoint, LessonMaterial, PlanWord, SessionPlan
+from konvami_api.domain.plan import (
+    FocusPoint,
+    ImportMaterial,
+    LessonMaterial,
+    PlanWord,
+    SessionPlan,
+)
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import Report, ReportService, Severity
 
@@ -42,6 +52,10 @@ MAX_REVIEW_WORDS = 6
 PRACTISE_WORDS = "words"
 # What precedes a grammar topic's id when a learner asks for a guided lesson on it (spec §6.3).
 LESSON_PREFIX = "lesson:"
+# What precedes an import's id (32 hex digits) when a learner asks to talk about it, or, for a
+# letter, to rehearse its reply or phone call (spec §6.17).
+IMPORT_PREFIX = "import:"
+LETTER_PREFIX = "letter:"
 # The conversations whose mistakes count; older ones are what the learner may since have learnt.
 RECENT_REPORTS = 5
 RECENT_TOPICS = 3
@@ -102,6 +116,10 @@ def choose_focus(
     )
 
 
+# What the learner imported: the material of an import, for a talk about it (`rehearse` False) or
+# for rehearsing a letter's reply; None when they have no such import.
+type ImportReader = Callable[[UUID, UUID, bool], ImportMaterial | None]
+
 # The topic of the learner's week a call on a given day puts first (the Learning Director's
 # `topic_for_call`); None when the week has none.
 type WeekTopic = Callable[[UUID, dt.date], str | None]
@@ -115,11 +133,13 @@ class SessionPlanner:
         reports: ReportService,
         cards: CardService,
         week_topic: WeekTopic | None = None,
+        imports: ImportReader | None = None,
     ) -> None:
         self._profiles = profiles
         self._reports = reports
         self._cards = cards
         self._week_topic = week_topic
+        self._imports = imports
 
     def plan(
         self, user_id: UUID, practise: str | None = None, today: dt.date | None = None
@@ -131,6 +151,8 @@ class SessionPlanner:
         their language lacks."""
         language = self._profiles.get(user_id).target_language or ""
         pack = self._profiles.catalog.available_pack(language)
+        if practise is not None and practise.startswith((IMPORT_PREFIX, LETTER_PREFIX)):
+            return self._import_plan(user_id, language, pack, practise)
         review = practise == PRACTISE_WORDS
         lesson = practise is not None and practise.startswith(LESSON_PREFIX)
         if lesson and practise is not None:
@@ -161,4 +183,26 @@ class SessionPlanner:
             words=tuple(PlanWord(card.front, card.back, str(card.id)) for card in cards),
             recent_topics=tuple(report.summary for report in reports[:RECENT_TOPICS]),
             review=review,
+        )
+
+    def _import_plan(
+        self, user_id: UUID, language: str, pack: LanguagePack | None, practise: str
+    ) -> SessionPlan:
+        """A call about something the learner imported (spec §6.17): the material alone, with the
+        learner's own mistakes still showing; the words and earlier talk would only compete with
+        it. Raises `GrammarMapError` (`not_found`) for an import they do not have."""
+        rehearse = practise.startswith(LETTER_PREFIX)
+        raw = practise[len(LETTER_PREFIX if rehearse else IMPORT_PREFIX) :]
+        try:
+            import_id = UUID(hex=raw)
+        except ValueError:
+            raise GrammarMapError("not_found") from None
+        material = self._imports(user_id, import_id, rehearse) if self._imports else None
+        if material is None:
+            raise GrammarMapError("not_found")
+        reports = self._reports.recent(user_id, RECENT_REPORTS)
+        return SessionPlan(
+            language=language,
+            focus=choose_focus(reports, pack, None)[:1] if pack else (),
+            material=material,
         )

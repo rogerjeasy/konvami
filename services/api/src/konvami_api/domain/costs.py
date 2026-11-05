@@ -60,6 +60,8 @@ class Feature(StrEnum):
     VOICE_SAMPLE = "voice_sample"
     # Phrases suggested for a situation (the phrasebook, spec §6.7).
     PHRASEBOOK = "phrasebook"
+    # Something the learner imported, worked out by the Course agent (spec §6.17).
+    COURSE_IMPORT = "course_import"
 
 
 @dataclass(frozen=True)
