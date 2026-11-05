@@ -13,6 +13,9 @@ locals {
   # Where the API's signed upload forms store a file until it is confirmed. The same prefix as
   # in services/api (domain/accounts.py).
   upload_prefix = "uploads/"
+  # Where a learner's copies of their data are written (6.19). The same prefix as in
+  # services/api (domain/accounts.py, export_folder).
+  export_prefix = "exports/"
 }
 
 resource "aws_s3_bucket" "media" {
@@ -62,6 +65,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
 
     expiration {
       days = var.upload_expiry_days
+    }
+  }
+
+  # A copy of a learner's data is for one download: its address works for an hour, the file is
+  # gone after a day, and deleting the account deletes it at once.
+  rule {
+    id     = "delete-data-exports"
+    status = "Enabled"
+
+    filter {
+      prefix = local.export_prefix
+    }
+
+    expiration {
+      days = var.export_expiry_days
     }
   }
 
