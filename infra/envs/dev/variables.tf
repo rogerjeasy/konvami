@@ -60,6 +60,12 @@ variable "web_preview_origins" {
   default     = ["http://localhost:8081"]
 }
 
+variable "sentry_dsn" {
+  description = "The Sentry DSN for the backend's crash reports (spec §6.21.4), from the Sentry project's settings. Empty turns them off. Set it in terraform.tfvars (gitignored). The app has its own, EXPO_PUBLIC_SENTRY_DSN."
+  type        = string
+  default     = ""
+}
+
 variable "openai_api_key" {
   description = "The OpenAI API key. Set it in terraform.tfvars (gitignored) or TF_VAR_openai_api_key. It goes to Secrets Manager and is never written to state or plans."
   type        = string

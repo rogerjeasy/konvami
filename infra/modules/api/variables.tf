@@ -94,6 +94,12 @@ variable "costs" {
   }
 }
 
+variable "sentry_dsn" {
+  description = "The Sentry DSN the API and the call worker report crashes to (spec §6.21.4); empty turns crash reporting off."
+  type        = string
+  default     = ""
+}
+
 variable "alert_topic_arn" {
   description = "The SNS topic the spending alerts are emailed through (modules/budget); empty sends none."
   type        = string

@@ -14,6 +14,7 @@ from uuid import UUID
 
 from mangum import Mangum
 
+from konvami_api import observability
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import AccountService
 from konvami_api.domain.card_details import CardDetailsService
@@ -146,6 +147,10 @@ class Clients:
 class Backend:
     services: Services
     realtime: OpenAiRealtime
+
+
+# Crash reporting starts with the container, so an error while building the backend is reported too.
+observability.init(os.environ)
 
 
 def _now() -> dt.datetime:

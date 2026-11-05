@@ -18,6 +18,10 @@ budget_alert_emails = ["you@example.com"]
 openai_api_key = "sk-..."
 # openai_api_key_version = 1
 
+# Crash reports from the API and the call worker go to this Sentry project (spec §6.21.4). Leave it
+# out to turn them off. The app has its own DSN, EXPO_PUBLIC_SENTRY_DSN in apps/mobile/.env.
+# sentry_dsn = "https://<key>@<org>.ingest.de.sentry.io/<project>"
+
 # Publish the website with the privacy policy, once apps/site/site.config.ts is filled in and the
 # site is built (pnpm --filter @konvami/site build).
 # publish_site = true

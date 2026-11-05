@@ -9,6 +9,7 @@ dependencies = [
     "mangum>=0.22,<1",
     "httpx>=0.28,<1",
     "websockets>=15,<17",
+    "sentry-sdk (==2.72.0)",
 ]
 
 [tool.poetry]
