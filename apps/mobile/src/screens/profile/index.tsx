@@ -321,8 +321,20 @@ export function ProfileScreen() {
           </ListGroup>
         </Section>
       </Reveal>
+      <Reveal delay={staggerDelay(5)}>
+        <Section title={t('profile.groups.help')}>
+          <ListGroup>
+            <ListRow
+              icon="info"
+              title={t('profile.rows.help')}
+              detail={t('profile.rows.helpHint')}
+              onPress={go(ROUTES.accountHelp)}
+            />
+          </ListGroup>
+        </Section>
+      </Reveal>
       {owner ? (
-        <Reveal delay={staggerDelay(5)}>
+        <Reveal delay={staggerDelay(6)}>
           <Section title={t('profile.groups.owner')}>
             <ListGroup>
               <ListRow
@@ -337,11 +349,17 @@ export function ProfileScreen() {
                 detail={t('profile.rows.flagsHint')}
                 onPress={go(ROUTES.accountFlags)}
               />
+              <ListRow
+                icon="mail"
+                title={t('profile.rows.feedbackInbox')}
+                detail={t('profile.rows.feedbackInboxHint')}
+                onPress={go(ROUTES.accountFeedbackInbox)}
+              />
             </ListGroup>
           </Section>
         </Reveal>
       ) : null}
-      <Reveal delay={staggerDelay(6)}>
+      <Reveal delay={staggerDelay(7)}>
         <View className="gap-3">
           <Button
             variant="secondary"

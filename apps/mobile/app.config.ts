@@ -142,6 +142,9 @@ const config: ExpoConfig = {
       },
     ],
     'expo-secure-store',
+    // Crash reporting (spec §6.21.4). Only in a build that has a DSN; without one the app never
+    // loads Sentry. Source maps are not uploaded yet (docs/superpowers/specs/2026-11-06-ops-feedback-design.md).
+    ...(process.env.EXPO_PUBLIC_SENTRY_DSN ? ['@sentry/react-native/expo' as const] : []),
     [
       'expo-local-authentication',
       {

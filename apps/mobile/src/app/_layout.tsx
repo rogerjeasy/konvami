@@ -11,7 +11,9 @@ import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import { Lexend_600SemiBold } from '@expo-google-fonts/lexend/600SemiBold';
+import { track } from '@/analytics';
 import { AuthServicesProvider, authServices } from '@/auth';
+import { initMonitoring, monitored } from '@/monitoring';
 import { OnboardingProvider, onboardingStore } from '@/onboarding';
 import { PracticeProvider, practiceServices } from '@/practice';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
@@ -34,11 +36,14 @@ import {
 // What shows when this layout itself breaks; each screen has its own boundary (`RootStack`).
 export { AppError as ErrorBoundary } from '@/screens/error';
 
+// Crash reporting starts before anything renders, so an error while starting up is reported too.
+initMonitoring();
+
 // The native splash stays up until fonts, saved preferences and the saved session are ready, so
 // nothing flickers and a signed-in user never sees the signed-out screens.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -49,9 +54,11 @@ export default function RootLayout() {
   const [prefsReady, setPrefsReady] = useState(false);
   useEffect(() => {
     // Neither call throws: a broken store means defaults and signed out, never a stuck splash.
-    Promise.all([loadPreferences(), authServices.session.restore()]).finally(() =>
-      setPrefsReady(true),
-    );
+    Promise.all([loadPreferences(), authServices.session.restore()]).finally(() => {
+      setPrefsReady(true);
+      // The learner's choice is loaded by now, so this counts only if they agreed to it (6.7).
+      track('app_opened');
+    });
     return followPhoneLanguage();
   }, []);
 
@@ -122,3 +129,5 @@ function RootStack() {
     </Stack>
   );
 }
+
+export default monitored(RootLayout);

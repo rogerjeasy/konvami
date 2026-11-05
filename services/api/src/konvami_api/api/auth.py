@@ -7,6 +7,7 @@ from uuid import UUID
 
 from fastapi import Depends, Request
 
+from konvami_api import observability
 from konvami_api.api.errors import ApiError
 
 
@@ -15,9 +16,11 @@ def current_user(request: Request) -> UUID:
     claims = event.get("requestContext", {}).get("authorizer", {}).get("jwt", {}).get("claims", {})
     try:
         # A Cognito subject is a UUID; it is the user's id everywhere in the backend.
-        return UUID(claims["sub"])
+        user = UUID(claims["sub"])
     except (KeyError, TypeError, ValueError):
         raise ApiError(401, "not_authenticated") from None
+    observability.identify(user)
+    return user
 
 
 CurrentUser = Annotated[UUID, Depends(current_user)]

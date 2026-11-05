@@ -11,10 +11,12 @@ import { NoticeBox } from '@/components/notice-box';
 import { Switch } from '@/components/switch';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
+import { analyticsAvailable } from '@/analytics';
 import { openLegal } from '@/lib/external';
 import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
+import { setAnalytics, usePreferences } from '@/preferences';
 import { useProfileServices, useRecordings } from '@/profile/services';
 import { useElevenLabsConsent } from '@/profile/use-elevenlabs-consent';
 import { ProfilePage } from './page';
@@ -104,6 +106,31 @@ function RecordingsChoice() {
 }
 
 /**
+ * Whether anonymous usage counts may be sent (spec §6.21.4). Off until the learner turns it on;
+ * turning it off stops them at once and forgets the random id they carried. Not shown in a
+ * build that has no analytics.
+ */
+function UsageDataChoice() {
+  const { t } = useTranslation();
+  const { analytics } = usePreferences();
+  return (
+    <Card className="flex-row items-center gap-3 p-3.5">
+      <View className="flex-1 gap-1">
+        <Text variant="labelMedium">{t('profile.privacy.analytics.label')}</Text>
+        <Text variant="small" tone="muted">
+          {t(analytics ? 'profile.privacy.analytics.on' : 'profile.privacy.analytics.off')}
+        </Text>
+      </View>
+      <Switch
+        label={t('profile.privacy.analytics.label')}
+        value={analytics}
+        onValueChange={(on) => void setAnalytics(on)}
+      />
+    </Card>
+  );
+}
+
+/**
  * 6.7 Privacy and AI (spec §6.19): which AI provider receives the learner's data and what it
  * receives, with the full privacy notice; whether recordings are kept; and the way to delete the
  * account, which is also how the AI consent is withdrawn.
@@ -148,7 +175,12 @@ export function PrivacyScreen() {
       <Reveal delay={staggerDelay(2)}>
         <RecordingsChoice />
       </Reveal>
-      <Reveal delay={staggerDelay(3)}>
+      {analyticsAvailable ? (
+        <Reveal delay={staggerDelay(3)}>
+          <UsageDataChoice />
+        </Reveal>
+      ) : null}
+      <Reveal delay={staggerDelay(4)}>
         <ListGroup>
           <ListRow
             icon="trash"

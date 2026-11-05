@@ -33,6 +33,7 @@ import {
   type ProfileSource,
   type LevelPoint,
   type Progress,
+  type InboxFeedback,
   type QueuedFlag,
   type Rating,
   type SessionReport,
@@ -972,6 +973,8 @@ export function createFakeApi(): FakeApi {
   const retried = new Map<string, Map<number, boolean>>();
   // What the learner reported, as the owner's queue holds it (one per conversation, kind, index).
   const flagged: QueuedFlag[] = [];
+  // What the learner sent the owner, as the owner's inbox holds it.
+  const feedback: InboxFeedback[] = [];
   let tutorAnswer: TutorAnswer = FAKE_TUTOR_ANSWER;
   const keepQuestion = (question: string, source: TutorQuestion['source'], at: number) => {
     const kept: TutorQuestion = {
@@ -2224,6 +2227,35 @@ export function createFakeApi(): FakeApi {
       tried.set(index, (tried.get(index) ?? false) || right);
       retried.set(conversationId, tried);
       return { heard, right, said: mistake.original, better: mistake.corrected };
+    },
+    async sendFeedback(input) {
+      await record('sendFeedback', input);
+      if (!input.message.trim()) throw new ApiError('invalid_value', 422);
+      const sent: InboxFeedback = {
+        id: `feedback_${feedback.length + 1}`,
+        category: input.category,
+        createdAt: new Date(now).toISOString(),
+        message: input.message.trim(),
+        device: input.device ?? null,
+        status: 'open',
+        resolvedAt: null,
+      };
+      feedback.push(sent);
+      return { id: sent.id, category: sent.category, createdAt: sent.createdAt };
+    },
+    async getFeedbackInbox(status = 'open') {
+      await record('getFeedbackInbox', status);
+      if (!owner) throw new ApiError('not_owner', 403);
+      return { messages: feedback.filter((one) => one.status === status).reverse() };
+    },
+    async resolveFeedback(id, status) {
+      await record('resolveFeedback', id, status);
+      if (!owner) throw new ApiError('not_owner', 403);
+      const kept = feedback.find((one) => one.id === id);
+      if (!kept) throw new ApiError('not_found', 404);
+      kept.status = status;
+      kept.resolvedAt = status === 'open' ? null : new Date(now).toISOString();
+      return { ...kept };
     },
     async flagItem(conversationId, input) {
       await record('flagItem', conversationId, input);

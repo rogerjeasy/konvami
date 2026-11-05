@@ -58,6 +58,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0026_phrasebook",
         "0027_profile_question",
         "0028_content_flag",
+        "0045_feedback",
         "0050_moderation_refusal",
         "0055_premium_voice_choice",
         "0060_pen_pal",
@@ -95,6 +96,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "course_import",
         "penpal_settings",
         "penpal_note",
+        "feedback",
     } <= tables(empty_db)
 
 

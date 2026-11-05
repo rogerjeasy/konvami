@@ -1990,6 +1990,7 @@ export const de: Translation = {
       you: 'Du',
       partners: 'Partner',
       privacy: 'Datenschutz und Sicherheit',
+      help: 'Hilfe',
     },
     rows: {
       costs: 'Kosten',
@@ -2018,6 +2019,10 @@ export const de: Translation = {
       privacyHint: 'Was jeder KI-Anbieter erhält',
       security: 'Sicherheit',
       securityHint: 'Passwort, E-Mail und Geräte',
+      help: 'Hilfe und Feedback',
+      helpHint: 'Antworten, Support und was wir besser machen können',
+      feedbackInbox: 'Feedback',
+      feedbackInboxHint: 'Was Lernende dir geschickt haben',
     },
     version: 'Konvami {{version}}',
     saved: 'Gespeichert',
@@ -2144,6 +2149,11 @@ export const de: Translation = {
       note: 'Deine Partner sind immer KI und geben sich nie als Menschen aus. Um deine Zustimmung zu widerrufen, lösche dein Konto.',
       delete: 'Konto löschen',
       deleteHint: 'Entfernt dein Konto und alles darin',
+      analytics: {
+        label: 'Anonyme Nutzungsdaten teilen',
+        on: 'Konvami zählt ein paar Ereignisse, etwa das Öffnen der App oder den Start eines Gesprächs. Nie dein Name, dein Konto, deine Aufnahmen oder etwas, das du sagst. Du kannst es jederzeit ausschalten.',
+        off: 'Es wird nichts gezählt. Schalte das ein, damit wir sehen, was genutzt wird.',
+      },
       recordings: {
         label: 'Aufnahmen meiner Gespräche behalten',
         on: 'Du kannst deine Gespräche noch einmal anhören. Nur du kannst sie abspielen.',
@@ -2451,6 +2461,86 @@ export const de: Translation = {
     actionFailed: 'Das hat nicht geklappt. Versuch es noch einmal.',
     notOwner: 'Diese Seite ist dem Konto des Inhabers vorbehalten.',
     loading: 'Meldungen werden geladen',
+  },
+  help: {
+    title: 'Hilfe und Feedback',
+    body: 'Antworten auf häufige Fragen und eine Möglichkeit, uns zu sagen, was besser werden soll.',
+    faqTitle: 'Häufige Fragen',
+    faq: {
+      start: {
+        q: 'Wie starte ich ein Gespräch?',
+        a: 'Öffne den Tab Sprechen, wähle einen Partner und tippe auf Start. Ein Gespräch dauert höchstens 10 Minuten.',
+      },
+      partner: {
+        q: 'Mit wem spreche ich?',
+        a: 'Mit einem KI-Partner, nie mit einem Menschen. Stimme und Charakter sind für dich gemacht, und du kannst sie unter Meine Partner ändern.',
+      },
+      mistakes: {
+        q: 'Wann sehe ich meine Fehler?',
+        a: 'Im Gespräch erscheinen ein paar Korrekturen dezent unter deinen Zeilen. Danach listet dein Bericht jeden Fehler mit einer Erklärung auf. Die Korrekturen im Gespräch kannst du im Hilfe-Fenster ausblenden.',
+      },
+      minutes: {
+        q: 'Wie viele Sprechminuten habe ich?',
+        a: 'Du hast ein Wochenkontingent, das du in deinem Profil siehst. Es beginnt jeden Montag neu. Lernkarten und getippte Fragen an den Tutor verbrauchen keine Sprechminuten.',
+      },
+      recordings: {
+        q: 'Werden meine Gespräche aufgenommen?',
+        a: 'Nur wenn du Aufnahmen behältst. Unter Datenschutz und KI kannst du das ausschalten; dabei werden auch die bisherigen Aufnahmen gelöscht.',
+      },
+      wrong: {
+        q: 'Was, wenn ein Partner etwas Falsches oder Beleidigendes sagt?',
+        a: 'Tippe auf die Flagge neben der Zeile im Transkript oder auf „Das stimmt nicht“ bei einer Korrektur in deinem Bericht. Die Meldung geht zur Prüfung an uns.',
+      },
+      settings: {
+        q: 'Kann ich mein Niveau und meine Ziele ändern?',
+        a: 'Ja. Öffne dein Profil und dann Lernen. Du kannst auch einen Partner im Gespräch bitten, eine Einstellung zu ändern.',
+      },
+      delete: {
+        q: 'Wie lösche ich mein Konto?',
+        a: 'Öffne dein Profil, dann Datenschutz und KI und dann Konto löschen. Dein Konto und alles darin wird entfernt, auch die Aufnahmen.',
+      },
+    },
+    supportTitle: 'Kontakt',
+    supportEmail: 'Support per E-Mail',
+    feedbackTitle: 'Sag uns, was besser werden soll',
+    feedbackBody: 'Melde ein Problem oder teile eine Idee.',
+    category: {
+      label: 'Worum geht es?',
+      bug: 'Ein Problem',
+      idea: 'Eine Idee',
+      other: 'Etwas anderes',
+    },
+    message: 'Deine Nachricht',
+    includeDevice: 'Gerät und App-Version angeben',
+    includeDeviceHint:
+      'Fügt die App-Version, das System deines Telefons und iOS, Android oder Web hinzu. Sonst nichts über dein Telefon.',
+    privacy:
+      'Deine Gespräche, Aufnahmen und Berichte werden nicht gesendet. Auf Nachrichten von hier können wir nicht antworten.',
+    send: 'Senden',
+    sent: 'Danke',
+    sentBody: 'Deine Nachricht wurde gesendet.',
+    another: 'Noch eine senden',
+    failedLimit: 'Du hast heute viele Nachrichten gesendet. Bitte versuch es morgen wieder.',
+    failedUnavailable:
+      'Deine Nachricht konnte nicht gesendet werden. Bitte versuch es noch einmal.',
+  },
+  feedbackInbox: {
+    title: 'Feedback',
+    body: 'Was Lernende dir geschickt haben.',
+    status: {
+      open: 'Offen',
+      done: 'Erledigt',
+    },
+    emptyOpen: 'Nichts zu lesen.',
+    emptyDone: 'Noch nichts erledigt.',
+    device: '{{platform}} · App {{appVersion}} · System {{osVersion}}',
+    sentOn: 'Gesendet {{when}}',
+    markDone: 'Als erledigt markieren',
+    reopen: 'Wieder öffnen',
+    loadFailed: 'Die Nachrichten konnten nicht geladen werden.',
+    actionFailed: 'Das hat nicht geklappt. Versuch es noch einmal.',
+    notOwner: 'Diese Seite ist für das Konto des Inhabers.',
+    loading: 'Feedback wird geladen',
   },
   screenError: {
     title: 'Etwas ist schiefgelaufen',

@@ -17,9 +17,12 @@ import type {
   PushDevice,
   Catalog,
   ExamCentre,
+  FeedbackInput,
+  FeedbackStatus,
   Flag,
   FlagInput,
   FlagStatus,
+  InboxFeedback,
   QueuedFlag,
   NextSimulation,
   GrammarMap,
@@ -221,6 +224,15 @@ export interface PracticeServices {
   readFlagQueue: (status: FlagStatus) => Promise<{ flags: QueuedFlag[] }>;
   /** Closes a flag as resolved or dismissed, or opens it again (the owner). */
   resolveFlag: (id: string, status: FlagStatus) => Promise<QueuedFlag>;
+  /**
+   * Sends the owner a message (spec §6.21.4). Rejects with an `ApiError` (`feedback_limit`,
+   * `network`, …).
+   */
+  sendFeedback: (input: FeedbackInput) => Promise<unknown>;
+  /** The owner's inbox of messages. Rejects with an `ApiError` (`not_owner`, …). */
+  readFeedbackInbox: (status: FeedbackStatus) => Promise<{ messages: InboxFeedback[] }>;
+  /** Marks a message done, or opens it again (the owner). */
+  resolveFeedback: (id: string, status: FeedbackStatus) => Promise<InboxFeedback>;
   /** Where a card's sound plays from (made the first time). Rejects with an `ApiError`. */
   cardSound: (id: string) => Promise<string>;
   /** One of the learner's cards. Rejects with an `ApiError` (`not_found`, …). */
@@ -299,6 +311,9 @@ export function createPracticeServices(
     | 'getGrammarTopic'
     | 'retryCorrection'
     | 'getRetries'
+    | 'sendFeedback'
+    | 'getFeedbackInbox'
+    | 'resolveFeedback'
     | 'flagItem'
     | 'getFlags'
     | 'getFlagQueue'
@@ -461,6 +476,9 @@ export function createPracticeServices(
       api.retryCorrection(conversationId, index, spoken(recording)),
     answerCard: (id, recording) => api.answerCard(id, spoken(recording)),
     readRetries: (conversationId) => api.getRetries(conversationId),
+    sendFeedback: (input) => api.sendFeedback(input),
+    readFeedbackInbox: (status) => api.getFeedbackInbox(status),
+    resolveFeedback: (id, status) => api.resolveFeedback(id, status),
     flagItem: (conversationId, input) => api.flagItem(conversationId, input),
     readFlags: (conversationId) => api.getFlags(conversationId),
     readFlagQueue: (status) => api.getFlagQueue(status),

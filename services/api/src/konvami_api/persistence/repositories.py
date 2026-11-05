@@ -30,6 +30,7 @@ from konvami_api.domain.course_import import CourseImport
 from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
 from konvami_api.domain.exams import PartScore
+from konvami_api.domain.feedback import DeviceInfo, Feedback, FeedbackStatus
 from konvami_api.domain.flags import Flag, FlagStatus
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.levels import LevelFit, LevelStep
@@ -2867,3 +2868,102 @@ def _pen_pal_note(row: dict[str, Any]) -> penpal.Note:
         claimed_at=from_epoch_micros(claimed) if claimed is not None else None,
         read=bool(row["opened"]),
     )
+
+
+# --- Feedback from the learner -----------------------------------------------------------------
+
+_FEEDBACK_COLUMNS = f"""
+    CAST(id AS text) AS id, CAST(user_id AS text) AS user_id, category, message, app_version,
+    platform, os_version, status, {epoch_micros("created_at")} AS created_at,
+    {epoch_micros("resolved_at")} AS resolved_at
+"""
+
+_ADD_FEEDBACK = f"""
+    INSERT INTO feedback
+        (id, user_id, category, message, app_version, platform, os_version, status, created_at)
+    VALUES (CAST(:id AS uuid), CAST(:user_id AS uuid), :category, :message, :app_version,
+            :platform, :os_version, 'open', CAST(:created_at AS timestamptz))
+    RETURNING {_FEEDBACK_COLUMNS}
+"""
+
+_FEEDBACK_SENT = """
+    SELECT count(*) AS sent FROM feedback
+    WHERE user_id = CAST(:user_id AS uuid) AND created_at >= CAST(:since AS timestamptz)
+"""
+
+_FEEDBACK_INBOX = f"""
+    SELECT {_FEEDBACK_COLUMNS} FROM feedback
+    WHERE CAST(:status AS text) IS NULL OR status = :status
+    ORDER BY created_at DESC LIMIT :limit
+"""
+
+_RESOLVE_FEEDBACK = f"""
+    UPDATE feedback
+    SET status = :status,
+        resolved_at = CASE WHEN :status = 'open' THEN NULL ELSE CAST(:at AS timestamptz) END
+    WHERE id = CAST(:id AS uuid)
+    RETURNING {_FEEDBACK_COLUMNS}
+"""
+
+
+def _feedback(row: dict[str, Any]) -> Feedback:
+    resolved = row["resolved_at"]
+    device = (
+        DeviceInfo(
+            app_version=row["app_version"],
+            platform=cast(Any, row["platform"]),
+            os_version=row["os_version"],
+        )
+        if row["app_version"] is not None and row["platform"] is not None
+        else None
+    )
+    return Feedback(
+        id=UUID(row["id"]),
+        user_id=UUID(row["user_id"]),
+        category=cast(Any, row["category"]),
+        message=row["message"],
+        device=device,
+        status=cast(Any, row["status"]),
+        created_at=from_epoch_micros(int(row["created_at"])),
+        resolved_at=from_epoch_micros(int(resolved)) if resolved is not None else None,
+    )
+
+
+class SqlFeedbackRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def add(self, feedback: Feedback) -> Feedback:
+        device = feedback.device
+        rows = self._client.execute(
+            _ADD_FEEDBACK,
+            {
+                "id": str(feedback.id),
+                "user_id": str(feedback.user_id),
+                "category": feedback.category,
+                "message": feedback.message,
+                "app_version": device.app_version if device else None,
+                "platform": device.platform if device else None,
+                "os_version": device.os_version if device else None,
+                "created_at": feedback.created_at.isoformat(),
+            },
+        )
+        return _feedback(rows[0])
+
+    def sent_since(self, user_id: UUID, since: dt.datetime) -> int:
+        rows = self._client.execute(
+            _FEEDBACK_SENT, {"user_id": str(user_id), "since": since.isoformat()}
+        )
+        return int(rows[0]["sent"])
+
+    def inbox(self, status: FeedbackStatus | None, limit: int) -> list[Feedback]:
+        rows = self._client.execute(_FEEDBACK_INBOX, {"status": status, "limit": limit})
+        return [_feedback(row) for row in rows]
+
+    def resolve(
+        self, feedback_id: UUID, status: FeedbackStatus, at: dt.datetime
+    ) -> Feedback | None:
+        rows = self._client.execute(
+            _RESOLVE_FEEDBACK, {"id": str(feedback_id), "status": status, "at": at.isoformat()}
+        )
+        return _feedback(rows[0]) if rows else None

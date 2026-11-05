@@ -1,7 +1,7 @@
 # Premium voices (ElevenLabs): reading aloud in a voice the learner picks
 
 Spec §6.21.2 (Pro: "premium voices (ElevenLabs)"), §9.2 (the cascaded option), §15 (provider
-portability), §6.19 (consent). Screen 6.21 Read-aloud voice (not drawn on the canvas), and the
+portability), §6.19 (consent). Screen 6.22 Read-aloud voice (not drawn on the canvas), and the
 ElevenLabs switch on 2.5 and 6.7.
 
 ## What it is
@@ -84,7 +84,7 @@ shows "Premium voices aren't part of your plan" when the server says `allowed: f
   learner). With a choice it speaks with ElevenLabs under a key that includes the provider, model,
   voice and text, so a new voice or text is spoken anew and an old sound is never played for it. If
   ElevenLabs fails, the standard voice reads: premium is a bonus, never a broken card.
-- **Samples** on 6.21 are spoken once per voice and language and kept
+- **Samples** on 6.22 are spoken once per voice and language and kept
   (`voices/premium/<lang>/<voice>-<fingerprint>.mp3`), like the partners' samples.
 - **Storage:** migration `0055_premium_voice_choice.sql`, one row per learner who chose a voice
   (none: the standard voice), removed with the account.
@@ -124,4 +124,4 @@ shows "Premium voices aren't part of your plan" when the server says `allowed: f
   suits German may sound wrong in French. The learner hears the sample in their target language
   before choosing.
 - A real call to ElevenLabs: the provider is tested against a mock transport only, and the key was
-  not available. The first real sample (6.21) is the first real request.
+  not available. The first real sample (6.22) is the first real request.

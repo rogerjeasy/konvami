@@ -19,6 +19,7 @@ from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -70,6 +71,7 @@ from tests.fakes import (
     InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryExamRepository,
+    InMemoryFeedbackRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
     InMemoryImportRepository,
@@ -633,6 +635,11 @@ def services(
             clock=clock,
         ),
         then_vs_now=ThenVsNowService(conversations=conversations, recordings=recordings),
+        feedback=FeedbackService(
+            repository=InMemoryFeedbackRepository(),
+            owners=frozenset({UUID(OWNER)}),
+            clock=clock,
+        ),
         flags=FlagService(
             conversations=conversations,
             reports=reports,

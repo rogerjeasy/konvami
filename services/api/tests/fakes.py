@@ -27,6 +27,7 @@ from konvami_api.domain.costs import (
 from konvami_api.domain.course_import import CourseImport, FetchedPage, PageFetchError
 from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
+from konvami_api.domain.feedback import Feedback, FeedbackStatus
 from konvami_api.domain.flags import Flag, FlagStatus
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn
@@ -1494,3 +1495,29 @@ class RecordingPenPalStarter:
         if self.fail:
             raise self.fail
         self.started.append(note_id)
+
+
+class InMemoryFeedbackRepository:
+    def __init__(self) -> None:
+        self.messages: list[Feedback] = []
+
+    def add(self, feedback: Feedback) -> Feedback:
+        self.messages.append(feedback)
+        return feedback
+
+    def sent_since(self, user_id: UUID, since: datetime) -> int:
+        return sum(1 for m in self.messages if m.user_id == user_id and m.created_at >= since)
+
+    def inbox(self, status: FeedbackStatus | None, limit: int) -> list[Feedback]:
+        found = [m for m in self.messages if status is None or m.status == status]
+        return sorted(found, key=lambda m: m.created_at, reverse=True)[:limit]
+
+    def resolve(self, feedback_id: UUID, status: FeedbackStatus, at: datetime) -> Feedback | None:
+        for position, message in enumerate(self.messages):
+            if message.id == feedback_id:
+                changed = replace(
+                    message, status=status, resolved_at=None if status == "open" else at
+                )
+                self.messages[position] = changed
+                return changed
+        return None

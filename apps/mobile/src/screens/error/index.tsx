@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { router, type ErrorBoundaryProps } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
+import { reportError } from '@/monitoring';
 import { ROUTES } from '@/lib/routes';
 import { ThemeProvider } from '@/theme';
 
@@ -80,7 +81,8 @@ export function ScreenBoundary({
  * shows when the layout itself breaks (a provider, the navigator), where no screen is left to
  * go to. It brings its own theme, because the layout's is gone with it.
  */
-export function AppError({ retry }: ErrorBoundaryProps) {
+export function AppError({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => reportError(error), [error]);
   return (
     <ThemeProvider>
       <ScreenError onRetry={() => void retry()} />

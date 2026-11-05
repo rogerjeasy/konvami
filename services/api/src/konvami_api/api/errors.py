@@ -17,6 +17,7 @@ from konvami_api.domain.costs import CostError
 from konvami_api.domain.course_import import CourseImportError
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.exam_centre import ExamError
+from konvami_api.domain.feedback import FeedbackError
 from konvami_api.domain.flags import FlagError
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.memories import MemoriesError
@@ -144,6 +145,13 @@ _PRONUNCIATION_STATUS = {
     "consent_required": 403,
     "drill_limit": 429,
 }
+
+_FEEDBACK_STATUS = {
+    "not_owner": 403,
+    "not_found": 404,
+    "invalid_value": 422,
+    "feedback_limit": 429,
+}
 _FLAG_STATUS = {"not_owner": 403, "not_found": 404, "invalid_value": 422, "flag_limit": 429}
 _PEN_PAL_STATUS = {
     "not_found": 404,
@@ -211,6 +219,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RetryError)
     async def _retry_error(_: Request, error: RetryError) -> JSONResponse:
         return _response(_RETRY_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(FeedbackError)
+    async def _feedback_error(_: Request, error: FeedbackError) -> JSONResponse:
+        return _response(_FEEDBACK_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(FlagError)
     async def _flag_error(_: Request, error: FlagError) -> JSONResponse:

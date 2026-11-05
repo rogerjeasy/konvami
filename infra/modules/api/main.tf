@@ -41,6 +41,14 @@ locals {
     KONVAMI_COSTS                 = jsonencode(var.costs)
     KONVAMI_ALERT_TOPIC_ARN       = var.alert_topic_arn
   }
+
+  # Crash reporting (spec §6.21.4) is on only when a Sentry DSN is given; without one the
+  # functions' settings do not change at all. A DSN is an ingest-only key, like the one inside the
+  # app, so it is an ordinary setting here rather than a Secrets Manager secret.
+  crash_reporting = var.sentry_dsn == "" ? {} : {
+    KONVAMI_SENTRY_DSN  = var.sentry_dsn
+    KONVAMI_ENVIRONMENT = var.name
+  }
 }
 
 data "archive_file" "package" {
@@ -182,7 +190,7 @@ resource "aws_lambda_function" "api" {
   timeout          = local.api_timeout_seconds
 
   environment {
-    variables = local.environment
+    variables = merge(local.environment, local.crash_reporting)
   }
 
   depends_on = [aws_cloudwatch_log_group.api, aws_iam_role_policy.api]
@@ -202,7 +210,7 @@ resource "aws_lambda_function" "migrate" {
   timeout          = local.migrate_timeout_seconds
 
   environment {
-    variables = local.environment
+    variables = merge(local.environment, local.crash_reporting)
   }
 
   depends_on = [aws_cloudwatch_log_group.migrate, aws_iam_role_policy.api]
@@ -227,7 +235,7 @@ resource "aws_lambda_function" "call_worker" {
   timeout          = local.call_worker_timeout_seconds
 
   environment {
-    variables = local.environment
+    variables = merge(local.environment, local.crash_reporting)
   }
 
   depends_on = [aws_cloudwatch_log_group.call_worker, aws_iam_role_policy.api]

@@ -36,7 +36,7 @@ async function open(
   return { api, device };
 }
 
-describe('6.21 Read-aloud voice', () => {
+describe('6.22 Read-aloud voice', () => {
   it('goes back to the Profile where ElevenLabs is not set up', async () => {
     await open(inApp());
 

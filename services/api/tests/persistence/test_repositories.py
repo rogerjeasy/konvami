@@ -19,6 +19,7 @@ from konvami_api.domain.cards import Card, CardRepository, CardTotals, WordDetai
 from konvami_api.domain.conversations import ConversationRepository
 from konvami_api.domain.exam_centre import ExamRepository, Simulation, SimulationResult
 from konvami_api.domain.exams import PartScore
+from konvami_api.domain.feedback import DeviceInfo, Feedback, FeedbackRepository
 from konvami_api.domain.flags import Flag, FlagRepository
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.grammar_map import Mastery
@@ -76,6 +77,7 @@ from konvami_api.persistence.repositories import (
     SqlConversationRepository,
     SqlDraftLog,
     SqlExamRepository,
+    SqlFeedbackRepository,
     SqlFlagRepository,
     SqlLevelRepository,
     SqlMemoryRepository,
@@ -102,6 +104,7 @@ from tests.fakes import (
     InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryExamRepository,
+    InMemoryFeedbackRepository,
     InMemoryFlagRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
@@ -3071,3 +3074,64 @@ def test_a_finished_note_cannot_be_taken_and_a_failed_one_can_be_reopened(
     penpals.claim(note.id, NOON + 2 * HOUR, NOON + 2 * HOUR, 3)
     penpals.finish(note.id, "failed", "", None, [])
     assert penpals.reopen(note.id, NOON + 3 * HOUR, 2) is False
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def feedback(request: pytest.FixtureRequest) -> FeedbackRepository:
+    if request.param == "memory":
+        return InMemoryFeedbackRepository()
+    db = request.getfixturevalue("db")
+    # The learner exists once they have talked; feedback needs only the account row.
+    SqlVoiceSessionRepository(db).started(
+        VoiceSession("rtc_1", USER, CallPurpose.PRACTICE, "gpt-realtime-2.1-mini", NOON)
+    )
+    return SqlFeedbackRepository(db)
+
+
+def a_message(text: str = "Hello", *, at: datetime = NOON, **changes: Any) -> Feedback:
+    message = Feedback(
+        id=uuid4(),
+        user_id=USER,
+        category="bug",
+        message=text,
+        device=None,
+        status="open",
+        created_at=at,
+    )
+    return replace(message, **changes)
+
+
+def test_feedback_keeps_the_device_only_when_there_is_one(feedback: FeedbackRepository) -> None:
+    device = DeviceInfo("0.1.0", "ios", "19.1")
+    with_device = feedback.add(a_message("With", device=device))
+    without = feedback.add(a_message("Without", at=NOON + HOUR))
+
+    assert with_device.device == device
+    assert without.device is None
+    assert feedback.inbox("open", 10) == [without, with_device]
+
+
+def test_feedback_is_counted_per_learner_from_a_time_on(feedback: FeedbackRepository) -> None:
+    feedback.add(a_message(at=NOON))
+    feedback.add(a_message(at=NOON + 2 * HOUR))
+
+    assert feedback.sent_since(USER, NOON + HOUR) == 1
+    assert feedback.sent_since(USER, NOON - HOUR) == 2
+    assert feedback.sent_since(OTHER_USER, NOON - HOUR) == 0
+
+
+def test_feedback_is_closed_with_the_time_and_opened_again(feedback: FeedbackRepository) -> None:
+    old = feedback.add(a_message("Old", at=NOON))
+    new = feedback.add(a_message("New", at=NOON + HOUR))
+
+    done = feedback.resolve(old.id, "done", NOON + 2 * HOUR)
+
+    assert done is not None
+    assert (done.status, done.resolved_at) == ("done", NOON + 2 * HOUR)
+    assert feedback.inbox("open", 10) == [new]
+    assert feedback.inbox("done", 10) == [done]
+    assert feedback.inbox(None, 1) == [new]
+    reopened = feedback.resolve(old.id, "open", NOON + 3 * HOUR)
+    assert reopened is not None
+    assert reopened.resolved_at is None
+    assert feedback.resolve(uuid4(), "done", NOON) is None

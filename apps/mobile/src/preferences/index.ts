@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
+import { forgetAnalyticsId } from '@/analytics/install-id';
 import i18n, { deviceLanguage, isLanguage, type Language } from '@/i18n';
 import { readItem, removeItem, writeItem } from '@/lib/storage';
 import { DEFAULT_REMINDERS, REMINDER_TIMES, type ReminderSettings } from '@/reminders/schedule';
@@ -30,6 +31,11 @@ export interface Preferences {
    * learner chose, when Today offers them once.
    */
   reminders: ReminderSettings | null;
+  /**
+   * Whether anonymous usage counts may be sent (6.7 Privacy and AI, spec §6.21.4). Off until the
+   * learner turns it on, and never sent before then.
+   */
+  analytics: boolean;
 }
 
 const KEY = {
@@ -37,15 +43,19 @@ const KEY = {
   partnerCaptions: 'konvami.pref.partnerCaptions',
   liveCorrections: 'konvami.pref.liveCorrections',
   reminders: 'konvami.pref.reminders',
+  analytics: 'konvami.pref.analytics',
 } as const;
 // What a shown-by-default preference is stored as when the learner hid it.
 const HIDDEN = 'hidden';
+// What an off-by-default preference is stored as when the learner turned it on.
+const ON = 'on';
 
 let current: Preferences = {
   language: null,
   partnerCaptions: true,
   liveCorrections: true,
   reminders: null,
+  analytics: false,
 };
 
 /**
@@ -86,17 +96,19 @@ function update(next: Preferences) {
 
 /** Loads saved preferences once at launch. Falls back to the defaults. */
 export async function loadPreferences(): Promise<void> {
-  const [language, captions, corrections, reminders] = await Promise.all([
+  const [language, captions, corrections, reminders, analytics] = await Promise.all([
     readItem(KEY.language),
     readItem(KEY.partnerCaptions),
     readItem(KEY.liveCorrections),
     readItem(KEY.reminders),
+    readItem(KEY.analytics),
   ]);
   update({
     language: isLanguage(language) ? language : null,
     partnerCaptions: captions !== HIDDEN,
     liveCorrections: corrections !== HIDDEN,
     reminders: remindersOf(reminders),
+    analytics: analytics === ON,
   });
 }
 
@@ -124,6 +136,19 @@ export async function setReminders(reminders: ReminderSettings | null): Promise<
   await (reminders
     ? writeItem(KEY.reminders, JSON.stringify(reminders))
     : removeItem(KEY.reminders));
+}
+
+/**
+ * Lets anonymous usage counts be sent, or stops them (6.7 Privacy and AI). Stopping is at once
+ * (no event is sent after this is called) and forgets the install id the events carried.
+ */
+export async function setAnalytics(shared: boolean): Promise<void> {
+  update({ ...current, analytics: shared });
+  if (shared) {
+    await writeItem(KEY.analytics, ON);
+  } else {
+    await Promise.all([removeItem(KEY.analytics), forgetAnalyticsId()]);
+  }
 }
 
 /**

@@ -1991,6 +1991,7 @@ export const fr: Translation = {
       you: 'Toi',
       partners: 'Partenaires',
       privacy: 'Confidentialité et sécurité',
+      help: 'Aide',
     },
     rows: {
       costs: 'Coûts',
@@ -2019,6 +2020,10 @@ export const fr: Translation = {
       privacyHint: 'Ce que reçoit chaque fournisseur d’IA',
       security: 'Sécurité',
       securityHint: 'Mot de passe, e-mail et appareils',
+      help: 'Aide et avis',
+      helpHint: 'Réponses, assistance, et dis-nous quoi améliorer',
+      feedbackInbox: 'Avis',
+      feedbackInboxHint: 'Ce que les apprenants t’ont envoyé',
     },
     version: 'Konvami {{version}}',
     saved: 'Enregistré',
@@ -2143,6 +2148,11 @@ export const fr: Translation = {
       note: 'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Pour retirer ton accord, supprime ton compte.',
       delete: 'Supprimer le compte',
       deleteHint: 'Supprime ton compte et tout ce qu’il contient',
+      analytics: {
+        label: 'Partager des données d’usage anonymes',
+        on: 'Konvami compte quelques événements, comme l’ouverture de l’app ou le début d’une conversation. Jamais ton nom, ton compte, tes enregistrements ni ce que tu dis. Tu peux désactiver cela à tout moment.',
+        off: 'Rien n’est compté. Active cette option pour nous aider à voir ce qui est utilisé.',
+      },
       recordings: {
         label: 'Garder les enregistrements de mes conversations',
         on: 'Tu peux réécouter tes conversations. Personne d’autre ne peut les écouter.',
@@ -2457,6 +2467,85 @@ export const fr: Translation = {
     actionFailed: 'Ça n’a pas marché. Réessaie.',
     notOwner: 'Cette page est réservée au compte du propriétaire.',
     loading: 'Chargement des signalements',
+  },
+  help: {
+    title: 'Aide et avis',
+    body: 'Des réponses aux questions courantes, et un moyen de nous dire quoi améliorer.',
+    faqTitle: 'Questions fréquentes',
+    faq: {
+      start: {
+        q: 'Comment démarrer une conversation ?',
+        a: 'Ouvre l’onglet Parler, choisis un partenaire et touche Commencer. Une conversation dure 10 minutes au plus.',
+      },
+      partner: {
+        q: 'À qui est-ce que je parle ?',
+        a: 'À un partenaire IA, jamais à une personne. Sa voix et son caractère sont faits pour toi, et tu peux les changer dans Mes partenaires.',
+      },
+      mistakes: {
+        q: 'Quand est-ce que je vois mes erreurs ?',
+        a: 'Pendant une conversation, quelques corrections apparaissent discrètement sous tes répliques. Ensuite, ton compte rendu liste chaque erreur avec une explication. Tu peux masquer les corrections en direct dans la feuille d’aide d’une conversation.',
+      },
+      minutes: {
+        q: 'Combien de minutes de voix ai-je ?',
+        a: 'Tu as un quota hebdomadaire, affiché sur ton profil, qui repart chaque lundi. Les cartes de révision et les questions écrites au Tuteur n’utilisent pas de minutes de voix.',
+      },
+      recordings: {
+        q: 'Mes conversations sont-elles enregistrées ?',
+        a: 'Seulement si tu gardes les enregistrements. Tu peux le désactiver dans Confidentialité et IA, ce qui supprime aussi ceux déjà gardés.',
+      },
+      wrong: {
+        q: 'Et si un partenaire dit quelque chose de faux ou d’offensant ?',
+        a: 'Touche le drapeau à côté de la réplique dans la transcription, ou « C’est faux » sur une correction de ton compte rendu. Le signalement nous est envoyé pour examen.',
+      },
+      settings: {
+        q: 'Puis-je changer mon niveau et mes objectifs ?',
+        a: 'Oui. Ouvre ton profil, puis Apprentissage. Tu peux aussi demander à un partenaire, pendant une conversation, de changer un réglage.',
+      },
+      delete: {
+        q: 'Comment supprimer mon compte ?',
+        a: 'Ouvre ton profil, puis Confidentialité et IA, puis Supprimer le compte. Cela supprime ton compte et tout ce qu’il contient, enregistrements compris.',
+      },
+    },
+    supportTitle: 'Contact',
+    supportEmail: 'Écrire à l’assistance',
+    feedbackTitle: 'Dis-nous quoi améliorer',
+    feedbackBody: 'Signale un problème ou partage une idée.',
+    category: {
+      label: 'De quoi s’agit-il ?',
+      bug: 'Un problème',
+      idea: 'Une idée',
+      other: 'Autre chose',
+    },
+    message: 'Ton message',
+    includeDevice: 'Inclure l’appareil et la version de l’app',
+    includeDeviceHint:
+      'Ajoute la version de l’app, le système de ton téléphone et s’il s’agit d’iOS, d’Android ou du web. Rien d’autre sur ton téléphone.',
+    privacy:
+      'Tes conversations, enregistrements et comptes rendus ne sont pas envoyés. Nous ne pouvons pas répondre aux messages envoyés d’ici.',
+    send: 'Envoyer',
+    sent: 'Merci',
+    sentBody: 'Ton message a été envoyé.',
+    another: 'En envoyer un autre',
+    failedLimit: 'Tu as envoyé beaucoup de messages aujourd’hui. Réessaie demain.',
+    failedUnavailable: 'Ton message n’a pas pu être envoyé. Réessaie.',
+  },
+  feedbackInbox: {
+    title: 'Avis',
+    body: 'Ce que les apprenants t’ont envoyé.',
+    status: {
+      open: 'Ouverts',
+      done: 'Traités',
+    },
+    emptyOpen: 'Rien à lire.',
+    emptyDone: 'Rien de traité pour l’instant.',
+    device: '{{platform}} · app {{appVersion}} · système {{osVersion}}',
+    sentOn: 'Envoyé {{when}}',
+    markDone: 'Marquer comme traité',
+    reopen: 'Rouvrir',
+    loadFailed: 'Les messages n’ont pas pu être chargés.',
+    actionFailed: 'Ça n’a pas marché. Réessaie.',
+    notOwner: 'Cette page est réservée au compte du propriétaire.',
+    loading: 'Chargement des avis',
   },
   screenError: {
     title: 'Un problème est survenu',

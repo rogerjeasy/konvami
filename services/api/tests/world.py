@@ -16,6 +16,7 @@ from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -85,6 +86,7 @@ from tests.fakes import (
     InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryExamRepository,
+    InMemoryFeedbackRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
     InMemoryImportRepository,
@@ -272,6 +274,11 @@ class World:
             details=self.card_details_starter,
         )
         self.grammar = GrammarMapService(profiles=self.profiles, reports=self.reports)
+        self.feedback = FeedbackService(
+            repository=InMemoryFeedbackRepository(),
+            owners=frozenset({OWNER}),
+            clock=self.clock,
+        )
         self.flag_store = InMemoryFlagRepository()
         self.flags = FlagService(
             conversations=self.conversations,

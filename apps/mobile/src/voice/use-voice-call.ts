@@ -3,6 +3,7 @@ import { useSharedValue, withTiming, type SharedValue } from 'react-native-reani
 import { motion } from '@konvami/design-tokens';
 import type { CallPlan, CallPurpose } from '@konvami/api-client';
 import { mouthOpenness, visemeAt, visemeIndex } from '@/lib/lip-sync';
+import { track } from '@/analytics';
 import { conversationReducer, INITIAL_CONVERSATION, type ConversationState } from './conversation';
 import { VoiceError, type StartedCall, type VoiceEngine, type VoiceErrorCode } from './engine';
 import type { HelpKind } from './help';
@@ -85,6 +86,8 @@ export function useVoiceCall(
         if (!current) return;
         setStarted(answer);
         setStatus('live');
+        // Counts only if the learner agreed to usage counts (6.7); the purpose is the only detail.
+        track('conversation_started', { purpose });
       },
       (error: unknown) => fail(error instanceof VoiceError ? error.code : 'unknown'),
     );

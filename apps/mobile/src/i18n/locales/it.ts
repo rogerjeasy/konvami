@@ -1981,6 +1981,7 @@ export const it: Translation = {
       you: 'Tu',
       partners: 'Partner',
       privacy: 'Privacy e sicurezza',
+      help: 'Aiuto',
     },
     rows: {
       costs: 'Costi',
@@ -2009,6 +2010,10 @@ export const it: Translation = {
       privacyHint: 'Che cosa riceve ogni fornitore di IA',
       security: 'Sicurezza',
       securityHint: 'Password, email e dispositivi',
+      help: 'Aiuto e feedback',
+      helpHint: 'Risposte, assistenza, e dicci cosa migliorare',
+      feedbackInbox: 'Feedback',
+      feedbackInboxHint: 'Ciò che gli studenti ti hanno inviato',
     },
     version: 'Konvami {{version}}',
     saved: 'Salvato',
@@ -2133,6 +2138,11 @@ export const it: Translation = {
       note: 'I tuoi partner sono sempre IA e non fingono mai di essere umani. Per revocare il tuo consenso, elimina il tuo account.',
       delete: 'Elimina account',
       deleteHint: 'Rimuove il tuo account e tutto il suo contenuto',
+      analytics: {
+        label: 'Condividi dati d’uso anonimi',
+        on: 'Konvami conta pochi eventi, come l’apertura dell’app o l’inizio di una conversazione. Mai il tuo nome, il tuo account, le tue registrazioni o ciò che dici. Puoi disattivarlo in qualsiasi momento.',
+        off: 'Non viene contato nulla. Attivalo per aiutarci a capire cosa viene usato.',
+      },
       recordings: {
         label: 'Conserva le registrazioni delle mie conversazioni',
         on: 'Puoi riascoltare le tue conversazioni. Solo tu puoi ascoltarle.',
@@ -2438,6 +2448,85 @@ export const it: Translation = {
     actionFailed: 'Non ha funzionato. Riprova.',
     notOwner: 'Questa pagina è riservata all’account del proprietario.',
     loading: 'Caricamento delle segnalazioni',
+  },
+  help: {
+    title: 'Aiuto e feedback',
+    body: 'Risposte alle domande più comuni e un modo per dirci cosa migliorare.',
+    faqTitle: 'Domande frequenti',
+    faq: {
+      start: {
+        q: 'Come inizio una conversazione?',
+        a: 'Apri la scheda Parla, scegli un partner e tocca Inizia. Una conversazione dura al massimo 10 minuti.',
+      },
+      partner: {
+        q: 'Con chi sto parlando?',
+        a: 'Con un partner IA, mai con una persona. Voce e carattere sono fatti per te e puoi cambiarli in I miei partner.',
+      },
+      mistakes: {
+        q: 'Quando vedo i miei errori?',
+        a: 'Durante una conversazione, alcune correzioni compaiono con discrezione sotto le tue battute. Poi il tuo resoconto elenca ogni errore con una spiegazione. Puoi nascondere le correzioni dal vivo nel foglio Aiuto di una conversazione.',
+      },
+      minutes: {
+        q: 'Quanti minuti di voce ho?',
+        a: 'Hai un monte ore settimanale, mostrato nel tuo profilo, che riparte ogni lunedì. Le schede di ripasso e le domande scritte al Tutor non usano minuti di voce.',
+      },
+      recordings: {
+        q: 'Le mie conversazioni vengono registrate?',
+        a: 'Solo se conservi le registrazioni. Puoi disattivarlo in Privacy e IA, e così vengono eliminate anche quelle conservate finora.',
+      },
+      wrong: {
+        q: 'E se un partner dice qualcosa di sbagliato o offensivo?',
+        a: 'Tocca la bandierina accanto alla battuta nella trascrizione, oppure «Non è giusto» su una correzione del resoconto. La segnalazione arriva a noi per essere esaminata.',
+      },
+      settings: {
+        q: 'Posso cambiare livello e obiettivi?',
+        a: 'Sì. Apri il tuo profilo, poi Apprendimento. Puoi anche chiedere a un partner, durante una conversazione, di cambiare un’impostazione.',
+      },
+      delete: {
+        q: 'Come elimino il mio account?',
+        a: 'Apri il tuo profilo, poi Privacy e IA, poi Elimina account. Vengono rimossi l’account e tutto ciò che contiene, registrazioni comprese.',
+      },
+    },
+    supportTitle: 'Contatto',
+    supportEmail: 'Scrivi all’assistenza',
+    feedbackTitle: 'Dicci cosa migliorare',
+    feedbackBody: 'Segnala un problema o condividi un’idea.',
+    category: {
+      label: 'Di cosa si tratta?',
+      bug: 'Un problema',
+      idea: 'Un’idea',
+      other: 'Altro',
+    },
+    message: 'Il tuo messaggio',
+    includeDevice: 'Includi dispositivo e versione dell’app',
+    includeDeviceHint:
+      'Aggiunge la versione dell’app, il sistema del telefono e se è iOS, Android o web. Nient’altro sul tuo telefono.',
+    privacy:
+      'Le tue conversazioni, registrazioni e resoconti non vengono inviati. Non possiamo rispondere ai messaggi inviati da qui.',
+    send: 'Invia',
+    sent: 'Grazie',
+    sentBody: 'Il tuo messaggio è stato inviato.',
+    another: 'Inviane un altro',
+    failedLimit: 'Hai inviato molti messaggi oggi. Riprova domani.',
+    failedUnavailable: 'Il messaggio non è stato inviato. Riprova.',
+  },
+  feedbackInbox: {
+    title: 'Feedback',
+    body: 'Ciò che gli studenti ti hanno inviato.',
+    status: {
+      open: 'Aperti',
+      done: 'Gestiti',
+    },
+    emptyOpen: 'Niente da leggere.',
+    emptyDone: 'Ancora niente di gestito.',
+    device: '{{platform}} · app {{appVersion}} · sistema {{osVersion}}',
+    sentOn: 'Inviato {{when}}',
+    markDone: 'Segna come gestito',
+    reopen: 'Riapri',
+    loadFailed: 'Non è stato possibile caricare i messaggi.',
+    actionFailed: 'Non ha funzionato. Riprova.',
+    notOwner: 'Questa pagina è per l’account del proprietario.',
+    loading: 'Caricamento dei feedback',
   },
   screenError: {
     title: 'Qualcosa è andato storto',

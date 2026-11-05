@@ -14,6 +14,7 @@ from uuid import UUID
 
 from mangum import Mangum
 
+from konvami_api import observability
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import AccountService
 from konvami_api.domain.card_details import CardDetailsService
@@ -25,6 +26,7 @@ from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -71,6 +73,7 @@ from konvami_api.persistence.repositories import (
     SqlConversationRepository,
     SqlDraftLog,
     SqlExamRepository,
+    SqlFeedbackRepository,
     SqlFlagRepository,
     SqlImportRepository,
     SqlLevelRepository,
@@ -163,6 +166,10 @@ class Clients:
 class Backend:
     services: Services
     realtime: OpenAiRealtime
+
+
+# Crash reporting starts with the container, so an error while building the backend is reported too.
+observability.init(os.environ)
 
 
 def _now() -> dt.datetime:
@@ -505,6 +512,9 @@ def build_backend(
             clock=_now,
         ),
         then_vs_now=ThenVsNowService(conversations=conversations, recordings=recordings),
+        feedback=FeedbackService(
+            repository=SqlFeedbackRepository(sql), owners=costs.owners, clock=_now
+        ),
         flags=FlagService(
             conversations=conversations,
             reports=reports,

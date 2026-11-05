@@ -6,7 +6,7 @@ import { usePremiumVoices, useProfileServices } from './services';
 
 /**
  * The learner's choice about ElevenLabs reading text aloud (consent text v3, spec §6.19), for the
- * screens that change it after sign-up (6.7 Privacy and AI, 6.21 Read-aloud voice).
+ * screens that change it after sign-up (6.7 Privacy and AI, 6.22 Read-aloud voice).
  *
  * `offered` is false until the server says ElevenLabs is set up: until then nobody is asked about
  * it. A change is written to the account at once and the server's view is read again, because

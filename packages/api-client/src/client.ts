@@ -53,6 +53,15 @@ export type PronunciationDrill = Schemas['PronunciationAttemptIn']['drill'];
 export type PronunciationAttempt = Schemas['PronunciationAttemptOut'];
 /** The corrections of a report the learner said again, and whether they got one right. */
 export type Retries = Schemas['RetriesOut'];
+/** A message to the owner: a bug, an idea or anything else (spec §6.21.4). */
+export type FeedbackInput = Schemas['FeedbackIn'];
+export type FeedbackCategory = FeedbackInput['category'];
+/** The device and app version a learner chose to send along with a message. */
+export type FeedbackDevice = Schemas['DeviceIn'];
+export type FeedbackStatus = Schemas['InboxFeedbackOut']['status'];
+/** A message as the owner reads it in the inbox. */
+export type InboxFeedback = Schemas['InboxFeedbackOut'];
+
 /** A partner's line or a correction the learner reported (spec §16.1). */
 export type Flag = Schemas['FlagOut'];
 export type FlagInput = Schemas['FlagIn'];
@@ -420,6 +429,13 @@ export interface ApiClient {
   sendPenPalReply(personaId: string, note: SpokenRecording): Promise<PenPalReply>;
   /** Has a note or an answer that failed written again. Fails with `not_found`, `retry_limit`. */
   retryPenPalNote(noteId: string): Promise<PenPalNote>;
+
+  /** Sends the owner a message. Fails with `invalid_value`, `feedback_limit`. */
+  sendFeedback(input: FeedbackInput): Promise<Schemas['FeedbackOut']>;
+  /** The owner's inbox (open messages unless `status` says otherwise); fails `not_owner`. */
+  getFeedbackInbox(status?: FeedbackStatus): Promise<{ messages: InboxFeedback[] }>;
+  /** Marks a message done, or opens it again; the owner only. */
+  resolveFeedback(id: string, status: FeedbackStatus): Promise<InboxFeedback>;
   /**
    * Reports a partner's line or a correction of a conversation; reporting one again changes the
    * reason. Fails with `not_found`, `invalid_value`, `flag_limit`.
@@ -716,6 +732,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('POST', `/v1/pen-pal/${encodeURIComponent(personaId)}/replies`, note),
     retryPenPalNote: (noteId) =>
       request('POST', `/v1/pen-pal/notes/${encodeURIComponent(noteId)}/retry`),
+
+    sendFeedback: (input) => request('POST', '/v1/feedback', input),
+    getFeedbackInbox: (status) => request('GET', withQuery('/v1/owner/feedback', { status })),
+    resolveFeedback: (id, status) =>
+      request('PUT', `/v1/owner/feedback/${encodeURIComponent(id)}`, { status }),
     flagItem: (conversationId, input) =>
       request('PUT', `/v1/conversations/${encodeURIComponent(conversationId)}/flags`, input),
     getFlags: (conversationId) =>

@@ -102,6 +102,7 @@ module "api" {
     owners      = var.cost_owners
   }
   alert_topic_arn      = try(module.budget[0].alert_topic_arn, "")
+  sentry_dsn           = var.sentry_dsn
   cors_allowed_origins = var.web_preview_origins
 }
 

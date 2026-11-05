@@ -838,6 +838,34 @@
         "title": "DeckSummaryOut",
         "type": "object"
       },
+      "DeviceIn": {
+        "additionalProperties": false,
+        "description": "The device and app version a learner chose to send with a message.",
+        "properties": {
+          "appVersion": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Appversion",
+            "type": "string"
+          },
+          "osVersion": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Osversion",
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Platform"
+          }
+        },
+        "required": [
+          "appVersion",
+          "platform",
+          "osVersion"
+        ],
+        "title": "DeviceIn",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "error": {
@@ -1120,6 +1148,106 @@
         ],
         "title": "ExampleOut",
         "type": "object"
+      },
+      "FeedbackCategory": {
+        "enum": [
+          "bug",
+          "idea",
+          "other"
+        ],
+        "type": "string"
+      },
+      "FeedbackIn": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/FeedbackCategory"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "message"
+        ],
+        "title": "FeedbackIn",
+        "type": "object"
+      },
+      "FeedbackInboxOut": {
+        "additionalProperties": false,
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/InboxFeedbackOut"
+            },
+            "title": "Messages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "messages"
+        ],
+        "title": "FeedbackInboxOut",
+        "type": "object"
+      },
+      "FeedbackOut": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/FeedbackCategory"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "createdAt"
+        ],
+        "title": "FeedbackOut",
+        "type": "object"
+      },
+      "FeedbackResolution": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/FeedbackStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "FeedbackResolution",
+        "type": "object"
+      },
+      "FeedbackStatus": {
+        "enum": [
+          "open",
+          "done"
+        ],
+        "type": "string"
       },
       "FieldOut": {
         "additionalProperties": false,
@@ -2171,6 +2299,65 @@
           "limit"
         ],
         "title": "ImportsOut",
+        "type": "object"
+      },
+      "InboxFeedbackOut": {
+        "additionalProperties": false,
+        "description": "A message as the owner reads it. Nobody is named: the owner answers through support.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/FeedbackCategory"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "resolvedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolvedat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FeedbackStatus"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "createdAt",
+          "message",
+          "device",
+          "status",
+          "resolvedAt"
+        ],
+        "title": "InboxFeedbackOut",
         "type": "object"
       },
       "LanguageOut": {
@@ -4195,6 +4382,14 @@
         ],
         "title": "PlanWordOut",
         "type": "object"
+      },
+      "Platform": {
+        "enum": [
+          "ios",
+          "android",
+          "web"
+        ],
+        "type": "string"
       },
       "PremiumVoiceChoiceIn": {
         "additionalProperties": false,
@@ -8597,6 +8792,65 @@
         "summary": "Get Next Simulation"
       }
     },
+    "/v1/feedback": {
+      "post": {
+        "description": "Sends the owner a bug report, an idea or any other message (spec \u00a76.21.4).",
+        "operationId": "sendFeedback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Send Feedback"
+      }
+    },
     "/v1/grammar": {
       "get": {
         "description": "Every grammar topic of the language learned, with how well the learner has it.",
@@ -9541,6 +9795,155 @@
           }
         },
         "summary": "Get Costs"
+      }
+    },
+    "/v1/owner/feedback": {
+      "get": {
+        "description": "The owner's inbox of feedback (open messages unless `status` says otherwise).",
+        "operationId": "getFeedbackInbox",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FeedbackStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "open",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackInboxOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Feedback Inbox"
+      }
+    },
+    "/v1/owner/feedback/{feedback_id}": {
+      "put": {
+        "description": "Marks a message done, or open again.",
+        "operationId": "resolveFeedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "feedback_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Feedback Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackResolution"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxFeedbackOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Feedback"
       }
     },
     "/v1/owner/flags": {

@@ -19,7 +19,7 @@ import { useElevenLabsConsent } from '@/profile/use-elevenlabs-consent';
 import { ProfilePage } from './page';
 
 /**
- * 6.21 Read-aloud voice (spec §6.21.2): the premium voice (ElevenLabs) that reads cards, the
+ * 6.22 Read-aloud voice (spec §6.21.2): the premium voice (ElevenLabs) that reads cards, the
  * weekly check-in and an exam's model answers aloud. Live conversations keep the partners' own
  * voices. The voices are listed with a sample each, after the learner agreed to ElevenLabs and
  * when they may use premium voices; the standard voice is always one of the choices.

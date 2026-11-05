@@ -1963,6 +1963,7 @@ export const en = {
       you: 'You',
       partners: 'Partners',
       privacy: 'Privacy and security',
+      help: 'Help',
     },
     rows: {
       costs: 'Costs',
@@ -1991,6 +1992,10 @@ export const en = {
       privacyHint: 'What each AI provider receives',
       security: 'Security',
       securityHint: 'Password, email and devices',
+      help: 'Help and feedback',
+      helpHint: 'Answers, support, and tell us what to improve',
+      feedbackInbox: 'Feedback',
+      feedbackInboxHint: 'What learners sent you',
     },
     version: 'Konvami {{version}}',
     saved: 'Saved',
@@ -2113,6 +2118,11 @@ export const en = {
       note: 'Your partners are always AI and never claim to be human. To withdraw your agreement, delete your account.',
       delete: 'Delete account',
       deleteHint: 'Removes your account and everything in it',
+      analytics: {
+        label: 'Share anonymous usage data',
+        on: 'Konvami counts a few events, like opening the app or starting a conversation. Never your name, account, recordings or anything you say. Turn it off anytime.',
+        off: 'Nothing is counted. Turn this on to help us see what gets used.',
+      },
       recordings: {
         label: 'Keep recordings of my conversations',
         on: 'You can listen to your conversations again. Only you can play them.',
@@ -2414,6 +2424,85 @@ export const en = {
     actionFailed: 'That didn’t work. Try again.',
     notOwner: 'This page is for the owner’s account.',
     loading: 'Loading reports',
+  },
+  help: {
+    title: 'Help and feedback',
+    body: 'Answers to common questions, and a way to tell us what to improve.',
+    faqTitle: 'Common questions',
+    faq: {
+      start: {
+        q: 'How do I start a conversation?',
+        a: 'Open the Talk tab, choose a partner and tap Start. A conversation lasts up to 10 minutes.',
+      },
+      partner: {
+        q: 'Who am I talking to?',
+        a: 'An AI partner, never a person. Its voice and character are made for you, and you can change them in My partners.',
+      },
+      mistakes: {
+        q: 'When do I see my mistakes?',
+        a: 'During a conversation, a few corrections appear gently under your lines. Afterwards your report lists every mistake with an explanation. You can hide the live corrections in the Help sheet of a conversation.',
+      },
+      minutes: {
+        q: 'How many voice minutes do I have?',
+        a: 'You get a weekly allowance, shown on your Profile, which starts again every Monday. Flashcards and typed questions to the Tutor don’t use voice minutes.',
+      },
+      recordings: {
+        q: 'Are my conversations recorded?',
+        a: 'Only if you keep recordings. You can turn this off in Privacy and AI, which also deletes the ones kept so far.',
+      },
+      wrong: {
+        q: 'What if a partner says something wrong or offensive?',
+        a: 'Tap the flag next to the line in the transcript, or “That’s wrong” on a correction in your report. It goes to us for review.',
+      },
+      settings: {
+        q: 'Can I change my level and goals?',
+        a: 'Yes. Open your Profile, then Learning. You can also ask a partner in a conversation to change a setting.',
+      },
+      delete: {
+        q: 'How do I delete my account?',
+        a: 'Open your Profile, then Privacy and AI, then Delete account. It removes your account and everything in it, recordings included.',
+      },
+    },
+    supportTitle: 'Contact',
+    supportEmail: 'Email support',
+    feedbackTitle: 'Tell us what to improve',
+    feedbackBody: 'Report a problem or share an idea.',
+    category: {
+      label: 'What is it about?',
+      bug: 'A problem',
+      idea: 'An idea',
+      other: 'Something else',
+    },
+    message: 'Your message',
+    includeDevice: 'Include device and app version',
+    includeDeviceHint:
+      'Adds the app version, your phone’s system and whether it is iOS, Android or the web. Nothing else about your phone.',
+    privacy:
+      'Your conversations, recordings and reports are not sent. We can’t reply to messages sent here.',
+    send: 'Send',
+    sent: 'Thank you',
+    sentBody: 'Your message was sent.',
+    another: 'Send another',
+    failedLimit: 'You have sent a lot of messages today. Please try again tomorrow.',
+    failedUnavailable: 'Your message couldn’t be sent. Please try again.',
+  },
+  feedbackInbox: {
+    title: 'Feedback',
+    body: 'What learners sent you.',
+    status: {
+      open: 'Open',
+      done: 'Done',
+    },
+    emptyOpen: 'Nothing to read.',
+    emptyDone: 'Nothing done yet.',
+    device: '{{platform}} · app {{appVersion}} · system {{osVersion}}',
+    sentOn: 'Sent {{when}}',
+    markDone: 'Mark done',
+    reopen: 'Reopen',
+    loadFailed: 'The messages couldn’t be loaded.',
+    actionFailed: 'That didn’t work. Try again.',
+    notOwner: 'This page is for the owner’s account.',
+    loading: 'Loading feedback',
   },
   screenError: {
     title: 'Something went wrong',

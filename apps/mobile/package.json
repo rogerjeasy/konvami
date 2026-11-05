@@ -22,6 +22,7 @@
     "@expo/metro-runtime": "~57.0.16",
     "@konvami/api-client": "workspace:*",
     "@konvami/design-tokens": "workspace:*",
+    "@sentry/react-native": "~7.11.0",
     "expo": "~57.0.27",
     "expo-asset": "~57.0.19",
     "expo-audio": "~57.0.5",
