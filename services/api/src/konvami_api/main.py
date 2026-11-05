@@ -205,6 +205,8 @@ def build_backend(
         model=models.personas,
         drafts=SqlDraftLog(sql),
         clock=_now,
+        # The plan is built below, with the voice settings; the limit is asked per request.
+        capacity=lambda user_id: plans.persona_limit(user_id),
     )
     conversations = ConversationService(SqlConversationRepository(sql), personas)
     push = PushService(
@@ -290,6 +292,7 @@ def build_backend(
         packs=SqlPackRepository(sql),
         owners=costs.owners,
         legacy_weekly_seconds=voice_config.weekly_seconds,
+        used_seconds=sessions.seconds_used,
         clock=_now,
     )
     speech = OpenAiSpeech(openai_key, meter=meter)

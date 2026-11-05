@@ -23,6 +23,8 @@ NOW = dt.datetime(2026, 11, 4, 12, 0, tzinfo=dt.UTC)
 WEEK = dt.date(2026, 11, 2)
 MONTH = dt.timedelta(days=30)
 TESTERS_SECONDS = 3600
+# The free plan's minutes per week, in seconds.
+QUOTA = 15 * 60
 
 SETTINGS = PlanSettings(
     enforce=True,
@@ -39,13 +41,24 @@ class Clock:
         return self.now
 
 
-def service(settings: PlanSettings = SETTINGS, clock: Clock | None = None) -> PlanService:
+def service(
+    settings: PlanSettings = SETTINGS,
+    clock: Clock | None = None,
+    used: dict[tuple[UUID, dt.date], int] | None = None,
+) -> PlanService:
+    """`used` is the seconds each learner's calls used in each week (the voice sessions')."""
+    seconds = used if used is not None else {}
+
+    def seconds_used(user_id: UUID, week: dt.date) -> int:
+        return seconds.get((user_id, week), 0)
+
     return PlanService(
         settings=settings,
         entitlements=InMemoryEntitlementRepository(),
-        packs=InMemoryPackRepository(),
+        packs=InMemoryPackRepository(seconds_used),
         owners=frozenset({OWNER}),
         legacy_weekly_seconds=TESTERS_SECONDS,
+        used_seconds=seconds_used,
         clock=clock or Clock(),
     )
 
@@ -197,32 +210,112 @@ def test_a_pack_adds_its_minutes_once_however_often_the_store_says_so() -> None:
     plans.apply(event("NON_RENEWING_PURCHASE", product_id="minutes_60", transaction_id="tx-9"))
     plans.apply(event("NON_RENEWING_PURCHASE", product_id="minutes_60", transaction_id="tx-9"))
 
-    assert plans.plan(LEARNER, WEEK).pack_seconds == 3600
-    assert plans.weekly_seconds(LEARNER, WEEK, used=0) == 15 * 60 + 3600
+    assert plans.plan(LEARNER).pack_seconds == 3600
+    assert plans.weekly_seconds(LEARNER, WEEK) == QUOTA + 3600
 
 
-def test_a_week_past_its_quota_draws_from_the_packs_and_the_next_week_finds_less() -> None:
-    plans = service()
+def test_minutes_used_from_a_pack_stay_used_however_many_weeks_pass() -> None:
+    clock = Clock()
+    used: dict[tuple[UUID, dt.date], int] = {}
+    plans = service(clock=clock, used=used)
     plans.apply(event("NON_RENEWING_PURCHASE", product_id="minutes_60", transaction_id="tx-9"))
-    quota = 15 * 60
 
-    # 10 minutes past the quota this week.
-    plans.weekly_seconds(LEARNER, WEEK, used=quota + 600)
-    left_this_week = plans.plan(LEARNER, WEEK).pack_seconds
-    next_week = WEEK + dt.timedelta(days=7)
-    cap_next_week = plans.weekly_seconds(LEARNER, next_week, used=0)
+    # The week's minutes are granted when a call starts; the week then goes 10 minutes past
+    # its quota. Nobody reads the allowance again before the week ends.
+    plans.weekly_seconds(LEARNER, WEEK)
+    used[(LEARNER, WEEK)] = QUOTA + 600
+    balances = []
+    for weeks in (1, 2, 5):
+        clock.now = NOW + dt.timedelta(weeks=weeks)
+        balances.append(plans.plan(LEARNER).pack_seconds)
+        later = WEEK + dt.timedelta(weeks=weeks)
+        assert plans.weekly_seconds(LEARNER, later) == QUOTA + 3000
 
-    assert left_this_week == 3000
-    assert cap_next_week == quota + 3000
+    assert balances == [3000, 3000, 3000]
+
+
+def test_time_a_call_gives_back_is_given_back_to_the_pack_too() -> None:
+    used: dict[tuple[UUID, dt.date], int] = {}
+    plans = service(used=used)
+    plans.apply(event("NON_RENEWING_PURCHASE", product_id="minutes_60", transaction_id="tx-9"))
+    plans.weekly_seconds(LEARNER, WEEK)
+
+    used[(LEARNER, WEEK)] = QUOTA + 900
+    during = plans.plan(LEARNER).pack_seconds
+    used[(LEARNER, WEEK)] = QUOTA + 300
+    after = plans.plan(LEARNER).pack_seconds
+
+    assert (during, after) == (2700, 3300)
 
 
 def test_a_pack_that_is_used_up_gives_nothing_more() -> None:
+    used: dict[tuple[UUID, dt.date], int] = {}
+    plans = service(used=used)
+    plans.apply(event("NON_RENEWING_PURCHASE", product_id="minutes_60", transaction_id="tx-9"))
+    plans.weekly_seconds(LEARNER, WEEK)
+
+    used[(LEARNER, WEEK)] = QUOTA + 3600
+
+    assert plans.plan(LEARNER).pack_seconds == 0
+    assert plans.weekly_seconds(LEARNER, WEEK + dt.timedelta(weeks=1)) == QUOTA
+
+
+def test_a_refunded_pack_takes_its_minutes_back_and_leaves_the_subscription() -> None:
     plans = service()
+    plans.apply(event("INITIAL_PURCHASE"))
     plans.apply(event("NON_RENEWING_PURCHASE", product_id="minutes_60", transaction_id="tx-9"))
 
-    plans.weekly_seconds(LEARNER, WEEK, used=15 * 60 + 5000)
+    plans.apply(
+        event(
+            "CANCELLATION",
+            product_id="minutes_60",
+            transaction_id="tx-9",
+            cancel_reason="CUSTOMER_SUPPORT",
+            at=NOW + dt.timedelta(hours=1),
+        )
+    )
+    # The pack arriving again after its refund is not counted again.
+    plans.apply(event("NON_RENEWING_PURCHASE", product_id="minutes_60", transaction_id="tx-9"))
 
-    assert plans.plan(LEARNER, WEEK).pack_seconds == 0
+    plan = plans.plan(LEARNER)
+    assert (plan.pack_seconds, plan.tier) == (0, Tier.PLUS)
+
+
+def test_the_refund_of_a_subscription_the_learner_no_longer_has_changes_nothing() -> None:
+    plans = service()
+    plans.apply(event("INITIAL_PURCHASE", product_id="pro_yearly", entitlement_ids=("pro",)))
+
+    plans.apply(
+        event(
+            "CANCELLATION",
+            product_id="plus_monthly",
+            cancel_reason="CUSTOMER_SUPPORT",
+            at=NOW + dt.timedelta(hours=1),
+        )
+    )
+
+    assert plans.plan(LEARNER).tier is Tier.PRO
+
+
+def test_a_transfer_moves_the_subscription_to_the_new_account() -> None:
+    other = UUID("22222222-2222-4222-8222-222222222222")
+    clock = Clock()
+    plans = service(clock=clock)
+    plans.apply(event("INITIAL_PURCHASE"))
+
+    clock.now = NOW + dt.timedelta(hours=1)
+    plans.apply(
+        event(
+            "TRANSFER",
+            user_id=other,
+            at=clock.now,
+            transferred_from=(LEARNER,),
+            transferred_to=(other,),
+        )
+    )
+
+    assert plans.plan(LEARNER).tier is Tier.FREE
+    assert (plans.plan(other).tier, plans.plan(other).expires_at) == (Tier.PLUS, NOW + MONTH)
 
 
 def test_a_product_that_is_not_a_pack_adds_no_minutes() -> None:
@@ -230,7 +323,7 @@ def test_a_product_that_is_not_a_pack_adds_no_minutes() -> None:
 
     plans.apply(event("NON_RENEWING_PURCHASE", product_id="gift_card", transaction_id="tx-3"))
 
-    assert plans.plan(LEARNER, WEEK).pack_seconds == 0
+    assert plans.plan(LEARNER).pack_seconds == 0
 
 
 @pytest.mark.parametrize(

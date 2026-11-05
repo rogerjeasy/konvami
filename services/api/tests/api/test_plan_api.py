@@ -86,6 +86,36 @@ def test_minute_packs_add_to_the_allowance_once(call: Call) -> None:
     assert call("GET", "/v1/plan").body["packSeconds"] == 3600
 
 
+def test_a_refunded_pack_leaves_the_allowance_as_it_was_before(call: Call) -> None:
+    pack = hook(type="NON_RENEWING_PURCHASE", product_id="minutes_60", period_type="NORMAL")
+    send(call, pack)
+    send(
+        call, hook(**{**pack["event"], "type": "CANCELLATION", "cancel_reason": "CUSTOMER_SUPPORT"})
+    )
+
+    assert call("GET", "/v1/voice/allowance").body["weeklySeconds"] == 15 * 60
+
+
+def test_a_transfer_moves_the_plan_to_the_account_named(call: Call) -> None:
+    send(call, hook())
+    other = "22222222-2222-4222-8222-222222222222"
+
+    sent = send(
+        call,
+        hook(
+            type="TRANSFER",
+            app_user_id="",
+            transferred_from=[USER],
+            transferred_to=[other],
+            event_timestamp_ms=NOW_MS + 1,
+        ),
+    )
+
+    assert sent.status == 200
+    assert call("GET", "/v1/plan", subject=other).body["tier"] == "plus"
+    assert call("GET", "/v1/plan").body["autoRenew"] is False
+
+
 def test_the_webhook_refuses_a_caller_without_the_secret(call: Call) -> None:
     wrong = send(call, hook(), secret="not-the-secret")  # noqa: S106 - a test value
     missing = send(call, hook(), secret=None)
@@ -104,6 +134,16 @@ def test_an_event_about_nobody_we_know_is_accepted_and_ignored(call: Call) -> No
 @pytest.mark.usefixtures("in_app")
 def test_the_free_plan_refuses_a_third_partner(call: Call) -> None:
     refused = call("POST", "/v1/personas", GRETA)
+
+    assert (refused.status, refused.body["error"]["code"]) == (402, "plan_required")
+    assert len(call("GET", "/v1/personas").body["personas"]) == 2
+
+
+@pytest.mark.usefixtures("in_app")
+def test_the_free_plan_refuses_a_copy_of_a_partner_too(call: Call) -> None:
+    partners = call("GET", "/v1/personas").body["personas"]
+
+    refused = call("POST", f"/v1/personas/{partners[0]['id']}/duplicate")
 
     assert (refused.status, refused.body["error"]["code"]) == (402, "plan_required")
     assert len(call("GET", "/v1/personas").body["personas"]) == 2

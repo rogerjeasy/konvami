@@ -8587,6 +8587,16 @@
             },
             "description": "Unauthorized"
           },
+          "402": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Payment Required"
+          },
           "404": {
             "content": {
               "application/json": {

@@ -2496,23 +2496,41 @@ _CREDIT_PACK = f"""
     SELECT count(*) AS credited FROM added
 """
 
+# What was bought, what earlier weeks used from it (the seconds each used beyond the quota it had,
+# worked out from voice_week so that time given back by a call that ended early is given back
+# here too), and the quota of the week asked about.
 _PACK_BALANCE = """
     SELECT
         CAST(coalesce((SELECT purchased_seconds FROM minute_pack
                        WHERE user_id = CAST(:user_id AS uuid)), 0) AS bigint) AS purchased,
-        CAST(coalesce((SELECT sum(seconds) FROM minute_pack_week
-                       WHERE user_id = CAST(:user_id AS uuid)
-                         AND week <> CAST(:week AS date)), 0) AS bigint) AS other,
-        CAST(coalesce((SELECT seconds FROM minute_pack_week
-                       WHERE user_id = CAST(:user_id AS uuid)
-                         AND week = CAST(:week AS date)), 0) AS bigint) AS this
+        CAST(coalesce((SELECT sum(GREATEST(0, vw.seconds - mw.quota_seconds))
+                       FROM minute_pack_week mw
+                       JOIN voice_week vw ON vw.user_id = mw.user_id AND vw.week = mw.week
+                       WHERE mw.user_id = CAST(:user_id AS uuid)
+                         AND mw.week <> CAST(:week AS date)), 0) AS bigint) AS other,
+        (SELECT quota_seconds FROM minute_pack_week
+         WHERE user_id = CAST(:user_id AS uuid) AND week = CAST(:week AS date)) AS quota
 """
 
-_DRAW_PACK = f"""
+_RECORD_QUOTA = f"""
     WITH {_ENSURE_USER}
-    INSERT INTO minute_pack_week (user_id, week, seconds)
-    VALUES (CAST(:user_id AS uuid), CAST(:week AS date), :seconds)
-    ON CONFLICT (user_id, week) DO UPDATE SET seconds = EXCLUDED.seconds
+    INSERT INTO minute_pack_week (user_id, week, quota_seconds)
+    VALUES (CAST(:user_id AS uuid), CAST(:week AS date), :quota)
+    ON CONFLICT (user_id, week) DO UPDATE SET quota_seconds = EXCLUDED.quota_seconds
+"""
+
+# Marks a purchase refunded once, and takes its seconds off the total.
+_REFUND_PACK = """
+    WITH refunded AS (
+        UPDATE minute_pack_purchase SET refunded_at = now()
+        WHERE transaction_id = :transaction_id AND refunded_at IS NULL
+        RETURNING user_id, seconds
+    ),
+    taken AS (
+        UPDATE minute_pack SET purchased_seconds = GREATEST(0, purchased_seconds - refunded.seconds)
+        FROM refunded WHERE minute_pack.user_id = refunded.user_id
+    )
+    SELECT count(*) AS refunded FROM refunded
 """
 
 
@@ -2532,14 +2550,22 @@ class SqlPackRepository:
         )
         return bool(rows and int(rows[0]["credited"]))
 
+    def refund(self, transaction_id: str) -> bool:
+        rows = self._client.execute(_REFUND_PACK, {"transaction_id": transaction_id})
+        return bool(rows and int(rows[0]["refunded"]))
+
     def balance(self, user_id: UUID, week: dt.date) -> plans.PackBalance:
         rows = self._client.execute(
             _PACK_BALANCE, {"user_id": str(user_id), "week": week.isoformat()}
         )
         row = rows[0]
-        return plans.PackBalance(int(row["purchased"]), int(row["other"]), int(row["this"]))
+        quota = row["quota"]
+        return plans.PackBalance(
+            int(row["purchased"]), int(row["other"]), int(quota) if quota is not None else None
+        )
 
-    def draw(self, user_id: UUID, week: dt.date, seconds: int) -> None:
+    def record_quota(self, user_id: UUID, week: dt.date, quota_seconds: int) -> None:
         self._client.execute(
-            _DRAW_PACK, {"user_id": str(user_id), "week": week.isoformat(), "seconds": seconds}
+            _RECORD_QUOTA,
+            {"user_id": str(user_id), "week": week.isoformat(), "quota": quota_seconds},
         )

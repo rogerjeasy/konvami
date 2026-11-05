@@ -339,6 +339,7 @@ def services(
         model="gpt-6-luna",
         drafts=InMemoryDraftLog(),
         clock=clock,
+        capacity=lambda user: plans.persona_limit(user),
     )
     conversations = ConversationService(InMemoryConversationRepository(calls), personas)
     push = PushService(
@@ -421,9 +422,10 @@ def services(
     plans = PlanService(
         settings=plan_settings,
         entitlements=entitlement_store,
-        packs=InMemoryPackRepository(),
+        packs=InMemoryPackRepository(calls.seconds_used),
         owners=frozenset({UUID(OWNER)}),
         legacy_weekly_seconds=VOICE.weekly_seconds,
+        used_seconds=calls.seconds_used,
         clock=clock,
     )
     voice = VoiceCallService(

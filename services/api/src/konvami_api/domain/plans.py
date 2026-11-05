@@ -10,8 +10,11 @@ testers keep the `voice.weekly_minutes` they have and every feature is open, and
 account always has everything. Switching it on is the step that opens the app to the stores.
 
 Minute packs are bought once and used after the week's quota (spec §6.21.2 "Extra minutes after
-the quota is used up"). A pack never expires; a week that goes past its quota draws the rest
-from what was bought, and that draw is written down per week so it is counted once.
+the quota is used up"). A pack never expires. A week that goes past its quota has used the
+packs for the rest, and how much is never stored as a number of its own: it is worked out from
+the seconds the week really used (which a call that ends early gives back from) and the quota
+the week had (written down when the week's minutes are granted). So minutes used from a pack
+stay used however many weeks pass, and minutes given back are the learner's again.
 """
 
 import datetime as dt
@@ -103,13 +106,13 @@ class Entitlement:
 
 @dataclass(frozen=True)
 class PackBalance:
-    """Minutes bought in packs: all of them, and what earlier weeks drew."""
+    """Minutes bought in packs: all of them, what earlier weeks used, and the quota the week
+    being asked about had when its minutes were last granted (None before the first grant)."""
 
     purchased_seconds: int
-    # Drawn by every week except the one being asked about.
-    drawn_other_weeks: int
-    # What the week being asked about has drawn so far.
-    drawn_this_week: int = 0
+    # Used from the packs by every week except the one being asked about.
+    used_other_weeks: int
+    quota_this_week: int | None = None
 
 
 @dataclass(frozen=True)
@@ -127,7 +130,7 @@ class Plan:
     # Partners the learner may have; None for as many as they like.
     personas: int | None
     perks: frozenset[Perk]
-    # Minutes from packs not yet drawn, in seconds.
+    # Minutes from packs not yet used, in seconds.
     pack_seconds: int
 
 
@@ -144,10 +147,18 @@ class PackRepository(Protocol):
         """Adds a bought pack. False when this purchase was already counted."""
         ...
 
-    def balance(self, user_id: UUID, week: dt.date) -> PackBalance: ...
+    def refund(self, transaction_id: str) -> bool:
+        """Takes a refunded pack back. False when it is unknown or was already taken back; a
+        refunded purchase that arrives again is not counted again."""
+        ...
 
-    def draw(self, user_id: UUID, week: dt.date, seconds: int) -> None:
-        """Writes down what `week` drew from the packs (replacing what it had drawn)."""
+    def balance(self, user_id: UUID, week: dt.date) -> PackBalance:
+        """What was bought and what earlier weeks used from it (worked out from the seconds
+        each of them used and the quota each had)."""
+        ...
+
+    def record_quota(self, user_id: UUID, week: dt.date, quota_seconds: int) -> None:
+        """Writes down the quota `week` has, so that what it uses beyond it is told later."""
         ...
 
 
@@ -175,6 +186,9 @@ class StoreEvent:
     transaction_id: str
     # RevenueCat says why a subscription was cancelled; a refund ends it at once.
     cancel_reason: str
+    # A TRANSFER moves what one set of ids bought to another.
+    transferred_from: tuple[UUID, ...] = ()
+    transferred_to: tuple[UUID, ...] = ()
 
 
 # The event types that start or extend a subscription.
@@ -197,6 +211,11 @@ def token_matches(sent: str | None, expected: str) -> bool:
     return bool(expected) and sent is not None and hmac.compare_digest(sent, expected)
 
 
+def monday_of(day: dt.date) -> dt.date:
+    """The Monday that starts `day`'s week (when voice minutes come back, spec §6.19)."""
+    return day - dt.timedelta(days=day.weekday())
+
+
 class PlanService:
     def __init__(
         self,
@@ -206,20 +225,23 @@ class PlanService:
         packs: PackRepository,
         owners: frozenset[UUID],
         legacy_weekly_seconds: int,
+        used_seconds: Callable[[UUID, dt.date], int],
         clock: Callable[[], dt.datetime],
     ) -> None:
         """`legacy_weekly_seconds` is the testers' time (`voice.weekly_minutes`), used while
-        plans are not enforced."""
+        plans are not enforced; `used_seconds(learner, week)` is what the learner's calls used
+        in the week that starts on that Monday."""
         self._settings = settings
         self._entitlements = entitlements
         self._packs = packs
         self._owners = owners
         self._legacy = legacy_weekly_seconds
+        self._used = used_seconds
         self._clock = clock
 
     # --- What a learner has -------------------------------------------------------------------
 
-    def _tier(self, user_id: UUID) -> Entitlement | None:
+    def _bought(self, user_id: UUID) -> Entitlement | None:
         found = self._entitlements.get(user_id)
         if found is None:
             return None
@@ -231,23 +253,27 @@ class PlanService:
         minutes = self._settings.weekly_minutes.get(tier, TIERS[tier].weekly_minutes)
         return minutes * 60
 
-    def plan(self, user_id: UUID, week: dt.date | None = None) -> Plan:
-        """The learner's plan now. `week` (the Monday that starts it) is for the packs' share."""
-        bought = self._tier(user_id)
+    def _this_week(self) -> dt.date:
+        return monday_of(self._clock().astimezone(dt.UTC).date())
+
+    def plan(self, user_id: UUID) -> Plan:
+        """The learner's plan now."""
+        bought = self._bought(user_id)
         tier = bought.tier if bought else Tier.FREE
         if user_id in self._owners:
             tier = Tier.PRO
         spec = TIERS[tier]
         enforced = self._settings.enforce and user_id not in self._owners
-        balance = self._packs.balance(user_id, week or self._clock().date())
-        pack_left = max(
-            0, balance.purchased_seconds - balance.drawn_other_weeks - balance.drawn_this_week
-        )
+        week = self._this_week()
+        balance = self._packs.balance(user_id, week)
+        available = max(0, balance.purchased_seconds - balance.used_other_weeks)
         if enforced:
             weekly, personas, perks = self._quota(tier), spec.personas, spec.perks
+            over = max(0, self._used(user_id, week) - weekly)
         else:
             # The testers' time, and every feature open.
             weekly, personas, perks = self._legacy, None, frozenset(Perk)
+            over = 0
         return Plan(
             tier=tier,
             trial=bool(bought and bought.trial),
@@ -258,22 +284,20 @@ class PlanService:
             weekly_seconds=weekly,
             personas=personas,
             perks=perks,
-            pack_seconds=pack_left,
+            pack_seconds=max(0, available - over),
         )
 
-    def weekly_seconds(self, user_id: UUID, week: dt.date, used: int) -> int:
-        """The seconds the learner may talk in `week` altogether: their tier's quota, and, when
-        the week has gone past it, what the packs they bought cover. `used` is what the week
-        has used so far; what it drew from the packs is written down here."""
-        plan = self.plan(user_id, week)
+    def weekly_seconds(self, user_id: UUID, week: dt.date) -> int:
+        """The seconds the learner may talk in `week` altogether: their tier's quota and the
+        minutes of the packs they bought and have not used. Writes down the quota the week
+        has, so that what it uses beyond it counts as used from the packs from now on."""
+        plan = self.plan(user_id)
         if not plan.enforced:
             return plan.weekly_seconds
         balance = self._packs.balance(user_id, week)
-        available = max(0, balance.purchased_seconds - balance.drawn_other_weeks)
-        drawn = min(max(0, used - plan.weekly_seconds), available)
-        if drawn != balance.drawn_this_week:
-            self._packs.draw(user_id, week, drawn)
-        return plan.weekly_seconds + available
+        if balance.quota_this_week != plan.weekly_seconds:
+            self._packs.record_quota(user_id, week, plan.weekly_seconds)
+        return plan.weekly_seconds + max(0, balance.purchased_seconds - balance.used_other_weeks)
 
     def require(self, user_id: UUID, perk: Perk) -> None:
         """Raises `plan_required` when the learner's plan does not include `perk`."""
@@ -285,6 +309,10 @@ class PlanService:
         limit = self.plan(user_id).personas
         if limit is not None and have >= limit:
             raise PlanError("plan_required")
+
+    def persona_limit(self, user_id: UUID) -> int | None:
+        """How many partners the learner may have; None for as many as they like."""
+        return self.plan(user_id).personas
 
     # --- What the store says ------------------------------------------------------------------
 
@@ -310,6 +338,8 @@ class PlanService:
             self._expire(event)
         elif event.type == "BILLING_ISSUE":
             self._change(event, billing_issue=True)
+        elif event.type == "TRANSFER":
+            self._transfer(event)
         else:
             _log.info("store event %s ignored", event.type)
 
@@ -338,11 +368,19 @@ class PlanService:
             self._entitlements.save(replace(found, event_at=event.at, **changes))
 
     def _cancel(self, event: StoreEvent) -> None:
-        if event.cancel_reason == _REFUNDED:
-            self._expire(event)
-        else:
+        if event.cancel_reason != _REFUNDED:
             # The plan runs to its end; it just does not renew.
             self._change(event, auto_renew=False)
+        elif event.product_id in self._settings.packs:
+            # A refunded pack takes its minutes back and leaves the subscription alone.
+            if event.transaction_id:
+                self._packs.refund(event.transaction_id)
+        else:
+            found = self._entitlements.get(event.user_id)
+            # Only the refund of what the learner has now ends it: the refund of an earlier
+            # subscription they have since replaced does not.
+            if found is not None and found.product_id == event.product_id:
+                self._expire(event)
 
     def _expire(self, event: StoreEvent) -> None:
         found = self._entitlements.get(event.user_id)
@@ -350,3 +388,16 @@ class PlanService:
             self._entitlements.save(
                 replace(found, expires_at=event.at, auto_renew=False, event_at=event.at)
             )
+
+    def _transfer(self, event: StoreEvent) -> None:
+        """What one set of ids bought now belongs to another (the learner restored a purchase
+        into another account). Bought minutes stay where they were bought: a pack is spent."""
+        for source in event.transferred_from:
+            found = self._entitlements.get(source)
+            if found is None or found.event_at > event.at:
+                continue
+            self._entitlements.save(
+                replace(found, expires_at=event.at, auto_renew=False, event_at=event.at)
+            )
+            for target in event.transferred_to:
+                self._entitlements.save(replace(found, user_id=target, event_at=event.at))

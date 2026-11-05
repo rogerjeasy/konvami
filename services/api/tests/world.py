@@ -179,7 +179,9 @@ class World:
         self.charges = InMemoryChargeRepository()
         self.notifier = RecordingNotifier()
         self.entitlement_store = InMemoryEntitlementRepository()
-        self.pack_store = InMemoryPackRepository()
+        self.pack_store = InMemoryPackRepository(
+            lambda user, week: self.sessions.seconds_used(user, week)
+        )
         self.plan_settings = PlanSettings()
         self.plans = PlanService(
             settings=self.plan_settings,
@@ -187,6 +189,7 @@ class World:
             packs=self.pack_store,
             owners=frozenset({OWNER}),
             legacy_weekly_seconds=VOICE.weekly_seconds,
+            used_seconds=lambda user, week: self.sessions.seconds_used(user, week),
             clock=self.clock,
         )
         self.guard = SpendGuard(
@@ -219,6 +222,7 @@ class World:
             model="gpt-6-luna",
             drafts=InMemoryDraftLog(),
             clock=self.clock,
+            capacity=lambda user: self.plans.persona_limit(user),
         )
         self.accounts = FakeAccountDirectory(
             {

@@ -37,6 +37,7 @@ from konvami_api.domain.persona_parts import (
     Top,
     Voice,
 )
+from konvami_api.domain.plans import PlanError
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.text import TextModel, TextModelError, TextTask
 
@@ -499,7 +500,11 @@ class PersonaService:
         model: str,
         drafts: DraftLog,
         clock: Callable[[], dt.datetime],
+        capacity: Callable[[UUID], int | None] | None = None,
     ) -> None:
+        """`capacity(learner)` is how many partners their plan allows (None for as many as
+        they like); without it only `MAX_PARTNERS` limits them."""
+        self._capacity = capacity
         self._profiles = profiles
         self._onboarding = onboarding
         self._repository = repository
@@ -601,8 +606,14 @@ class PersonaService:
         language = self._language(user_id)
         if not language:
             raise PersonaError("no_language")
-        if len(self._repository.for_learner(user_id, language)) >= MAX_PARTNERS:
+        have = len(self._repository.for_learner(user_id, language))
+        if have >= MAX_PARTNERS:
             raise PersonaError("too_many")
+        # Every way of adding a partner (a new one, a copy) comes through here, so the plan's
+        # limit holds for all of them.
+        limit = self._capacity(user_id) if self._capacity is not None else None
+        if limit is not None and have >= limit:
+            raise PlanError("plan_required")
         return language
 
     def create(self, user_id: UUID, fields: Mapping[str, Any]) -> Persona:

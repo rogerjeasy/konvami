@@ -315,7 +315,6 @@ def _router(services: Services) -> APIRouter:
         responses=REFUSED | CONFLICT | PLAN_REQUIRED,
     )
     def create_persona(user: CurrentUser, persona: PersonaIn) -> PersonaOut:
-        services.plans.require_room_for_persona(user, len(services.personas.partners(user)))
         return PersonaOut.of(services.personas.create(user, persona.model_dump(exclude_unset=True)))
 
     @router.get("/personas/templates", operation_id="getPersonaTemplates")
@@ -341,7 +340,7 @@ def _router(services: Services) -> APIRouter:
     @router.post(
         "/personas/{persona_id}/duplicate",
         operation_id="duplicatePersona",
-        responses=NOT_FOUND | CONFLICT,
+        responses=NOT_FOUND | CONFLICT | PLAN_REQUIRED,
     )
     def duplicate_persona(user: CurrentUser, persona_id: UUID) -> PersonaOut:
         return PersonaOut.of(services.personas.duplicate(user, persona_id))
@@ -843,6 +842,9 @@ class _StoreEventBody(BaseModel):
     event_timestamp_ms: int
     transaction_id: str | None = None
     cancel_reason: str | None = None
+    # Of a TRANSFER: the ids that had a purchase and the ids that have it now.
+    transferred_from: list[str] | None = None
+    transferred_to: list[str] | None = None
 
 
 class _StoreHook(BaseModel):
@@ -854,11 +856,13 @@ class _StoreHook(BaseModel):
 def _store_event(body: _StoreEventBody) -> StoreEvent | None:
     """RevenueCat's event for a Konvami learner, or None for one about nobody we know: the app
     names the learner to RevenueCat by their id, so an anonymous id is not ours."""
-    for name in [body.app_user_id, *(body.aliases or [])]:
-        try:
-            user_id = UUID(name)
-        except ValueError:
-            continue
+    moved_from = _ids(body.transferred_from)
+    moved_to = _ids(body.transferred_to)
+    # The event is about the first Konvami id it names. A transfer names none of its own: it is
+    # about the ids it moves between.
+    named = [*_ids([body.app_user_id, *(body.aliases or [])]), *moved_to, *moved_from]
+    if named:
+        user_id = named[0]
         expires = body.expiration_at_ms
         return StoreEvent(
             id=body.id,
@@ -872,8 +876,21 @@ def _store_event(body: _StoreEventBody) -> StoreEvent | None:
             at=dt.datetime.fromtimestamp(body.event_timestamp_ms / 1000, dt.UTC),
             transaction_id=body.transaction_id or "",
             cancel_reason=body.cancel_reason or "",
+            transferred_from=moved_from,
+            transferred_to=moved_to,
         )
     return None
+
+
+def _ids(names: list[str] | None) -> tuple[UUID, ...]:
+    """The learners among RevenueCat's ids: the ones that are a Konvami id, not an anonymous one."""
+    found: list[UUID] = []
+    for name in names or []:
+        try:
+            found.append(UUID(name))
+        except ValueError:
+            continue
+    return tuple(found)
 
 
 def _webhook_router(services: Services) -> APIRouter:

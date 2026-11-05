@@ -314,12 +314,12 @@ class VoiceCallService:
         guard: SpendGuard | None = None,
         meter: Meter | None = None,
         checker: TurnChecker | None = None,
-        weekly_seconds: Callable[[UUID, dt.date, int], int] | None = None,
+        weekly_seconds: Callable[[UUID, dt.date], int] | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
         `meter` they are not metered; without a `checker` no turn is checked live. Without
-        `weekly_seconds` (the learner, the week, the seconds used so far: the seconds the week
-        allows) every learner has the settings' minutes."""
+        `weekly_seconds` (the learner and the week: the seconds the week allows them) every
+        learner has the settings' minutes."""
         self._weekly = weekly_seconds
         self._settings = settings
         self._checker = checker
@@ -433,20 +433,17 @@ class VoiceCallService:
     def allowance(self, user_id: UUID) -> Allowance:
         """The learner's voice minutes this week."""
         start = week_start(self._clock())
-        used = self._sessions.seconds_used(user_id, start.date())
         return Allowance(
-            weekly_seconds=self._weekly_seconds(user_id, start.date(), used),
-            used_seconds=used,
+            weekly_seconds=self._weekly_seconds(user_id, start.date()),
+            used_seconds=self._sessions.seconds_used(user_id, start.date()),
             resets_at=start + WEEK,
         )
 
-    def _weekly_seconds(self, user_id: UUID, week: dt.date, used: int | None = None) -> int:
+    def _weekly_seconds(self, user_id: UUID, week: dt.date) -> int:
         """The seconds `week` allows this learner altogether (their plan, spec §6.21.2)."""
         if self._weekly is None:
             return self._settings.weekly_seconds
-        if used is None:
-            used = self._sessions.seconds_used(user_id, week)
-        return self._weekly(user_id, week, used)
+        return self._weekly(user_id, week)
 
     def live_call(self, call_id: str) -> LiveCall | None:
         """The server's side of a recorded call, with the tools of the learner it belongs to."""
