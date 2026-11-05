@@ -38,6 +38,33 @@ variable "openai_secret_arn" {
   type        = string
 }
 
+variable "elevenlabs_secret_arn" {
+  description = "The Secrets Manager secret holding the ElevenLabs API key (modules/secret); empty turns the premium voices off."
+  type        = string
+  default     = ""
+}
+
+variable "premium_voices" {
+  description = <<-EOT
+    The premium voices (spec §6.21.2): ElevenLabs' text-to-speech model and the voices a learner
+    can pick to have the app read aloud what it speaks outside a call (cards, the weekly check-in,
+    an exam's model answers, the sample on 6.16). Live calls stay on OpenAI's voices. The voice
+    ids are ElevenLabs' own (their voice library); the price of the model is in var.costs under
+    the same name. open_to_testers: everyone may use them while the app is in the testers' hands;
+    false restricts them to the cost owners until subscriptions decide who is Pro. Nothing is
+    offered without a model, voices and the key's secret.
+  EOT
+  type = object({
+    model = optional(string, "")
+    voices = optional(list(object({
+      id   = string
+      name = string
+    })), [])
+    open_to_testers = optional(bool, true)
+  })
+  default = {}
+}
+
 variable "media_bucket" {
   description = "The private bucket for learners' photos and voice samples (modules/media)."
   type = object({
