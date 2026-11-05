@@ -25,6 +25,7 @@ from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
+from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
@@ -61,6 +62,7 @@ from tests.fakes import (
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
+    InMemoryPhraseRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
@@ -365,17 +367,20 @@ def services(
     )
     # Question ids in the order they are handed out: ...0001, ...0002, and so on.
     question_ids = (UUID(f"dddddddd-dddd-4ddd-8ddd-{n:012d}") for n in range(1, 10_000))
+    tutor_store = InMemoryTutorRepository()
     tutor = TutorService(
         profiles=profiles,
         accounts=directory,
         conversations=conversations,
         reports=reports,
-        repository=InMemoryTutorRepository(),
+        repository=tutor_store,
         text_model=text_model,
         model="gpt-6.1-sol",
         clock=clock,
         new_id=lambda: next(question_ids),
     )
+    # Phrase ids in the order they are handed out: ...0001, ...0002, and so on.
+    phrase_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{number:012d}") for number in range(1, 1000))
     exams = ExamService(
         profiles=profiles,
         personas=personas,
@@ -490,6 +495,17 @@ def services(
         accounts=accounts,
         recordings=recordings,
         tutor=tutor,
+        phrasebook=PhrasebookService(
+            profiles=profiles,
+            accounts=directory,
+            cards=cards,
+            repository=InMemoryPhraseRepository(),
+            limit=tutor_store,
+            text_model=text_model,
+            model="gpt-6.1-sol",
+            clock=clock,
+            new_id=lambda: next(phrase_ids),
+        ),
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
         ),

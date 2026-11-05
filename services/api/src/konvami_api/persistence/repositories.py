@@ -34,6 +34,7 @@ from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.onboarding import OnboardingState, PlacementStatus
 from konvami_api.domain.personas import Persona
+from konvami_api.domain.phrasebook import Phrase
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile, Source
@@ -2130,3 +2131,111 @@ class SqlAlertLog:
 
     def forget(self, month: dt.date, level: Level) -> None:
         self._client.execute(_FORGET_ALERT, {"month": month.isoformat(), "level": level.value})
+
+
+# A learner's phrases in one language (the phrasebook).
+_PHRASE_COLUMNS = f"""
+    CAST(id AS text) AS id, phrase, meaning, situation, explained_in,
+    {epoch_micros("created_at")} AS created_at
+"""
+
+# The limit bounds storage, not money, as for cards.
+_ADD_PHRASE = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO phrase
+        (id, user_id, language, phrase_key, phrase, meaning, situation, explained_in, created_at)
+    SELECT CAST(:id AS uuid), CAST(:user_id AS uuid), :language, :phrase_key, :phrase, :meaning,
+           CAST(:situation AS text), :explained_in, CAST(:created_at AS timestamptz)
+    WHERE (SELECT count(*) FROM phrase
+           WHERE user_id = CAST(:user_id AS uuid) AND language = :language) < :limit
+    ON CONFLICT (user_id, language, phrase_key) DO NOTHING
+    RETURNING id
+"""
+
+_PHRASE_BY_KEY = f"""
+    SELECT {_PHRASE_COLUMNS} FROM phrase
+    WHERE user_id = CAST(:user_id AS uuid) AND language = :language AND phrase_key = :phrase_key
+"""
+
+_PHRASE_BY_ID = f"""
+    SELECT {_PHRASE_COLUMNS} FROM phrase
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+"""
+
+_LIST_PHRASES = f"""
+    SELECT {_PHRASE_COLUMNS} FROM phrase
+    WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+    ORDER BY created_at DESC, id DESC
+"""
+
+_REMOVE_PHRASE = """
+    DELETE FROM phrase WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+    RETURNING id
+"""
+
+_KNOWN_PHRASES = """
+    SELECT phrase_key FROM phrase
+    WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+      AND phrase_key IN (SELECT jsonb_array_elements_text(CAST(:keys AS jsonb)))
+"""
+
+
+class SqlPhraseRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def add(self, user_id: UUID, language: str, key: str, phrase: Phrase, limit: int) -> bool:
+        rows = self._client.execute(
+            _ADD_PHRASE,
+            {
+                "id": str(phrase.id),
+                "user_id": str(user_id),
+                "language": language,
+                "phrase_key": key,
+                "phrase": phrase.phrase,
+                "meaning": phrase.meaning,
+                "situation": phrase.situation,
+                "explained_in": phrase.explained_in,
+                "created_at": phrase.created_at.isoformat(),
+                "limit": limit,
+            },
+        )
+        return bool(rows)
+
+    def by_key(self, user_id: UUID, language: str, key: str) -> Phrase | None:
+        rows = self._client.execute(
+            _PHRASE_BY_KEY, {"user_id": str(user_id), "language": language, "phrase_key": key}
+        )
+        return _phrase(rows[0]) if rows else None
+
+    def get(self, user_id: UUID, phrase_id: UUID) -> Phrase | None:
+        rows = self._client.execute(_PHRASE_BY_ID, {"id": str(phrase_id), "user_id": str(user_id)})
+        return _phrase(rows[0]) if rows else None
+
+    def listed(self, user_id: UUID, language: str) -> list[Phrase]:
+        rows = self._client.execute(_LIST_PHRASES, {"user_id": str(user_id), "language": language})
+        return [_phrase(row) for row in rows]
+
+    def remove(self, user_id: UUID, phrase_id: UUID) -> bool:
+        rows = self._client.execute(_REMOVE_PHRASE, {"id": str(phrase_id), "user_id": str(user_id)})
+        return bool(rows)
+
+    def known(self, user_id: UUID, language: str, keys: Sequence[str]) -> set[str]:
+        if not keys:
+            return set()
+        rows = self._client.execute(
+            _KNOWN_PHRASES,
+            {"user_id": str(user_id), "language": language, "keys": json.dumps(list(keys))},
+        )
+        return {row["phrase_key"] for row in rows}
+
+
+def _phrase(row: dict[str, Any]) -> Phrase:
+    return Phrase(
+        id=UUID(row["id"]),
+        phrase=row["phrase"],
+        meaning=row["meaning"],
+        situation=row["situation"],
+        explained_in=row["explained_in"],
+        created_at=from_epoch_micros(row["created_at"]),
+    )

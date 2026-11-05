@@ -31,6 +31,7 @@ from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
+from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
@@ -64,6 +65,7 @@ from konvami_api.persistence.repositories import (
     SqlMemoryRepository,
     SqlOnboardingRepository,
     SqlPersonaRepository,
+    SqlPhraseRepository,
     SqlPlacementRepository,
     SqlProfileRepository,
     SqlPushDeviceRepository,
@@ -255,12 +257,13 @@ def build_backend(
         transcriber=transcriber,
         model=models.verbatim,
     )
+    tutor_store = SqlTutorRepository(sql)
     tutor = TutorService(
         profiles=profiles,
         accounts=directory,
         conversations=conversations,
         reports=reports,
-        repository=SqlTutorRepository(sql),
+        repository=tutor_store,
         text_model=text,
         model=models.tutor,
         clock=_now,
@@ -385,6 +388,16 @@ def build_backend(
         accounts=accounts,
         recordings=recordings,
         tutor=tutor,
+        phrasebook=PhrasebookService(
+            profiles=profiles,
+            accounts=directory,
+            cards=cards,
+            repository=SqlPhraseRepository(sql),
+            limit=tutor_store,
+            text_model=text,
+            model=models.tutor,
+            clock=_now,
+        ),
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model=models.speech
         ),

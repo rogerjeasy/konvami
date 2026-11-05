@@ -70,6 +70,8 @@ from konvami_api.domain.personas import (
     personality_of,
     teaching_of,
 )
+from konvami_api.domain.phrasebook import MEANING_MAX as PHRASE_MEANING_MAX
+from konvami_api.domain.phrasebook import PHRASE_MAX, SITUATION_MAX, PhrasebookEntry, Suggestion
 from konvami_api.domain.placement import PlacementView
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.profile import (
@@ -803,6 +805,62 @@ class TutorQuestionsOut(ApiModel):
 class TutorQuestionIn(ApiModel):
     # Checked again by the Tutor (blank, too long); the limit here keeps a huge body out.
     question: Annotated[str, Field(max_length=TUTOR_QUESTION_MAX)]
+
+
+class PhraseIn(ApiModel):
+    # Checked again by the phrasebook (blank); the limits here keep a huge body out.
+    phrase: Annotated[str, Field(max_length=PHRASE_MAX)]
+    meaning: Annotated[str, Field(max_length=PHRASE_MEANING_MAX)]
+    situation: Annotated[str | None, Field(max_length=SITUATION_MAX)] = None
+
+
+class PhraseSuggestionsIn(ApiModel):
+    situation: Annotated[str, Field(max_length=SITUATION_MAX)]
+
+
+class PhraseOut(ApiModel):
+    id: UUID
+    phrase: str
+    meaning: str
+    # What the learner asked for when it was suggested; null for a phrase they typed.
+    situation: str | None
+    # The language the meaning is written in.
+    explained_in: str
+    created_at: dt.datetime
+    # The learner has a flashcard of the phrase.
+    in_deck: bool
+
+    @classmethod
+    def of(cls, entry: PhrasebookEntry) -> "PhraseOut":
+        phrase = entry.phrase
+        return cls(
+            id=phrase.id,
+            phrase=phrase.phrase,
+            meaning=phrase.meaning,
+            situation=phrase.situation,
+            explained_in=phrase.explained_in,
+            created_at=phrase.created_at,
+            in_deck=entry.in_deck,
+        )
+
+
+class PhrasebookOut(ApiModel):
+    phrases: list[PhraseOut]
+
+
+class PhraseSuggestionOut(ApiModel):
+    phrase: str
+    meaning: str
+    # The learner keeps this phrase already.
+    saved: bool
+
+    @classmethod
+    def of(cls, suggestion: Suggestion) -> "PhraseSuggestionOut":
+        return cls(phrase=suggestion.phrase, meaning=suggestion.meaning, saved=suggestion.saved)
+
+
+class PhraseSuggestionsOut(ApiModel):
+    suggestions: list[PhraseSuggestionOut]
 
 
 class TutorCorrectionIn(ApiModel):
