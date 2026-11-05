@@ -134,6 +134,12 @@ export function PrivacyScreen() {
       <Reveal delay={staggerDelay(3)}>
         <ListGroup>
           <ListRow
+            icon="file"
+            title={t('profile.privacy.export')}
+            detail={t('profile.privacy.exportHint')}
+            onPress={() => router.push(ROUTES.accountExport)}
+          />
+          <ListRow
             icon="trash"
             tone="danger"
             title={t('profile.privacy.delete')}

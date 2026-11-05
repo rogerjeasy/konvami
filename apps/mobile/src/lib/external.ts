@@ -24,6 +24,12 @@ export function openLegal(page: keyof typeof LEGAL_URL, language: string): void 
   else router.push(LEGAL_SCREEN[page]);
 }
 
+/** Opens a file the server made for the learner (a copy of their data) in the browser or the
+ * phone's viewer, from where it can be saved or shared. */
+export function openFile(url: string): void {
+  void Linking.openURL(url).catch(() => {});
+}
+
 /** Whether this platform has a mail app the app can bring to the front. */
 /** Opens Konvami's page in the phone's settings (to allow notifications again). */
 export function openAppSettings(): void {

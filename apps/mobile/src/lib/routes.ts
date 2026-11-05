@@ -104,6 +104,8 @@ export const ROUTES = {
   accountCosts: '/account/costs',
   /** 6.15 Reports: what learners flagged, for the owner's account only (spec §16.1). */
   accountFlags: '/account/flags',
+  /** 6.19 Export my data: a copy of everything Konvami keeps about the learner. */
+  accountExport: '/account/export',
   /** 6.18 Terms of Use and Privacy Policy, shown by the app until a website address is set. */
   legalTerms: '/legal/terms',
   legalPrivacy: '/legal/privacy',

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useSyncExternalStore, type ReactN
 import type {
   ApiClient,
   Costs,
+  DataExport,
   PersonaDraft,
   PersonaVoice,
   ProfileChanges,
@@ -71,6 +72,8 @@ export interface ProfileServices {
   voiceSample: (voice: PersonaVoice) => Promise<string>;
   /** Deletes the account and everything stored for it. */
   deleteAccount: () => Promise<void>;
+  /** Makes a copy of everything stored for the learner (6.19) and says where to read it. */
+  exportData: () => Promise<DataExport>;
 }
 
 export function createProfileServices(
@@ -120,6 +123,7 @@ export function createProfileServices(
     partnerTemplates: () => api.getPersonaTemplates(),
     voiceSample: (voice) => api.getVoiceSample(voice),
     deleteAccount: () => api.deleteAccount(),
+    exportData: () => api.exportData(),
   };
 }
 

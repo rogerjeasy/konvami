@@ -1836,6 +1836,20 @@ export const de: Translation = {
       },
       exam: 'Auch deine Prüfung ist eines deiner Ziele: Du änderst sie unter „Deine Gründe“.',
     },
+    export: {
+      title: 'Meine Daten exportieren',
+      body: 'Erhalte eine Kopie dessen, was Konvami über dich speichert, als eine Datei, die du lesen oder mitnehmen kannst.',
+      includesTitle: 'Was darin steht',
+      includes:
+        'Dein Profil und deine Ziele, deine Partner, deine Gespräche mit Transkripten und Berichten, deine Notizen, Karten und Wendungen, deine Meldungen an uns und die per Sprache vorgenommenen Änderungen. Aufnahmen sind als Links enthalten, die kurze Zeit gelten. Dein Passwort ist nicht enthalten.',
+      prepare: 'Meine Daten vorbereiten',
+      preparing: 'Deine Daten werden vorbereitet …',
+      ready: 'Deine Daten sind bereit',
+      readyBody:
+        'Der Link gilt {{minutes}} Minuten. Öffne die Datei, um sie zu speichern oder zu teilen. Du kannst bis zu dreimal pro Tag eine neue Kopie vorbereiten.',
+      open: 'Datei öffnen',
+      limit: 'Du hast deine Daten heute schon dreimal vorbereitet. Versuche es morgen wieder.',
+    },
     privacy: {
       title: 'Datenschutz und KI',
       body: 'Konvami nutzt einen KI-Anbieter, um zuzuhören, zu antworten und Feedback zu geben. Hier siehst du, was er erhält.',
@@ -1843,6 +1857,8 @@ export const de: Translation = {
       delete: 'Konto löschen',
       deleteHint: 'Entfernt dein Konto und alles darin',
       terms: 'Nutzungsbedingungen lesen',
+      export: 'Meine Daten exportieren',
+      exportHint: 'Eine Kopie dessen, was Konvami über dich speichert',
       recordings: {
         label: 'Aufnahmen meiner Gespräche behalten',
         on: 'Du kannst deine Gespräche noch einmal anhören. Nur du kannst sie abspielen.',
