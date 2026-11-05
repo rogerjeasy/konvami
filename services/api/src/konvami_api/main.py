@@ -24,6 +24,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -63,6 +64,7 @@ from konvami_api.persistence.repositories import (
     SqlConversationRepository,
     SqlDraftLog,
     SqlExamRepository,
+    SqlFeedbackRepository,
     SqlFlagRepository,
     SqlLevelRepository,
     SqlMemoryRepository,
@@ -444,6 +446,9 @@ def build_backend(
             model=models.week or models.memory,
             sounds=sounds,
             clock=_now,
+        ),
+        feedback=FeedbackService(
+            repository=SqlFeedbackRepository(sql), owners=costs.owners, clock=_now
         ),
         flags=FlagService(
             conversations=conversations,

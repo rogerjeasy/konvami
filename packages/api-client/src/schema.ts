@@ -408,6 +408,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Feedback
+         * @description Sends the owner a bug report, an idea or any other message (spec §6.21.4).
+         */
+        post: operations["sendFeedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/grammar": {
         parameters: {
             query?: never;
@@ -591,6 +611,46 @@ export interface paths {
          */
         get: operations["getCosts"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/owner/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Feedback Inbox
+         * @description The owner's inbox of feedback (open messages unless `status` says otherwise).
+         */
+        get: operations["getFeedbackInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/owner/feedback/{feedback_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Resolve Feedback
+         * @description Marks a message done, or open again.
+         */
+        put: operations["resolveFeedback"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1519,6 +1579,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * DeviceIn
+         * @description The device and app version a learner chose to send with a message.
+         */
+        DeviceIn: {
+            /** Appversion */
+            appVersion: string;
+            /** Osversion */
+            osVersion: string;
+            platform: components["schemas"]["Platform"];
+        };
         /** ErrorBody */
         ErrorBody: {
             error: components["schemas"]["ErrorDetail"];
@@ -1612,6 +1683,40 @@ export interface components {
             /** Translation */
             translation: string;
         };
+        /** @enum {string} */
+        FeedbackCategory: "bug" | "idea" | "other";
+        /** FeedbackIn */
+        FeedbackIn: {
+            category: components["schemas"]["FeedbackCategory"];
+            device?: components["schemas"]["DeviceIn"] | null;
+            /** Message */
+            message: string;
+        };
+        /** FeedbackInboxOut */
+        FeedbackInboxOut: {
+            /** Messages */
+            messages: components["schemas"]["InboxFeedbackOut"][];
+        };
+        /** FeedbackOut */
+        FeedbackOut: {
+            category: components["schemas"]["FeedbackCategory"];
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** FeedbackResolution */
+        FeedbackResolution: {
+            status: components["schemas"]["FeedbackStatus"];
+        };
+        /** @enum {string} */
+        FeedbackStatus: "open" | "done";
         /** FieldOut */
         FieldOut: {
             source: components["schemas"]["Source"];
@@ -1791,6 +1896,29 @@ export interface components {
             /** Lasttalkedat */
             lastTalkedAt: string | null;
             persona: components["schemas"]["PersonaOut"];
+        };
+        /**
+         * InboxFeedbackOut
+         * @description A message as the owner reads it. Nobody is named: the owner answers through support.
+         */
+        InboxFeedbackOut: {
+            category: components["schemas"]["FeedbackCategory"];
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            device: components["schemas"]["DeviceIn"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Message */
+            message: string;
+            /** Resolvedat */
+            resolvedAt: string | null;
+            status: components["schemas"]["FeedbackStatus"];
         };
         /** LanguageOut */
         LanguageOut: {
@@ -2371,6 +2499,8 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** @enum {string} */
+        Platform: "ios" | "android" | "web";
         /** ProfileAnswerIn */
         ProfileAnswerIn: {
             /** Option */
@@ -4521,6 +4651,57 @@ export interface operations {
             };
         };
     };
+    sendFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     getGrammarMap: {
         parameters: {
             query?: never;
@@ -5004,6 +5185,117 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getFeedbackInbox: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["FeedbackStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackInboxOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolveFeedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                feedback_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackResolution"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxFeedbackOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -28,6 +28,10 @@ from konvami_api.api.schemas import (
     DeckSummaryOut,
     ExamCardOut,
     ExamCentreOut,
+    FeedbackIn,
+    FeedbackInboxOut,
+    FeedbackOut,
+    FeedbackResolution,
     FlagIn,
     FlagOut,
     FlagQueueOut,
@@ -36,6 +40,7 @@ from konvami_api.api.schemas import (
     GrammarMapOut,
     GrammarTopicPageOut,
     HomeOut,
+    InboxFeedbackOut,
     MemoriesOut,
     MemoryOut,
     MemoryPatch,
@@ -100,6 +105,7 @@ from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamService, Simulation
+from konvami_api.domain.feedback import FeedbackService, FeedbackStatus
 from konvami_api.domain.flags import FlagService, FlagStatus
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -160,6 +166,7 @@ class Services:
     week_reviews: WeekReviewService
     exams: ExamService
     flags: FlagService
+    feedback: FeedbackService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -649,6 +656,34 @@ def _router(services: Services) -> APIRouter:
     def resolve_flag(user: CurrentUser, flag_id: UUID, resolution: FlagResolution) -> QueuedFlagOut:
         """Closes a flag as resolved or dismissed, or opens it again."""
         return QueuedFlagOut.of(services.flags.resolve(user, flag_id, resolution.status))
+
+    @router.post("/feedback", operation_id="sendFeedback", responses=LIMITED)
+    def send_feedback(user: CurrentUser, message: FeedbackIn) -> FeedbackOut:
+        """Sends the owner a bug report, an idea or any other message (spec §6.21.4)."""
+        device = message.device.to_domain() if message.device else None
+        return FeedbackOut.of(
+            services.feedback.send(user, message.category, message.message, device)
+        )
+
+    @router.get("/owner/feedback", operation_id="getFeedbackInbox", responses=FORBIDDEN)
+    def get_feedback_inbox(
+        user: CurrentUser, status: FeedbackStatus | None = "open"
+    ) -> FeedbackInboxOut:
+        """The owner's inbox of feedback (open messages unless `status` says otherwise)."""
+        return FeedbackInboxOut(
+            messages=[InboxFeedbackOut.of(m) for m in services.feedback.inbox(user, status)]
+        )
+
+    @router.put(
+        "/owner/feedback/{feedback_id}",
+        operation_id="resolveFeedback",
+        responses=FORBIDDEN | NOT_FOUND,
+    )
+    def resolve_feedback(
+        user: CurrentUser, feedback_id: UUID, resolution: FeedbackResolution
+    ) -> InboxFeedbackOut:
+        """Marks a message done, or open again."""
+        return InboxFeedbackOut.of(services.feedback.resolve(user, feedback_id, resolution.status))
 
     @router.get("/grammar", operation_id="getGrammarMap")
     def get_grammar_map(user: CurrentUser) -> GrammarMapOut:

@@ -35,6 +35,15 @@ from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind, WeekPlan
 from konvami_api.domain.exam_centre import ExamCentre, Simulation
 from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
+from konvami_api.domain.feedback import (
+    MAX_MESSAGE_LENGTH,
+    MAX_VERSION_LENGTH,
+    DeviceInfo,
+    Feedback,
+    FeedbackCategory,
+    FeedbackStatus,
+)
+from konvami_api.domain.feedback import Platform as DevicePlatform
 from konvami_api.domain.flags import MAX_NOTE_LENGTH, Flag, FlagKind, FlagReason, FlagStatus
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.grammar_map import GrammarMap, Mastery, TopicPage, TopicState, Trend
@@ -2119,3 +2128,66 @@ class FlagQueueOut(ApiModel):
 
 class FlagResolution(ApiModel):
     status: FlagStatus
+
+
+class DeviceIn(ApiModel):
+    """The device and app version a learner chose to send with a message."""
+
+    app_version: str = Field(min_length=1, max_length=MAX_VERSION_LENGTH)
+    platform: DevicePlatform
+    os_version: str = Field(min_length=1, max_length=MAX_VERSION_LENGTH)
+
+    def to_domain(self) -> DeviceInfo:
+        return DeviceInfo(self.app_version, self.platform, self.os_version)
+
+
+class FeedbackIn(ApiModel):
+    category: FeedbackCategory
+    message: str = Field(min_length=1, max_length=MAX_MESSAGE_LENGTH)
+    device: DeviceIn | None = None
+
+
+class FeedbackOut(ApiModel):
+    id: UUID
+    category: FeedbackCategory
+    created_at: dt.datetime
+
+    @classmethod
+    def of(cls, feedback: Feedback) -> "FeedbackOut":
+        return cls(id=feedback.id, category=feedback.category, created_at=feedback.created_at)
+
+
+class InboxFeedbackOut(FeedbackOut):
+    """A message as the owner reads it. Nobody is named: the owner answers through support."""
+
+    message: str
+    device: DeviceIn | None
+    status: FeedbackStatus
+    resolved_at: dt.datetime | None
+
+    @classmethod
+    def of(cls, feedback: Feedback) -> "InboxFeedbackOut":
+        device = feedback.device
+        return cls(
+            **FeedbackOut.of(feedback).model_dump(),
+            message=feedback.message,
+            device=(
+                DeviceIn(
+                    app_version=device.app_version,
+                    platform=device.platform,
+                    os_version=device.os_version,
+                )
+                if device
+                else None
+            ),
+            status=feedback.status,
+            resolved_at=feedback.resolved_at,
+        )
+
+
+class FeedbackInboxOut(ApiModel):
+    messages: list[InboxFeedbackOut]
+
+
+class FeedbackResolution(ApiModel):
+    status: FeedbackStatus
