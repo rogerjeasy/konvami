@@ -315,4 +315,5 @@ def test_the_next_conversation_is_planned_from_the_report(
         "focus": ["dative", "perfekt"],
         "words": [],
         "review": False,
+        "lesson": False,
     }

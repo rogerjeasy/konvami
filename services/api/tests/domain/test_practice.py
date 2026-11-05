@@ -948,3 +948,38 @@ def test_the_plan_travels_with_the_briefing() -> None:
 
     assert briefing.plan is not None
     assert [point.topic for point in briefing.plan.focus] == ["dative"]
+
+
+# --- Guided lessons (spec §6.3) --------------------------------------------------------------
+
+
+def lesson(world: World, topic: str = "dative") -> str:
+    lena, _ = world.onboard()
+    account = world.accounts.get(USER)
+    return world.practice.prepare(
+        USER, account, TODAY, lena.id, None, f"lesson:{topic}"
+    ).instructions
+
+
+def test_in_a_guided_lesson_the_partner_teaches_the_topic_in_five_timed_steps() -> None:
+    text = lesson(World())
+
+    assert "guided lesson" in text
+    assert "Dative" in text
+    for step in ("Explain", "Examples", "They produce", "Feedback", "Free use"):
+        assert step in text
+    # The rule and a sentence that follows it come from the pack.
+    assert "everything after aus, bei, mit" in text
+    assert "Ich fahre mit dem Bus." in text
+    assert "never announce a step" in text
+
+
+def test_a_guided_lesson_has_no_other_plan_to_compete_with_it() -> None:
+    text = lesson(World())
+
+    assert "# Today's plan" not in text
+    assert "# Worth practising" not in text
+
+
+def test_a_free_conversation_is_no_guided_lesson() -> None:
+    assert "guided lesson" not in instructions(World())

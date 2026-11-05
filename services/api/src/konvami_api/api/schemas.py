@@ -299,7 +299,8 @@ class VoiceCallIn(ApiModel):
     # speaking test an exam call simulates (a format id of the exam centre).
     scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
     # A practice call that practises a grammar topic first (a topic id from the grammar map),
-    # or "words": a review conversation built around the learner's due words.
+    # or "words": a review conversation built around the learner's due words, or
+    # "lesson:<topic>": a guided lesson on that topic.
     practise: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
 
 
@@ -319,6 +320,8 @@ class CallPlanOut(ApiModel):
     words: list[PlanWordOut]
     # A review conversation: the words are its point.
     review: bool
+    # A guided lesson on the one topic in `focus`.
+    lesson: bool
 
     @classmethod
     def of(cls, plan: SessionPlan) -> "CallPlanOut":
@@ -327,6 +330,7 @@ class CallPlanOut(ApiModel):
             focus=[point.topic for point in plan.focus],
             words=[PlanWordOut(text=word.text, meaning=word.meaning) for word in plan.words],
             review=plan.review,
+            lesson=plan.lesson is not None,
         )
 
 

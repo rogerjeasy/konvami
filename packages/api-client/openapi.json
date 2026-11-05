@@ -180,6 +180,10 @@
             "title": "Language",
             "type": "string"
           },
+          "lesson": {
+            "title": "Lesson",
+            "type": "boolean"
+          },
           "review": {
             "title": "Review",
             "type": "boolean"
@@ -196,7 +200,8 @@
           "language",
           "focus",
           "words",
-          "review"
+          "review",
+          "lesson"
         ],
         "title": "CallPlanOut",
         "type": "object"

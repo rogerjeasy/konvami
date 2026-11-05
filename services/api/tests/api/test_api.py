@@ -504,7 +504,13 @@ def test_a_practice_call_starts_with_the_chosen_partner(
         "maxSeconds": 600,
         # Nothing to plan from before the first report.
         # Nothing is known of the learner yet: the call practises the week's first topic.
-        "plan": {"language": "de", "focus": ["perfekt"], "words": [], "review": False},
+        "plan": {
+            "language": "de",
+            "focus": ["perfekt"],
+            "words": [],
+            "review": False,
+            "lesson": False,
+        },
     }
     session = voice_provider.created[0][1]
     assert "You are Jonas" in session["instructions"]

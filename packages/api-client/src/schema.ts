@@ -1059,6 +1059,8 @@ export interface components {
             focus: string[];
             /** Language */
             language: string;
+            /** Lesson */
+            lesson: boolean;
             /** Review */
             review: boolean;
             /** Words */
