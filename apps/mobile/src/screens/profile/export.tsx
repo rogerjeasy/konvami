@@ -62,14 +62,7 @@ export function ExportScreen() {
         )
       }
     >
-      <Reveal delay={staggerDelay(1)}>
-        <Card className="gap-2 p-3.5">
-          <Text variant="labelMedium">{t('profile.export.includesTitle')}</Text>
-          <Text variant="small" tone="muted">
-            {t('profile.export.includes')}
-          </Text>
-        </Card>
-      </Reveal>
+      {/* Above the list: on a 320 x 568 phone the result would sit behind the pinned button. */}
       <View accessibilityLiveRegion="polite" className="gap-3">
         {copy ? (
           <NoticeBox icon="check" tone="primary" title={t('profile.export.ready')}>
@@ -82,6 +75,14 @@ export function ExportScreen() {
           </NoticeBox>
         ) : null}
       </View>
+      <Reveal delay={staggerDelay(1)}>
+        <Card className="gap-2 p-3.5">
+          <Text variant="labelMedium">{t('profile.export.includesTitle')}</Text>
+          <Text variant="small" tone="muted">
+            {t('profile.export.includes')}
+          </Text>
+        </Card>
+      </Reveal>
     </ProfilePage>
   );
 }
