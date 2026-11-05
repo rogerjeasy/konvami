@@ -18,6 +18,11 @@ output "api_url" {
   value       = module.api.url
 }
 
+output "delete_account_url" {
+  description = "The web page for deleting an account without the app: the address for the stores' listings (Google Play asks for one). Add ?lang=de|fr|it for another language."
+  value       = "${module.api.url}/public/delete-account"
+}
+
 output "migrations_applied" {
   description = "Database migrations applied by the last deploy."
   value       = module.api.migrations_applied

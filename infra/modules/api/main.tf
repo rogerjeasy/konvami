@@ -1,7 +1,9 @@
 # The Konvami API (spec §10): FastAPI on Lambda behind an API Gateway HTTP API.
 #
-# - Every route requires a Cognito access token. API Gateway verifies it (JWT authorizer) before
-#   the function runs; the function only reads the verified subject.
+# - Every route requires a Cognito access token, except `/public/*`: the web page for deleting an
+#   account without the app, and its two requests (spec §6.21.3). Those are throttled on their own
+#   and prove who is asking by a code emailed to the account's address. API Gateway verifies the
+#   token (JWT authorizer) before the function runs; the function only reads the verified subject.
 # - The function reaches PostgreSQL through the RDS Data API, so it runs outside any VPC.
 # - A second function from the same package applies schema migrations; Terraform invokes it
 #   whenever the package changes.
@@ -30,6 +32,7 @@ locals {
     KONVAMI_DB_SECRET_ARN     = var.database.secret_arn
     KONVAMI_DB_NAME           = var.database.database_name
     KONVAMI_USER_POOL_ID      = var.auth.user_pool_id
+    KONVAMI_APP_CLIENT_ID     = var.auth.client_id
     KONVAMI_OPENAI_SECRET_ARN = var.openai_secret_arn
     KONVAMI_CALL_WORKER       = local.call_worker_name
     KONVAMI_MEDIA_BUCKET      = var.media_bucket.name
@@ -318,6 +321,18 @@ resource "aws_apigatewayv2_route" "api" {
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
+# The web page for deleting an account (domain/web_deletion.py) and its two requests. They are
+# the one thing that works without a token, so they are named in full and nothing else matches:
+# a more specific route wins over `/{proxy+}`.
+resource "aws_apigatewayv2_route" "public" {
+  for_each = toset(["GET", "POST"])
+
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "${each.key} /public/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.api.id}"
+  authorization_type = "NONE"
+}
+
 resource "aws_cloudwatch_log_group" "access" {
   name              = "/aws/apigateway/${var.name}-api"
   retention_in_days = var.log_retention_days
@@ -331,6 +346,14 @@ resource "aws_apigatewayv2_stage" "default" {
   default_route_settings {
     throttling_rate_limit  = var.throttle.rate
     throttling_burst_limit = var.throttle.burst
+  }
+
+  # Anyone can send these two requests, and each one can make Cognito email someone. Few per
+  # second, whoever is asking: Cognito limits the codes per address on top of this.
+  route_settings {
+    route_key              = aws_apigatewayv2_route.public["POST"].route_key
+    throttling_rate_limit  = var.public_throttle.rate
+    throttling_burst_limit = var.public_throttle.burst
   }
 
   # No headers, tokens or bodies: only what is needed to see load and failures.

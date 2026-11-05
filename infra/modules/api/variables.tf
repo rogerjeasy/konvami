@@ -157,6 +157,18 @@ variable "throttle" {
   }
 }
 
+variable "public_throttle" {
+  description = "Requests per second the public account-deletion requests (POST /public/*) accept, and the burst above it."
+  type = object({
+    rate  = number
+    burst = number
+  })
+  default = {
+    rate  = 1
+    burst = 5
+  }
+}
+
 variable "log_retention_days" {
   description = "How long function and access logs are kept."
   type        = number
