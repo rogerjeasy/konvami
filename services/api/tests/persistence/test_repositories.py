@@ -30,6 +30,7 @@ from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState,
 from konvami_api.domain.personas import DraftLog, Persona, PersonaRepository
 from konvami_api.domain.placement import PlacementRepository, PlacementResult
 from konvami_api.domain.plan import FocusPoint, PlanWord, SessionPlan
+from konvami_api.domain.premium_voices import ChoiceRepository
 from konvami_api.domain.profile import ChangeRecord, Origin, ProfileRepository, Source
 from konvami_api.domain.profile_questions import QuestionRepository, QuestionState, QuestionStatus
 from konvami_api.domain.push import PushDevice, PushDeviceRepository
@@ -76,6 +77,7 @@ from konvami_api.persistence.repositories import (
     SqlOnboardingRepository,
     SqlPersonaRepository,
     SqlPlacementRepository,
+    SqlPremiumVoiceRepository,
     SqlProfileRepository,
     SqlPushDeviceRepository,
     SqlQuestionRepository,
@@ -100,6 +102,7 @@ from tests.fakes import (
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
     InMemoryPlacementRepository,
+    InMemoryPremiumChoices,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
     InMemoryQuestionRepository,
@@ -2856,3 +2859,38 @@ def test_the_queue_lists_newest_first_by_status_and_closing_sets_the_time(
     assert flags.queue(None, 10) == [new, closed]
     assert flags.queue(None, 1) == [new]
     assert flags.resolve(uuid4(), "resolved", NOON) is None
+
+
+# --- Premium voice choices ----------------------------------------------------------------------
+
+
+@pytest.fixture(params=["memory", "postgres"])
+def premium_choices(request: pytest.FixtureRequest) -> ChoiceRepository:
+    if request.param == "memory":
+        return InMemoryPremiumChoices()
+    db: SqlClient = request.getfixturevalue("db")
+    # The choice hangs on the learner's row, which saving a profile creates.
+    for user in (USER, OTHER_USER):
+        SqlProfileRepository(db).save(user, [change("goals", {"reasons": ["work"]})])
+    return SqlPremiumVoiceRepository(db, lambda: NOON)
+
+
+def test_a_choice_is_read_back_and_replaced_by_the_next(premium_choices: ChoiceRepository) -> None:
+    assert premium_choices.get(USER) is None
+
+    premium_choices.set(USER, "Maya123")
+    premium_choices.set(USER, "Otto456")
+
+    assert premium_choices.get(USER) == "Otto456"
+    assert premium_choices.get(OTHER_USER) is None
+
+
+def test_going_back_to_the_standard_voice_forgets_the_choice(
+    premium_choices: ChoiceRepository,
+) -> None:
+    premium_choices.set(USER, "Maya123")
+
+    premium_choices.set(USER, None)
+    premium_choices.set(OTHER_USER, None)
+
+    assert premium_choices.get(USER) is None

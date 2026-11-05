@@ -5,7 +5,7 @@ transaction (see `sql.py`); the owning `app_user` row is created on a user's fir
 import dataclasses
 import datetime as dt
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any, cast
 from uuid import UUID
 
@@ -2410,3 +2410,33 @@ class SqlFlagRepository:
             _RESOLVE_FLAG, {"id": str(flag_id), "status": status, "at": at.isoformat()}
         )
         return _flag(rows[0]) if rows else None
+
+
+class SqlPremiumVoiceRepository:
+    """The premium voice each learner chose (spec §6.21.2)."""
+
+    def __init__(self, client: SqlClient, clock: Callable[[], dt.datetime]) -> None:
+        self._client = client
+        self._clock = clock
+
+    def get(self, user_id: UUID) -> str | None:
+        rows = self._client.execute(
+            "SELECT voice_id FROM premium_voice_choice WHERE user_id = CAST(:user_id AS uuid)",
+            {"user_id": str(user_id)},
+        )
+        return rows[0]["voice_id"] if rows else None
+
+    def set(self, user_id: UUID, voice_id: str | None) -> None:
+        if voice_id is None:
+            self._client.execute(
+                "DELETE FROM premium_voice_choice WHERE user_id = CAST(:user_id AS uuid)",
+                {"user_id": str(user_id)},
+            )
+            return
+        self._client.execute(
+            """INSERT INTO premium_voice_choice (user_id, voice_id, chosen_at)
+            VALUES (CAST(:user_id AS uuid), :voice_id, CAST(:at AS timestamptz))
+            ON CONFLICT (user_id) DO UPDATE
+            SET voice_id = EXCLUDED.voice_id, chosen_at = EXCLUDED.chosen_at""",
+            {"user_id": str(user_id), "voice_id": voice_id, "at": self._clock().isoformat()},
+        )

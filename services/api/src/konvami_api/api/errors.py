@@ -22,6 +22,7 @@ from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.phrasebook import PhrasebookError
+from konvami_api.domain.premium_voices import PremiumError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.profile_questions import QuestionError
 from konvami_api.domain.reports import ReportError
@@ -64,6 +65,13 @@ _PERSONA_STATUS = {
     "writer_unavailable": 503,
 }
 _SAMPLE_STATUS = {"no_language": 409}
+_PREMIUM_STATUS = {
+    "consent_needed": 403,
+    "not_allowed": 403,
+    "not_offered": 409,
+    "no_language": 409,
+    "unknown_voice": 422,
+}
 _CARD_STATUS = {
     "unavailable": 503,
     "consent_required": 403,
@@ -145,6 +153,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(SampleError)
     async def _sample_error(_: Request, error: SampleError) -> JSONResponse:
         return _response(_SAMPLE_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(PremiumError)
+    async def _premium_error(_: Request, error: PremiumError) -> JSONResponse:
+        return _response(_PREMIUM_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(ConversationError)
     async def _conversation_error(_: Request, error: ConversationError) -> JSONResponse:
