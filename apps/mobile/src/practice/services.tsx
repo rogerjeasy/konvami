@@ -31,6 +31,11 @@ import type {
   Phrase,
   PhraseDraft,
   PhraseSuggestion,
+  ProblemWord,
+  PronunciationAttempt,
+  PronunciationDrill,
+  PronunciationSound,
+  PronunciationSoundDetail,
   TutorQuestion,
 } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
@@ -52,6 +57,12 @@ export interface DeviceClock {
   timeZone: () => string | undefined;
   /** Milliseconds since the epoch. */
   now: () => number;
+}
+
+/** The pronunciation lab (5.22): the problem sounds with the practice so far, and the words missed. */
+export interface PronunciationLab {
+  sounds: PronunciationSound[];
+  words: ProblemWord[];
 }
 
 /**
@@ -107,6 +118,26 @@ export interface PracticeServices {
   makePhraseCard: (id: string) => Promise<Card>;
   /** Removes a kept phrase. Rejects with an `ApiError` (`not_found`, …). */
   removePhrase: (id: string) => Promise<void>;
+  /** The pronunciation lab (5.22). */
+  pronunciation: ResourceStore<PronunciationLab>;
+  /** One sound with its pairs, words and sentences. Rejects with an `ApiError` (`not_found`). */
+  readPronunciationSound: (id: string) => Promise<PronunciationSoundDetail>;
+  /**
+   * Where a word or sentence of the lab plays from, in the first partner's voice. Rejects with
+   * an `ApiError` (`not_found`, `unavailable`).
+   */
+  pronunciationSound: (text: string) => Promise<string>;
+  /**
+   * Says a drill out loud and has it heard word by word; the lab's tallies are read again.
+   * `soundId` is null for one of the learner's problem words. Rejects with an `ApiError`
+   * (`drill_limit`, `consent_required`, `unavailable`, …).
+   */
+  drillPronunciation: (
+    drill: { drill: PronunciationDrill; soundId: string | null; target: string },
+    recording: SentenceRecording,
+  ) => Promise<PronunciationAttempt>;
+  /** Which word of a pair was heard; true when right. The lab's tallies are read again. */
+  pickPronunciationWord: (soundId: string, played: string, chosen: string) => Promise<boolean>;
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
   /**
@@ -200,6 +231,12 @@ export function createPracticeServices(
     | 'getFlagQueue'
     | 'resolveFlag'
     | 'getCardAudio'
+    | 'getPronunciationSounds'
+    | 'getPronunciationSound'
+    | 'getProblemWords'
+    | 'getPronunciationAudio'
+    | 'drillPronunciation'
+    | 'pickPronunciationWord'
     | 'getCard'
     | 'registerPushDevice'
     | 'removePushDevice'
@@ -221,6 +258,13 @@ export function createPracticeServices(
   const tutor = createResourceStore(() => api.getTutorQuestions(), clock.now);
   const catalog = createResourceStore(() => api.getCatalog(), clock.now);
   const phrasebook = createResourceStore(() => api.getPhrasebook(), clock.now);
+  const pronunciation = createResourceStore(async () => {
+    const [{ sounds }, { words }] = await Promise.all([
+      api.getPronunciationSounds(),
+      api.getProblemWords(),
+    ]);
+    return { sounds, words };
+  }, clock.now);
   return {
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
@@ -265,6 +309,19 @@ export function createPracticeServices(
         () => api.removePhrase(id),
         (_, answer) => answer,
       );
+    },
+    pronunciation,
+    readPronunciationSound: (id) => api.getPronunciationSound(id),
+    pronunciationSound: async (text) => (await api.getPronunciationAudio(text)).url,
+    async drillPronunciation(drill, recording) {
+      const attempt = await api.drillPronunciation({ ...drill, recording: spoken(recording) });
+      void pronunciation.refresh();
+      return attempt;
+    },
+    async pickPronunciationWord(soundId, played, chosen) {
+      const { right } = await api.pickPronunciationWord({ soundId, played, chosen });
+      void pronunciation.refresh();
+      return right;
     },
     tutor,
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
@@ -319,6 +376,7 @@ export function PracticeProvider({
     services.exams.reset();
     services.tutor.reset();
     services.phrasebook.reset();
+    services.pronunciation.reset();
     services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
@@ -484,6 +542,16 @@ export function useGrammarTopic(id: string): TopicReading & { retry: () => void 
 export function usePhrasebook(): ResourceState<{ phrases: Phrase[] }> {
   const { phrasebook } = usePracticeServices();
   return useSyncExternalStore(phrasebook.subscribe, phrasebook.getState, phrasebook.getState);
+}
+
+/** The pronunciation lab; re-renders when it changes. */
+export function usePronunciation(): ResourceState<PronunciationLab> {
+  const { pronunciation } = usePracticeServices();
+  return useSyncExternalStore(
+    pronunciation.subscribe,
+    pronunciation.getState,
+    pronunciation.getState,
+  );
 }
 
 /** The questions asked to the Tutor; re-renders when they change. */
