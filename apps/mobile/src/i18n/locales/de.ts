@@ -72,6 +72,19 @@ export const de: Translation = {
     tooManyAttempts: 'Zu viele Versuche. Warte ein paar Minuten und versuch es dann noch einmal.',
     notConfigured: 'Die Registrierung ist in dieser Version noch nicht eingerichtet.',
     unknown: 'Etwas ist schiefgelaufen. Bitte versuch es noch einmal.',
+    moderation: {
+      text_instructions:
+        'Das liest sich wie eine Anweisung an die KI und nicht wie etwas über eine Person. Beschreib, wer sie ist, und versuch es noch einmal.',
+      text_link:
+        'Links und Webadressen sind hier nicht möglich. Nimm sie heraus und versuch es noch einmal.',
+      text_contact:
+        'Bitte lass E-Mail-Adressen, Telefonnummern und Benutzernamen weg und versuch es noch einmal.',
+      text_unsafe:
+        'Ein Teil deines Textes kann von einem Partner nicht verwendet werden. Formulier ihn bitte um und versuch es noch einmal.',
+      moderation_unavailable:
+        'Ich konnte deinen Text gerade nicht prüfen, deshalb wurde nichts gespeichert. Versuch es gleich noch einmal.',
+      moderation_limit: 'Heute wurden mehrere deiner Texte abgelehnt. Versuch es morgen wieder.',
+    },
   },
   ageCheck: {
     title: 'Wann hast du Geburtstag?',
@@ -1719,6 +1732,7 @@ export const de: Translation = {
       voice_review: 'Laut beantwortete Karten',
       voice_sample: 'Stimmproben',
       phrasebook: 'Phrasebuch',
+      moderation: 'Prüfung deiner Texte',
     },
   },
   profile: {

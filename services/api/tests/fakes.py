@@ -1,6 +1,6 @@
 """In-memory stand-ins for the persistence layer, checked against the same contract tests as SQL."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -16,6 +16,7 @@ from konvami_api.domain.conversations import (
     zone_of,
 )
 from konvami_api.domain.costs import (
+    Charge,
     ChargeRecord,
     DaySpend,
     LearnerSpend,
@@ -29,6 +30,7 @@ from konvami_api.domain.flags import Flag, FlagStatus
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
+from konvami_api.domain.moderation import ModeratorError, TextGuard, Verdict
 from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.phrasebook import Phrase
@@ -453,6 +455,44 @@ class InMemoryDraftLog:
             return False
         self.drafts[(user_id, day)] = used + 1
         return True
+
+
+class FakeModerator:
+    """Flags any text that contains one of `flag`, and records what it was asked."""
+
+    def __init__(self, *flag: str) -> None:
+        self.flag = flag
+        self.checked: list[list[str]] = []
+        self.fail = False
+
+    def check(self, texts: Sequence[str], charge: Charge) -> Verdict:
+        if self.fail:
+            raise ModeratorError("down")
+        self.checked.append(list(texts))
+        return Verdict(any(word in text for word in self.flag for text in texts))
+
+
+class InMemoryAttemptLog:
+    def __init__(self) -> None:
+        self.refusals: dict[tuple[UUID, date, str], int] = {}
+
+    def add(self, user_id: UUID, day: date, reason: str) -> None:
+        key = (user_id, day, reason)
+        self.refusals[key] = self.refusals.get(key, 0) + 1
+
+    def count(self, user_id: UUID, day: date, reasons: Sequence[str]) -> int:
+        return sum(
+            count
+            for (user, when, reason), count in self.refusals.items()
+            if user == user_id and when == day and reason in reasons
+        )
+
+
+def text_guard(clock: Callable[[], datetime], moderator: FakeModerator | None = None) -> TextGuard:
+    """A guard whose moderator flags nothing, unless told otherwise."""
+    return TextGuard(
+        moderator=moderator or FakeModerator(), attempts=InMemoryAttemptLog(), clock=clock
+    )
 
 
 class FakeSpeechModel:

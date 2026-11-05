@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from konvami_api.domain.catalog import ExplanationUsage, StartingLevel
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.moderation import Screen
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.persona_parts import (
     Backdrop,
@@ -215,6 +216,20 @@ def _fields_of(persona: Persona) -> dict[str, Any]:
         "personality": persona.personality or None,
         "teaching": persona.teaching or None,
     }
+
+
+def _texts_of(fields: PersonaFields) -> dict[str, str]:
+    """The free text of a persona, which ends up in its instructions (moderation). The other
+    fields are choices from a list or numbers."""
+    texts = {
+        "name": fields.name,
+        "origin": fields.origin,
+        "occupation": fields.occupation,
+        "tagline": fields.tagline or "",
+        "backstory": fields.backstory,
+        "focus": (fields.teaching.focus if fields.teaching else None) or "",
+    }
+    return {name: text for name, text in texts.items() if text}
 
 
 def _persona(persona_id: UUID, fields: PersonaFields) -> Persona:
@@ -498,8 +513,10 @@ class PersonaService:
         text_model: TextModel,
         model: str,
         drafts: DraftLog,
+        guard: Screen,
         clock: Callable[[], dt.datetime],
     ) -> None:
+        self._guard = guard
         self._profiles = profiles
         self._onboarding = onboarding
         self._repository = repository
@@ -609,9 +626,12 @@ class PersonaService:
         """Adds a partner the learner designed (or reviewed, after a draft or a template)."""
         language = self._room_for_one_more(user_id)
         try:
-            persona = _persona(uuid4(), PersonaFields.model_validate(dict(fields)))
+            checked = PersonaFields.model_validate(dict(fields))
         except ValidationError as error:
             raise PersonaError("invalid_value") from error
+        # After the shape: a value that does not fit is refused without a request.
+        self._guard.check(user_id, list(_texts_of(checked).values()))
+        persona = _persona(uuid4(), checked)
         self._repository.add(user_id, language, [persona])
         return persona
 
@@ -623,6 +643,11 @@ class PersonaService:
             fields = PersonaFields.model_validate({**_fields_of(persona), **changes})
         except ValidationError as error:
             raise PersonaError("invalid_value") from error
+        # Only what is new is read: a partner's earlier words were checked when they were saved.
+        before = _texts_of(PersonaFields.model_validate(_fields_of(persona)))
+        self._guard.check(
+            user_id, [text for name, text in _texts_of(fields).items() if before.get(name) != text]
+        )
         changed = _persona(persona.id, fields)
         if not self._repository.update(user_id, changed):
             raise PersonaError("not_found")
@@ -659,6 +684,8 @@ class PersonaService:
         wish = description.strip()
         if not DESCRIPTION_MIN <= len(wish) <= DESCRIPTION_MAX:
             raise PersonaError("invalid_value")
+        # The description is written into the writer's request: read before it costs anything.
+        self._guard.check(user_id, [wish])
         profile = self._profiles.get(user_id)
         language = profile.target_language
         if not language:

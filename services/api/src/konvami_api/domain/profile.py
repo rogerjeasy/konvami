@@ -31,6 +31,7 @@ from konvami_api.domain.catalog import (
     LanguagePack,
     StartingLevel,
 )
+from konvami_api.domain.moderation import ModerationError, Screen
 
 # A JSON-compatible value: what a profile field holds and what the database stores.
 type Json = Any
@@ -137,6 +138,18 @@ class LoggedChange:
     change: ChangeRecord
     # Whether it is the latest change of its field, and so can be undone.
     undoable: bool
+
+
+def free_text(field: str, value: Json) -> list[str]:
+    """The words a learner wrote in a setting's value, which a partner's instructions then carry
+    (moderation, spec §6.21.4). Every other setting is a choice, a number or a date."""
+    if field == "goals" and isinstance(value, dict):
+        return [str(value["note"])] if value.get("note") else []
+    if field == AVOID_TOPICS and isinstance(value, list):
+        return [str(topic) for topic in value]
+    if field == "course" and isinstance(value, dict):
+        return [str(value[key]) for key in ("name", "chapter") if value.get(key)]
+    return []
 
 
 class ProfileError(Exception):
@@ -354,8 +367,14 @@ FIELDS: Mapping[str, FieldSpec] = {
 
 class ProfileService:
     def __init__(
-        self, repository: ProfileRepository, catalog: Catalog, clock: Callable[[], dt.datetime]
+        self,
+        repository: ProfileRepository,
+        catalog: Catalog,
+        clock: Callable[[], dt.datetime],
+        guard: Screen | None = None,
     ) -> None:
+        # None: nothing a learner writes is read (tests of other things).
+        self._guard = guard
         self._repository = repository
         self._catalog = catalog
         self._clock = clock
@@ -433,6 +452,7 @@ class ProfileService:
             stored = current.get((scope, change.field))
             if stored is not None and stored.value == value:
                 continue
+            self._screen(user_id, change.field, value, origin)
             records.append(
                 ChangeRecord(
                     scope=scope,
@@ -449,6 +469,16 @@ class ProfileService:
         if records:
             self._repository.save(user_id, records)
         return Profile(current)
+
+    def _screen(self, user_id: UUID, field: str, value: Json, origin: Origin) -> None:
+        """Reads what the learner wrote before it is kept. The system's own measurements are
+        not their words."""
+        if self._guard is None or origin is Origin.SYSTEM:
+            return
+        try:
+            self._guard.check(user_id, free_text(field, value))
+        except ModerationError as error:
+            raise ProfileError(error.code, field) from error
 
     def _scope(self, spec: FieldSpec, change: Change, target_language: str | None) -> str:
         if not spec.per_language:

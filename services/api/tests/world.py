@@ -101,6 +101,7 @@ from tests.fakes import (
     RecordingWeekStarter,
     ScriptedTextModel,
     ScriptedTranscriber,
+    text_guard,
 )
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
@@ -205,6 +206,7 @@ class World:
             text_model=self.text,
             model="gpt-6-luna",
             drafts=InMemoryDraftLog(),
+            guard=text_guard(self.clock),
             clock=self.clock,
         )
         self.accounts = FakeAccountDirectory(

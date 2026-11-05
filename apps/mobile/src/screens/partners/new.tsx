@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { PersonaDraft } from '@konvami/api-client';
-import { apiErrorCode, apiErrorKey } from '@/api/messages';
+import { apiErrorCode, apiErrorKey, failureOf, type Failure } from '@/api/messages';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -37,7 +37,7 @@ export function NewPartnerScreen() {
   const services = useProfileServices();
   const [description, setDescription] = useState('');
   const [writing, setWriting] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Failure | null>(null);
   /** The ready-made partners; null while loading, `failed` when they could not be read. */
   const [templates, setTemplates] = useState<PersonaDraft[] | 'failed' | null>(null);
   const signedIn = status === 'signedIn';
@@ -68,7 +68,9 @@ export function NewPartnerScreen() {
     } catch (error) {
       const code = apiErrorCode(error);
       const known = WRITER_PROBLEMS.find((candidate) => candidate === code);
-      setProblem(t(known ? `partners.create.problems.${known}` : apiErrorKey(code)));
+      setProblem(
+        failureOf(t(known ? `partners.create.problems.${known}` : apiErrorKey(code)), code),
+      );
     } finally {
       setWriting(false);
     }
@@ -99,8 +101,8 @@ export function NewPartnerScreen() {
               editable={!writing}
             />
             {problem ? (
-              <NoticeBox icon="alert" tone="danger">
-                {problem}
+              <NoticeBox icon={problem.tone === 'danger' ? 'alert' : 'info'} tone={problem.tone}>
+                {problem.message}
               </NoticeBox>
             ) : (
               <Text variant="small" tone="subtle">

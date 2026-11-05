@@ -48,6 +48,7 @@ const FEATURE = {
   voice_review: 'costs.feature.voice_review',
   voice_sample: 'costs.feature.voice_sample',
   phrasebook: 'costs.feature.phrasebook',
+  moderation: 'costs.feature.moderation',
 } as const;
 
 // Providers go by their own names, which are not translated.

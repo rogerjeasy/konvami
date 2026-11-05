@@ -19,6 +19,9 @@ from konvami_api.domain.exam_centre import ExamError
 from konvami_api.domain.flags import FlagError
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.memories import MemoriesError
+from konvami_api.domain.moderation import LIMIT as MODERATION_LIMIT
+from konvami_api.domain.moderation import UNAVAILABLE as MODERATION_UNAVAILABLE
+from konvami_api.domain.moderation import ModerationError
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.phrasebook import PhrasebookError
@@ -76,9 +79,12 @@ _CARD_STATUS = {
     "no_such_item": 422,
     "not_certain": 422,
 }
+# Free text that was refused (the code says why: instructions, a link, contact data, unsafe), a
+# check that could not be made, or too many attempts today. Any other code is a refusal: 422.
+_MODERATION_STATUS = {MODERATION_UNAVAILABLE: 503, MODERATION_LIMIT: 429}
 # Undoing a change by voice: none such, or something changed the same setting since. Every
 # other refusal of a profile change is a value that does not fit.
-_PROFILE_STATUS = {"not_found": 404, "superseded": 409}
+_PROFILE_STATUS = {"not_found": 404, "superseded": 409, **_MODERATION_STATUS}
 _QUESTION_STATUS = {"not_found": 404, "invalid_option": 422}
 _MEMORY_STATUS = {"not_found": 404, "duplicate": 409}
 _EXAM_STATUS = {"not_found": 404, "score_limit": 429}
@@ -125,6 +131,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ProfileError)
     async def _profile_error(_: Request, error: ProfileError) -> JSONResponse:
         return _response(_PROFILE_STATUS.get(error.code, 422), error.code, error.field)
+
+    @app.exception_handler(ModerationError)
+    async def _moderation_error(_: Request, error: ModerationError) -> JSONResponse:
+        return _response(_MODERATION_STATUS.get(error.code, 422), error.code)
 
     @app.exception_handler(QuestionError)
     async def _question_error(_: Request, error: QuestionError) -> JSONResponse:

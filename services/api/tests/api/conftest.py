@@ -85,6 +85,7 @@ from tests.fakes import (
     RecordingWeekStarter,
     ScriptedTextModel,
     ScriptedTranscriber,
+    text_guard,
 )
 
 USER = "11111111-1111-4111-8111-111111111111"
@@ -318,6 +319,7 @@ def services(
         text_model=text_model,
         model="gpt-6-luna",
         drafts=InMemoryDraftLog(),
+        guard=text_guard(clock),
         clock=clock,
     )
     conversations = ConversationService(InMemoryConversationRepository(calls), personas)

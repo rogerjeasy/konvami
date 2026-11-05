@@ -60,6 +60,9 @@ class Feature(StrEnum):
     VOICE_SAMPLE = "voice_sample"
     # Phrases suggested for a situation (the phrasebook, spec §6.7).
     PHRASEBOOK = "phrasebook"
+    # The check of what a learner wrote for a partner's instructions (moderation, spec §6.21.4).
+    # The provider does not charge for it: the requests are counted.
+    MODERATION = "moderation"
 
 
 @dataclass(frozen=True)
