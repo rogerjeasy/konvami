@@ -304,6 +304,46 @@ class CardService:
             raise CardError("too_many")
         return existing
 
+    def save_phrase(self, user_id: UUID, phrase: str, meaning: str, explained_in: str) -> Card:
+        """Makes a word card of a phrasebook entry (spec §6.7): the phrase, what it means and no
+        sentence. Saving what is already a card answers with that card."""
+        language = self._language(user_id)
+        key = card_key(phrase)
+        existing = self._repository.by_key(user_id, language, "word", key)
+        if existing is not None:
+            return existing
+        now = self._clock()
+        card = Card(
+            id=self._new_id(),
+            kind="word",
+            front=phrase,
+            back=meaning,
+            note=None,
+            explained_in=explained_in,
+            source_call_id=None,
+            created_at=now,
+            due_at=now,
+            reviewed_at=None,
+            memory=None,
+            reviews=0,
+            lapses=0,
+        )
+        if self._repository.add(user_id, language, key, card, MAX_CARDS):
+            if self._details is not None:
+                with contextlib.suppress(Exception):
+                    self._details.start(user_id)
+            return card
+        existing = self._repository.by_key(user_id, language, "word", key)
+        if existing is None:
+            raise CardError("too_many")
+        return existing
+
+    def has_words(self, user_id: UUID, words: Sequence[str]) -> list[bool]:
+        """Which of the words, in order, the learner has a word card for."""
+        keys = [("word", card_key(word)) for word in words]
+        known = self._repository.known(user_id, self._language(user_id), keys)  # type: ignore[arg-type]
+        return [pair in known for pair in keys]
+
     def _content(self, report: Report, kind: Kind, index: int) -> tuple[str, str, str | None]:
         if kind == "word":
             if not 0 <= index < len(report.words):

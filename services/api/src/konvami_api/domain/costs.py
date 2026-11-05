@@ -58,6 +58,8 @@ class Feature(StrEnum):
     EXAM_SCORE = "exam_score"
     EXAM_AUDIO = "exam_audio"
     VOICE_SAMPLE = "voice_sample"
+    # Phrases suggested for a situation (the phrasebook, spec §6.7).
+    PHRASEBOOK = "phrasebook"
 
 
 @dataclass(frozen=True)

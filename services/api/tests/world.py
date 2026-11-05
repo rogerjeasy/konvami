@@ -23,6 +23,7 @@ from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import Persona, PersonaService
+from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.planner import SessionPlanner
@@ -76,6 +77,7 @@ from tests.fakes import (
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
     InMemoryPersonaRepository,
+    InMemoryPhraseRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
@@ -334,6 +336,19 @@ class World:
             model="gpt-6.1-sol",
             clock=self.clock,
             new_id=lambda: next(question_ids),
+        )
+        # Phrase ids in the order they are handed out: ...0001, ...0002, and so on.
+        phrase_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{n:012d}") for n in range(1, 10_000))
+        self.phrasebook = PhrasebookService(
+            profiles=self.profiles,
+            accounts=self.accounts,
+            cards=self.cards,
+            repository=InMemoryPhraseRepository(),
+            limit=self.tutor_store,
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            clock=self.clock,
+            new_id=lambda: next(phrase_ids),
         )
         self.practice = PracticeScript(
             profiles=self.profiles,
