@@ -1115,6 +1115,20 @@ class RecordingExamStarter:
         self.started.append(call_id)
 
 
+class InMemoryPremiumChoices:
+    def __init__(self) -> None:
+        self.chosen: dict[UUID, str] = {}
+
+    def get(self, user_id: UUID) -> str | None:
+        return self.chosen.get(user_id)
+
+    def set(self, user_id: UUID, voice_id: str | None) -> None:
+        if voice_id is None:
+            self.chosen.pop(user_id, None)
+        else:
+            self.chosen[user_id] = voice_id
+
+
 class InMemoryPushDeviceRepository:
     def __init__(self) -> None:
         self.devices: dict[str, PushDevice] = {}

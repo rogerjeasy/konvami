@@ -5,7 +5,12 @@ import pytest
 
 from konvami_api.domain.costs import Budget
 from konvami_api.domain.voice import CallPurpose
-from konvami_api.settings import cost_settings, text_models, voice_settings
+from konvami_api.settings import (
+    cost_settings,
+    premium_voice_settings,
+    text_models,
+    voice_settings,
+)
 
 CONFIGURED = json.dumps(
     {
@@ -183,3 +188,48 @@ def test_the_weekly_check_in_model_is_read_with_the_text_models() -> None:
     assert models.week == "m"
     # Written before weekly check-ins: none is set, and the memory model writes them.
     assert text_models('{"assessment": "a", "personas": "p"}').week == ""
+
+
+def test_premium_voices_are_read_from_the_json_terraform_sets() -> None:
+    raw = json.dumps(
+        {
+            "model": "eleven_multilingual_v2",
+            "voices": [{"id": "Maya123", "name": "Maya"}],
+            "open_to_testers": False,
+        }
+    )
+
+    settings = premium_voice_settings(raw)
+
+    assert settings.voices.offered
+    assert settings.voices.model == "eleven_multilingual_v2"
+    assert [(voice.id, voice.name) for voice in settings.voices.voices] == [("Maya123", "Maya")]
+    assert settings.open_to_testers is False
+
+
+@pytest.mark.parametrize("missing", [None, ""])
+def test_without_premium_voice_settings_none_are_offered(missing: str | None) -> None:
+    settings = premium_voice_settings(missing)
+
+    assert not settings.voices.offered
+    assert settings.open_to_testers is True
+
+
+def test_a_model_without_voices_offers_nothing() -> None:
+    assert not premium_voice_settings(
+        json.dumps({"model": "eleven_multilingual_v2"})
+    ).voices.offered
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "not json",
+        json.dumps({"model": "m", "voices": [{"id": "../x", "name": "X"}]}),
+        json.dumps({"model": "m", "voices": [{"id": "abc", "name": ""}]}),
+        json.dumps({"model": "m", "extra": 1}),
+    ],
+)
+def test_a_broken_premium_voice_setting_is_named_at_start_up(raw: str) -> None:
+    with pytest.raises(RuntimeError, match="KONVAMI_PREMIUM_VOICES"):
+        premium_voice_settings(raw)

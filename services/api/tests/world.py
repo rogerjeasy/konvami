@@ -29,6 +29,12 @@ from konvami_api.domain.placement import PlacementResult, PlacementScript, Place
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
+from konvami_api.domain.premium_voices import (
+    PilotAccess,
+    PremiumVoice,
+    PremiumVoices,
+    PremiumVoiceService,
+)
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
@@ -82,6 +88,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPhraseRepository,
     InMemoryPlacementRepository,
+    InMemoryPremiumChoices,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
     InMemoryQuestionRepository,
@@ -398,6 +405,21 @@ class World:
         self.exam_store = InMemoryExamRepository()
         self.exam_starter = RecordingExamStarter()
         self.speech = FakeSpeechModel()
+        # The premium voices (ElevenLabs): two on offer, open to every tester.
+        self.premium_speech = FakeSpeechModel()
+        self.premium_choices = InMemoryPremiumChoices()
+        self.premium = PremiumVoiceService(
+            premium=PremiumVoices(
+                "eleven_multilingual_v2",
+                (PremiumVoice("Maya123", "Maya"), PremiumVoice("Otto456", "Otto")),
+            ),
+            access=PilotAccess(owners=[], open_to_testers=True),
+            accounts=self.accounts,
+            choices=self.premium_choices,
+            speech=self.premium_speech,
+            profiles=self.profiles,
+            files=self.files,
+        )
         self.exams = ExamService(
             profiles=self.profiles,
             personas=self.personas,
@@ -407,7 +429,12 @@ class World:
             starter=self.exam_starter,
             text_model=self.text,
             model="gpt-6.1-sol",
-            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
+            sounds=Sounds(
+                speech=self.speech,
+                model="gpt-4o-mini-tts",
+                files=self.files,
+                premium=self.premium,
+            ),
             clock=self.clock,
             # The push service comes later: looked up when a report or a score is written.
             announce=lambda *said: self.push.simulation_scored(*said),
@@ -475,7 +502,12 @@ class World:
             repository=self.card_store,
             text_model=self.text,
             model="gpt-6.1-sol",
-            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
+            sounds=Sounds(
+                speech=self.speech,
+                model="gpt-4o-mini-tts",
+                files=self.files,
+                premium=self.premium,
+            ),
             files=self.files,
             clock=self.clock,
         )
@@ -497,7 +529,12 @@ class World:
             starter=self.week_starter,
             text_model=self.text,
             model="gpt-6-luna",
-            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
+            sounds=Sounds(
+                speech=self.speech,
+                model="gpt-4o-mini-tts",
+                files=self.files,
+                premium=self.premium,
+            ),
             clock=self.clock,
         )
         self.voices = VoiceSampleService(

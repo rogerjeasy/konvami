@@ -55,3 +55,28 @@ def test_a_missing_name_is_empty_not_invented() -> None:
     attributes = {key: value for key, value in ATTRIBUTES.items() if key != "given_name"}
 
     assert account_from_attributes(attributes).first_name == ""
+
+
+@pytest.mark.parametrize(
+    ("stored", "agreed"),
+    [
+        ("v3|2026-11-06T12:30:00.000Z|openai=1,elevenlabs=1,bedrock=0", True),
+        ("v4|2026-11-06T12:30:00.000Z|openai=1,elevenlabs=1,bedrock=0", True),
+        ("v3|2026-11-06T12:30:00.000Z|openai=1,elevenlabs=0,bedrock=0", False),
+        ("v3|2026-11-06T12:30:00.000Z|openai=0,elevenlabs=1,bedrock=0", False),
+        # Earlier consent texts did not name ElevenLabs as in use, so their flag counts for nothing.
+        ("v2|2026-10-23T12:30:00.000Z|openai=1,elevenlabs=1,bedrock=0", False),
+        ("v1|2026-10-09T12:30:00.000Z|openai=1,elevenlabs=1,bedrock=0", False),
+        ("v3|not a date|openai=1,elevenlabs=1", False),
+        ("vx|2026-11-06T12:30:00.000Z|openai=1,elevenlabs=1", False),
+        (None, False),
+    ],
+)
+def test_elevenlabs_needs_the_v3_consent_record_that_names_it(
+    stored: str | None, agreed: bool
+) -> None:
+    attributes = {key: value for key, value in ATTRIBUTES.items() if key != "custom:ai_consent"}
+    if stored is not None:
+        attributes["custom:ai_consent"] = stored
+
+    assert account_from_attributes(attributes).premium_voice_consent is agreed

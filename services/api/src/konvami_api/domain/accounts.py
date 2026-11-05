@@ -22,6 +22,10 @@ DEFAULT_LANGUAGE: InterfaceLanguage = "en"
 
 # The provider that receives live voice: without consent to it there is no voice call.
 VOICE_PROVIDER = "openai"
+# The optional provider that speaks text aloud (premium voices, spec §6.21.2). It counts only on a
+# record of this version or later: earlier consent texts did not name it as in use.
+PREMIUM_VOICE_PROVIDER = "elevenlabs"
+PREMIUM_VOICE_CONSENT_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,8 @@ class Account:
     first_name: str
     language: InterfaceLanguage
     voice_consent: bool
+    # Agreed to ElevenLabs speaking text aloud (consent record v3, 2.5 and 6.7).
+    premium_voice_consent: bool = False
 
 
 class AccountNotFound(Exception):  # noqa: N818 - reads as a fact, like KeyError
@@ -44,21 +50,40 @@ class AccountDirectory(Protocol):
         """Removes the account, so nobody can sign in to it. Nothing to do when it is gone."""
 
 
-def _voice_consent(stored: str | None) -> bool:
-    """Reads the app's consent record: `v1|<ISO time>|openai=1,elevenlabs=1,bedrock=0`.
+def _consent_flags(stored: str | None) -> tuple[int, dict[str, str]] | None:
+    """The version and the providers of the app's consent record,
+    `v3|<ISO time>|openai=1,elevenlabs=1,bedrock=0`, or None when it cannot be read in full.
 
-    The format is written by apps/mobile/src/auth/consent.ts. Anything that cannot be read in
-    full counts as no consent.
+    The format is written by apps/mobile/src/auth/consent.ts.
     """
     parts = (stored or "").split("|")
     if len(parts) != 3 or not all(parts):
-        return False
+        return None
     try:
         dt.datetime.fromisoformat(parts[1])
+        version = int(parts[0].removeprefix("v"))
     except ValueError:
+        return None
+    return version, dict(pair.split("=", 1) for pair in parts[2].split(",") if "=" in pair)
+
+
+def _voice_consent(stored: str | None) -> bool:
+    """Whether the record agrees to the provider of live voice. Anything that cannot be read in
+    full counts as no consent."""
+    record = _consent_flags(stored)
+    return record is not None and record[1].get(VOICE_PROVIDER) == "1"
+
+
+def _premium_voice_consent(stored: str | None) -> bool:
+    record = _consent_flags(stored)
+    if record is None:
         return False
-    flags = dict(pair.split("=", 1) for pair in parts[2].split(",") if "=" in pair)
-    return flags.get(VOICE_PROVIDER) == "1"
+    version, flags = record
+    return (
+        version >= PREMIUM_VOICE_CONSENT_VERSION
+        and flags.get(VOICE_PROVIDER) == "1"
+        and flags.get(PREMIUM_VOICE_PROVIDER) == "1"
+    )
 
 
 def account_from_attributes(attributes: Mapping[str, str]) -> Account:
@@ -69,6 +94,7 @@ def account_from_attributes(attributes: Mapping[str, str]) -> Account:
         first_name=attributes.get("given_name", "").strip(),
         language=language,
         voice_consent=_voice_consent(attributes.get("custom:ai_consent")),
+        premium_voice_consent=_premium_voice_consent(attributes.get("custom:ai_consent")),
     )
 
 
