@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import { useSession } from '@/auth';
 import { LogoMark } from '@/components/brand';
@@ -32,7 +32,7 @@ const BUBBLE = { top: 40, right: -1 } as const;
 const HERO_SHARE = 0.46;
 
 // The logo pops first, then the greeting; text and buttons rise in after (stagger positions).
-const ORDER = { bubble: 3, title: 4, body: 5, guide: 6, trial: 7, primary: 9, secondary: 10 };
+const ORDER = { bubble: 3, title: 4, body: 5, guide: 6, primary: 8, secondary: 9 };
 
 /** The Konvami mark greeting the new user by name, on the brand ground. Decorative. */
 function GreetingIllustration({ name }: { name: string }) {
@@ -137,17 +137,6 @@ export function AllSetScreen() {
                 </Text>
               </View>
             </Card>
-          </Reveal>
-          <Reveal delay={staggerDelay(ORDER.trial)}>
-            <View className="flex-row items-center gap-2.5 px-1">
-              <Icon name="gift" color={color.primaryText} size={size.iconMd} />
-              <Text variant="callout" tone="primary" className="flex-1">
-                <Trans
-                  i18nKey="allSet.trial"
-                  components={{ strong: <Text variant="labelSmall" tone="primary" /> }}
-                />
-              </Text>
-            </View>
           </Reveal>
         </>
       }
