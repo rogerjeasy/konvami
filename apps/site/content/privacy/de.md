@@ -37,6 +37,10 @@ Konvami ist in der Testphase. Einige Funktionen aus dem Entwurf der App sind noc
 
 **Technische Protokolle.** Zu jeder Anfrage an unsere Server: die Zeit, die angefragte Adresse, das Ergebnis und die Dauer. IP-Adressen, Passwörter und Inhalte werden nicht protokolliert.
 
+**Absturzberichte, Nutzungszahlen und Benachrichtigungen.** Wenn die App abstürzt, geht ein Absturzbericht an Sentry: die Art des Fehlers, die Stelle im Code und dein Gerät, System und die App-Version. Alles, was du gesagt oder getippt hast, wird vor dem Senden entfernt. Anonyme Nutzungszahlen (die App wurde geöffnet, ein Gespräch begann, Feedback gesendet, jeweils mit App-Version, Plattform und einer zufälligen Installationsnummer, die nicht an dein Konto gebunden ist) gehen nur dann an PostHog (EU), wenn du in Profil › Datenschutz und KI „Anonyme Nutzungsdaten teilen“ einschaltest; bis dahin ist es aus, und beim Ausschalten wird die Installationsnummer gelöscht. Wenn du Erinnerungen einschaltest, wird dein Handy für Push-Benachrichtigungen registriert: Konvami speichert das Benachrichtigungs-Token deines Geräts.
+
+**Käufe und Feedback.** Wenn du abonnierst, wickelt der Store die Zahlung ab; Konvami speichert, welchen Plan du hast und bis wann, und deine Kontonummer wird an RevenueCat weitergegeben, damit ein Kauf bei deinem Konto ankommt. Wenn du in Profil › Hilfe und Feedback eine Nachricht sendest, speichern wir die Kategorie, deine Nachricht und, nur wenn du es ankreuzt, die App-Version und das System deines Geräts.
+
 Bitte teile nichts, was du nicht aufgeschrieben haben möchtest, etwa über deine Gesundheit, deinen Glauben oder andere Menschen. Wenn du es tust, kann es in Transkripten, Berichten und Notizen erscheinen. Eine Notiz kannst du jederzeit löschen; Transkripte und Berichte werden mit deinem Konto gelöscht.
 
 ## Wozu, und auf welcher Rechtsgrundlage
@@ -44,10 +48,11 @@ Bitte teile nichts, was du nicht aufgeschrieben haben möchtest, etwa über dein
 - **Um Konvami bereitzustellen** (Konto, Gespräche, Berichte, Karten, Antworten des Tutors, Notizen, Aufnahmen): weil du es von uns möchtest, nach unseren Nutzungsbedingungen (Art. 6 Abs. 1 lit. b DSGVO).
 - **Um deine Gespräche an die unten genannten KI-Anbieter zu senden**: auf Grundlage deiner Einwilligung auf dem Bildschirm „So nutzt Konvami KI“ (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie jederzeit widerrufen, indem du dein Konto löschst; ohne sie funktionieren die Gespräche nicht.
 - **Um Konvami sicher und bezahlbar zu halten** (Protokolle, Schutz der Anmeldung, Kontingent an Sprachminuten, Kostengrenzen): unser berechtigtes Interesse, einen sicheren Dienst im Rahmen seines Budgets zu betreiben (Art. 6 Abs. 1 lit. f DSGVO).
+- **Um zu verstehen, wie die App genutzt wird, und um Fehler zu finden**: Absturzberichte auf Grundlage unseres berechtigten Interesses an einer funktionierenden App (Art. 6 Abs. 1 lit. f DSGVO); anonyme Nutzungszahlen nur auf Grundlage deiner Einwilligung (Art. 6 Abs. 1 lit. a), die du jederzeit in Profil › Datenschutz und KI widerrufen kannst.
 
 Konvami nutzt deine Stimme nicht, um dich zu identifizieren. Dein Niveau, deine Korrekturen und Berichte werden von KI ermittelt; sie helfen dir beim Lernen, haben keine rechtliche oder ähnlich erhebliche Wirkung auf dich, und du kannst dein Niveau jederzeit ändern.
 
-Konvami zeigt keine Werbung, verkauft keine Daten, verfolgt dich nicht über andere Apps oder Websites und enthält keine Analyse- oder Werbewerkzeuge.
+Konvami zeigt keine Werbung, verkauft keine Daten und verfolgt dich nicht über andere Apps oder Websites. Es hat keine Werbewerkzeuge, und seine einzige Analyse sind die anonymen Nutzungszahlen, die du einschalten kannst.
 
 ## Wer sonst deine Daten erhält
 
@@ -55,6 +60,11 @@ Wir nutzen Dienstleister, die Daten nur nach unseren Weisungen verarbeiten, auf 
 
 - **Amazon Web Services EMEA SARL** (Luxemburg) betreibt Konvami in seiner Region Frankfurt, Deutschland: unsere Server, die Datenbank, den Dateispeicher, den Anmeldedienst und die E-Mails mit deinen Bestätigungs- und Passwort-Codes.
 - **OpenAI Ireland Ltd** (Dublin) stellt die KI bereit. Während eines Gesprächs erhält OpenAI deine Stimme und das Transkript; zur Vorbereitung deines Partners die Teile deines Lernprofils und deiner Notizen, die dein Partner braucht; nach dem Gespräch das Transkript, um den Bericht, das wortgetreue Transkript und die Notizen zu schreiben; außerdem beantwortet OpenAI deine Fragen an den Tutor. OpenAI nutzt diese Daten nicht, um seine Modelle zu trainieren. Es kann sie bis zu 30 Tage aufbewahren, um Missbrauch zu erkennen, und löscht sie dann.
+- **Sentry** erhält Absturzberichte (siehe oben), ohne alles, was du gesagt oder getippt hast.
+- **PostHog** (EU-Cloud) erhält anonyme Nutzungszahlen, aber nur, wenn du sie eingeschaltet hast.
+- **Expo** (der Push-Dienst von Expo) erhält das Benachrichtigungs-Token deines Geräts und den Text einer Benachrichtigung, wenn Konvami dir eine sendet: ein geschriebener Bericht, eine bewertete Prüfungssimulation oder eine Erinnerung nach einer ruhigen Woche.
+- **RevenueCat** erhält deine Kontonummer und deine Käufe, um Konvami mitzuteilen, welchen Plan du hast. Die Zahlung wickeln der App Store und Google Play selbst ab.
+- **ElevenLabs** ist optional und bleibt aus, bis du es in Profil › Vorlese-Stimme einschaltest. Dann erhält es nur den Text, den es vorlesen soll (eine Karte, ein Wochen-Check-in), nie deine Stimme.
 
 OpenAI verarbeitet Daten in den USA. Die Übermittlung ist durch die Standardvertragsklauseln der Europäischen Kommission, mit den Anpassungen für die Schweiz, im Auftragsverarbeitungsvertrag von OpenAI geschützt.
 

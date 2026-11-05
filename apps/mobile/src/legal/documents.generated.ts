@@ -212,6 +212,30 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
+              "text": "Crash reports, usage counts and notifications.",
+              "bold": true
+            },
+            {
+              "text": " If the app breaks, a crash report is sent to Sentry: the kind of error, where in the code it happened, and your device, system and app version. Anything you said or typed is removed from it before it is sent. Anonymous usage counts (the app was opened, a conversation started, feedback sent, each with the app version and platform and a random install number that is not tied to your account) are sent to PostHog (EU) only if you turn on \"Share anonymous usage data\" in Profile › Privacy and AI; it is off until you do, and turning it off deletes the install number. If you turn on reminders, your phone is registered for push notifications: Konvami keeps the notification token of your device."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Purchases and feedback.",
+              "bold": true
+            },
+            {
+              "text": " If you subscribe, the store handles the payment; Konvami keeps which plan you have and until when, and your account number is shared with RevenueCat so that a purchase reaches your account. If you send feedback in Profile › Help and feedback, we keep the category, your message and, only if you tick it, the app version and your device's system."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
               "text": "Please do not share information you would not want written down, for example about your health, beliefs or other people. If you do, it may appear in transcripts, reports and memories. You can delete a memory at any time; transcripts and reports are deleted with your account."
             }
           ]
@@ -249,6 +273,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               {
                 "text": " (logs, sign-in protection, voice-minute allowance, cost limits): our legitimate interest in running a safe service within its budget (GDPR art. 6(1)(f))."
               }
+            ],
+            [
+              {
+                "text": "To understand how the app is used and to find faults",
+                "bold": true
+              },
+              {
+                "text": ": crash reports on the basis of our legitimate interest in a working app (GDPR art. 6(1)(f)); anonymous usage counts only on the basis of your consent (art. 6(1)(a)), which you can withdraw at any time in Profile › Privacy and AI."
+              }
             ]
           ]
         },
@@ -264,7 +297,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
-              "text": "Konvami shows no advertising, sells no data, does not track you across other apps or websites, and contains no analytics or advertising tools."
+              "text": "Konvami shows no advertising, sells no data and does not track you across other apps or websites. It has no advertising tools, and its only analytics are the anonymous usage counts you can turn on."
             }
           ]
         },
@@ -299,6 +332,51 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (Dublin) provides the AI. During a conversation it receives your voice and the transcript; to prepare your partner, it receives the parts of your learning profile and memories your partner needs; after the conversation, it receives the transcript to write the report, the word-for-word transcript and the memories, and it answers your Tutor questions. OpenAI does not use this data to train its models. It may keep it for up to 30 days to detect abuse, then deletes it."
+              }
+            ],
+            [
+              {
+                "text": "Sentry",
+                "bold": true
+              },
+              {
+                "text": " receives crash reports (see above), with everything you said or typed removed."
+              }
+            ],
+            [
+              {
+                "text": "PostHog",
+                "bold": true
+              },
+              {
+                "text": " (EU cloud) receives anonymous usage counts, but only if you turned them on."
+              }
+            ],
+            [
+              {
+                "text": "Expo",
+                "bold": true
+              },
+              {
+                "text": " (Expo's push notification service) receives your device's notification token and the text of a notification when Konvami sends you one: a written report, a scored exam simulation or a reminder after a quiet week."
+              }
+            ],
+            [
+              {
+                "text": "RevenueCat",
+                "bold": true
+              },
+              {
+                "text": " receives your account number and your purchases, to tell Konvami which plan you have. The App Store and Google Play process the payment themselves."
+              }
+            ],
+            [
+              {
+                "text": "ElevenLabs",
+                "bold": true
+              },
+              {
+                "text": " is optional and off until you turn it on in Profile › Read-aloud voice. If you do, it receives only the text it has to read aloud (a card, a weekly check-in), never your voice."
               }
             ]
           ]
@@ -894,6 +972,30 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
+              "text": "Absturzberichte, Nutzungszahlen und Benachrichtigungen.",
+              "bold": true
+            },
+            {
+              "text": " Wenn die App abstürzt, geht ein Absturzbericht an Sentry: die Art des Fehlers, die Stelle im Code und dein Gerät, System und die App-Version. Alles, was du gesagt oder getippt hast, wird vor dem Senden entfernt. Anonyme Nutzungszahlen (die App wurde geöffnet, ein Gespräch begann, Feedback gesendet, jeweils mit App-Version, Plattform und einer zufälligen Installationsnummer, die nicht an dein Konto gebunden ist) gehen nur dann an PostHog (EU), wenn du in Profil › Datenschutz und KI „Anonyme Nutzungsdaten teilen“ einschaltest; bis dahin ist es aus, und beim Ausschalten wird die Installationsnummer gelöscht. Wenn du Erinnerungen einschaltest, wird dein Handy für Push-Benachrichtigungen registriert: Konvami speichert das Benachrichtigungs-Token deines Geräts."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Käufe und Feedback.",
+              "bold": true
+            },
+            {
+              "text": " Wenn du abonnierst, wickelt der Store die Zahlung ab; Konvami speichert, welchen Plan du hast und bis wann, und deine Kontonummer wird an RevenueCat weitergegeben, damit ein Kauf bei deinem Konto ankommt. Wenn du in Profil › Hilfe und Feedback eine Nachricht sendest, speichern wir die Kategorie, deine Nachricht und, nur wenn du es ankreuzt, die App-Version und das System deines Geräts."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
               "text": "Bitte teile nichts, was du nicht aufgeschrieben haben möchtest, etwa über deine Gesundheit, deinen Glauben oder andere Menschen. Wenn du es tust, kann es in Transkripten, Berichten und Notizen erscheinen. Eine Notiz kannst du jederzeit löschen; Transkripte und Berichte werden mit deinem Konto gelöscht."
             }
           ]
@@ -931,6 +1033,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               {
                 "text": " (Protokolle, Schutz der Anmeldung, Kontingent an Sprachminuten, Kostengrenzen): unser berechtigtes Interesse, einen sicheren Dienst im Rahmen seines Budgets zu betreiben (Art. 6 Abs. 1 lit. f DSGVO)."
               }
+            ],
+            [
+              {
+                "text": "Um zu verstehen, wie die App genutzt wird, und um Fehler zu finden",
+                "bold": true
+              },
+              {
+                "text": ": Absturzberichte auf Grundlage unseres berechtigten Interesses an einer funktionierenden App (Art. 6 Abs. 1 lit. f DSGVO); anonyme Nutzungszahlen nur auf Grundlage deiner Einwilligung (Art. 6 Abs. 1 lit. a), die du jederzeit in Profil › Datenschutz und KI widerrufen kannst."
+              }
             ]
           ]
         },
@@ -946,7 +1057,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
-              "text": "Konvami zeigt keine Werbung, verkauft keine Daten, verfolgt dich nicht über andere Apps oder Websites und enthält keine Analyse- oder Werbewerkzeuge."
+              "text": "Konvami zeigt keine Werbung, verkauft keine Daten und verfolgt dich nicht über andere Apps oder Websites. Es hat keine Werbewerkzeuge, und seine einzige Analyse sind die anonymen Nutzungszahlen, die du einschalten kannst."
             }
           ]
         },
@@ -981,6 +1092,51 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (Dublin) stellt die KI bereit. Während eines Gesprächs erhält OpenAI deine Stimme und das Transkript; zur Vorbereitung deines Partners die Teile deines Lernprofils und deiner Notizen, die dein Partner braucht; nach dem Gespräch das Transkript, um den Bericht, das wortgetreue Transkript und die Notizen zu schreiben; außerdem beantwortet OpenAI deine Fragen an den Tutor. OpenAI nutzt diese Daten nicht, um seine Modelle zu trainieren. Es kann sie bis zu 30 Tage aufbewahren, um Missbrauch zu erkennen, und löscht sie dann."
+              }
+            ],
+            [
+              {
+                "text": "Sentry",
+                "bold": true
+              },
+              {
+                "text": " erhält Absturzberichte (siehe oben), ohne alles, was du gesagt oder getippt hast."
+              }
+            ],
+            [
+              {
+                "text": "PostHog",
+                "bold": true
+              },
+              {
+                "text": " (EU-Cloud) erhält anonyme Nutzungszahlen, aber nur, wenn du sie eingeschaltet hast."
+              }
+            ],
+            [
+              {
+                "text": "Expo",
+                "bold": true
+              },
+              {
+                "text": " (der Push-Dienst von Expo) erhält das Benachrichtigungs-Token deines Geräts und den Text einer Benachrichtigung, wenn Konvami dir eine sendet: ein geschriebener Bericht, eine bewertete Prüfungssimulation oder eine Erinnerung nach einer ruhigen Woche."
+              }
+            ],
+            [
+              {
+                "text": "RevenueCat",
+                "bold": true
+              },
+              {
+                "text": " erhält deine Kontonummer und deine Käufe, um Konvami mitzuteilen, welchen Plan du hast. Die Zahlung wickeln der App Store und Google Play selbst ab."
+              }
+            ],
+            [
+              {
+                "text": "ElevenLabs",
+                "bold": true
+              },
+              {
+                "text": " ist optional und bleibt aus, bis du es in Profil › Vorlese-Stimme einschaltest. Dann erhält es nur den Text, den es vorlesen soll (eine Karte, ein Wochen-Check-in), nie deine Stimme."
               }
             ]
           ]
@@ -1591,6 +1747,30 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
+              "text": "Rapports de plantage, comptages d’usage et notifications.",
+              "bold": true
+            },
+            {
+              "text": " Si l’app plante, un rapport de plantage est envoyé à Sentry : le type d’erreur, l’endroit du code et ton appareil, ton système et la version de l’app. Tout ce que tu as dit ou écrit en est retiré avant l’envoi. Des comptages d’usage anonymes (l’app a été ouverte, une conversation a commencé, un avis a été envoyé, chacun avec la version de l’app, la plateforme et un numéro d’installation aléatoire, sans lien avec ton compte) ne sont envoyés à PostHog (UE) que si tu actives « Partager des données d’usage anonymes » dans Profil › Confidentialité et IA ; c’est désactivé tant que tu ne le fais pas, et le désactiver supprime le numéro d’installation. Si tu actives les rappels, ton téléphone est enregistré pour les notifications push : Konvami conserve le jeton de notification de ton appareil."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Achats et avis.",
+              "bold": true
+            },
+            {
+              "text": " Si tu t’abonnes, le store gère le paiement ; Konvami conserve ton offre et sa date de fin, et ton numéro de compte est transmis à RevenueCat pour qu’un achat arrive sur ton compte. Si tu envoies un avis dans Profil › Aide et avis, nous conservons la catégorie, ton message et, seulement si tu le coches, la version de l’app et le système de ton appareil."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
               "text": "Merci de ne pas partager ce que tu ne voudrais pas voir écrit, par exemple sur ta santé, tes convictions ou d’autres personnes. Si tu le fais, cela peut apparaître dans les transcriptions, les bilans et les notes. Tu peux supprimer une note à tout moment ; les transcriptions et les bilans sont supprimés avec ton compte."
             }
           ]
@@ -1628,6 +1808,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               {
                 "text": " (journaux, protection de la connexion, quota de minutes vocales, plafonds de coûts) : notre intérêt légitime à exploiter un service sûr dans les limites de son budget (art. 6, par. 1, let. f RGPD)."
               }
+            ],
+            [
+              {
+                "text": "Pour comprendre comment l’app est utilisée et trouver les défauts",
+                "bold": true
+              },
+              {
+                "text": " : les rapports de plantage sur la base de notre intérêt légitime à une app qui fonctionne (RGPD art. 6, par. 1, let. f) ; les comptages d’usage anonymes uniquement sur la base de ton consentement (art. 6, par. 1, let. a), que tu peux retirer à tout moment dans Profil › Confidentialité et IA."
+              }
             ]
           ]
         },
@@ -1643,7 +1832,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
-              "text": "Konvami n’affiche pas de publicité, ne vend aucune donnée, ne te suit pas dans d’autres apps ou sites web et ne contient aucun outil d’analyse ou de publicité."
+              "text": "Konvami n’affiche pas de publicité, ne vend aucune donnée et ne te suit pas sur d’autres apps ou sites. Il n’a aucun outil publicitaire, et sa seule mesure d’audience est le comptage d’usage anonyme que tu peux activer."
             }
           ]
         },
@@ -1678,6 +1867,51 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (Dublin) fournit l’IA. Pendant une conversation, OpenAI reçoit ta voix et la transcription ; pour préparer ton partenaire, les parties de ton profil d’apprentissage et de tes notes dont il a besoin ; après la conversation, la transcription pour rédiger le bilan, la transcription mot à mot et les notes ; OpenAI répond aussi à tes questions au tuteur. OpenAI n’utilise pas ces données pour entraîner ses modèles. Il peut les conserver jusqu’à 30 jours pour détecter les abus, puis les supprime."
+              }
+            ],
+            [
+              {
+                "text": "Sentry",
+                "bold": true
+              },
+              {
+                "text": " reçoit les rapports de plantage (voir ci-dessus), sans rien de ce que tu as dit ou écrit."
+              }
+            ],
+            [
+              {
+                "text": "PostHog",
+                "bold": true
+              },
+              {
+                "text": " (cloud UE) reçoit des comptages d’usage anonymes, mais seulement si tu les as activés."
+              }
+            ],
+            [
+              {
+                "text": "Expo",
+                "bold": true
+              },
+              {
+                "text": " (le service de notifications push d’Expo) reçoit le jeton de notification de ton appareil et le texte d’une notification quand Konvami t’en envoie une : un bilan écrit, une simulation d’examen notée ou un rappel après une semaine calme."
+              }
+            ],
+            [
+              {
+                "text": "RevenueCat",
+                "bold": true
+              },
+              {
+                "text": " reçoit ton numéro de compte et tes achats, pour dire à Konvami quelle offre tu as. L’App Store et Google Play traitent eux-mêmes le paiement."
+              }
+            ],
+            [
+              {
+                "text": "ElevenLabs",
+                "bold": true
+              },
+              {
+                "text": " est facultatif et reste désactivé jusqu’à ce que tu l’actives dans Profil › Voix de lecture. Dans ce cas, il ne reçoit que le texte à lire à voix haute (une carte, un bilan hebdomadaire), jamais ta voix."
               }
             ]
           ]
@@ -2288,6 +2522,30 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
+              "text": "Rapporti di crash, conteggi d’uso e notifiche.",
+              "bold": true
+            },
+            {
+              "text": " Se l’app si blocca, un rapporto di crash viene inviato a Sentry: il tipo di errore, il punto del codice e il tuo dispositivo, sistema e versione dell’app. Tutto ciò che hai detto o scritto viene rimosso prima dell’invio. Conteggi d’uso anonimi (l’app è stata aperta, una conversazione è iniziata, un messaggio è stato inviato, ciascuno con versione dell’app, piattaforma e un numero di installazione casuale non legato al tuo account) vanno a PostHog (UE) solo se attivi «Condividi dati d’uso anonimi» in Profilo › Privacy e IA; finché non lo fai è disattivato, e disattivandolo il numero di installazione viene cancellato. Se attivi i promemoria, il telefono viene registrato per le notifiche push: Konvami conserva il token di notifica del tuo dispositivo."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Acquisti e messaggi.",
+              "bold": true
+            },
+            {
+              "text": " Se ti abboni, il pagamento è gestito dallo store; Konvami conserva quale piano hai e fino a quando, e il numero del tuo account è condiviso con RevenueCat perché un acquisto arrivi al tuo account. Se invii un messaggio in Profilo › Aiuto e feedback, conserviamo la categoria, il tuo messaggio e, solo se lo selezioni, la versione dell’app e il sistema del dispositivo."
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "spans": [
+            {
               "text": "Ti chiediamo di non condividere ciò che non vorresti vedere scritto, per esempio sulla tua salute, sulle tue convinzioni o su altre persone. Se lo fai, può comparire in trascrizioni, resoconti e note. Puoi cancellare una nota in qualsiasi momento; trascrizioni e resoconti vengono cancellati insieme al tuo account."
             }
           ]
@@ -2325,6 +2583,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               {
                 "text": " (log, protezione dell’accesso, limite di minuti vocali, tetti di spesa): il nostro legittimo interesse a gestire un servizio sicuro entro il suo budget (art. 6, par. 1, lett. f GDPR)."
               }
+            ],
+            [
+              {
+                "text": "Per capire come viene usata l’app e trovare i difetti",
+                "bold": true
+              },
+              {
+                "text": ": i rapporti di crash sulla base del nostro legittimo interesse a un’app funzionante (GDPR art. 6, par. 1, lett. f); i conteggi d’uso anonimi solo sulla base del tuo consenso (art. 6, par. 1, lett. a), che puoi revocare in qualsiasi momento in Profilo › Privacy e IA."
+              }
             ]
           ]
         },
@@ -2340,7 +2607,7 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           "kind": "paragraph",
           "spans": [
             {
-              "text": "Konvami non mostra pubblicità, non vende dati, non ti traccia su altre app o siti web e non contiene strumenti di analisi o pubblicitari."
+              "text": "Konvami non mostra pubblicità, non vende dati e non ti traccia su altre app o siti. Non ha strumenti pubblicitari, e la sua unica analisi sono i conteggi d’uso anonimi che puoi attivare."
             }
           ]
         },
@@ -2375,6 +2642,51 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (Dublino) fornisce l’IA. Durante una conversazione OpenAI riceve la tua voce e la trascrizione; per preparare il tuo partner, le parti del tuo profilo di apprendimento e delle tue note di cui il partner ha bisogno; dopo la conversazione, la trascrizione per scrivere il resoconto, la trascrizione parola per parola e le note; OpenAI risponde inoltre alle tue domande al Tutor. OpenAI non usa questi dati per addestrare i suoi modelli. Può conservarli fino a 30 giorni per individuare abusi, poi li cancella."
+              }
+            ],
+            [
+              {
+                "text": "Sentry",
+                "bold": true
+              },
+              {
+                "text": " riceve i rapporti di crash (vedi sopra), senza nulla di ciò che hai detto o scritto."
+              }
+            ],
+            [
+              {
+                "text": "PostHog",
+                "bold": true
+              },
+              {
+                "text": " (cloud UE) riceve conteggi d’uso anonimi, ma solo se li hai attivati."
+              }
+            ],
+            [
+              {
+                "text": "Expo",
+                "bold": true
+              },
+              {
+                "text": " (il servizio di notifiche push di Expo) riceve il token di notifica del tuo dispositivo e il testo di una notifica quando Konvami te ne invia una: un resoconto scritto, una simulazione d’esame valutata o un promemoria dopo una settimana tranquilla."
+              }
+            ],
+            [
+              {
+                "text": "RevenueCat",
+                "bold": true
+              },
+              {
+                "text": " riceve il numero del tuo account e i tuoi acquisti, per dire a Konvami quale piano hai. L’App Store e Google Play gestiscono il pagamento da soli."
+              }
+            ],
+            [
+              {
+                "text": "ElevenLabs",
+                "bold": true
+              },
+              {
+                "text": " è facoltativo e resta disattivato finché non lo attivi in Profilo › Voce di lettura. In tal caso riceve solo il testo da leggere ad alta voce (una scheda, un check-in settimanale), mai la tua voce."
               }
             ]
           ]
