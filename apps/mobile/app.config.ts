@@ -25,6 +25,49 @@ const MICROPHONE_REASON =
 // blockedPermissions below).
 const NO_CAMERA = 'Konvami does not use the camera.';
 
+// iOS privacy manifest (PrivacyInfo.xcprivacy), merged by Expo with those of the libraries.
+// Keep the data types in step with docs/store/privacy-labels.md, which says where each comes from.
+const COLLECTED_FOR_THE_APP = {
+  NSPrivacyCollectedDataTypeLinked: true,
+  NSPrivacyCollectedDataTypeTracking: false,
+  NSPrivacyCollectedDataTypePurposes: ['NSPrivacyCollectedDataTypePurposeAppFunctionality'],
+};
+const PRIVACY_MANIFEST = {
+  // Konvami has no advertising, no cross-app tracking and no analytics SDK.
+  NSPrivacyTracking: false,
+  NSPrivacyTrackingDomains: [],
+  NSPrivacyCollectedDataTypes: [
+    'NSPrivacyCollectedDataTypeEmailAddress',
+    'NSPrivacyCollectedDataTypeName',
+    'NSPrivacyCollectedDataTypeUserID',
+    'NSPrivacyCollectedDataTypeDeviceID',
+    'NSPrivacyCollectedDataTypePhotosorVideos',
+    'NSPrivacyCollectedDataTypeAudioData',
+    'NSPrivacyCollectedDataTypeOtherUserContent',
+    'NSPrivacyCollectedDataTypeProductInteraction',
+  ].map((NSPrivacyCollectedDataType) => ({ NSPrivacyCollectedDataType, ...COLLECTED_FOR_THE_APP })),
+  // The required-reason APIs that React Native, Expo and the app's libraries use, with the reasons
+  // Expo documents for them (preferences, file times, boot time, free disk space).
+  NSPrivacyAccessedAPITypes: [
+    {
+      NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
+      NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
+    },
+    {
+      NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
+      NSPrivacyAccessedAPITypeReasons: ['C617.1', '0A2A.1', '3B52.1'],
+    },
+    {
+      NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime',
+      NSPrivacyAccessedAPITypeReasons: ['35F9.1'],
+    },
+    {
+      NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',
+      NSPrivacyAccessedAPITypeReasons: ['E174.1', '85F4.1'],
+    },
+  ],
+};
+
 const config: ExpoConfig = {
   name: IS_DEV_BUILD ? 'Konvami Dev' : 'Konvami',
   slug: 'konvami',
@@ -43,6 +86,7 @@ const config: ExpoConfig = {
     appleTeamId: process.env.APPLE_TEAM_ID || undefined,
     supportsTablet: true,
     config: { usesNonExemptEncryption: false },
+    privacyManifests: PRIVACY_MANIFEST,
   },
   android: {
     package: BUNDLE_ID,
@@ -60,7 +104,14 @@ const config: ExpoConfig = {
     predictiveBackGestureEnabled: false,
     // The WebRTC plugin below declares every permission the library can use. Konvami sends
     // voice only: it never opens the camera and never draws over other apps.
-    blockedPermissions: ['android.permission.CAMERA', 'android.permission.SYSTEM_ALERT_WINDOW'],
+    blockedPermissions: [
+      'android.permission.CAMERA',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      // The profile photo is chosen with the system photo picker, which needs no storage access;
+      // Google Play asks for a justification for every photo or storage permission.
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ],
   },
   web: {
     bundler: 'metro',
@@ -97,7 +148,17 @@ const config: ExpoConfig = {
           'Konvami uses Face ID so you can get back into your account without typing your password.',
       },
     ],
-    ['expo-audio', { microphonePermission: MICROPHONE_REASON }],
+    [
+      'expo-audio',
+      {
+        microphonePermission: MICROPHONE_REASON,
+        // Konvami plays and records only while it is open (background audio belongs to the
+        // hands-free mode, spec §6.3, which is not built). The default would add iOS's "audio"
+        // background mode and Android's media foreground-service permissions, which the stores
+        // review and which nothing here uses.
+        enableBackgroundPlayback: false,
+      },
+    ],
     [
       // Live voice calls (spec §10.2). A native module: voice works in development and store
       // builds, not in Expo Go, where the voice screen offers the form instead.
