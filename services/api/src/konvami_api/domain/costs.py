@@ -60,6 +60,11 @@ class Feature(StrEnum):
     VOICE_SAMPLE = "voice_sample"
     # Phrases suggested for a situation (the phrasebook, spec §6.7).
     PHRASEBOOK = "phrasebook"
+    # Pen-pal voice notes (spec §6.16): what the partner writes (a note, an answer and the second
+    # check of its corrections), its sound, and the learner's own note written down.
+    PEN_PAL = "pen_pal"
+    PEN_PAL_AUDIO = "pen_pal_audio"
+    PEN_PAL_LISTEN = "pen_pal_listen"
 
 
 @dataclass(frozen=True)
