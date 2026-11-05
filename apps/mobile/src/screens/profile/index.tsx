@@ -26,7 +26,13 @@ import { ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
 import { Meter } from '@/components/meter';
 import { TextButton } from '@/components/text-button';
-import { useAccount, useAllowance, useMinutesBack, useProfileServices } from '@/profile/services';
+import {
+  useAccount,
+  useAllowance,
+  useMinutesBack,
+  usePremiumVoices,
+  useProfileServices,
+} from '@/profile/services';
 import { usePreferences } from '@/preferences';
 import { withLine } from '@/voice/problems';
 import { useTheme } from '@/theme';
@@ -183,7 +189,8 @@ export function ProfileScreen() {
   const { session } = useAuthServices();
   const { status } = useSession();
   const { home: store } = usePracticeServices();
-  const { allowance } = useProfileServices();
+  const { allowance, premium } = useProfileServices();
+  const voices = usePremiumVoices();
   const { owner } = useAccount();
   const home = useHome();
   const { split } = useScreenLayout();
@@ -193,6 +200,11 @@ export function ProfileScreen() {
   useEffect(() => {
     if (signedIn) void store.load();
   }, [signedIn, store]);
+
+  // The read-aloud voice has a row only where ElevenLabs is set up.
+  useEffect(() => {
+    if (signedIn) void premium.load();
+  }, [signedIn, premium]);
 
   // The streak and the partners change elsewhere; coming back reads them again when stale.
   useFocusEffect(
@@ -248,6 +260,20 @@ export function ProfileScreen() {
               }
               onPress={go(ROUTES.accountReminders)}
             />
+            {voices.phase === 'ready' && voices.data.offered ? (
+              <ListRow
+                icon="volume"
+                title={t('profile.rows.readAloud')}
+                detail={t('profile.rows.readAloudHint')}
+                value={
+                  voices.data.consent && voices.data.allowed
+                    ? (voices.data.voices.find((voice) => voice.id === voices.data.chosen)?.name ??
+                      t('profile.readAloud.standard'))
+                    : undefined
+                }
+                onPress={go(ROUTES.accountReadAloud)}
+              />
+            ) : null}
           </ListGroup>
         </Section>
       </Reveal>

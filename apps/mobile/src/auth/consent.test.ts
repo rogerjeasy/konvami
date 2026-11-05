@@ -1,4 +1,10 @@
-import { AI_CONSENT_VERSION, decodeAiConsent, encodeAiConsent, encodeTipsOptIn } from './consent';
+import {
+  AI_CONSENT_VERSION,
+  agreedToElevenLabs,
+  decodeAiConsent,
+  encodeAiConsent,
+  encodeTipsOptIn,
+} from './consent';
 
 const at = new Date('2026-10-09T12:30:00.000Z');
 
@@ -29,6 +35,32 @@ describe('AI consent record', () => {
     expect(
       decodeAiConsent('v1|2026-10-09T12:30:00.000Z|openai=0,elevenlabs=1,bedrock=1'),
     ).toBeNull();
+  });
+});
+
+describe('ElevenLabs consent', () => {
+  const agreed = (version: string, elevenlabs: boolean) =>
+    decodeAiConsent(
+      `${version}|2026-11-06T12:30:00.000Z|openai=1,elevenlabs=${elevenlabs ? 1 : 0},bedrock=0`,
+    );
+
+  it('counts on a record that names ElevenLabs and has it on', () => {
+    expect(agreedToElevenLabs(agreed('v3', true))).toBe(true);
+    expect(agreedToElevenLabs(agreed('v4', true))).toBe(true);
+  });
+
+  it('does not count when it is off', () => {
+    expect(agreedToElevenLabs(agreed('v3', false))).toBe(false);
+  });
+
+  it('does not count on a record from before it was named, whatever its flag says', () => {
+    expect(agreedToElevenLabs(agreed('v2', true))).toBe(false);
+    expect(agreedToElevenLabs(agreed('v1', true))).toBe(false);
+  });
+
+  it('does not count without a record', () => {
+    expect(agreedToElevenLabs(null)).toBe(false);
+    expect(agreedToElevenLabs(undefined)).toBe(false);
   });
 });
 

@@ -340,8 +340,44 @@ describe('2.5 AI data consent', () => {
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/microphone'));
     // Nobody is asked about the providers not in use, so none is agreed to.
     expect(auth.session.getState().user?.aiConsent).toMatchObject({
-      version: 'v2',
+      version: 'v3',
       providers: { openai: true, elevenlabs: false, bedrock: false },
+    });
+  });
+
+  it('names ElevenLabs as optional and off, once the server offers it', async () => {
+    const auth = await signedIn();
+    const api = createFakeApi();
+    api.premiumVoices({ offered: true, voices: [{ id: 'Maya123', name: 'Maya' }] });
+    await renderScreen(<AiConsentScreen />, { auth, api });
+
+    const switchOff = await screen.findByRole('switch', { name: 'ElevenLabs, off' });
+    expect(switchOff).not.toBeChecked();
+    expect(screen.getByText('Optional')).toBeTruthy();
+    expect(screen.getByText('Receives: the text to read aloud · never your voice')).toBeTruthy();
+
+    // Agreeing without turning it on leaves it off.
+    await fireEvent.press(screen.getByRole('button', { name: 'Agree and continue' }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/microphone'));
+    expect(auth.session.getState().user?.aiConsent).toMatchObject({
+      providers: { openai: true, elevenlabs: false },
+    });
+  });
+
+  it('stores the agreement to ElevenLabs when the learner turns it on', async () => {
+    const auth = await signedIn();
+    const api = createFakeApi();
+    api.premiumVoices({ offered: true, voices: [{ id: 'Maya123', name: 'Maya' }] });
+    await renderScreen(<AiConsentScreen />, { auth, api });
+
+    await fireEvent.press(await screen.findByRole('switch', { name: 'ElevenLabs, off' }));
+    expect(screen.getByRole('switch', { name: 'ElevenLabs, optional' })).toBeChecked();
+    await fireEvent.press(screen.getByRole('button', { name: 'Agree and continue' }));
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/microphone'));
+    expect(auth.session.getState().user?.aiConsent).toMatchObject({
+      version: 'v3',
+      providers: { openai: true, elevenlabs: true, bedrock: false },
     });
   });
 

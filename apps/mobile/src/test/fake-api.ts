@@ -36,6 +36,7 @@ import {
   type TutorAnswer,
   type Phrase,
   type PhraseSuggestion,
+  type PremiumVoices,
   type TutorQuestion,
   type ExamCard,
   type ExamCentre,
@@ -762,6 +763,14 @@ export interface FakeApi extends ApiClient {
   ): void;
   /** What the Tutor answers next (by default `FAKE_TUTOR_ANSWER`). */
   nextTutorAnswer(answer: Partial<TutorAnswer>): void;
+  /**
+   * The premium voices the server answers with. By default none are offered (ElevenLabs is not set
+   * up). `consent` may be a function, read at each call, so a test can follow what the account
+   * agreed to.
+   */
+  premiumVoices(
+    state: Partial<Omit<PremiumVoices, 'consent'>> & { consent?: boolean | (() => boolean) },
+  ): void;
   /** Phrases the phrasebook suggests next (by default `FAKE_PHRASE_SUGGESTIONS`). */
   nextPhraseSuggestions(suggestions: PhraseSuggestion[]): void;
   /** Phrases the learner kept earlier, oldest first. */
@@ -908,6 +917,17 @@ export function createFakeApi(): FakeApi {
     return kept;
   };
   let recordingsKept = true;
+  let premium: Omit<PremiumVoices, 'consent'> & { consent: boolean | (() => boolean) } = {
+    offered: false,
+    consent: false,
+    allowed: true,
+    voices: [],
+    chosen: null,
+  };
+  const premiumNow = (): PremiumVoices => ({
+    ...premium,
+    consent: typeof premium.consent === 'function' ? premium.consent() : premium.consent,
+  });
   // What partners changed by voice, newest first, and the question the server finds due.
   let voiceChanges: ProfileChangeEntry[] = [];
   let dueQuestion: ProfileQuestion | null = null;
@@ -1779,6 +1799,9 @@ export function createFakeApi(): FakeApi {
     nextTutorAnswer(answer) {
       tutorAnswer = { ...FAKE_TUTOR_ANSWER, ...answer };
     },
+    premiumVoices(state) {
+      premium = { ...premium, ...state };
+    },
     nextPhraseSuggestions(suggestions) {
       phraseSuggestions = suggestions;
     },
@@ -2019,6 +2042,27 @@ export function createFakeApi(): FakeApi {
       await record('dismissProfileQuestion', id);
       dueQuestion = null;
       return { question: null };
+    },
+    async getPremiumVoices() {
+      await record('getPremiumVoices');
+      return premiumNow();
+    },
+    async choosePremiumVoice(voiceId) {
+      await record('choosePremiumVoice', voiceId);
+      const now = premiumNow();
+      if (voiceId !== null) {
+        if (!now.consent) throw new ApiError('consent_needed', 403);
+        if (!now.allowed) throw new ApiError('not_allowed', 403);
+        if (!now.voices.some((voice) => voice.id === voiceId)) {
+          throw new ApiError('unknown_voice', 422);
+        }
+      }
+      premium = { ...premium, chosen: voiceId };
+      return premiumNow();
+    },
+    async getPremiumVoiceSample(voiceId) {
+      await record('getPremiumVoiceSample', voiceId);
+      return `${FILES}/voices/premium/de/${voiceId}.mp3`;
     },
     async getRecordings() {
       await record('getRecordings');

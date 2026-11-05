@@ -7,11 +7,27 @@ import type { AiConsent, AiConsentChoices } from './types';
 
 /** Version of the 2.5 consent text. Bump it when the providers or what they receive change. */
 // v2 (2026-10-23): OpenAI alone, with everything it does; ElevenLabs and Bedrock are not asked.
-export const AI_CONSENT_VERSION = 'v2';
+// v3 (2026-11-06): ElevenLabs is named, optional and off until the learner turns it on (it reads
+// text aloud and receives that text only, spec §6.21.2). Bedrock is still not asked.
+export const AI_CONSENT_VERSION = 'v3';
 
-/** The optional providers, none of which is in use: nobody is asked about them, so none is
- * agreed to. The record keeps its fields so that it reads the same once they are. */
+/** The first version of the consent text that names ElevenLabs: a record before it says nothing
+ * about it, whatever its flag holds, and the server counts it the same way. */
+const ELEVENLABS_FROM_VERSION = 3;
+
+/** Nobody is asked about Bedrock, so it is not agreed to. The record keeps its fields so that it
+ * reads the same once it is. ElevenLabs is the learner's choice (off by default). */
 export const NO_OPTIONAL_PROVIDERS: AiConsentChoices = { elevenlabs: false, bedrock: false };
+
+/** Whether the record is of a consent text that names ElevenLabs (the learner has seen it). */
+export function consentNamesElevenLabs(consent: AiConsent | null | undefined): boolean {
+  return !!consent && Number(consent.version.replace(/^v/, '')) >= ELEVENLABS_FROM_VERSION;
+}
+
+/** Whether the learner agreed to ElevenLabs reading text aloud, on a record that names it. */
+export function agreedToElevenLabs(consent: AiConsent | null | undefined): boolean {
+  return consentNamesElevenLabs(consent) && !!consent?.providers.elevenlabs;
+}
 
 const flag = (on: boolean) => (on ? '1' : '0');
 

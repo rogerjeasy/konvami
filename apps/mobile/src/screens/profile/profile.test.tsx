@@ -99,6 +99,29 @@ describe('6.1 Profile', () => {
     expect(router.push).toHaveBeenCalledWith(route);
   });
 
+  it('has no read-aloud row where ElevenLabs is not set up', async () => {
+    await open();
+
+    expect(screen.queryByRole('button', { name: 'Read-aloud voice' })).toBeNull();
+  });
+
+  it('has a read-aloud row that says which voice reads, where ElevenLabs is set up', async () => {
+    const api = inApp();
+    api.premiumVoices({
+      offered: true,
+      consent: true,
+      voices: [{ id: 'Maya123', name: 'Maya' }],
+      chosen: 'Maya123',
+    });
+    await open(api);
+
+    const row = await screen.findByRole('button', { name: 'Read-aloud voice' });
+    expect(screen.getByText('Maya')).toBeTruthy();
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/account/read-aloud');
+  });
+
   it('shows the voice minutes left this week and when they come back', async () => {
     const api = inApp();
     api.usedMinutes(15);
