@@ -299,6 +299,12 @@ export function ProfileScreen() {
                 detail={t('profile.rows.costsHint')}
                 onPress={go(ROUTES.accountCosts)}
               />
+              <ListRow
+                icon="flag"
+                title={t('profile.rows.flags')}
+                detail={t('profile.rows.flagsHint')}
+                onPress={go(ROUTES.accountFlags)}
+              />
             </ListGroup>
           </Section>
         </Reveal>
