@@ -24,6 +24,7 @@ from konvami_api.domain.moderation import LIMIT as MODERATION_LIMIT
 from konvami_api.domain.moderation import UNAVAILABLE as MODERATION_UNAVAILABLE
 from konvami_api.domain.moderation import ModerationError
 from konvami_api.domain.onboarding import OnboardingError
+from konvami_api.domain.penpal import PenPalError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.phrasebook import PhrasebookError
 from konvami_api.domain.premium_voices import PremiumError
@@ -144,6 +145,14 @@ _PRONUNCIATION_STATUS = {
     "drill_limit": 429,
 }
 _FLAG_STATUS = {"not_owner": 403, "not_found": 404, "invalid_value": 422, "flag_limit": 429}
+_PEN_PAL_STATUS = {
+    "not_found": 404,
+    "invalid_value": 422,
+    "too_short": 422,
+    "consent_required": 403,
+    "limit": 429,
+    "retry_limit": 429,
+}
 _UNAVAILABLE = 503
 
 
@@ -206,6 +215,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(FlagError)
     async def _flag_error(_: Request, error: FlagError) -> JSONResponse:
         return _response(_FLAG_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(PenPalError)
+    async def _pen_pal_error(_: Request, error: PenPalError) -> JSONResponse:
+        return _response(_PEN_PAL_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(ExamError)
     async def _exam_error(_: Request, error: ExamError) -> JSONResponse:

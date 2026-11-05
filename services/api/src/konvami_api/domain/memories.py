@@ -12,9 +12,9 @@ the partner as it is.
 
 import datetime as dt
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import Literal, Protocol, TypedDict, Unpack, get_args
+from typing import Any, Literal, Protocol, TypedDict, Unpack, get_args
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, ValidationError
@@ -178,24 +178,30 @@ class _Answer(BaseModel):
     memories: list[_Found]
 
 
-_SCHEMA = answer_object(
-    {
-        "memories": answer_list(
-            answer_object(
-                {
-                    "kind": {"type": "string", "enum": list(get_args(Kind))},
-                    "text": {"type": "string"},
-                    "day": {"type": ["string", "null"]},
-                    "importance": {"type": "integer", "enum": list(IMPORTANCE)},
-                    "turn": {"type": "integer"},
-                    "replaces": {"type": ["integer", "null"]},
-                    "ask": {"type": ["string", "null"]},
-                }
-            ),
-            MAX_PER_CALL,
-        )
+def _item_properties(*, with_turn: bool) -> dict[str, Any]:
+    """The properties of one memory in a model's answer. A conversation's memories name the turn
+    that says them and the known memory they replace; a single note (`MemoryService.remember`)
+    has neither."""
+    properties: dict[str, Any] = {
+        "kind": {"type": "string", "enum": list(get_args(Kind))},
+        "text": {"type": "string"},
+        "day": {"type": ["string", "null"]},
+        "importance": {"type": "integer", "enum": list(IMPORTANCE)},
     }
+    if with_turn:
+        properties["turn"] = {"type": "integer"}
+        properties["replaces"] = {"type": ["integer", "null"]}
+    properties["ask"] = {"type": ["string", "null"]}
+    return properties
+
+
+_SCHEMA = answer_object(
+    {"memories": answer_list(answer_object(_item_properties(with_turn=True)), MAX_PER_CALL)}
 )
+
+# What a model writing memories of a single message (a pen-pal reply) puts in its answer: the
+# same notes, without the turn they come from.
+MEMORY_NOTES_SCHEMA = answer_list(answer_object(_item_properties(with_turn=False)), MAX_PER_CALL)
 
 
 def _instructions(target: str, explanation: str, partner: str | None) -> str:
@@ -516,10 +522,30 @@ class MemoryService:
         notes = _notes(answer.memories, turns, partner, session.started_at.date())
         self._keep(user_id, call_id, partner, known, notes)
 
+    def remember(
+        self,
+        user_id: UUID,
+        partner: Persona | None,
+        said: str,
+        found: Sequence[Mapping[str, Any]],
+        on: dt.date,
+    ) -> None:
+        """Writes down notes a model found in one thing the learner said outside a call (a
+        pen-pal voice note), held to the same rules as a conversation's: the learner's own words
+        are the only source of facts about them, memory must be on, and what is not valid is
+        left out. `found` are notes shaped as `MEMORY_NOTES_SCHEMA`."""
+        if not found or not self._profiles.get(user_id).memory_enabled:
+            return
+        try:
+            items = [_Found.model_validate({**note, "turn": 0, "replaces": None}) for note in found]
+        except ValidationError:
+            return
+        self._keep(user_id, None, partner, [], _notes(items, [Turn("learner", said)], partner, on))
+
     def _keep(
         self,
         user_id: UUID,
-        call_id: str,
+        call_id: str | None,
         partner: Persona | None,
         known: Sequence[Memory],
         notes: Sequence[_Note],

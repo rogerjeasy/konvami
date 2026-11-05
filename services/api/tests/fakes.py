@@ -33,6 +33,10 @@ from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
 from konvami_api.domain.moderation import ModeratorError, TextGuard, Verdict
 from konvami_api.domain.onboarding import OnboardingState
+from konvami_api.domain.penpal import Correction as PenPalCorrection
+from konvami_api.domain.penpal import Note as PenPalNote
+from konvami_api.domain.penpal import Settings as PenPalSettings
+from konvami_api.domain.penpal import Status as PenPalStatus
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.phrasebook import Phrase
 from konvami_api.domain.placement import PlacementResult
@@ -1373,3 +1377,120 @@ class InMemoryPronunciationRepository:
             if (owner, lang) == (user_id, language) and misses > 0 and streak < CLEARED_AFTER
         ]
         return sorted(mine, key=lambda w: (-w.misses, w.word))[:limit]
+
+
+class InMemoryPenPalRepository:
+    def __init__(self) -> None:
+        self.settings_of: dict[UUID, PenPalSettings] = {}
+        # In the order the notes were added, which is the order of a thread.
+        self.notes: dict[UUID, PenPalNote] = {}
+
+    def settings(self, user_id: UUID) -> PenPalSettings | None:
+        return self.settings_of.get(user_id)
+
+    def save_settings(self, user_id: UUID, settings: PenPalSettings, at: datetime) -> None:
+        self.settings_of[user_id] = settings
+
+    def enabled(self, limit: int) -> list[tuple[UUID, PenPalSettings]]:
+        return [(user, s) for user, s in self.settings_of.items() if s.enabled][:limit]
+
+    def add(self, note: PenPalNote) -> None:
+        self.notes[note.id] = note
+
+    def get(self, note_id: UUID) -> PenPalNote | None:
+        return self.notes.get(note_id)
+
+    def _of(self, user_id: UUID, persona_id: UUID | None) -> list[PenPalNote]:
+        return [
+            n
+            for n in self.notes.values()
+            if n.user_id == user_id and persona_id in (None, n.persona_id)
+        ]
+
+    def thread(self, user_id: UUID, persona_id: UUID, limit: int) -> list[PenPalNote]:
+        return self._of(user_id, persona_id)[-limit:]
+
+    def last_of(self, user_id: UUID, persona_id: UUID | None) -> PenPalNote | None:
+        found = self._of(user_id, persona_id)
+        return found[-1] if found else None
+
+    def partner_notes_since(self, user_id: UUID, since: datetime) -> int:
+        return sum(
+            1
+            for n in self._of(user_id, None)
+            if n.sender == "partner"
+            and n.reply_to is None
+            and n.status != "failed"
+            and n.created_at >= since
+        )
+
+    def learner_notes_since(self, user_id: UUID, since: datetime) -> int:
+        return sum(
+            1 for n in self._of(user_id, None) if n.sender == "learner" and n.created_at >= since
+        )
+
+    def unanswered(self, user_id: UUID, persona_id: UUID) -> int:
+        count = 0
+        for n in self._of(user_id, persona_id):
+            if n.sender == "learner":
+                count = 0
+            elif n.reply_to is None and n.status != "failed":
+                count += 1
+        return count
+
+    def unread(self, user_id: UUID) -> dict[UUID, int]:
+        counts: dict[UUID, int] = {}
+        for n in self._of(user_id, None):
+            if n.sender == "partner" and n.status == "ready" and not n.read:
+                counts[n.persona_id] = counts.get(n.persona_id, 0) + 1
+        return counts
+
+    def mark_read(self, user_id: UUID, persona_id: UUID) -> None:
+        for n in self._of(user_id, persona_id):
+            self.notes[n.id] = replace(n, read=True)
+
+    def claim(self, note_id: UUID, at: datetime, stale_before: datetime, max_attempts: int) -> bool:
+        note = self.notes.get(note_id)
+        if note is None or note.status != "pending" or note.attempts >= max_attempts:
+            return False
+        if note.claimed_at is not None and note.claimed_at >= stale_before:
+            return False
+        self.notes[note_id] = replace(note, claimed_at=at, attempts=note.attempts + 1)
+        return True
+
+    def reopen(self, note_id: UUID, stale_before: datetime, max_attempts: int) -> bool:
+        note = self.notes.get(note_id)
+        if note is None or note.attempts >= max_attempts:
+            return False
+        lost = note.status == "pending" and (note.claimed_at or note.created_at) < stale_before
+        if note.status != "failed" and not lost:
+            return False
+        self.notes[note_id] = replace(note, status="pending", claimed_at=None)
+        return True
+
+    def finish(
+        self,
+        note_id: UUID,
+        status: PenPalStatus,
+        text: str,
+        audio_key: str | None,
+        corrections: Sequence[PenPalCorrection],
+    ) -> None:
+        self.notes[note_id] = replace(
+            self.notes[note_id],
+            status=status,
+            text=text,
+            audio_key=audio_key,
+            corrections=tuple(corrections),
+        )
+
+
+class RecordingPenPalStarter:
+    def __init__(self) -> None:
+        self.started: list[UUID] = []
+        self.fail: Exception | None = None
+
+    def start(self, note_id: UUID) -> None:
+        if self.fail:
+            raise self.fail
+        self.started.append(note_id)

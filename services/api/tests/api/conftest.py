@@ -26,6 +26,7 @@ from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
+from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
@@ -75,6 +76,7 @@ from tests.fakes import (
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryPenPalRepository,
     InMemoryPersonaRepository,
     InMemoryPhraseRepository,
     InMemoryPlacementRepository,
@@ -92,6 +94,7 @@ from tests.fakes import (
     RecordingCallStarter,
     RecordingExamStarter,
     RecordingNotifier,
+    RecordingPenPalStarter,
     RecordingPushSender,
     RecordingReportStarter,
     RecordingWeekStarter,
@@ -289,6 +292,17 @@ def report_starter() -> RecordingReportStarter:
 
 
 @pytest.fixture
+def pen_pal_transcriber() -> ScriptedTranscriber:
+    """Writes down the learner's pen-pal voice notes."""
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
+def pen_pal_starter() -> RecordingPenPalStarter:
+    return RecordingPenPalStarter()
+
+
+@pytest.fixture
 def exam_starter() -> RecordingExamStarter:
     return RecordingExamStarter()
 
@@ -331,6 +345,8 @@ def services(
     pronunciation_transcriber: ScriptedTranscriber,
     week_starter: RecordingWeekStarter,
     exam_starter: RecordingExamStarter,
+    pen_pal_transcriber: ScriptedTranscriber,
+    pen_pal_starter: RecordingPenPalStarter,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -623,6 +639,31 @@ def services(
             repository=InMemoryFlagRepository(),
             owners=frozenset({UUID(OWNER)}),
             clock=clock,
+        ),
+        pen_pal=PenPalService(
+            profiles=profiles,
+            personas=personas,
+            conversations=conversations,
+            memories=memories,
+            accounts=directory,
+            repository=InMemoryPenPalRepository(),
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=pen_pal_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            text_model=text_model,
+            note_model="gpt-6-luna",
+            reply_model="gpt-6.1-sol",
+            speech=speech,
+            speech_model="gpt-4o-mini-tts",
+            files=files,
+            starter=pen_pal_starter,
+            clock=clock,
+            announce=lambda user_id, persona_id, reply: push.pen_pal(
+                user_id, persona_id, reply=reply
+            ),
         ),
         retries=RetryService(
             reports=reports,

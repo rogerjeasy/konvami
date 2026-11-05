@@ -71,6 +71,12 @@ class Feature(StrEnum):
     # Something the learner imported, worked out by the Course agent (spec §6.17).
     COURSE_IMPORT = "course_import"
 
+    # Pen-pal voice notes (spec §6.16): what the partner writes (a note, an answer and the second
+    # check of its corrections), its sound, and the learner's own note written down.
+    PEN_PAL = "pen_pal"
+    PEN_PAL_AUDIO = "pen_pal_audio"
+    PEN_PAL_LISTEN = "pen_pal_listen"
+
 
 @dataclass(frozen=True)
 class Charge:

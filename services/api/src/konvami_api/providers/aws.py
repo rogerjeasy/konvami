@@ -102,6 +102,24 @@ class LambdaExamStarter:
         )
 
 
+class LambdaPenPalStarter:
+    """Has a pen-pal note or answer written by the worker function, in an invocation of its own:
+    writing and speaking it takes longer than an API request may."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, note_id: UUID) -> None:
+        # The worker writes only a note that is waiting in the database, for the learner it
+        # belongs to.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"pen_pal": str(note_id)}).encode(),
+        )
+
+
 class LambdaWeekReviewStarter:
     """Has a learner's weekly check-in written by the worker function, in an invocation of its
     own, so opening Progress does not wait for the text model."""

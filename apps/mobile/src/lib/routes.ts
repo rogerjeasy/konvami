@@ -75,6 +75,9 @@ export const ROUTES = {
 
   /** 5.23 Import: what the learner brings (a text, a page, a photo) and what was made of it. */
   import: '/import',
+
+  /** 5.21 Pen-pal: the voice notes a partner sends, and the learner's answers (`penPalRoute`). */
+  penPal: '/pen-pal',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
@@ -118,6 +121,13 @@ export const ROUTES = {
 } as const satisfies Record<string, Href>;
 
 /** 4.7 Edit one starter partner: their name and look. */
+/** 5.21 The pen-pal thread with one partner; without one, with the partner who wrote last. */
+export const penPalRoute = (personaId?: string) =>
+  ({
+    pathname: '/pen-pal',
+    params: personaId ? { partner: personaId } : {},
+  }) as const satisfies Href;
+
 export const partnerRoute = (id: string) =>
   ({ pathname: '/onboarding/partners/[id]', params: { id } }) as const satisfies Href;
 

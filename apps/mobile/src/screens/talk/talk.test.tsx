@@ -57,6 +57,18 @@ describe('5.2 Talk', () => {
     expect(router.push).toHaveBeenCalledWith('/role-plays');
   });
 
+  it('leads to the pen-pal thread, marked while a note waits', async () => {
+    const api = inApp();
+    api.penPalNotes(FAKE_PERSONAS[0]!.id, [{ text: 'Hallo!' }]);
+    await open(api);
+
+    const row = await screen.findByRole('button', { name: 'Pen-pal' });
+    expect(await screen.findByText('New')).toBeTruthy();
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/pen-pal', params: {} });
+  });
+
   it('leads to the grammar map, where a guided lesson is chosen', async () => {
     await open();
 

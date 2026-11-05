@@ -697,6 +697,42 @@ describe('api client', () => {
     expect(calls[0]?.body).toEqual({ audio: 'AAEC', format: 'm4a', durationMs: 2400 });
   });
 
+  it('reads and changes the pen-pal, and sends a voice note', async () => {
+    const note = { id: 'n/1', status: 'pending' };
+    const { fetch, calls } = fakeFetch(
+      json(200, { settings: { enabled: false }, threads: [] }),
+      json(200, { enabled: true }),
+      json(200, { personaId: 'p/1', notes: [], unread: 0 }),
+      json(200, { settings: { enabled: true }, threads: [] }),
+      json(200, note),
+      json(200, { heard: note, answer: note }),
+      json(200, note),
+    );
+    const { api } = client(fetch);
+
+    await api.getPenPal();
+    expect(await api.updatePenPalSettings({ enabled: true, perWeek: 5 })).toEqual({
+      enabled: true,
+    });
+    await api.getPenPalThread('p/1');
+    await api.openPenPalThread('p/1');
+    await api.askForPenPalNote('p/1');
+    await api.sendPenPalReply('p/1', { audio: 'AAEC', format: 'm4a', durationMs: 4200 });
+    await api.retryPenPalNote('n/1');
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/pen-pal',
+      'PUT https://api.example.test/v1/pen-pal/settings',
+      'GET https://api.example.test/v1/pen-pal/p%2F1',
+      'POST https://api.example.test/v1/pen-pal/p%2F1/opened',
+      'POST https://api.example.test/v1/pen-pal/p%2F1/notes',
+      'POST https://api.example.test/v1/pen-pal/p%2F1/replies',
+      'POST https://api.example.test/v1/pen-pal/notes/n%2F1/retry',
+    ]);
+    expect(calls[1]?.body).toEqual({ enabled: true, perWeek: 5 });
+    expect(calls[5]?.body).toEqual({ audio: 'AAEC', format: 'm4a', durationMs: 4200 });
+  });
+
   it('reads where a card’s sound plays from', async () => {
     const { fetch, calls } = fakeFetch(json(200, { url: 'https://files/card.mp3' }));
 

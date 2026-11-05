@@ -1270,6 +1270,57 @@ export const de: Translation = {
     },
     later: 'Eine Grammatikübersicht und ein Phrasenbuch sind in Arbeit.',
   },
+  penPal: {
+    title: 'Brieffreund',
+    body: 'Sprachnachrichten mit deinem Partner. Er schreibt, wenn es euch beiden passt, und du antwortest, wann du magst. Es läuft keine Uhr.',
+    row: 'Brieffreund',
+    rowHint: 'Sprachnachrichten deiner Partner, zum Antworten, wann du magst',
+    new: 'Neu',
+    loading: 'Deine Nachrichten werden geöffnet…',
+    loadFailed: 'Wir konnten deine Nachrichten nicht öffnen.',
+    settings: 'Einstellungen',
+    partner: 'Partner',
+    emptyTitle: 'Noch keine Nachrichten',
+    emptyOff:
+      '{{name}} schreibt dir zuerst, sobald du Nachrichten in den Einstellungen einschaltest. Oder bitte jetzt um eine Nachricht.',
+    emptyOn: '{{name}} schickt dir bald eine erste Nachricht. Oder bitte jetzt um eine.',
+    ask: '{{name}} um eine Nachricht bitten',
+    record: 'Sprachnachricht aufnehmen',
+    recording: 'Aufnahme läuft',
+    recordingHint: 'Sag, was du magst, in deinem Tempo. Tippe auf Stopp, wenn du fertig bist.',
+    stop: 'Stopp',
+    checking: 'Wird aufgeschrieben…',
+    play: 'Sprachnachricht abspielen',
+    stopPlaying: 'Sprachnachricht anhalten',
+    noteFrom: 'Sprachnachricht von {{name}}',
+    yourNote: 'Deine Sprachnachricht',
+    writingNote: '{{name}} nimmt eine Nachricht auf…',
+    writingReply: '{{name}} nimmt eine Antwort auf…',
+    noteFailed: 'Diese Nachricht ist nicht angekommen.',
+    retry: 'Nochmal versuchen',
+    retryLimit: 'Auch nach drei Versuchen hat es nicht geklappt. Versuche es später noch einmal.',
+    failed: {
+      limit: 'Das war’s für heute. Versuche es morgen wieder.',
+      too_short: 'Das war sehr kurz. Sag ein bisschen mehr.',
+      consent_required:
+        'Um Sprachnachrichten zu senden, stimme der Nutzung von KI unter Datenschutz und KI zu.',
+      unavailable:
+        'Sprachnachrichten sind gerade nicht verfügbar. Bitte versuche es später noch einmal.',
+    },
+    sheet: {
+      title: 'Einstellungen für den Brieffreund',
+      on: 'Meine Partner schreiben mir',
+      perWeek: 'Nachrichten pro Woche',
+      quietFrom: 'Keine Nachrichten ab',
+      quietTo: 'Bis',
+      note: 'Nachrichten kommen von selbst, zu einer Zeit, die zu deinem Tag passt, nie in deinen ruhigen Stunden. Für eine Push-Mitteilung beim Eintreffen schalte die Erinnerungen ein.',
+      done: 'Fertig',
+    },
+    today: {
+      title: '{{name}} hat dir eine Sprachnachricht geschickt',
+      body: 'Hör zu und antworte, wann du magst.',
+    },
+  },
   phrasebook: {
     title: 'Phrasebuch',
     body: 'Die Sätze, die du im Alltag brauchst. Sag, was du brauchst, behalte die passenden und lerne sie als Karten.',
@@ -1909,6 +1960,10 @@ export const de: Translation = {
       pronunciation_audio: 'Aussprache-Klänge',
 
       course_import: 'Mitgebrachtes Material',
+
+      pen_pal: 'Brieffreund-Nachrichten',
+      pen_pal_audio: 'Brieffreund-Töne',
+      pen_pal_listen: 'Sprachnachrichten aufgeschrieben',
     },
   },
   profile: {

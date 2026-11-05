@@ -15,6 +15,8 @@ import {
   type HomePartner,
   type Memories,
   type Memory,
+  type PenPalNote,
+  type PenPalSettings,
   type Onboarding,
   type Persona,
   type PersonaDraft,
@@ -830,6 +832,16 @@ export interface FakeApi extends ApiClient {
   nextImport(item: Partial<CourseImport>): void;
   /** Imports the learner brought earlier, oldest first. */
   broughtImports(items: Partial<CourseImport>[]): void;
+
+  /**
+   * Notes in a pen-pal thread, oldest first (a partner's, ready and unread, unless `read`; each
+   * with `FAKE_PEN_PAL_NOTE`'s other fields unless given).
+   */
+  penPalNotes(personaId: string, notes: (Partial<PenPalNote> & { read?: boolean })[]): void;
+  /** Completes a pending note or answer, as the server's worker would (a note of the partner). */
+  penPalWritten(noteId: string, note: Partial<PenPalNote>): void;
+  /** What the next voice note is written down as (by default `FAKE_PEN_PAL_HEARD`). */
+  nextPenPalHeard(text: string): void;
   /** Ends a call recorded with `ended: false`. */
   finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
   /**
@@ -904,6 +916,29 @@ export function recordingOf(id: string, index: number): TurnAudio {
   return { url: `https://files.test/${id}/${index}.wav`, milliseconds: 1500 + index * 100 };
 }
 
+/** The pen-pal settings of a learner who has not changed anything. */
+export const FAKE_PEN_PAL_SETTINGS: PenPalSettings = {
+  enabled: false,
+  perWeek: 3,
+  quietFrom: 21,
+  quietTo: 8,
+  timezone: 'UTC',
+};
+/** A note of a partner, ready to play. */
+export const FAKE_PEN_PAL_NOTE: PenPalNote = {
+  id: 'note_0',
+  personaId: '',
+  sender: 'partner',
+  status: 'ready',
+  text: 'Hallo! Heute habe ich Kuchen gebacken. Und du?',
+  createdAt: '2026-10-09T12:00:00Z',
+  replyTo: null,
+  audioUrl: 'https://files.test/penpal/note.mp3',
+  corrections: [],
+};
+/** What a voice note of the learner is written down as. */
+export const FAKE_PEN_PAL_HEARD = 'Ich habe gestern ein Film gesehen';
+
 export function createFakeApi(): FakeApi {
   const fields = new Map<string, unknown>();
   // Where a value came from, for the fields the learner did not give themselves.
@@ -950,6 +985,31 @@ export function createFakeApi(): FakeApi {
     tutorQuestions = [kept, ...tutorQuestions];
     return kept;
   };
+  // Pen-pal: the learner's settings, every note in the order it was written, the partner's notes
+  // not yet opened, and what the next voice note is heard as.
+  let penPalSettings: PenPalSettings = { ...FAKE_PEN_PAL_SETTINGS };
+  let penPalLog: PenPalNote[] = [];
+  const penPalUnread = new Set<string>();
+  let penPalHeard = FAKE_PEN_PAL_HEARD;
+  const penPalNote = (personaId: string, changes: Partial<PenPalNote>): PenPalNote => ({
+    ...FAKE_PEN_PAL_NOTE,
+    id: `note_${penPalLog.length + 1}`,
+    personaId,
+    createdAt: new Date(now).toISOString(),
+    ...changes,
+  });
+  const penPalOwn = (personaId: string) => {
+    if (!personas?.some(({ id }) => id === personaId)) throw new ApiError('not_found', 404);
+  };
+  const penPalThreads = () =>
+    (personas ?? []).map(({ id }) => {
+      const notes = penPalLog.filter((n) => n.personaId === id);
+      return {
+        personaId: id,
+        last: notes.at(-1) ?? null,
+        unread: notes.filter((n) => penPalUnread.has(n.id)).length,
+      };
+    });
   // The phrasebook, newest first, and what is suggested next.
   let phrases: Phrase[] = [];
   let phraseSuggestions: PhraseSuggestion[] = FAKE_PHRASE_SUGGESTIONS;
@@ -2013,6 +2073,91 @@ export function createFakeApi(): FakeApi {
     async getTutorQuestions() {
       await record('getTutorQuestions');
       return { questions: tutorQuestions };
+    },
+    penPalNotes(personaId, notes) {
+      for (const { read, ...fields } of notes) {
+        const note = penPalNote(personaId, fields);
+        penPalLog = [...penPalLog, note];
+        if (note.sender === 'partner' && note.status === 'ready' && !read) {
+          penPalUnread.add(note.id);
+        }
+      }
+    },
+    penPalWritten(noteId, note) {
+      penPalLog = penPalLog.map((n) => (n.id === noteId ? { ...n, status: 'ready', ...note } : n));
+      penPalUnread.add(noteId);
+    },
+    nextPenPalHeard(text) {
+      penPalHeard = text;
+    },
+    async getPenPal() {
+      await record('getPenPal');
+      return { settings: penPalSettings, threads: penPalThreads() };
+    },
+    async updatePenPalSettings(changes) {
+      await record('updatePenPalSettings', changes);
+      // A key left out or null leaves a setting as it is, as on the server.
+      const next: PenPalSettings = {
+        enabled: changes.enabled ?? penPalSettings.enabled,
+        perWeek: changes.perWeek ?? penPalSettings.perWeek,
+        quietFrom: changes.quietFrom ?? penPalSettings.quietFrom,
+        quietTo: changes.quietTo ?? penPalSettings.quietTo,
+        timezone: changes.timezone ?? penPalSettings.timezone,
+      };
+      if (next.perWeek < 1 || next.perWeek > 7) throw new ApiError('invalid_value', 422);
+      penPalSettings = next;
+      return penPalSettings;
+    },
+    async getPenPalThread(personaId) {
+      await record('getPenPalThread', personaId);
+      penPalOwn(personaId);
+      const notes = penPalLog.filter((n) => n.personaId === personaId);
+      return {
+        personaId,
+        notes,
+        unread: notes.filter((n) => penPalUnread.has(n.id)).length,
+      };
+    },
+    async openPenPalThread(personaId) {
+      await record('openPenPalThread', personaId);
+      penPalOwn(personaId);
+      for (const n of penPalLog) if (n.personaId === personaId) penPalUnread.delete(n.id);
+      return { settings: penPalSettings, threads: penPalThreads() };
+    },
+    async askForPenPalNote(personaId) {
+      await record('askForPenPalNote', personaId);
+      penPalOwn(personaId);
+      const note = penPalNote(personaId, { status: 'pending', text: '', audioUrl: null });
+      penPalLog = [...penPalLog, note];
+      return note;
+    },
+    async sendPenPalReply(personaId, recording) {
+      await record('sendPenPalReply', personaId, recording);
+      penPalOwn(personaId);
+      if (!recording.audio) throw new ApiError('invalid_value', 422);
+      const heard = penPalNote(personaId, {
+        sender: 'learner',
+        text: penPalHeard,
+        audioUrl: null,
+      });
+      penPalLog = [...penPalLog, heard];
+      const answer = penPalNote(personaId, {
+        status: 'pending',
+        text: '',
+        audioUrl: null,
+        replyTo: heard.id,
+      });
+      penPalLog = [...penPalLog, answer];
+      penPalHeard = FAKE_PEN_PAL_HEARD;
+      return { heard, answer };
+    },
+    async retryPenPalNote(noteId) {
+      await record('retryPenPalNote', noteId);
+      const note = penPalLog.find((n) => n.id === noteId);
+      if (!note) throw new ApiError('not_found', 404);
+      const again: PenPalNote = { ...note, status: 'pending' };
+      penPalLog = penPalLog.map((n) => (n.id === noteId ? again : n));
+      return again;
     },
     hearsNextRetry(heard) {
       nextRetryHeard = heard;

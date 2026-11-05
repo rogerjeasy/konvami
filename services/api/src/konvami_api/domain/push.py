@@ -42,6 +42,18 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "Ta simulation est notée. Regarde comment ça s’est passé.",  # noqa: RUF001
         "it": "La tua simulazione è stata valutata. Guarda com’è andata.",  # noqa: RUF001
     },
+    "pen_pal": {
+        "en": "Sent you a voice note.",
+        "de": "Hat dir eine Sprachnachricht geschickt.",
+        "fr": "T’a envoyé un message vocal.",  # noqa: RUF001
+        "it": "Ti ha mandato un messaggio vocale.",
+    },
+    "pen_pal_reply": {
+        "en": "Answered your voice note.",
+        "de": "Hat auf deine Sprachnachricht geantwortet.",
+        "fr": "A répondu à ton message vocal.",
+        "it": "Ha risposto al tuo messaggio vocale.",
+    },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
         "de": "Wir haben lange nicht gesprochen. Hast du fünf Minuten?",
@@ -72,7 +84,8 @@ class PushMessage:
     token: str
     title: str
     body: str
-    # What a tap opens: {"open": "report", "id": call id}, {"open": "simulation", …} or Today.
+    # What a tap opens: {"open": "report", "id": call id}, {"open": "simulation", …}, a pen-pal
+    # thread ({"open": "pen_pal", "id": partner id}) or Today.
     data: Mapping[str, str]
 
 
@@ -200,6 +213,16 @@ class PushService:
             "simulation",
             exam_name,
             {"open": "simulation", "id": call_id},
+        )
+
+    def pen_pal(self, user_id: UUID, persona_id: UUID, *, reply: bool) -> None:
+        """A pen-pal voice note arrived from a partner (`reply` False), or the partner answered
+        the learner's (`reply` True): from the partner, opening the thread (spec §6.16)."""
+        self._send(
+            self._repository.of(user_id),
+            "pen_pal_reply" if reply else "pen_pal",
+            self._partner_name(user_id, persona_id),
+            {"open": "pen_pal", "id": str(persona_id)},
         )
 
     def nudge(self) -> int:

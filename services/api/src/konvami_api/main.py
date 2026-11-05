@@ -33,6 +33,7 @@ from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.moderation import TextGuard
 from konvami_api.domain.onboarding import OnboardingService
+from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
@@ -75,6 +76,7 @@ from konvami_api.persistence.repositories import (
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
+    SqlPenPalRepository,
     SqlPersonaRepository,
     SqlPhraseRepository,
     SqlPlacementRepository,
@@ -95,6 +97,7 @@ from konvami_api.providers.aws import (
     LambdaClient,
     LambdaDetailsStarter,
     LambdaExamStarter,
+    LambdaPenPalStarter,
     LambdaReportStarter,
     LambdaWeekReviewStarter,
     SecretsClient,
@@ -509,6 +512,28 @@ def build_backend(
             owners=costs.owners,
             clock=_now,
         ),
+        pen_pal=PenPalService(
+            profiles=profiles,
+            personas=personas,
+            conversations=conversations,
+            memories=memories,
+            accounts=directory,
+            repository=SqlPenPalRepository(sql),
+            listener=listener,
+            text_model=text,
+            # A note is a short text; the answer and the check of its corrections judge the
+            # learner's language, as a report does.
+            note_model=models.week or models.memory,
+            reply_model=models.report,
+            speech=speech,
+            speech_model=models.speech,
+            files=files,
+            starter=LambdaPenPalStarter(clients.functions, worker),
+            clock=_now,
+            announce=lambda user_id, persona_id, reply: push.pen_pal(
+                user_id, persona_id, reply=reply
+            ),
+        ),
         retries=RetryService(
             reports=reports,
             repository=SqlRetryRepository(sql),
@@ -592,9 +617,17 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     the learner; and filling in a learner's new word cards with
     their forms (`card_details`); writing a learner's weekly check-in (`week_review`); scoring
     an exam simulation (`exam`); and, once an hour, nudging learners who have been quiet for a
-    week (`nudges`, from the schedule)."""
+    week (`nudges`, from the schedule), and the partners' voice notes: the ones due, sent by the
+    same hourly run (spec §6.16), and writing a note or an answer that is waiting (`pen_pal`)."""
     if "nudges" in event:
-        backend.services.push.nudge()
+        # One failing does not stop the other.
+        try:
+            backend.services.push.nudge()
+        finally:
+            backend.services.pen_pal.send_due()
+        return
+    if "pen_pal" in event:
+        backend.services.pen_pal.write(UUID(event["pen_pal"]))
         return
     if "exam" in event:
         backend.services.exams.score(event["exam"])

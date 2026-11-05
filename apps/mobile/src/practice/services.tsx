@@ -32,6 +32,12 @@ import type {
   Progress,
   Transcript,
   ThenVsNow,
+  PenPal,
+  PenPalNote,
+  PenPalReply,
+  PenPalSettings,
+  PenPalSettingsChange,
+  PenPalThread,
   Phrase,
   PhraseDraft,
   PhraseSuggestion,
@@ -173,6 +179,26 @@ export interface PracticeServices {
   makeImportCard: (id: string, index: number) => Promise<Card>;
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
+  /** The pen-pal settings and a line per partner (5.21, Today's card, Talk's row). */
+  penPal: ResourceStore<PenPal>;
+  /** One partner's thread of voice notes. Rejects with an `ApiError` (`not_found`, …). */
+  readPenPalThread: (personaId: string) => Promise<PenPalThread>;
+  /** Changes pen-pal settings and shows them. Rejects with an `ApiError` (`invalid_value`, …). */
+  changePenPal: (changes: PenPalSettingsChange) => Promise<PenPalSettings>;
+  /** The learner opened a thread: what the partner sent counts as read. */
+  openPenPalThread: (personaId: string) => Promise<void>;
+  /**
+   * Asks a partner for a note now; it is pending until the thread shows it. Rejects with an
+   * `ApiError` (`limit`, `consent_required`, …).
+   */
+  askForPenPalNote: (personaId: string) => Promise<PenPalNote>;
+  /**
+   * Answers a partner with a recorded voice note; the partner's answer follows. Rejects with an
+   * `ApiError` (`too_short`, `limit`, `consent_required`, …).
+   */
+  sendPenPalReply: (personaId: string, recording: SentenceRecording) => Promise<PenPalReply>;
+  /** Has a note or an answer that failed written again. */
+  retryPenPalNote: (noteId: string) => Promise<PenPalNote>;
   /**
    * Says correction `index` of a conversation's report again, from a recording ("Say it better").
    * Rejects with an `ApiError` (`unsure`, `retry_limit`, …).
@@ -248,6 +274,13 @@ export function createPracticeServices(
     | 'reviewCard'
     | 'removeCard'
     | 'getTutorQuestions'
+    | 'getPenPal'
+    | 'updatePenPalSettings'
+    | 'getPenPalThread'
+    | 'openPenPalThread'
+    | 'askForPenPalNote'
+    | 'sendPenPalReply'
+    | 'retryPenPalNote'
     | 'getCatalog'
     | 'askTutor'
     | 'getPhrasebook'
@@ -308,6 +341,8 @@ export function createPracticeServices(
   }, clock.now);
 
   const imports = createResourceStore(() => api.getImports(), clock.now);
+
+  const penPal = createResourceStore(() => api.getPenPal(), clock.now);
   return {
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
@@ -398,6 +433,22 @@ export function createPracticeServices(
       return card;
     },
     tutor,
+    penPal,
+    readPenPalThread: (personaId) => api.getPenPalThread(personaId),
+    changePenPal: (changes) =>
+      penPal.mutate(
+        () => api.updatePenPalSettings(changes),
+        (shown, settings) => ({ ...shown, settings }),
+      ),
+    async openPenPalThread(personaId) {
+      await penPal.mutate(
+        () => api.openPenPalThread(personaId),
+        (_, overview) => overview,
+      );
+    },
+    askForPenPalNote: (personaId) => api.askForPenPalNote(personaId),
+    sendPenPalReply: (personaId, recording) => api.sendPenPalReply(personaId, spoken(recording)),
+    retryPenPalNote: (noteId) => api.retryPenPalNote(noteId),
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
     readGrammarTopic: (id) => api.getGrammarTopic(id),
     cardSound: async (id) => (await api.getCardAudio(id)).url,
@@ -453,6 +504,8 @@ export function PracticeProvider({
     services.pronunciation.reset();
 
     services.imports.reset();
+
+    services.penPal.reset();
     services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
@@ -677,6 +730,20 @@ export function usePronunciation(): ResourceState<PronunciationLab> {
 export function useImports(): ResourceState<CourseImports> {
   const { imports } = usePracticeServices();
   return useSyncExternalStore(imports.subscribe, imports.getState, imports.getState);
+}
+
+/**
+ * The pen-pal settings and a line per partner; re-renders when they change. Reads them when
+ * first asked and again when the app comes back after a while, so a new note shows.
+ */
+export function usePenPal(): ResourceState<PenPal> {
+  const { penPal } = usePracticeServices();
+  const { status } = useSession();
+  const signedIn = status === 'signedIn';
+  useEffect(() => {
+    if (signedIn) void penPal.load();
+  }, [signedIn, penPal]);
+  return useSyncExternalStore(penPal.subscribe, penPal.getState, penPal.getState);
 }
 
 /** The questions asked to the Tutor; re-renders when they change. */

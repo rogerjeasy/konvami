@@ -19,8 +19,8 @@ import { dayPart } from '@/lib/greeting';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { sessionRoute } from '@/lib/plan';
-import { callRoute, conversationRoute, ROUTES } from '@/lib/routes';
-import { useHome, usePracticeServices } from '@/practice/services';
+import { callRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes';
+import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useAccount, useProfileQuestion, useProfileServices } from '@/profile/services';
 import { useReminderSchedule } from '@/reminders/use-reminders';
 import { ExamCard } from './exam-card';
@@ -63,6 +63,13 @@ function Day({ home, now }: { home: Home; now: Date }) {
     home.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ?? home.partners[0];
   // A question about a setting, when the server finds one due (progressive profiling).
   const question = useProfileQuestion();
+  // A partner's voice note waiting to be opened (spec §14.1).
+  const penPal = usePenPal();
+  const waiting =
+    penPal.phase === 'ready' ? penPal.data.threads.find((thread) => thread.unread > 0) : undefined;
+  const writer = waiting
+    ? home.partners.find(({ persona }) => persona.id === waiting.personaId)?.persona
+    : undefined;
   const asking =
     question.phase === 'ready' &&
     question.data.question !== null &&
@@ -87,6 +94,16 @@ function Day({ home, now }: { home: Home; now: Date }) {
         }}
         onOthers={() => router.navigate(ROUTES.talk)}
       />
+    ) : null,
+    waiting && writer ? (
+      <ListGroup key="pen-pal">
+        <ListRow
+          icon="mic"
+          title={t('penPal.today.title', { name: writer.name })}
+          detail={t('penPal.today.body')}
+          onPress={() => router.push(penPalRoute(writer.id))}
+        />
+      </ListGroup>
     ) : null,
     // Shown only while cards are waiting: a count of zero is nothing to do.
     home.cardsDue > 0 ? (
@@ -181,7 +198,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
 export function TodayScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { home: store, clock } = usePracticeServices();
+  const { home: store, penPal, clock } = usePracticeServices();
   const { question } = useProfileServices();
   const home = useHome();
   const signedIn = status === 'signedIn';
@@ -197,7 +214,8 @@ export function TodayScreen() {
     useCallback(() => {
       void store.revisit();
       void question.revisit();
-    }, [store, question]),
+      void penPal.revisit();
+    }, [store, question, penPal]),
   );
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;

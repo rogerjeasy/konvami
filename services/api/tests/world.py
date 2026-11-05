@@ -24,6 +24,7 @@ from konvami_api.domain.levels import LevelFit, LevelService
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.onboarding import OnboardingService
+from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
@@ -90,6 +91,7 @@ from tests.fakes import (
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryPenPalRepository,
     InMemoryPersonaRepository,
     InMemoryPhraseRepository,
     InMemoryPlacementRepository,
@@ -108,6 +110,7 @@ from tests.fakes import (
     RecordingDetailsStarter,
     RecordingExamStarter,
     RecordingNotifier,
+    RecordingPenPalStarter,
     RecordingPushSender,
     RecordingReportStarter,
     RecordingWeekStarter,
@@ -486,6 +489,35 @@ class World:
             announce=lambda *said: self.push.simulation_scored(*said),
         )
         self.exam_script = ExamScript(self.exams)
+        self.penpal_store = InMemoryPenPalRepository()
+        self.penpal_starter = RecordingPenPalStarter()
+        self.penpal_transcriber = ScriptedTranscriber()
+        # Note ids in the order they are handed out: ...0001, ...0002, and so on.
+        note_ids = (UUID(f"ffffffff-ffff-4fff-8fff-{n:012d}") for n in range(1, 10_000))
+        self.penpal = PenPalService(
+            profiles=self.profiles,
+            personas=self.personas,
+            conversations=self.conversations,
+            memories=self.memories,
+            accounts=self.accounts,
+            repository=self.penpal_store,
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.penpal_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            text_model=self.text,
+            note_model="gpt-6-luna",
+            reply_model="gpt-6.1-sol",
+            speech=self.speech,
+            speech_model="gpt-4o-mini-tts",
+            files=self.files,
+            starter=self.penpal_starter,
+            clock=self.clock,
+            announce=lambda user, persona, reply: self.push.pen_pal(user, persona, reply=reply),
+            new_id=lambda: next(note_ids),
+        )
         self.voice = VoiceCallService(
             settings=VOICE,
             scripts={

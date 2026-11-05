@@ -46,6 +46,12 @@ from konvami_api.api.schemas import (
     MemorySettingsPatch,
     NextSimulationOut,
     OnboardingOut,
+    PenPalNoteOut,
+    PenPalOut,
+    PenPalReplyOut,
+    PenPalSettingsIn,
+    PenPalSettingsOut,
+    PenPalThreadOut,
     PersonaDescription,
     PersonaDraftOut,
     PersonaIn,
@@ -123,6 +129,7 @@ from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
 from konvami_api.domain.onboarding import OnboardingService
+from konvami_api.domain.penpal import PenPalError, PenPalService
 from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.phrasebook import PhrasebookEntry, PhrasebookService
@@ -185,6 +192,8 @@ class Services:
     then_vs_now: ThenVsNowService
     pronunciation: PronunciationService
 
+    pen_pal: PenPalService
+
 
 # Documented error responses, so the generated client knows their shape.
 type Responses = dict[int | str, dict[str, Any]]
@@ -196,6 +205,7 @@ TUTOR_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 429, 50
 CALL_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 429, 503)}
 RETRY_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 422, 429, 503)}
 ANSWER_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 422, 429, 503)}
+PEN_PAL_REFUSED: Responses = ANSWER_REFUSED
 LIMITED: Responses = {429: {"model": ErrorBody}}
 UNAVAILABLE: Responses = {503: {"model": ErrorBody}}
 # An IANA time zone name is at most a few dozen characters ("America/Argentina/ComodRivadavia").
@@ -693,6 +703,58 @@ def _router(services: Services) -> APIRouter:
     def resolve_flag(user: CurrentUser, flag_id: UUID, resolution: FlagResolution) -> QueuedFlagOut:
         """Closes a flag as resolved or dismissed, or opens it again."""
         return QueuedFlagOut.of(services.flags.resolve(user, flag_id, resolution.status))
+
+    @router.get("/pen-pal", operation_id="getPenPal")
+    def get_pen_pal(user: CurrentUser) -> PenPalOut:
+        """The learner's pen-pal settings and a line per partner (spec §6.16)."""
+        return PenPalOut.of(services.pen_pal.overview(user))
+
+    @router.put("/pen-pal/settings", operation_id="updatePenPalSettings", responses=REFUSED)
+    def update_pen_pal_settings(user: CurrentUser, changes: PenPalSettingsIn) -> PenPalSettingsOut:
+        """Turns the partners' unprompted voice notes on or off, and sets how often and when."""
+        return PenPalSettingsOut.of(
+            services.pen_pal.configure(user, **changes.model_dump(exclude_none=True))
+        )
+
+    @router.get("/pen-pal/{persona_id}", operation_id="getPenPalThread", responses=NOT_FOUND)
+    def get_pen_pal_thread(user: CurrentUser, persona_id: UUID) -> PenPalThreadOut:
+        """One partner's thread: every note, oldest first, with an address to play each."""
+        return PenPalThreadOut.of(services.pen_pal.thread(user, persona_id))
+
+    @router.post(
+        "/pen-pal/{persona_id}/opened", operation_id="openPenPalThread", responses=NOT_FOUND
+    )
+    def open_pen_pal_thread(user: CurrentUser, persona_id: UUID) -> PenPalOut:
+        """The learner opened a thread: what the partner sent is read."""
+        services.pen_pal.opened(user, persona_id)
+        return PenPalOut.of(services.pen_pal.overview(user))
+
+    @router.post(
+        "/pen-pal/{persona_id}/notes", operation_id="askForPenPalNote", responses=PEN_PAL_REFUSED
+    )
+    def ask_for_pen_pal_note(user: CurrentUser, persona_id: UUID) -> PenPalNoteOut:
+        """Asks a partner for a voice note now. It is written in the background: the note is
+        pending until the thread shows it ready."""
+        return PenPalNoteOut.of(services.pen_pal.ask(user, persona_id))
+
+    @router.post(
+        "/pen-pal/{persona_id}/replies", operation_id="sendPenPalReply", responses=PEN_PAL_REFUSED
+    )
+    def send_pen_pal_reply(
+        user: CurrentUser, persona_id: UUID, note: RecordingIn
+    ) -> PenPalReplyOut:
+        """Answers a partner with a voice note: written down at once, word for word; the
+        partner's answer follows in the background."""
+        audio, seconds = recorded(note, PenPalError)
+        heard, answer = services.pen_pal.reply(user, persona_id, audio, note.format, seconds)
+        return PenPalReplyOut(heard=PenPalNoteOut.of(heard), answer=PenPalNoteOut.of(answer))
+
+    @router.post(
+        "/pen-pal/notes/{note_id}/retry", operation_id="retryPenPalNote", responses=PEN_PAL_REFUSED
+    )
+    def retry_pen_pal_note(user: CurrentUser, note_id: UUID) -> PenPalNoteOut:
+        """Has a note or an answer that failed written again (three attempts in all)."""
+        return PenPalNoteOut.of(services.pen_pal.retry(user, note_id))
 
     @router.get("/grammar", operation_id="getGrammarMap")
     def get_grammar_map(user: CurrentUser) -> GrammarMapOut:

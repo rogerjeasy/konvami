@@ -22,6 +22,8 @@ export type SpokenStep<T> =
 export function useSpokenAttempt<T>(
   check: (recording: SentenceRecording) => Promise<T>,
   onHeard?: (result: T) => void,
+  // A longer thing to say (a pen-pal voice note) is let run longer.
+  maxMs: number = MAX_RECORDING_MS,
 ) {
   const recorder = useSentenceRecorder();
   const [step, setStep] = useState<SpokenStep<T>>({ kind: 'ready' });
@@ -62,7 +64,7 @@ export function useSpokenAttempt<T>(
     try {
       await recorder.start();
       setStep({ kind: 'recording' });
-      timer.current = setTimeout(() => void stop(), MAX_RECORDING_MS);
+      timer.current = setTimeout(() => void stop(), maxMs);
     } catch (error) {
       setStep({
         kind: 'failed',

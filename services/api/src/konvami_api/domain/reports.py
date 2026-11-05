@@ -506,6 +506,11 @@ the same, and it is clearly what native speakers more usually say. Otherwise `dr
 Judge every item on its own, and answer for every id."""
 
 
+# The second check, for other places that show a learner corrections (pen-pal answers, spec §6.16).
+reviewer_instructions = _reviewer_instructions
+Review = _Review
+REVIEW_SCHEMA = _REVIEW_SCHEMA
+
 # --- Reading the analyst's answer ----------------------------------------------------------------
 
 
