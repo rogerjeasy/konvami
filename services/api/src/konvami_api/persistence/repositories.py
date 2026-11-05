@@ -26,6 +26,7 @@ from konvami_api.domain.costs import (
     Share,
     Spending,
 )
+from konvami_api.domain.course_import import CourseImport
 from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
 from konvami_api.domain.exams import PartScore
@@ -2479,3 +2480,99 @@ class SqlPremiumVoiceRepository:
             SET voice_id = EXCLUDED.voice_id, chosen_at = EXCLUDED.chosen_at""",
             {"user_id": str(user_id), "voice_id": voice_id, "at": self._clock().isoformat()},
         )
+
+
+# --- Imports of the course companion (spec §6.17) ---------------------------------------------
+
+_IMPORT_COLUMNS = f"""
+    CAST(id AS text) AS id, language, kind, title, source, textbook, chapter, body,
+    CAST(analysis AS text) AS analysis, {epoch_micros("created_at")} AS created_at
+"""
+
+# The limit bounds storage and what a learner can ask the model to read, as for phrases.
+_ADD_IMPORT = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO course_import
+        (id, user_id, language, kind, title, source, textbook, chapter, body, analysis, created_at)
+    SELECT CAST(:id AS uuid), CAST(:user_id AS uuid), :language, :kind, :title,
+           CAST(:source AS text), CAST(:textbook AS text), CAST(:chapter AS text), :body,
+           CAST(:analysis AS jsonb), CAST(:created_at AS timestamptz)
+    WHERE (SELECT count(*) FROM course_import WHERE user_id = CAST(:user_id AS uuid)) < :limit
+    RETURNING id
+"""
+
+_IMPORT_BY_ID = f"""
+    SELECT {_IMPORT_COLUMNS} FROM course_import
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+"""
+
+_LIST_IMPORTS = f"""
+    SELECT {_IMPORT_COLUMNS} FROM course_import
+    WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+    ORDER BY created_at DESC, id DESC
+"""
+
+_COUNT_IMPORTS = """
+    SELECT count(*) AS total FROM course_import WHERE user_id = CAST(:user_id AS uuid)
+"""
+
+_REMOVE_IMPORT = """
+    DELETE FROM course_import WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+    RETURNING id
+"""
+
+
+class SqlImportRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def add(self, user_id: UUID, item: CourseImport, limit: int) -> bool:
+        rows = self._client.execute(
+            _ADD_IMPORT,
+            {
+                "id": str(item.id),
+                "user_id": str(user_id),
+                "language": item.language,
+                "kind": item.kind,
+                "title": item.title,
+                "source": item.source,
+                "textbook": item.textbook,
+                "chapter": item.chapter,
+                "body": item.text,
+                "analysis": json.dumps(item.document(), ensure_ascii=False),
+                "created_at": item.created_at.isoformat(),
+                "limit": limit,
+            },
+        )
+        return bool(rows)
+
+    def get(self, user_id: UUID, import_id: UUID) -> CourseImport | None:
+        rows = self._client.execute(_IMPORT_BY_ID, {"id": str(import_id), "user_id": str(user_id)})
+        return _import(rows[0]) if rows else None
+
+    def listed(self, user_id: UUID, language: str) -> list[CourseImport]:
+        rows = self._client.execute(_LIST_IMPORTS, {"user_id": str(user_id), "language": language})
+        return [_import(row) for row in rows]
+
+    def count(self, user_id: UUID) -> int:
+        rows = self._client.execute(_COUNT_IMPORTS, {"user_id": str(user_id)})
+        return int(rows[0]["total"]) if rows else 0
+
+    def remove(self, user_id: UUID, import_id: UUID) -> bool:
+        rows = self._client.execute(_REMOVE_IMPORT, {"id": str(import_id), "user_id": str(user_id)})
+        return bool(rows)
+
+
+def _import(row: dict[str, Any]) -> CourseImport:
+    return CourseImport.restore(
+        id=UUID(row["id"]),
+        language=row["language"],
+        kind=row["kind"],
+        title=row["title"],
+        source=row["source"],
+        textbook=row["textbook"],
+        chapter=row["chapter"],
+        text=row["body"],
+        document=json.loads(row["analysis"]),
+        created_at=from_epoch_micros(row["created_at"]),
+    )

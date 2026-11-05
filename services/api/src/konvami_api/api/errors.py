@@ -14,6 +14,7 @@ from konvami_api.domain.accounts import AccountError
 from konvami_api.domain.cards import CardError
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import CostError
+from konvami_api.domain.course_import import CourseImportError
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.exam_centre import ExamError
 from konvami_api.domain.flags import FlagError
@@ -113,6 +114,21 @@ _PHRASEBOOK_STATUS = {
     "no_language": 409,
     "too_many": 409,
     "suggestion_limit": 429,
+}
+_IMPORT_STATUS = {
+    "invalid_value": 422,
+    "invalid_photo": 422,
+    "not_text": 422,
+    "no_text": 422,
+    "not_in_language": 422,
+    "blocked": 422,
+    "unreachable": 422,
+    "consent_required": 403,
+    "not_found": 404,
+    "upload_not_found": 404,
+    "no_language": 409,
+    "too_many": 409,
+    "import_limit": 429,
 }
 _RETRY_STATUS = {
     "not_found": 404,
@@ -226,6 +242,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PronunciationError)
     async def _pronunciation_error(_: Request, error: PronunciationError) -> JSONResponse:
         return _response(_PRONUNCIATION_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(CourseImportError)
+    async def _import_error(_: Request, error: CourseImportError) -> JSONResponse:
+        return _response(_IMPORT_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(CostError)
     async def _cost_error(_: Request, error: CostError) -> JSONResponse:

@@ -25,6 +25,8 @@ const PLAN = {
   words: [{ text: 'der Termin', meaning: 'appointment' }],
   review: false,
   lesson: false,
+  material: null,
+  rehearse: false,
 };
 const answer = { callId: 'rtc_1', sdp: 'v=0 answer', maxSeconds: 480, plan: PLAN };
 

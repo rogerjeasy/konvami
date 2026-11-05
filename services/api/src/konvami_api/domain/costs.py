@@ -68,6 +68,9 @@ class Feature(StrEnum):
     PRONUNCIATION = "pronunciation"
     PRONUNCIATION_AUDIO = "pronunciation_audio"
 
+    # Something the learner imported, worked out by the Course agent (spec §6.17).
+    COURSE_IMPORT = "course_import"
+
 
 @dataclass(frozen=True)
 class Charge:

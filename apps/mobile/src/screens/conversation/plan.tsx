@@ -24,7 +24,8 @@ function useWordsUsed(plan: CallPlan, said: readonly string[]): ReadonlySet<stri
  * What the conversation sets out to practise (the Session Planner, spec §8.2): the grammar
  * topics the partner steers towards, and the learner's saved words, each ticked off once they
  * have used it (spec §6.4 "3 of 5 target words used"). A guided lesson (spec §6.3) names its
- * topic as the lesson. In a review conversation (spec §6.7) the words are the point: each one
+ * topic as the lesson, and a conversation about something the learner imported (spec §6.17)
+ * names it. In a review conversation (spec §6.7) the words are the point: each one
  * said counts as reviewed after the call. Nothing to plan, nothing shown.
  */
 export function CallPlanStrip({
@@ -37,12 +38,19 @@ export function CallPlanStrip({
 }) {
   const { t, i18n } = useTranslation();
   const used = useWordsUsed(plan, learnerLines);
-  if (plan.focus.length === 0 && plan.words.length === 0) return null;
+  if (plan.focus.length === 0 && plan.words.length === 0 && !plan.material) return null;
   const topics = plan.focus.map((topic) =>
     t(`grammar.topics.${topic}` as 'grammar.topics.dative', { defaultValue: topic }),
   );
   return (
     <View className="items-center gap-2 pt-1">
+      {plan.material ? (
+        <Text variant="caption" tone="subtle" className="text-center">
+          {t(plan.rehearse ? 'conversation.plan.letter' : 'conversation.plan.material', {
+            title: plan.material,
+          })}
+        </Text>
+      ) : null}
       {topics.length ? (
         <Text variant="caption" tone="subtle" className="text-center">
           {t(plan.lesson ? 'conversation.plan.lesson' : 'conversation.plan.focus', {

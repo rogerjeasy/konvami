@@ -77,6 +77,16 @@ describe('5.2 Talk', () => {
     expect(router.push).toHaveBeenCalledWith('/pronunciation');
   });
 
+  it('leads to the course companion, where a letter or a page is brought to talk over', async () => {
+    await open();
+
+    const row = screen.getByRole('button', { name: 'Bring your own material' });
+    expect(row.props.accessibilityHint).toBe('A letter, a page, a link or a menu');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/import');
+  });
+
   it('includes the exam coach of a learner who is preparing an exam', async () => {
     await open(inApp({ exam: { type: 'goethe', target_level: 'B1', date: null } }));
 

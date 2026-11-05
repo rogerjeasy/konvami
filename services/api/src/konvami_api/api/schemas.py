@@ -32,6 +32,16 @@ from konvami_api.domain.conversations import (
     Transcript,
 )
 from konvami_api.domain.costs import Allowance, CostReport, Level, Share
+from konvami_api.domain.course_import import CHAPTER_MAX as IMPORT_CHAPTER_MAX
+from konvami_api.domain.course_import import (
+    MAX_IMPORTS,
+    CourseImport,
+    ImportEntry,
+    ImportUpload,
+)
+from konvami_api.domain.course_import import PASTE_MAX as IMPORT_PASTE_MAX
+from konvami_api.domain.course_import import TEXTBOOK_MAX as IMPORT_TEXTBOOK_MAX
+from konvami_api.domain.course_import import URL_MAX as IMPORT_URL_MAX
 from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind, WeekPlan
 from konvami_api.domain.exam_centre import ExamCentre, Simulation
 from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
@@ -399,6 +409,10 @@ class CallPlanOut(ApiModel):
     review: bool
     # A guided lesson on the one topic in `focus`.
     lesson: bool
+    # Something the learner imported, which the conversation is about: its title. Null otherwise.
+    material: str | None
+    # The conversation rehearses the reply or phone call a letter asks for.
+    rehearse: bool
 
     @classmethod
     def of(cls, plan: SessionPlan) -> "CallPlanOut":
@@ -408,6 +422,8 @@ class CallPlanOut(ApiModel):
             words=[PlanWordOut(text=word.text, meaning=word.meaning) for word in plan.words],
             review=plan.review,
             lesson=plan.lesson is not None,
+            material=plan.material.title if plan.material else None,
+            rehearse=plan.material.rehearse if plan.material else False,
         )
 
 
@@ -2290,3 +2306,157 @@ class FlagQueueOut(ApiModel):
 
 class FlagResolution(ApiModel):
     status: FlagStatus
+
+
+# --- Course companion: what the learner imported (spec §6.17) ---------------------------------
+
+
+class ImportIn(ApiModel):
+    """Something to work out: a pasted text, a web page's address, or an uploaded photo. The
+    field for the `kind` is required, the others are ignored."""
+
+    kind: Literal["text", "link", "photo"]
+    # Checked again by the service (too short); the limits here keep a huge body out.
+    text: Annotated[str | None, Field(max_length=IMPORT_PASTE_MAX)] = None
+    url: Annotated[str | None, Field(max_length=IMPORT_URL_MAX)] = None
+    # The `uploadId` of the form from `startImportUpload`, after the photo was sent.
+    upload_id: UUID | None = None
+    # The textbook and chapter the material is from, if the learner says.
+    textbook: Annotated[str | None, Field(max_length=IMPORT_TEXTBOOK_MAX)] = None
+    chapter: Annotated[str | None, Field(max_length=IMPORT_CHAPTER_MAX)] = None
+
+
+class ImportUploadOut(ApiModel):
+    """How to send a photo to read: a form POST to `url` with `fields`, then the JPEG as `file`."""
+
+    upload_id: UUID
+    url: str
+    fields: dict[str, str]
+
+    @classmethod
+    def of(cls, upload: ImportUpload) -> "ImportUploadOut":
+        return cls(upload_id=upload.upload_id, url=upload.form.url, fields=dict(upload.form.fields))
+
+
+class ImportWordOut(ApiModel):
+    word: str
+    meaning: str
+    # The learner has a flashcard of the word.
+    in_deck: bool
+
+
+class ImportPointOut(ApiModel):
+    point: str
+    explanation: str
+
+
+class ImportSentenceOut(ApiModel):
+    sentence: str
+    explanation: str
+
+
+class ImportLetterOut(ApiModel):
+    sender: str
+    says: str
+    to_do: list[str]
+    reply_goal: str
+
+
+class ImportOut(ApiModel):
+    id: UUID
+    kind: Literal["text", "link", "photo"]
+    genre: Literal["letter", "menu", "article", "textbook", "other"]
+    title: str
+    # The address of a page; null for a text or a photo.
+    source: str | None
+    textbook: str | None
+    chapter: str | None
+    # How hard the material is (CEFR).
+    level: str
+    summary: str
+    # What was read: the text, or what the photo says.
+    text: str
+    vocabulary: list[ImportWordOut]
+    grammar: list[ImportPointOut]
+    hard_sentences: list[ImportSentenceOut]
+    # For an official letter: what it asks. Null for anything else.
+    letter: ImportLetterOut | None
+    # The language the summary and meanings are written in.
+    explained_in: str
+    created_at: dt.datetime
+
+    @classmethod
+    def of(cls, entry: ImportEntry) -> "ImportOut":
+        item = entry.item
+        return cls(
+            id=item.id,
+            kind=item.kind,
+            genre=item.genre,
+            title=item.title,
+            source=item.source,
+            textbook=item.textbook,
+            chapter=item.chapter,
+            level=item.level,
+            summary=item.summary,
+            text=item.text,
+            vocabulary=[
+                ImportWordOut(word=w.word, meaning=w.meaning, in_deck=saved)
+                for w, saved in zip(item.vocabulary, entry.in_deck, strict=True)
+            ],
+            grammar=[
+                ImportPointOut(point=g.point, explanation=g.explanation) for g in item.grammar
+            ],
+            hard_sentences=[
+                ImportSentenceOut(sentence=h.sentence, explanation=h.explanation)
+                for h in item.hard_sentences
+            ],
+            letter=(
+                ImportLetterOut(
+                    sender=item.letter.sender,
+                    says=item.letter.says,
+                    to_do=list(item.letter.to_do),
+                    reply_goal=item.letter.reply_goal,
+                )
+                if item.letter
+                else None
+            ),
+            explained_in=item.explained_in,
+            created_at=item.created_at,
+        )
+
+
+class ImportSummaryOut(ApiModel):
+    id: UUID
+    kind: Literal["text", "link", "photo"]
+    genre: Literal["letter", "menu", "article", "textbook", "other"]
+    title: str
+    textbook: str | None
+    chapter: str | None
+    level: str
+    # How many words it holds to learn.
+    words: int
+    created_at: dt.datetime
+
+    @classmethod
+    def of(cls, item: CourseImport) -> "ImportSummaryOut":
+        return cls(
+            id=item.id,
+            kind=item.kind,
+            genre=item.genre,
+            title=item.title,
+            textbook=item.textbook,
+            chapter=item.chapter,
+            level=item.level,
+            words=len(item.vocabulary),
+            created_at=item.created_at,
+        )
+
+
+class ImportsOut(ApiModel):
+    imports: list[ImportSummaryOut]
+    # The most imports a learner keeps.
+    limit: int
+
+    @classmethod
+    def of(cls, items: Sequence[CourseImport]) -> "ImportsOut":
+        return cls(imports=[ImportSummaryOut.of(item) for item in items], limit=MAX_IMPORTS)

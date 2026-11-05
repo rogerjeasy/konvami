@@ -24,6 +24,7 @@ from konvami_api.domain.costs import (
     Share,
     Spending,
 )
+from konvami_api.domain.course_import import CourseImport, FetchedPage, PageFetchError
 from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
 from konvami_api.domain.flags import Flag, FlagStatus
@@ -271,6 +272,21 @@ class InMemoryFileStore:
     def remove_all(self, prefix: str) -> None:
         for key in [key for key in self.files if key.startswith(prefix)]:
             del self.files[key]
+
+
+class FakePageFetcher:
+    """Answers with the page set for an address, or fails like a fetcher that was refused."""
+
+    def __init__(self) -> None:
+        self.pages: dict[str, FetchedPage | PageFetchError] = {}
+        self.fetched: list[str] = []
+
+    def fetch(self, url: str) -> FetchedPage:
+        self.fetched.append(url)
+        found = self.pages.get(url, PageFetchError("unreachable"))
+        if isinstance(found, PageFetchError):
+            raise found
+        return found
 
 
 class FakeVoiceProvider:
@@ -610,6 +626,34 @@ class InMemoryPhraseRepository:
 
     def known(self, user_id: UUID, language: str, keys: Sequence[str]) -> set[str]:
         return {key for key in keys if (user_id, language, key) in self.phrases}
+
+
+class InMemoryImportRepository:
+    def __init__(self) -> None:
+        self.imports: dict[UUID, tuple[UUID, CourseImport]] = {}
+
+    def add(self, user_id: UUID, item: CourseImport, limit: int) -> bool:
+        if self.count(user_id) >= limit:
+            return False
+        self.imports[item.id] = (user_id, item)
+        return True
+
+    def get(self, user_id: UUID, import_id: UUID) -> CourseImport | None:
+        owner, item = self.imports.get(import_id, (None, None))
+        return item if owner == user_id else None
+
+    def listed(self, user_id: UUID, language: str) -> list[CourseImport]:
+        mine = [i for u, i in self.imports.values() if u == user_id and i.language == language]
+        return sorted(mine, key=lambda i: (i.created_at, str(i.id)), reverse=True)
+
+    def count(self, user_id: UUID) -> int:
+        return sum(1 for u, _ in self.imports.values() if u == user_id)
+
+    def remove(self, user_id: UUID, import_id: UUID) -> bool:
+        if self.get(user_id, import_id) is None:
+            return False
+        del self.imports[import_id]
+        return True
 
 
 class InMemoryLevelRepository:

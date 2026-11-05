@@ -109,6 +109,13 @@ export function TalkScreen() {
             detail={t('talk.pronunciationHint')}
             onPress={() => router.push(ROUTES.pronunciation)}
           />
+          {/* Something of the learner's own (a letter, a page, a menu) is brought on 5.23. */}
+          <ListRow
+            icon="file"
+            title={t('talk.import')}
+            detail={t('talk.importHint')}
+            onPress={() => router.push(ROUTES.import)}
+          />
         </ListGroup>
       </Reveal>
       {home.phase === 'ready' ? (

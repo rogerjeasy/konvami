@@ -37,6 +37,8 @@ import {
   type TranscriptTurn,
   type TurnAudio,
   type TutorAnswer,
+  type CourseImport,
+  type CourseImportSummary,
   type Phrase,
   type PhraseSuggestion,
   type PremiumVoices,
@@ -370,6 +372,36 @@ export const FAKE_PHRASE_SUGGESTIONS: PhraseSuggestion[] = [
   { phrase: 'Ich hätte gern einen Termin.', meaning: 'I would like an appointment.', saved: false },
   { phrase: 'Könnten Sie das bitte wiederholen?', meaning: 'Could you repeat that?', saved: false },
 ];
+
+/** What the fake course companion makes of anything the learner brings: a letter from the office. */
+export const FAKE_IMPORT: CourseImport = {
+  id: 'import_1',
+  kind: 'text',
+  genre: 'letter',
+  title: 'Brief vom Amt',
+  source: null,
+  textbook: null,
+  chapter: null,
+  level: 'A2',
+  summary: 'A letter from the registration office: bring your rental contract by 15 March.',
+  text: 'Sehr geehrter Herr Amara, bitte bringen Sie bis zum 15. März Ihren Mietvertrag mit.',
+  vocabulary: [
+    { word: 'der Mietvertrag', meaning: 'the rental contract', inDeck: false },
+    { word: 'mitbringen', meaning: 'to bring along', inDeck: false },
+  ],
+  grammar: [{ point: 'Polite imperative', explanation: '“Bringen Sie” is the polite way to ask.' }],
+  hardSentences: [
+    { sentence: 'Bitte bringen Sie … mit.', explanation: 'Separable verb: “mit” goes to the end.' },
+  ],
+  letter: {
+    sender: 'Das Einwohnermeldeamt',
+    says: 'You must bring your rental contract.',
+    toDo: ['Bring the contract by 15 March'],
+    replyGoal: 'Agree on an appointment.',
+  },
+  explainedIn: 'en',
+  createdAt: '2026-10-09T12:00:00.000Z',
+};
 
 export const FAKE_REPORT_SAYS = [
   'Gut. Ich habe nach Berlin gefahren mit der Bus.',
@@ -794,6 +826,10 @@ export interface FakeApi extends ApiClient {
   nextPhraseSuggestions(suggestions: PhraseSuggestion[]): void;
   /** Phrases the learner kept earlier, oldest first. */
   keptPhrases(phrases: { phrase: string; meaning: string; situation?: string }[]): void;
+  /** What the course companion makes of the next thing brought (by default `FAKE_IMPORT`). */
+  nextImport(item: Partial<CourseImport>): void;
+  /** Imports the learner brought earlier, oldest first. */
+  broughtImports(items: Partial<CourseImport>[]): void;
   /** Ends a call recorded with `ended: false`. */
   finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
   /**
@@ -980,6 +1016,27 @@ export function createFakeApi(): FakeApi {
       sound.tries += 1;
       sound.right += right ? 1 : 0;
     }
+  };
+
+  // What the learner brought, newest first, and what the next import is made into.
+  let imports: CourseImport[] = [];
+  let importNext: Partial<CourseImport> = {};
+  const importSummary = (item: CourseImport): CourseImportSummary => ({
+    id: item.id,
+    kind: item.kind,
+    genre: item.genre,
+    title: item.title,
+    textbook: item.textbook,
+    chapter: item.chapter,
+    level: item.level,
+    words: item.vocabulary.length,
+    createdAt: item.createdAt,
+  });
+  const importList = () => ({ imports: imports.map(importSummary), limit: 30 });
+  const keepImport = (made: Partial<CourseImport>): CourseImport => {
+    const item: CourseImport = { ...FAKE_IMPORT, ...made, id: `import_${imports.length + 1}` };
+    imports = [item, ...imports];
+    return item;
   };
   let recordingsKept = true;
   let premium: Omit<PremiumVoices, 'consent'> & { consent: boolean | (() => boolean) } = {
@@ -1578,6 +1635,13 @@ export function createFakeApi(): FakeApi {
       const words = review ? dueCards().filter(({ kind }) => kind === 'word') : [];
       // A guided lesson is `lesson:<topic>`: the topic alone, with no words.
       const lessonTopic = practise?.startsWith('lesson:') ? practise.slice('lesson:'.length) : null;
+      // A conversation about an import is `import:<id>` (32 hex digits) or `letter:<id>` to
+      // rehearse it; the fake's ids are not hex, so it matches on the digits it keeps.
+      const aboutImport = practise?.match(/^(import|letter):(.+)$/);
+      const brought = aboutImport
+        ? imports.find((item) => item.id.replaceAll('-', '') === aboutImport[2])
+        : undefined;
+      if (aboutImport && !brought) throw new ApiError('not_found', 404);
       const plan =
         purpose === 'practice'
           ? {
@@ -1586,6 +1650,8 @@ export function createFakeApi(): FakeApi {
               words: words.map(({ front, back }) => ({ text: front, meaning: back })),
               review,
               lesson: lessonTopic !== null,
+              material: brought?.title ?? null,
+              rehearse: aboutImport?.[1] === 'letter',
             }
           : null;
       return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds, plan };
@@ -1872,6 +1938,77 @@ export function createFakeApi(): FakeApi {
     },
     keptPhrases(kept) {
       for (const draft of kept) keepPhrase(draft);
+    },
+    nextImport(item) {
+      importNext = item;
+    },
+    broughtImports(items) {
+      for (const item of items) keepImport(item);
+    },
+    async getImports() {
+      await record('getImports');
+      return importList();
+    },
+    async startImportUpload() {
+      await record('startImportUpload');
+      return { uploadId: 'upload_1', url: 'https://files.test/', fields: {} };
+    },
+    async createImport(draft) {
+      await record('createImport', draft);
+      return keepImport({
+        kind: draft.kind === 'link' ? 'link' : draft.kind,
+        source: draft.kind === 'link' ? draft.url : null,
+        textbook: draft.textbook || null,
+        chapter: draft.textbook ? draft.chapter || null : null,
+        ...importNext,
+      });
+    },
+    async getImport(id) {
+      await record('getImport', id);
+      const item = imports.find((candidate) => candidate.id === id);
+      if (!item) throw new ApiError('not_found', 404);
+      return item;
+    },
+    async removeImport(id) {
+      await record('removeImport', id);
+      if (!imports.some((candidate) => candidate.id === id)) throw new ApiError('not_found', 404);
+      imports = imports.filter((candidate) => candidate.id !== id);
+      return importList();
+    },
+    async makeImportWordCard(id, index) {
+      await record('makeImportWordCard', { id, index });
+      const item = imports.find((candidate) => candidate.id === id);
+      const word = item?.vocabulary[index];
+      if (!item || !word) throw new ApiError('not_found', 404);
+      imports = imports.map((candidate) =>
+        candidate.id === id
+          ? {
+              ...candidate,
+              vocabulary: candidate.vocabulary.map((w, i) =>
+                i === index ? { ...w, inDeck: true } : w,
+              ),
+            }
+          : candidate,
+      );
+      const known = cards.find((card) => cardKey(card.front) === cardKey(word.word));
+      if (known) return known;
+      const card: Card = {
+        id: `card_${cards.length + 1}`,
+        kind: 'word',
+        front: word.word,
+        back: word.meaning,
+        note: null,
+        explainedIn: item.explainedIn,
+        conversationId: null,
+        createdAt: new Date(now + cards.length * 1000).toISOString(),
+        dueAt: new Date(now).toISOString(),
+        reviewedAt: null,
+        reviews: 0,
+        lapses: 0,
+        details: null,
+      };
+      cards.push(card);
+      return card;
     },
     async getTutorQuestions() {
       await record('getTutorQuestions');

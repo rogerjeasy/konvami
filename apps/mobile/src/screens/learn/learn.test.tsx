@@ -92,6 +92,16 @@ describe('5.7 Learn', () => {
     expect(router.push).toHaveBeenCalledWith('/pronunciation');
   });
 
+  it('leads to the course companion, where the learner brings their own material', async () => {
+    await open(inApp());
+
+    const row = screen.getByRole('button', { name: 'Bring your own material' });
+    expect(row.props.accessibilityHint).toBe('Texts, links and photos, with their words');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/import');
+  });
+
   it('leads to the grammar map', async () => {
     await open(inApp());
 

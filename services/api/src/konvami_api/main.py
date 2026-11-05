@@ -22,6 +22,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
+from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.flags import FlagService
@@ -70,6 +71,7 @@ from konvami_api.persistence.repositories import (
     SqlDraftLog,
     SqlExamRepository,
     SqlFlagRepository,
+    SqlImportRepository,
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
@@ -109,6 +111,7 @@ from konvami_api.providers.openai_speech import OpenAiSpeech
 from konvami_api.providers.openai_text import OpenAiText
 from konvami_api.providers.openai_transcription import OpenAiTranscription
 from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
+from konvami_api.providers.web_page import WebPageFetcher
 from konvami_api.settings import (
     COSTS_VARIABLE,
     PREMIUM_VOICES_VARIABLE,
@@ -293,6 +296,18 @@ def build_backend(
         model=models.tutor,
         clock=_now,
     )
+    course_imports = CourseImportService(
+        profiles=profiles,
+        accounts=directory,
+        cards=cards,
+        repository=SqlImportRepository(sql),
+        limit=tutor_store,
+        files=files,
+        fetcher=WebPageFetcher(),
+        text_model=text,
+        model=models.tutor,
+        clock=_now,
+    )
     grammar = GrammarMapService(profiles=profiles, reports=reports)
     conversation_review = ConversationReview(
         profiles=profiles, sessions=sessions, conversations=conversations, cards=cards
@@ -365,6 +380,7 @@ def build_backend(
                     reports=reports,
                     cards=cards,
                     week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
+                    imports=course_imports.material,
                 ),
             ),
         },
@@ -438,6 +454,7 @@ def build_backend(
         accounts=accounts,
         recordings=recordings,
         tutor=tutor,
+        course_imports=course_imports,
         phrasebook=PhrasebookService(
             profiles=profiles,
             accounts=directory,

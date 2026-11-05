@@ -16,6 +16,7 @@ from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
+from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.flags import FlagService
@@ -55,6 +56,7 @@ from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.week_review import WeekReviewService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakePageFetcher,
     FakeSpeechModel,
     FakeTranscriber,
     FakeVoiceProvider,
@@ -69,6 +71,7 @@ from tests.fakes import (
     InMemoryExamRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
+    InMemoryImportRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
@@ -220,6 +223,11 @@ def text_model() -> ScriptedTextModel:
 
 
 @pytest.fixture
+def pages() -> FakePageFetcher:
+    return FakePageFetcher()
+
+
+@pytest.fixture
 def retry_transcriber() -> ScriptedTranscriber:
     return ScriptedTranscriber()
 
@@ -307,6 +315,7 @@ def services(
     clock: FixedClock,
     voice_provider: FakeVoiceProvider,
     text_model: ScriptedTextModel,
+    pages: FakePageFetcher,
     calls: InMemoryVoiceSessionRepository,
     memory_store: InMemoryMemoryRepository,
     files: InMemoryFileStore,
@@ -408,6 +417,21 @@ def services(
         clock=clock,
         new_id=lambda: next(question_ids),
     )
+    # Import ids in the order they are handed out: ...0001, ...0002, and so on.
+    import_ids = (UUID(f"ffffffff-ffff-4fff-8fff-{number:012d}") for number in range(1, 1000))
+    course_imports = CourseImportService(
+        profiles=profiles,
+        accounts=directory,
+        cards=cards,
+        repository=InMemoryImportRepository(),
+        limit=tutor_store,
+        files=files,
+        fetcher=pages,
+        text_model=text_model,
+        model="gpt-6.1-sol",
+        clock=clock,
+        new_id=lambda: next(import_ids),
+    )
     # Phrase ids in the order they are handed out: ...0001, ...0002, and so on.
     phrase_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{number:012d}") for number in range(1, 1000))
     exams = ExamService(
@@ -443,6 +467,7 @@ def services(
                     reports=reports,
                     cards=cards,
                     week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
+                    imports=course_imports.material,
                 ),
             ),
             CallPurpose.EXAM: ExamScript(exams),
@@ -532,6 +557,7 @@ def services(
         accounts=accounts,
         recordings=recordings,
         tutor=tutor,
+        course_imports=course_imports,
         phrasebook=PhrasebookService(
             profiles=profiles,
             accounts=directory,

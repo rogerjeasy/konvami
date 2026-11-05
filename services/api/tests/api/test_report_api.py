@@ -316,4 +316,6 @@ def test_the_next_conversation_is_planned_from_the_report(
         "words": [],
         "review": False,
         "lesson": False,
+        "material": None,
+        "rehearse": False,
     }

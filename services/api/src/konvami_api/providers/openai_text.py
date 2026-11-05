@@ -1,5 +1,6 @@
 """The text model: OpenAI's Responses API with a JSON-schema answer."""
 
+import base64
 import json
 from collections.abc import Callable
 from typing import Any
@@ -14,6 +15,18 @@ PROVIDER = "openai"
 # For tasks without a limit of their own: a transcript assessment takes a while, and its caller
 # is a background step, not a person waiting.
 TIMEOUT_SECONDS = 90.0
+
+
+def _input(task: TextTask) -> str | list[dict[str, Any]]:
+    """The task's input: its text, or, with pictures, one message of the text and the pictures
+    (the Responses API takes them as data addresses)."""
+    if not task.images:
+        return task.content
+    parts: list[dict[str, Any]] = [{"type": "input_text", "text": task.content}]
+    for image in task.images:
+        data = base64.b64encode(image.data).decode("ascii")
+        parts.append({"type": "input_image", "image_url": f"data:{image.media_type};base64,{data}"})
+    return [{"role": "user", "content": parts}]
 
 
 class OpenAiText:
@@ -31,7 +44,7 @@ class OpenAiText:
         body = {
             "model": task.model,
             "instructions": task.instructions,
-            "input": task.content,
+            "input": _input(task),
             "text": {
                 "format": {
                     "type": "json_schema",
