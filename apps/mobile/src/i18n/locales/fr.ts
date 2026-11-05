@@ -870,6 +870,40 @@ export const fr: Translation = {
       },
     },
   },
+  thenVsNow: {
+    title: 'Avant et maintenant',
+    intro:
+      'Ta voix d’il y a quelque temps, à côté d’une conversation récente du même genre. Il n’y a pas de note : écoute ce qui a changé.',
+    loading: 'Recherche de tes enregistrements',
+    loadFailed: 'Tes enregistrements n’ont pas pu être chargés.',
+    weeksApart_one: '{{count}} semaine d’écart',
+    weeksApart_other: '{{count}} semaines d’écart',
+    then: 'Avant',
+    now: 'Maintenant',
+    thenWhen: 'avant',
+    nowWhen: 'maintenant',
+    meta: '{{date}} · avec {{name}}',
+    metaNoPartner: '{{date}}',
+    line: 'Toi, {{when}} : {{text}}',
+    play: 'Écouter ce que tu as dit {{when}}',
+    stopPlaying: 'Arrêter la lecture',
+    whole: 'Écouter toute la conversation',
+    off: {
+      title: 'Les enregistrements sont désactivés',
+      body: 'Avant et maintenant a besoin de tes enregistrements. Active-les, et les conversations à venir te donneront de quoi comparer.',
+      action: 'Confidentialité et IA',
+    },
+    none: {
+      title: 'Rien d’enregistré pour l’instant',
+      body: 'Parle avec un partenaire et ta voix sera conservée, pour que tu puisses entendre dans quelques semaines le chemin parcouru.',
+      action: 'Commencer une conversation',
+    },
+    notYet: {
+      title: 'Pas encore assez de temps écoulé',
+      body: 'Avant et maintenant met côte à côte des conversations espacées d’au moins deux semaines. Continue de parler : ton premier enregistrement attend un enregistrement récent du même genre.',
+      action: 'Commencer une conversation',
+    },
+  },
   library: {
     title: 'Bibliothèque',
     body: 'Toutes tes conversations, à relire.',
@@ -1494,6 +1528,10 @@ export const fr: Translation = {
     back: 'Retour à Apprendre',
   },
   progress: {
+    thenVsNow: {
+      title: 'Avant et maintenant',
+      detail: 'Écoute-toi à tes débuts, à côté d’aujourd’hui',
+    },
     lastWeek: {
       title: 'La semaine dernière',
       writing: 'Ton partenaire écrit quelques mots sur ta semaine…',

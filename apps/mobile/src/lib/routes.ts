@@ -68,6 +68,8 @@ export const ROUTES = {
   tutor: '/tutor',
   /** 5.19 Phrasebook: the phrases the learner needs in their life, to keep and to learn. */
   phrasebook: '/phrasebook',
+  /** 5.20 Then vs Now: the learner's voice from their first weeks next to a recent conversation. */
+  thenVsNow: '/then-vs-now',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
