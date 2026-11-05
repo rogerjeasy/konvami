@@ -1835,6 +1835,7 @@ export const it: Translation = {
       note: 'I tuoi partner sono sempre IA e non fingono mai di essere umani. Per revocare il tuo consenso, elimina il tuo account.',
       delete: 'Elimina account',
       deleteHint: 'Rimuove il tuo account e tutto il suo contenuto',
+      terms: 'Leggi le condizioni d’uso',
       recordings: {
         label: 'Conserva le registrazioni delle mie conversazioni',
         on: 'Puoi riascoltare le tue conversazioni. Solo tu puoi ascoltarle.',
@@ -2122,6 +2123,12 @@ export const it: Translation = {
     title: 'Qualcosa è andato storto',
     body: 'Non è stato possibile mostrare questa schermata. Riprova.',
     home: 'Torna all’inizio',
+  },
+  legal: {
+    unset: 'non indicato',
+    draftTitle: 'Bozza',
+    draftBody:
+      'Nome, indirizzo ed e-mail del fornitore non sono ancora indicati, quindi questo testo non è definitivo. È mostrato com’è destinato a essere una volta indicati.',
   },
   upcoming: {
     title: 'In arrivo',

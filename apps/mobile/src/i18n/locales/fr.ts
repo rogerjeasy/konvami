@@ -1842,6 +1842,7 @@ export const fr: Translation = {
       note: 'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Pour retirer ton accord, supprime ton compte.',
       delete: 'Supprimer le compte',
       deleteHint: 'Supprime ton compte et tout ce qu’il contient',
+      terms: 'Lire les conditions d’utilisation',
       recordings: {
         label: 'Garder les enregistrements de mes conversations',
         on: 'Tu peux réécouter tes conversations. Personne d’autre ne peut les écouter.',
@@ -2138,6 +2139,12 @@ export const fr: Translation = {
     title: 'Un problème est survenu',
     body: 'Cet écran n’a pas pu s’afficher. Réessaie, s’il te plaît.',
     home: 'Retour au début',
+  },
+  legal: {
+    unset: 'non renseigné',
+    draftTitle: 'Brouillon',
+    draftBody:
+      'Le nom, l’adresse et l’e-mail du fournisseur ne sont pas encore renseignés : ce texte n’est pas définitif. Il est montré tel qu’il sera une fois ces informations ajoutées.',
   },
   upcoming: {
     title: 'Bientôt disponible',

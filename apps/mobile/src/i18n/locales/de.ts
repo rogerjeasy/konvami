@@ -1842,6 +1842,7 @@ export const de: Translation = {
       note: 'Deine Partner sind immer KI und geben sich nie als Menschen aus. Um deine Zustimmung zu widerrufen, lösche dein Konto.',
       delete: 'Konto löschen',
       deleteHint: 'Entfernt dein Konto und alles darin',
+      terms: 'Nutzungsbedingungen lesen',
       recordings: {
         label: 'Aufnahmen meiner Gespräche behalten',
         on: 'Du kannst deine Gespräche noch einmal anhören. Nur du kannst sie abspielen.',
@@ -2131,6 +2132,12 @@ export const de: Translation = {
     title: 'Etwas ist schiefgelaufen',
     body: 'Dieser Bildschirm konnte nicht angezeigt werden. Bitte versuch es noch einmal.',
     home: 'Zurück zum Start',
+  },
+  legal: {
+    unset: 'nicht angegeben',
+    draftTitle: 'Entwurf',
+    draftBody:
+      'Name, Adresse und E-Mail des Anbieters sind noch nicht eingetragen, daher ist dieser Text nicht endgültig. Er wird so gezeigt, wie er mit diesen Angaben lauten wird.',
   },
   upcoming: {
     title: 'Kommt als Nächstes',

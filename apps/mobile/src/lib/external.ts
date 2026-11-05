@@ -14,12 +14,14 @@ const LEGAL_URL = {
   privacy: process.env.EXPO_PUBLIC_PRIVACY_URL,
 } as const;
 
-/** Opens the Terms of Use or the Privacy Policy in the app language; the in-app placeholder
- * until the pages exist. */
+const LEGAL_SCREEN = { terms: ROUTES.legalTerms, privacy: ROUTES.legalPrivacy } as const;
+
+/** Opens the Terms of Use or the Privacy Policy in the app language: the website's page when its
+ * address is set, otherwise the app's own screen (6.18), which shows the same text. */
 export function openLegal(page: keyof typeof LEGAL_URL, language: string): void {
   const url = legalUrl(LEGAL_URL[page], language);
   if (url) void Linking.openURL(url).catch(() => {});
-  else router.push(ROUTES.comingNext);
+  else router.push(LEGAL_SCREEN[page]);
 }
 
 /** Whether this platform has a mail app the app can bring to the front. */

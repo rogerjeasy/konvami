@@ -104,7 +104,10 @@ export const ROUTES = {
   accountCosts: '/account/costs',
   /** 6.15 Reports: what learners flagged, for the owner's account only (spec §16.1). */
   accountFlags: '/account/flags',
-  /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
+  /** 6.18 Terms of Use and Privacy Policy, shown by the app until a website address is set. */
+  legalTerms: '/legal/terms',
+  legalPrivacy: '/legal/privacy',
+  /** Placeholder for pages that do not exist yet. */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;
 

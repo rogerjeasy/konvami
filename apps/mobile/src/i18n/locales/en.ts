@@ -1818,6 +1818,7 @@ export const en = {
       note: 'Your partners are always AI and never claim to be human. To withdraw your agreement, delete your account.',
       delete: 'Delete account',
       deleteHint: 'Removes your account and everything in it',
+      terms: 'Read the Terms of Use',
       recordings: {
         label: 'Keep recordings of my conversations',
         on: 'You can listen to your conversations again. Only you can play them.',
@@ -2101,6 +2102,12 @@ export const en = {
     title: 'Something went wrong',
     body: 'This screen couldn’t be shown. Please try again.',
     home: 'Back to the start',
+  },
+  legal: {
+    unset: 'not set',
+    draftTitle: 'Draft',
+    draftBody:
+      'The provider’s name, address and email are not filled in yet, so this text is not final. It is shown as it will read once they are.',
   },
   upcoming: {
     title: 'Coming next',

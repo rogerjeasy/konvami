@@ -14,6 +14,8 @@ docs/design/canvas-*/
 # Generated from the backend's OpenAPI schema (pnpm api:generate).
 packages/api-client/openapi.json
 packages/api-client/src/schema.ts
+# Generated from apps/site (pnpm legal:generate).
+apps/mobile/src/legal/documents.generated.ts
 # Python tooling folders
 **/.venv
 **/.mypy_cache

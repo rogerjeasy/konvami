@@ -121,6 +121,11 @@ export function PrivacyScreen() {
             label={t('aiConsent.readNotice')}
             onPress={() => openLegal('privacy', i18n.language)}
           />
+          <TextButton
+            tone="primary"
+            label={t('profile.privacy.terms')}
+            onPress={() => openLegal('terms', i18n.language)}
+          />
         </View>
       </Reveal>
       <Reveal delay={staggerDelay(2)}>
