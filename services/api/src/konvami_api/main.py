@@ -37,6 +37,7 @@ from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
+from konvami_api.domain.premium_voices import PilotAccess, PremiumVoices, PremiumVoiceService
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
@@ -73,6 +74,7 @@ from konvami_api.persistence.repositories import (
     SqlPersonaRepository,
     SqlPhraseRepository,
     SqlPlacementRepository,
+    SqlPremiumVoiceRepository,
     SqlProfileRepository,
     SqlPushDeviceRepository,
     SqlQuestionRepository,
@@ -97,6 +99,7 @@ from konvami_api.providers.aws import (
     cached_secret,
 )
 from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
+from konvami_api.providers.elevenlabs_speech import ElevenLabsSpeech
 from konvami_api.providers.expo_push import ExpoPush
 from konvami_api.providers.openai_moderation import OpenAiModerator
 from konvami_api.providers.openai_realtime import OpenAiRealtime
@@ -106,9 +109,11 @@ from konvami_api.providers.openai_transcription import OpenAiTranscription
 from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
 from konvami_api.settings import (
     COSTS_VARIABLE,
+    PREMIUM_VOICES_VARIABLE,
     TEXT_MODELS_VARIABLE,
     VOICE_VARIABLE,
     cost_settings,
+    premium_voice_settings,
     text_models,
     voice_settings,
 )
@@ -122,6 +127,8 @@ _DB_SETTINGS = {
 # Set once the voice infrastructure exists; until then no voice call can start.
 _USER_POOL = "KONVAMI_USER_POOL_ID"
 _OPENAI_SECRET = "KONVAMI_OPENAI_SECRET_ARN"  # noqa: S105 - the name of a setting
+# Empty until ElevenLabs is turned on (infra/envs/dev `elevenlabs_enabled`).
+_ELEVENLABS_SECRET = "KONVAMI_ELEVENLABS_SECRET_ARN"  # noqa: S105 - the name of a setting
 _CALL_WORKER = "KONVAMI_CALL_WORKER"
 # The private bucket for photos and voice samples (infra/modules/media).
 _MEDIA_BUCKET = "KONVAMI_MEDIA_BUCKET"
@@ -290,7 +297,24 @@ def build_backend(
     )
     voice_config = voice_settings(environment.get(VOICE_VARIABLE))
     speech = OpenAiSpeech(openai_key, meter=meter)
-    sounds = Sounds(speech=speech, model=models.speech, files=files)
+    premium_config = premium_voice_settings(environment.get(PREMIUM_VOICES_VARIABLE))
+    premium_voices = PremiumVoiceService(
+        # Without the key's secret nothing is offered, whatever the voices say.
+        premium=(
+            premium_config.voices
+            if environment.get(_ELEVENLABS_SECRET)
+            else PremiumVoices(model="")
+        ),
+        access=PilotAccess(owners=costs.owners, open_to_testers=premium_config.open_to_testers),
+        accounts=directory,
+        choices=SqlPremiumVoiceRepository(sql, _now),
+        speech=ElevenLabsSpeech(
+            cached_secret(clients.secrets, environment.get(_ELEVENLABS_SECRET, "")), meter=meter
+        ),
+        profiles=profiles,
+        files=files,
+    )
+    sounds = Sounds(speech=speech, model=models.speech, files=files, premium=premium_voices)
     exams = ExamService(
         profiles=profiles,
         personas=personas,
@@ -425,6 +449,7 @@ def build_backend(
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model=models.speech
         ),
+        premium_voices=premium_voices,
         card_details=CardDetailsService(
             profiles=profiles,
             personas=personas,

@@ -4,6 +4,7 @@ import type {
   Costs,
   PersonaDraft,
   PersonaVoice,
+  PremiumVoices,
   ProfileChanges,
   ProfileQuestionState,
   Recordings,
@@ -42,6 +43,19 @@ export interface ProfileServices {
    * `ApiError`, and then what is shown stays as it was.
    */
   keepRecordings: (kept: boolean) => Promise<Recordings>;
+  /**
+   * The premium voices (ElevenLabs, spec §6.21.2): whether they are on offer, whether the learner
+   * agreed to them and may use them, and which one reads aloud. Also what 2.5 and 6.7 read to
+   * show the ElevenLabs choice only where it is offered.
+   */
+  premium: ResourceStore<PremiumVoices>;
+  /**
+   * Picks the voice that reads cards and check-ins aloud (null: the standard voice). Rejects with
+   * an `ApiError`, and then what is shown stays as it was.
+   */
+  choosePremiumVoice: (voiceId: string | null) => Promise<PremiumVoices>;
+  /** A short-lived address of a premium voice's sample. */
+  premiumVoiceSample: (voiceId: string) => Promise<string>;
   /** What partners changed in the learner's settings by voice (6.14), with undo. */
   changes: ChangesStore;
   /** The question about a setting that is due now, shown on Today (spec §6.1.2). */
@@ -90,6 +104,7 @@ export function createProfileServices(
   let studioStart: PersonaDraft | null = null;
   const recordings = createResourceStore(() => api.getRecordings(), Date.now);
   const allowance = createResourceStore(() => api.getVoiceAllowance(), Date.now);
+  const premium = createResourceStore(() => api.getPremiumVoices(), Date.now);
   const memory = createMemoryStore(api, Date.now);
   return {
     account: createAccountStore(api, device.pictures.send),
@@ -101,6 +116,13 @@ export function createProfileServices(
         () => api.configureRecordings(kept),
         (_, answer) => answer,
       ),
+    premium,
+    choosePremiumVoice: (voiceId) =>
+      premium.mutate(
+        () => api.choosePremiumVoice(voiceId),
+        (_, answer) => answer,
+      ),
+    premiumVoiceSample: (voiceId) => api.getPremiumVoiceSample(voiceId),
     changes: createChangesStore(api, Date.now, device.onSettingsChanged),
     question: createQuestionStore(api, Date.now, () => {
       // An answer may have switched the audio or the memory on or off.
@@ -150,6 +172,7 @@ export function ProfileProvider({
     services.changes.reset();
     services.question.reset();
     services.allowance.reset();
+    services.premium.reset();
   }, [status, services]);
   return <ProfileContext.Provider value={services}>{children}</ProfileContext.Provider>;
 }
@@ -206,6 +229,12 @@ export function useMinutesBack(wanted: boolean): string | null {
   return t('call.minutesBack', {
     day: formatDayLine(i18n.language, new Date(state.data.resetsAt)),
   });
+}
+
+/** The premium voices and the learner's choice; re-renders when they change. */
+export function usePremiumVoices(): ResourceState<PremiumVoices> {
+  const { premium } = useProfileServices();
+  return useSyncExternalStore(premium.subscribe, premium.getState, premium.getState);
 }
 
 /** What partners changed by voice; re-renders when it changes. */

@@ -15,7 +15,7 @@ locals {
     age_bracket = 16
     # "1|2026-10-09": the email-tips choice and the day it was made.
     tips_optin = 32
-    # "v1|<ISO time>|openai=1,elevenlabs=1,bedrock=0": the AI consent record (Apple 5.1.2(i), GDPR).
+    # "v3|<ISO time>|openai=1,elevenlabs=1,bedrock=0": the AI consent record (Apple 5.1.2(i), GDPR).
     ai_consent = 256
   }
 

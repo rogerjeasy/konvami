@@ -729,6 +729,39 @@ describe('api client', () => {
     ]);
   });
 
+  it('lists the premium voices, picks one and reads the address of its sample', async () => {
+    const voices = {
+      offered: true,
+      consent: true,
+      allowed: true,
+      voices: [{ id: 'Maya123', name: 'Maya' }],
+      chosen: null,
+    };
+    const { fetch, calls } = fakeFetch(
+      json(200, voices),
+      json(200, { ...voices, chosen: 'Maya123' }),
+      json(200, { url: 'https://files.example.test/voices/Maya123.mp3' }),
+      json(403, { error: { code: 'consent_needed', field: null } }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getPremiumVoices()).toEqual(voices);
+    expect((await api.choosePremiumVoice('Maya123')).chosen).toBe('Maya123');
+    expect(await api.getPremiumVoiceSample('Maya123')).toBe(
+      'https://files.example.test/voices/Maya123.mp3',
+    );
+    await expect(api.choosePremiumVoice(null)).rejects.toMatchObject({ code: 'consent_needed' });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/premium-voices',
+      'PUT https://api.example.test/v1/premium-voices/choice',
+      'GET https://api.example.test/v1/premium-voices/Maya123/sample',
+      'PUT https://api.example.test/v1/premium-voices/choice',
+    ]);
+    expect(calls[1]?.body).toEqual({ voiceId: 'Maya123' });
+    expect(calls[3]?.body).toEqual({ voiceId: null });
+  });
+
   it('reports an item, lists the reports and, for the owner, works the review queue', async () => {
     const flag = {
       id: 'f1',

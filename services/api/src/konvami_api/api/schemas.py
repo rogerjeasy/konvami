@@ -79,6 +79,7 @@ from konvami_api.domain.phrasebook import MEANING_MAX as PHRASE_MEANING_MAX
 from konvami_api.domain.phrasebook import PHRASE_MAX, SITUATION_MAX, PhrasebookEntry, Suggestion
 from konvami_api.domain.placement import PlacementView
 from konvami_api.domain.plan import SessionPlan
+from konvami_api.domain.premium_voices import PremiumStatus
 from konvami_api.domain.profile import (
     AVOID_TOPIC_MAX,
     GLOBAL_SCOPE,
@@ -738,6 +739,38 @@ class PersonaDescription(ApiModel):
 class VoiceSampleOut(ApiModel):
     # A short-lived address of the voice's sample (MP3).
     url: str
+
+
+class PremiumVoiceOut(ApiModel):
+    id: str
+    name: str
+
+
+class PremiumVoicesOut(ApiModel):
+    # ElevenLabs is set up: the consent screens name it only then.
+    offered: bool
+    # The learner agreed to it (consent record v3).
+    consent: bool
+    # The learner may use premium voices (Pro, or a tester while there is no subscription).
+    allowed: bool
+    voices: list[PremiumVoiceOut]
+    # The id of the voice read-aloud uses; null: the standard voice.
+    chosen: str | None
+
+    @classmethod
+    def of(cls, status: PremiumStatus) -> "PremiumVoicesOut":
+        return cls(
+            offered=status.offered,
+            consent=status.consent,
+            allowed=status.allowed,
+            voices=[PremiumVoiceOut(id=voice.id, name=voice.name) for voice in status.voices],
+            chosen=status.chosen,
+        )
+
+
+class PremiumVoiceChoiceIn(ApiModel):
+    # null goes back to the standard voice.
+    voice_id: str | None
 
 
 class ConversationOut(ApiModel):

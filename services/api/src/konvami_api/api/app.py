@@ -59,6 +59,8 @@ from konvami_api.api.schemas import (
     PictureUploadOut,
     PlacementDecision,
     PlacementOut,
+    PremiumVoiceChoiceIn,
+    PremiumVoicesOut,
     ProfileAnswerIn,
     ProfileChangesOut,
     ProfileOut,
@@ -111,6 +113,7 @@ from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.phrasebook import PhrasebookEntry, PhrasebookService
 from konvami_api.domain.placement import PlacementService
+from konvami_api.domain.premium_voices import PremiumVoiceService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
@@ -152,6 +155,7 @@ class Services:
     tutor: TutorService
     phrasebook: PhrasebookService
     voices: VoiceSampleService
+    premium_voices: PremiumVoiceService
     costs: CostService
     grammar: GrammarMapService
     card_details: CardDetailsService
@@ -344,6 +348,26 @@ def _router(services: Services) -> APIRouter:
     )
     def get_voice_sample(user: CurrentUser, voice: Voice) -> VoiceSampleOut:
         return VoiceSampleOut(url=services.voices.sample(user, voice))
+
+    @router.get("/premium-voices", operation_id="getPremiumVoices")
+    def get_premium_voices(user: CurrentUser) -> PremiumVoicesOut:
+        return PremiumVoicesOut.of(services.premium_voices.status(user))
+
+    @router.put(
+        "/premium-voices/choice",
+        operation_id="choosePremiumVoice",
+        responses=REFUSED | CONFLICT | {403: {"model": ErrorBody}},
+    )
+    def choose_premium_voice(user: CurrentUser, body: PremiumVoiceChoiceIn) -> PremiumVoicesOut:
+        return PremiumVoicesOut.of(services.premium_voices.choose(user, body.voice_id))
+
+    @router.get(
+        "/premium-voices/{voice_id}/sample",
+        operation_id="getPremiumVoiceSample",
+        responses=REFUSED | CONFLICT | UNAVAILABLE | {403: {"model": ErrorBody}},
+    )
+    def get_premium_voice_sample(user: CurrentUser, voice_id: str) -> VoiceSampleOut:
+        return VoiceSampleOut(url=services.premium_voices.sample(user, voice_id))
 
     @router.delete("/personas/{persona_id}", operation_id="removePersona", responses=NOT_FOUND)
     def remove_persona(user: CurrentUser, persona_id: UUID) -> PersonasOut:

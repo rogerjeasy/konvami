@@ -53,6 +53,18 @@ module "openai_key" {
   value_version = var.openai_api_key_version
 }
 
+# The ElevenLabs API key for the premium voices, only when elevenlabs_enabled (spec §6.21.2). Read
+# by the API at run time, like the OpenAI key.
+module "elevenlabs_key" {
+  source = "../../modules/secret"
+  count  = var.elevenlabs_enabled ? 1 : 0
+
+  name          = "${local.name}-elevenlabs-api-key"
+  description   = "ElevenLabs API key for Konvami's premium voices (${var.environment})"
+  value         = var.elevenlabs_api_key
+  value_version = var.elevenlabs_api_key_version
+}
+
 # Private files: learners' photos and the voices' samples (profile design P2–P4, P9).
 module "media" {
   source = "../../modules/media"
@@ -74,7 +86,9 @@ module "api" {
     user_pool_arn = module.auth.user_pool_arn
     client_id     = module.auth.client_id
   }
-  openai_secret_arn = module.openai_key.arn
+  openai_secret_arn     = module.openai_key.arn
+  elevenlabs_secret_arn = try(module.elevenlabs_key[0].arn, "")
+  premium_voices        = var.premium_voices
   media_bucket = {
     name = module.media.bucket
     arn  = module.media.arn

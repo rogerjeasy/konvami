@@ -102,6 +102,8 @@ export const ROUTES = {
   accountDelete: '/account/delete',
   /** 6.14 Changes made by voice: what partners changed in the settings, with Undo. */
   accountChanges: '/account/changes',
+  /** 6.21 Read-aloud voice: the premium voice (ElevenLabs) for cards and check-ins (spec §6.21.2). */
+  accountReadAloud: '/account/read-aloud',
   /** 6.12 Costs: what Konvami spends, for the owner's account only (spec §6.19). */
   accountCosts: '/account/costs',
   /** 6.15 Reports: what learners flagged, for the owner's account only (spec §16.1). */

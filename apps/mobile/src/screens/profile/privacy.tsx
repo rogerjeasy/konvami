@@ -16,6 +16,7 @@ import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
 import { useProfileServices, useRecordings } from '@/profile/services';
+import { useElevenLabsConsent } from '@/profile/use-elevenlabs-consent';
 import { ProfilePage } from './page';
 
 /**
@@ -109,12 +110,33 @@ function RecordingsChoice() {
  */
 export function PrivacyScreen() {
   const { t, i18n } = useTranslation();
+  const elevenlabs = useElevenLabsConsent();
 
   return (
     <ProfilePage title={t('profile.privacy.title')} body={t('profile.privacy.body')}>
       <Reveal delay={staggerDelay(1)}>
         <View className="gap-3">
-          <AiProviderList />
+          <AiProviderList
+            elevenlabs={
+              elevenlabs.offered
+                ? {
+                    on: elevenlabs.on,
+                    locked: elevenlabs.saving,
+                    onChange: (on) => void elevenlabs.set(on),
+                  }
+                : undefined
+            }
+          />
+          {elevenlabs.offered && !elevenlabs.seen ? (
+            <NoticeBox icon="info">{t('profile.privacy.elevenlabsNew')}</NoticeBox>
+          ) : null}
+          {elevenlabs.error ? (
+            <View accessibilityLiveRegion="polite">
+              <NoticeBox icon="alert" tone="danger">
+                {elevenlabs.error}
+              </NoticeBox>
+            </View>
+          ) : null}
           <NoticeBox icon="info">{t('profile.privacy.note')}</NoticeBox>
           <TextButton
             tone="primary"

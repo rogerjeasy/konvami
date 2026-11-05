@@ -18,6 +18,15 @@ budget_alert_emails = ["you@example.com"]
 openai_api_key = "sk-..."
 # openai_api_key_version = 1
 
+# Premium voices (ElevenLabs, spec §6.21.2): off until the key and the voices are set. The key goes
+# to Secrets Manager and is never written to state. After changing it, raise
+# elevenlabs_api_key_version by one. Voice ids come from ElevenLabs' voice library.
+# elevenlabs_enabled = true
+# elevenlabs_api_key = "..."
+# premium_voices = {
+#   voices = [{ id = "<voice id>", name = "<name>" }]
+# }
+
 # Publish the website with the privacy policy, once apps/site/site.config.ts is filled in and the
 # site is built (pnpm --filter @konvami/site build).
 # publish_site = true

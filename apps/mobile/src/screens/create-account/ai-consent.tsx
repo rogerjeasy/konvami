@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -17,19 +17,30 @@ import { commitFeedback } from '@/lib/haptics';
 import { microphoneAllowed } from '@/lib/microphone';
 import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
+import { usePremiumVoices, useProfileServices } from '@/profile/services';
 import { SIGN_UP_STEPS } from './steps';
 
 /**
  * 2.5 AI data consent (Apple guideline 5.1.2(i), GDPR): names each AI provider, what it receives
  * and why, before any data is sent. The agreement is stored on the account with its date. The
- * canvas also shows ElevenLabs and Bedrock as optional; they are left out until they are used.
+ * canvas also shows ElevenLabs and Bedrock as optional. ElevenLabs is named, off by default, only
+ * where the server offers it (premium voices, consent text v3); Bedrock is left out until used.
  */
 export function AiConsentScreen() {
   const { t, i18n } = useTranslation();
   const { session } = useAuthServices();
   const { status } = useSession();
+  const { premium } = useProfileServices();
+  const voices = usePremiumVoices();
   const [saving, setSaving] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // ElevenLabs is optional and off until turned on; it is named only where the server offers it.
+  const [elevenlabs, setElevenlabs] = useState(false);
+  const offered = voices.phase === 'ready' && voices.data.offered;
+
+  useEffect(() => {
+    if (status === 'signedIn') void premium.load();
+  }, [status, premium]);
 
   // Consent belongs to an account: without one there is nothing to agree to yet.
   if (status !== 'signedIn') return <Redirect href={ROUTES.welcome} />;
@@ -39,7 +50,11 @@ export function AiConsentScreen() {
     setProblem(null);
     setSaving(true);
     try {
-      await session.saveAiConsent(NO_OPTIONAL_PROVIDERS);
+      await session.saveAiConsent({
+        ...NO_OPTIONAL_PROVIDERS,
+        // Only what the screen showed can have been agreed to.
+        elevenlabs: offered && elevenlabs,
+      });
       // The phone remembers the microphone answer: someone who already allowed it is not asked again.
       router.push((await microphoneAllowed()) ? ROUTES.allSet : ROUTES.microphone);
     } catch (error) {
@@ -90,7 +105,11 @@ export function AiConsentScreen() {
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
-        <AiProviderList />
+        <AiProviderList
+          elevenlabs={
+            offered ? { on: elevenlabs, locked: saving, onChange: setElevenlabs } : undefined
+          }
+        />
       </Reveal>
 
       <Reveal delay={staggerDelay(2)}>

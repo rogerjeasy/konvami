@@ -158,6 +158,12 @@ export const fr: Translation = {
     openaiPurpose: 'Conversations, corrections, bilans, notes et réponses du tuteur',
     openaiReceives: 'Reçoit : voix · transcriptions · profil d’apprentissage · notes',
     requiredProvider: '{{name}}, requis',
+    elevenlabsPurpose:
+      'Lit à voix haute des mots et des phrases avec une voix premium de ton choix',
+    elevenlabsReceives: 'Reçoit : le texte à lire · jamais ta voix',
+    optionalProvider: '{{name}}, facultatif',
+    optionalOff: '{{name}}, désactivé',
+    optional: 'Facultatif',
     notice:
       'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Tu peux relire ceci à tout moment dans Profil › Confidentialité et IA.',
     agree: 'Accepter et continuer',
@@ -1797,6 +1803,8 @@ export const fr: Translation = {
       memoryHint: 'Lire, corriger ou supprimer ce qu’ils retiennent',
       changes: 'Changements faits à la voix',
       changesHint: 'Ce que tes partenaires ont changé, avec Annuler',
+      readAloud: 'Voix de lecture',
+      readAloudHint: 'Une voix premium pour les cartes et les bilans',
       privacy: 'Confidentialité et IA',
       privacyHint: 'Ce que reçoit chaque fournisseur d’IA',
       security: 'Sécurité',
@@ -1902,8 +1910,25 @@ export const fr: Translation = {
       },
       exam: 'Ton examen fait aussi partie de tes objectifs : tu le changes sous « Tes raisons ».',
     },
+    readAloud: {
+      title: 'Voix de lecture',
+      body: 'Choisis la voix qui lit tes cartes, ton bilan de la semaine et les réponses modèles des examens. Les conversations gardent la voix de tes partenaires.',
+      standard: 'Voix standard',
+      standardHint: 'Incluse dans tous les forfaits',
+      consentTitle: 'Activer ElevenLabs',
+      consentBody:
+        'ElevenLabs prononce le texte qu’on te lit. Il ne reçoit que ce texte, jamais ta voix. Tu peux le désactiver à tout moment dans Confidentialité et IA.',
+      agree: 'Accepter et activer',
+      notAllowed: 'Les voix premium ne font pas partie de ton forfait.',
+      play: 'Écouter l’échantillon de {{voice}}',
+      stop: 'Arrêter l’échantillon de {{voice}}',
+      sampleFailed: 'Cet échantillon ne peut pas être lu pour le moment. Réessaie dans un instant.',
+      loadFailed: 'Les voix premium ne peuvent pas être affichées pour le moment.',
+    },
     privacy: {
       title: 'Confidentialité et IA',
+      elevenlabsNew:
+        'Nouveau : ElevenLabs peut lire tes cartes et ton bilan de la semaine avec une voix premium. C’est désactivé tant que tu ne l’actives pas.',
       body: 'Konvami fait appel à un fournisseur d’IA pour écouter, répondre et te donner un retour. Voici ce qu’il reçoit.',
       note: 'Tes partenaires sont toujours des IA et ne prétendent jamais être humains. Pour retirer ton accord, supprime ton compte.',
       delete: 'Supprimer le compte',

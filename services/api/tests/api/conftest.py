@@ -30,6 +30,12 @@ from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.practice import PracticeScript
+from konvami_api.domain.premium_voices import (
+    PilotAccess,
+    PremiumVoice,
+    PremiumVoices,
+    PremiumVoiceService,
+)
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
@@ -68,6 +74,7 @@ from tests.fakes import (
     InMemoryPersonaRepository,
     InMemoryPhraseRepository,
     InMemoryPlacementRepository,
+    InMemoryPremiumChoices,
     InMemoryProfileRepository,
     InMemoryPushDeviceRepository,
     InMemoryQuestionRepository,
@@ -255,6 +262,11 @@ def speech() -> FakeSpeechModel:
 
 
 @pytest.fixture
+def premium_speech() -> FakeSpeechModel:
+    return FakeSpeechModel()
+
+
+@pytest.fixture
 def report_starter() -> RecordingReportStarter:
     """Records the reports asked for; `services.reports.write` then stands in for the worker."""
     return RecordingReportStarter()
@@ -293,6 +305,7 @@ def services(
     directory: FakeAccountDirectory,
     account_records: InMemoryAccountRepository,
     speech: FakeSpeechModel,
+    premium_speech: FakeSpeechModel,
     report_starter: RecordingReportStarter,
     charges: InMemoryChargeRepository,
     level_store: InMemoryLevelRepository,
@@ -523,6 +536,18 @@ def services(
         ),
         voices=VoiceSampleService(
             profiles=profiles, files=files, speech=speech, model="gpt-4o-mini-tts"
+        ),
+        premium_voices=PremiumVoiceService(
+            premium=PremiumVoices(
+                "eleven_multilingual_v2",
+                (PremiumVoice("Maya123", "Maya"), PremiumVoice("Otto456", "Otto")),
+            ),
+            access=PilotAccess(owners=[], open_to_testers=True),
+            accounts=directory,
+            choices=InMemoryPremiumChoices(),
+            speech=premium_speech,
+            profiles=profiles,
+            files=files,
         ),
         grammar=grammar,
         director=director,

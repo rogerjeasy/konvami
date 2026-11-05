@@ -7,11 +7,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from konvami_api.domain.costs import Budget, Prices
+from konvami_api.domain.premium_voices import PremiumVoice, PremiumVoices
 from konvami_api.domain.voice import CallPurpose, VoiceSettings
 
 VOICE_VARIABLE = "KONVAMI_VOICE"
 TEXT_MODELS_VARIABLE = "KONVAMI_TEXT_MODELS"
 COSTS_VARIABLE = "KONVAMI_COSTS"
+PREMIUM_VOICES_VARIABLE = "KONVAMI_PREMIUM_VOICES"
 
 
 class _Voice(BaseModel):
@@ -161,4 +163,44 @@ def cost_settings(raw: str | None) -> CostSettings:
         prices=costs.prices,
         budget=Budget(target_usd=costs.target_usd, ceiling_usd=costs.ceiling_usd),
         owners=frozenset(costs.owners),
+    )
+
+
+@dataclass(frozen=True)
+class PremiumVoiceSettings:
+    """The premium voices and who may use them (spec §6.21.2)."""
+
+    voices: PremiumVoices
+    # Everyone may use them while the app is in the testers' hands; off: the owners only. Replaced
+    # by the subscription once there is one (`PremiumVoiceAccess`).
+    open_to_testers: bool
+
+
+class _PremiumVoice(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: str = Field(pattern=r"^[A-Za-z0-9]{1,64}$")
+    name: str = Field(min_length=1)
+
+
+class _PremiumVoices(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    # ElevenLabs' model id (its price is in the costs settings under the same name).
+    model: str = ""
+    voices: list[_PremiumVoice] = []
+    open_to_testers: bool = True
+
+
+def premium_voice_settings(raw: str | None) -> PremiumVoiceSettings:
+    """The premium voices from the `KONVAMI_PREMIUM_VOICES` JSON. Without it, none are offered."""
+    if not raw:
+        return PremiumVoiceSettings(PremiumVoices(model=""), open_to_testers=True)
+    try:
+        parsed = _PremiumVoices.model_validate(json.loads(raw))
+    except (ValueError, ValidationError) as error:
+        raise RuntimeError(f"{PREMIUM_VOICES_VARIABLE} is not valid") from error
+    voices = tuple(PremiumVoice(voice.id, voice.name) for voice in parsed.voices)
+    return PremiumVoiceSettings(
+        PremiumVoices(model=parsed.model, voices=voices), parsed.open_to_testers
     )

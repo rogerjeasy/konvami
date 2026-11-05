@@ -73,6 +73,39 @@ variable "openai_api_key_version" {
   default     = 1
 }
 
+variable "elevenlabs_enabled" {
+  description = "Store an ElevenLabs API key and offer the premium voices (spec §6.21.2). Off: nothing is stored and the app does not name ElevenLabs on its consent screens."
+  type        = bool
+  default     = false
+}
+
+variable "elevenlabs_api_key" {
+  description = "The ElevenLabs API key, needed when elevenlabs_enabled is true. Set it in terraform.tfvars (gitignored) or TF_VAR_elevenlabs_api_key. It goes to Secrets Manager and is never written to state or plans."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = ""
+}
+
+variable "elevenlabs_api_key_version" {
+  description = "Increase by one after changing elevenlabs_api_key, so the new key is stored."
+  type        = number
+  default     = 1
+}
+
+variable "premium_voices" {
+  description = "The premium voices on offer (see modules/api). Pick voice ids in ElevenLabs' voice library; they are not secrets."
+  type = object({
+    model = optional(string, "eleven_multilingual_v2")
+    voices = optional(list(object({
+      id   = string
+      name = string
+    })), [])
+    open_to_testers = optional(bool, true)
+  })
+  default = {}
+}
+
 variable "voice" {
   description = <<-EOT
     Voice models and limits for live calls (see modules/api). The spoken setup and the placement
@@ -222,6 +255,10 @@ variable "prices" {
     "gpt-4o-mini-tts"   = { characters = 17 }
     # Moderation of what learners write for a partner is free: its requests are only counted.
     "omni-moderation-latest" = { requests = 0 }
+    # ElevenLabs bills by characters against the plan's credits; 1 credit is a character on this
+    # model. 300 per million characters is the upper end of the plans' overage rates: check the
+    # plan and set the real rate here, since the owner's budget counts this figure.
+    "eleven_multilingual_v2" = { characters = 300 }
   }
 }
 

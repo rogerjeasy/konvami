@@ -31,12 +31,15 @@ locals {
     KONVAMI_DB_NAME           = var.database.database_name
     KONVAMI_USER_POOL_ID      = var.auth.user_pool_id
     KONVAMI_OPENAI_SECRET_ARN = var.openai_secret_arn
-    KONVAMI_CALL_WORKER       = local.call_worker_name
-    KONVAMI_MEDIA_BUCKET      = var.media_bucket.name
-    KONVAMI_VOICE             = jsonencode(var.voice)
-    KONVAMI_TEXT_MODELS       = jsonencode(var.text_models)
-    KONVAMI_COSTS             = jsonencode(var.costs)
-    KONVAMI_ALERT_TOPIC_ARN   = var.alert_topic_arn
+    # Empty: ElevenLabs is off and the premium voices are not offered.
+    KONVAMI_ELEVENLABS_SECRET_ARN = var.elevenlabs_secret_arn
+    KONVAMI_PREMIUM_VOICES        = jsonencode(var.premium_voices)
+    KONVAMI_CALL_WORKER           = local.call_worker_name
+    KONVAMI_MEDIA_BUCKET          = var.media_bucket.name
+    KONVAMI_VOICE                 = jsonencode(var.voice)
+    KONVAMI_TEXT_MODELS           = jsonencode(var.text_models)
+    KONVAMI_COSTS                 = jsonencode(var.costs)
+    KONVAMI_ALERT_TOPIC_ARN       = var.alert_topic_arn
   }
 }
 
@@ -93,6 +96,16 @@ data "aws_iam_policy_document" "api" {
     sid       = "ReadOpenAiKey"
     actions   = ["secretsmanager:GetSecretValue"]
     resources = [var.openai_secret_arn]
+  }
+
+  # The premium voices read text aloud with the server's ElevenLabs key (only when it is on).
+  dynamic "statement" {
+    for_each = var.elevenlabs_secret_arn == "" ? [] : [var.elevenlabs_secret_arn]
+    content {
+      sid       = "ReadElevenLabsKey"
+      actions   = ["secretsmanager:GetSecretValue"]
+      resources = [statement.value]
+    }
   }
 
   # Name, language and AI consent of the caller, before a voice call is created; and the last
