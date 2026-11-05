@@ -16,6 +16,7 @@ from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import CostError
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.exam_centre import ExamError
+from konvami_api.domain.flags import FlagError
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
@@ -91,6 +92,7 @@ _RETRY_STATUS = {
     "consent_required": 403,
     "retry_limit": 429,
 }
+_FLAG_STATUS = {"not_owner": 403, "not_found": 404, "invalid_value": 422, "flag_limit": 429}
 _UNAVAILABLE = 503
 
 
@@ -137,6 +139,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RetryError)
     async def _retry_error(_: Request, error: RetryError) -> JSONResponse:
         return _response(_RETRY_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(FlagError)
+    async def _flag_error(_: Request, error: FlagError) -> JSONResponse:
+        return _response(_FLAG_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(ExamError)
     async def _exam_error(_: Request, error: ExamError) -> JSONResponse:

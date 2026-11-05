@@ -18,6 +18,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
@@ -57,6 +58,7 @@ from tests.fakes import (
     InMemoryDraftLog,
     InMemoryExamRepository,
     InMemoryFileStore,
+    InMemoryFlagRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
@@ -523,6 +525,13 @@ def services(
             model="gpt-6.1-sol",
             sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
             files=files,
+            clock=clock,
+        ),
+        flags=FlagService(
+            conversations=conversations,
+            reports=reports,
+            repository=InMemoryFlagRepository(),
+            owners=frozenset({UUID(OWNER)}),
             clock=clock,
         ),
         retries=RetryService(

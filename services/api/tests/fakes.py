@@ -25,6 +25,7 @@ from konvami_api.domain.costs import (
 )
 from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
+from konvami_api.domain.flags import Flag, FlagStatus
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Memory
@@ -1112,3 +1113,35 @@ class RecordingPushSender:
             raise PushError("unreachable")
         self.sent.extend(messages)
         return [message.token for message in messages if message.token in self.gone]
+
+
+class InMemoryFlagRepository:
+    def __init__(self) -> None:
+        self.flags: dict[tuple[UUID, str, str, int], Flag] = {}
+
+    def save(self, flag: Flag) -> Flag:
+        key = (flag.user_id, flag.call_id, flag.kind, flag.index)
+        # Flagging an item again keeps its id and reopens it.
+        kept = self.flags.get(key)
+        stored = replace(flag, id=kept.id) if kept else flag
+        self.flags[key] = stored
+        return stored
+
+    def made_since(self, user_id: UUID, since: datetime) -> int:
+        return sum(1 for f in self.flags.values() if f.user_id == user_id and f.flagged_at >= since)
+
+    def of_conversation(self, user_id: UUID, call_id: str) -> list[Flag]:
+        found = [f for f in self.flags.values() if (f.user_id, f.call_id) == (user_id, call_id)]
+        return sorted(found, key=lambda f: (f.kind, f.index))
+
+    def queue(self, status: FlagStatus | None, limit: int) -> list[Flag]:
+        found = [f for f in self.flags.values() if status is None or f.status == status]
+        return sorted(found, key=lambda f: f.flagged_at, reverse=True)[:limit]
+
+    def resolve(self, flag_id: UUID, status: FlagStatus, at: datetime) -> Flag | None:
+        for key, flag in self.flags.items():
+            if flag.id == flag_id:
+                changed = replace(flag, status=status, resolved_at=None if status == "open" else at)
+                self.flags[key] = changed
+                return changed
+        return None

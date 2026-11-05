@@ -28,6 +28,11 @@ from konvami_api.api.schemas import (
     DeckSummaryOut,
     ExamCardOut,
     ExamCentreOut,
+    FlagIn,
+    FlagOut,
+    FlagQueueOut,
+    FlagResolution,
+    FlagsOut,
     GrammarMapOut,
     GrammarTopicPageOut,
     HomeOut,
@@ -53,6 +58,7 @@ from konvami_api.api.schemas import (
     ProgressOut,
     PushDeviceIn,
     PushDeviceOut,
+    QueuedFlagOut,
     QueueOut,
     RecordingIn,
     RecordingsOut,
@@ -85,6 +91,7 @@ from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamService, Simulation
+from konvami_api.domain.flags import FlagService, FlagStatus
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
@@ -139,6 +146,7 @@ class Services:
     director: DirectorService
     week_reviews: WeekReviewService
     exams: ExamService
+    flags: FlagService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -551,6 +559,39 @@ def _router(services: Services) -> APIRouter:
         return RetriesOut(
             retries=[RetryOut(index=index, right=right) for index, right in sorted(tried.items())]
         )
+
+    @router.put(
+        "/conversations/{call_id}/flags",
+        operation_id="flagItem",
+        responses=NOT_FOUND | REFUSED | LIMITED,
+    )
+    def flag_item(user: CurrentUser, call_id: str, item: FlagIn) -> FlagOut:
+        """Reports a partner's line or a correction (spec §16.1). Reporting one again changes the
+        reason and puts it back in the owner's queue."""
+        return FlagOut.of(
+            services.flags.flag(user, call_id, item.kind, item.index, item.reason, item.note)
+        )
+
+    @router.get("/conversations/{call_id}/flags", operation_id="getFlags", responses=NOT_FOUND)
+    def get_flags(user: CurrentUser, call_id: str) -> FlagsOut:
+        """What the learner reported in a conversation."""
+        return FlagsOut(
+            flags=[FlagOut.of(flag) for flag in services.flags.of_conversation(user, call_id)]
+        )
+
+    @router.get("/owner/flags", operation_id="getFlagQueue", responses=FORBIDDEN)
+    def get_flag_queue(user: CurrentUser, status: FlagStatus | None = "open") -> FlagQueueOut:
+        """The owner's review queue (open flags unless `status` says otherwise)."""
+        return FlagQueueOut(
+            flags=[QueuedFlagOut.of(flag) for flag in services.flags.queue(user, status)]
+        )
+
+    @router.put(
+        "/owner/flags/{flag_id}", operation_id="resolveFlag", responses=FORBIDDEN | NOT_FOUND
+    )
+    def resolve_flag(user: CurrentUser, flag_id: UUID, resolution: FlagResolution) -> QueuedFlagOut:
+        """Closes a flag as resolved or dismissed, or opens it again."""
+        return QueuedFlagOut.of(services.flags.resolve(user, flag_id, resolution.status))
 
     @router.get("/grammar", operation_id="getGrammarMap")
     def get_grammar_map(user: CurrentUser) -> GrammarMapOut:
