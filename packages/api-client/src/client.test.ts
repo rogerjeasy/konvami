@@ -715,6 +715,39 @@ describe('api client', () => {
     ]);
   });
 
+  it('sends a message to the owner, who reads and closes the inbox', async () => {
+    const sent = { id: 'm1', category: 'bug', createdAt: '2026-11-06T10:00:00Z' };
+    const message = {
+      ...sent,
+      message: 'The call drops',
+      device: { appVersion: '0.1.0', platform: 'ios' as const, osVersion: '19.1' },
+      status: 'open',
+      resolvedAt: null,
+    };
+    const { fetch, calls } = fakeFetch(
+      json(200, sent),
+      json(200, { messages: [message] }),
+      json(200, { ...message, status: 'done' }),
+    );
+    const { api } = client(fetch);
+
+    await api.sendFeedback({ category: 'bug', message: 'The call drops', device: message.device });
+    expect((await api.getFeedbackInbox('open')).messages).toEqual([message]);
+    await api.resolveFeedback('m1', 'done');
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/feedback',
+      'GET https://api.example.test/v1/owner/feedback?status=open',
+      'PUT https://api.example.test/v1/owner/feedback/m1',
+    ]);
+    expect(calls[0]?.body).toEqual({
+      category: 'bug',
+      message: 'The call drops',
+      device: message.device,
+    });
+    expect(calls[2]?.body).toEqual({ status: 'done' });
+  });
+
   it('reports an item, lists the reports and, for the owner, works the review queue', async () => {
     const flag = {
       id: 'f1',
