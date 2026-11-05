@@ -131,6 +131,12 @@ def _user_folder(user_id: UUID) -> str:
     return f"users/{user_id}/"
 
 
+def export_folder(user_id: UUID) -> str:
+    """Where a learner's archives of their data are kept (domain/exports.py). The bucket deletes
+    what is in it after a day; deleting the account deletes it at once."""
+    return f"exports/{user_id}/"
+
+
 class AccountService:
     def __init__(
         self,
@@ -204,6 +210,7 @@ class AccountService:
         """
         self._files.remove_all(_user_folder(user_id))
         self._files.remove_all(_upload_folder(user_id))
+        self._files.remove_all(export_folder(user_id))
         self._records.delete(user_id, self._clock())
         try:
             self._directory.delete(user_id)

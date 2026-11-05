@@ -24,6 +24,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -53,6 +54,7 @@ from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.week_review import WeekReviewService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
+from konvami_api.persistence.export_repository import SqlExportRepository
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
@@ -444,6 +446,9 @@ def build_backend(
             model=models.week or models.memory,
             sounds=sounds,
             clock=_now,
+        ),
+        exports=DataExportService(
+            records=SqlExportRepository(sql), accounts=directory, files=files, clock=_now
         ),
         flags=FlagService(
             conversations=conversations,

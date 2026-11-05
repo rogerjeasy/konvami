@@ -1214,3 +1214,23 @@ class InMemoryFlagRepository:
                 self.flags[key] = changed
                 return changed
         return None
+
+
+class InMemoryExportRepository:
+    """What is stored for a learner, by table, and the archives made so far."""
+
+    def __init__(self) -> None:
+        self.tables: dict[UUID, dict[str, list[dict[str, Any]]]] = {}
+        self.made: list[tuple[UUID, datetime]] = []
+
+    def rows(self, user_id: UUID) -> dict[str, list[dict[str, Any]]]:
+        return {
+            table: [dict(row) for row in rows]
+            for table, rows in self.tables.get(user_id, {}).items()
+        }
+
+    def made_since(self, user_id: UUID, since: datetime) -> int:
+        return sum(1 for who, at in self.made if who == user_id and at >= since)
+
+    def record(self, export_id: UUID, user_id: UUID, at: datetime) -> None:
+        self.made.append((user_id, at))

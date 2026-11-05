@@ -722,6 +722,37 @@
         "title": "DailyWordOut",
         "type": "object"
       },
+      "DataExportOut": {
+        "additionalProperties": false,
+        "description": "The learner's copy of their data (6.19): where to read it, for a short time.",
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "expiresInSeconds": {
+            "title": "Expiresinseconds",
+            "type": "integer"
+          },
+          "sizeBytes": {
+            "title": "Sizebytes",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expiresInSeconds",
+          "createdAt",
+          "sizeBytes"
+        ],
+        "title": "DataExportOut",
+        "type": "object"
+      },
       "DayOut": {
         "additionalProperties": false,
         "properties": {
@@ -5767,6 +5798,45 @@
           }
         },
         "summary": "Get Account"
+      }
+    },
+    "/v1/account/export": {
+      "post": {
+        "description": "Writes a copy of everything kept for the learner and says where to read it.",
+        "operationId": "exportData",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Export Data"
       }
     },
     "/v1/account/picture": {

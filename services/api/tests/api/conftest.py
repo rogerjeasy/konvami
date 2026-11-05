@@ -18,6 +18,7 @@ from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -59,6 +60,7 @@ from tests.fakes import (
     InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryExamRepository,
+    InMemoryExportRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
     InMemoryLevelRepository,
@@ -248,6 +250,11 @@ def account_records() -> InMemoryAccountRepository:
 
 
 @pytest.fixture
+def export_records() -> InMemoryExportRepository:
+    return InMemoryExportRepository()
+
+
+@pytest.fixture
 def speech() -> FakeSpeechModel:
     return FakeSpeechModel()
 
@@ -290,6 +297,7 @@ def services(
     files: InMemoryFileStore,
     directory: FakeAccountDirectory,
     account_records: InMemoryAccountRepository,
+    export_records: InMemoryExportRepository,
     speech: FakeSpeechModel,
     report_starter: RecordingReportStarter,
     charges: InMemoryChargeRepository,
@@ -552,6 +560,9 @@ def services(
             sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
             files=files,
             clock=clock,
+        ),
+        exports=DataExportService(
+            records=export_records, accounts=directory, files=files, clock=clock
         ),
         flags=FlagService(
             conversations=conversations,

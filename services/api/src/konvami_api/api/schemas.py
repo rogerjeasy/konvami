@@ -35,6 +35,7 @@ from konvami_api.domain.costs import Allowance, CostReport, Level, Share
 from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind, WeekPlan
 from konvami_api.domain.exam_centre import ExamCentre, Simulation
 from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
+from konvami_api.domain.exports import DataExport
 from konvami_api.domain.flags import MAX_NOTE_LENGTH, Flag, FlagKind, FlagReason, FlagStatus
 from konvami_api.domain.fsrs import Rating
 from konvami_api.domain.grammar_map import GrammarMap, Mastery, TopicPage, TopicState, Trend
@@ -2053,6 +2054,24 @@ class PictureConfirm(ApiModel):
 
 class AccountDeletedOut(ApiModel):
     deleted: Literal[True] = True
+
+
+class DataExportOut(ApiModel):
+    """The learner's copy of their data (6.19): where to read it, for a short time."""
+
+    url: str
+    expires_in_seconds: int
+    created_at: AwareDatetime
+    size_bytes: int
+
+    @classmethod
+    def of(cls, export: DataExport) -> "DataExportOut":
+        return cls(
+            url=export.url,
+            expires_in_seconds=export.expires_in_seconds,
+            created_at=export.created_at,
+            size_bytes=export.size_bytes,
+        )
 
 
 # A call lasts at most ten minutes, so its transcript is far shorter; the bound only refuses junk.

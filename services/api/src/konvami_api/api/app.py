@@ -24,6 +24,7 @@ from konvami_api.api.schemas import (
     CatalogOut,
     ConversationsOut,
     CostsOut,
+    DataExportOut,
     DeckOut,
     DeckSummaryOut,
     ExamCardOut,
@@ -100,6 +101,7 @@ from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamService, Simulation
+from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.flags import FlagService, FlagStatus
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
@@ -160,6 +162,7 @@ class Services:
     week_reviews: WeekReviewService
     exams: ExamService
     flags: FlagService
+    exports: DataExportService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -782,6 +785,11 @@ def _router(services: Services) -> APIRouter:
     @router.delete("/account/picture", operation_id="removePicture")
     def remove_picture(user: CurrentUser) -> AccountOut:
         return account_of(user, services.accounts.remove_picture(user))
+
+    @router.post("/account/export", operation_id="exportData", responses=LIMITED)
+    def export_data(user: CurrentUser) -> DataExportOut:
+        """Writes a copy of everything kept for the learner and says where to read it."""
+        return DataExportOut.of(services.exports.export(user))
 
     return router
 
