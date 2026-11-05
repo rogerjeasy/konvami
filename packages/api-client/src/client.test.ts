@@ -550,6 +550,44 @@ describe('api client', () => {
     expect(calls[1]?.body).toEqual({ phrase: 'Guten Tag.', meaning: 'Hello.' });
   });
 
+  it('reads the pronunciation lab, hears a drill and remembers a pick', async () => {
+    const { fetch, calls } = fakeFetch(
+      json(200, { sounds: [{ id: 'ue' }] }),
+      json(200, { sound: { id: 'ue' }, pairs: [], words: [], sentences: [] }),
+      json(200, { words: [{ word: 'für', soundId: 'ue', misses: 1 }] }),
+      json(200, { url: 'https://files.test/t.mp3' }),
+      json(200, { heard: 'fir', right: false, words: [{ word: 'für', ok: false }] }),
+      json(200, { right: true }),
+    );
+    const { api } = client(fetch);
+
+    expect((await api.getPronunciationSounds()).sounds).toHaveLength(1);
+    expect((await api.getPronunciationSound('ue')).sound.id).toBe('ue');
+    expect((await api.getProblemWords()).words[0]?.word).toBe('für');
+    expect((await api.getPronunciationAudio('Tür & Tier')).url).toContain('t.mp3');
+    const recording = { audio: 'AAEA', format: 'm4a' };
+    const heard = await api.drillPronunciation({
+      drill: 'word',
+      soundId: null,
+      target: 'für',
+      recording,
+    });
+    expect(heard.right).toBe(false);
+    expect(
+      await api.pickPronunciationWord({ soundId: 'ue', played: 'für', chosen: 'für' }),
+    ).toEqual({ right: true });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/pronunciation/sounds',
+      'GET https://api.example.test/v1/pronunciation/sounds/ue',
+      'GET https://api.example.test/v1/pronunciation/words',
+      'GET https://api.example.test/v1/pronunciation/audio?text=T%C3%BCr+%26+Tier',
+      'POST https://api.example.test/v1/pronunciation/attempts',
+      'POST https://api.example.test/v1/pronunciation/picks',
+    ]);
+    expect(calls[4]?.body).toEqual({ drill: 'word', soundId: null, target: 'für', recording });
+  });
+
   it('reads the grammar map and one of its topics', async () => {
     const map = { language: 'de', level: 'A2', topics: [] };
     const page = { topic: { id: 'dative' }, examples: [], typicalMistakes: [], mistakes: [] };
