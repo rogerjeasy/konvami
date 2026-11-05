@@ -277,6 +277,8 @@ export const size = {
   avatarHero: 88,
   /** A partner's portrait while their look is edited. */
   avatarXl: 132,
+  /** The live preview in the avatar editor, where the portrait is the point of the screen. */
+  avatarEditor: 176,
   /** The round badge that shows a measured level. */
   levelBadge: 92,
   /** The same badge beside a card's text (Today's level card). */

@@ -522,6 +522,21 @@ export const de: Translation = {
       backdrop: 'Hintergrund',
       glasses: 'Brille',
       beard: 'Bart',
+      face: 'Gesicht',
+      eyes: 'Augen',
+      aged: 'Altersfalten',
+      faces: {
+        oval: 'Oval',
+        round: 'Rund',
+        narrow: 'Schmal',
+      },
+      eyeColors: {
+        brown: 'Braun',
+        hazel: 'Haselnuss',
+        green: 'Grün',
+        blue: 'Blau',
+        grey: 'Grau',
+      },
       skins: {
         porcelain: 'Porzellan',
         sand: 'Sand',
@@ -1956,6 +1971,27 @@ export const de: Translation = {
       scratchTitle: 'Selbst bauen',
       scratch: 'Von Grund auf beginnen',
     },
+    avatar: {
+      title: 'So sieht {{name}} aus',
+      body: 'Ändere ein Detail und sieh zu, wie das Porträt folgt.',
+      preview: 'In Bewegung ansehen',
+      expression: 'Ausdruck',
+      expressions: {
+        neutral: 'Ruhig',
+        happy: 'Fröhlich',
+        surprised: 'Überrascht',
+        empathetic: 'Mitfühlend',
+        encouraging: 'Ermutigend',
+        confused: 'Verwirrt',
+        amused: 'Amüsiert',
+      },
+      thumbsUp: 'Daumen hoch',
+      speak: 'Sprechen lassen',
+      stopSpeaking: 'Nicht mehr sprechen',
+      save: 'Aussehen speichern',
+      saved: 'Gespeichert',
+      notFound: 'Dieser Gesprächspartner ist nicht mehr da.',
+    },
     studio: {
       steps: {
         identity: 'Person',
@@ -1997,6 +2033,8 @@ export const de: Translation = {
       look: {
         title: 'Wie sieht die Person aus?',
         body: 'Das Porträt ändert sich mit jeder Auswahl.',
+        editor: 'Avatar-Editor öffnen',
+        editorHint: 'Sieh zu, wie sie lächeln, sprechen und reagieren, während du gestaltest.',
       },
       voice: {
         title: 'Wie klingt die Person?',

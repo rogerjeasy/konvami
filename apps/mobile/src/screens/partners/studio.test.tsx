@@ -367,6 +367,19 @@ describe('6.6 Persona Studio: one of the learner’s partners', () => {
     expect(changed(api)).toEqual([]);
   });
 
+  it('leads from the look to the avatar editor', async () => {
+    await open();
+    await screen.findByRole('header', { name: 'Lena' });
+
+    await fireEvent.press(screen.getByRole('tab', { name: 'Look' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Open the avatar editor' }));
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/account/partners/avatar/[id]',
+      params: { id: LENA.id },
+    });
+  });
+
   it('says so when the change could not be saved, and keeps it on screen', async () => {
     const { api } = await open();
     await screen.findByRole('header', { name: 'Lena' });

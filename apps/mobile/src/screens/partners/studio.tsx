@@ -17,7 +17,7 @@ import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
 import { commitFeedback, stepFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
-import { ROUTES } from '@/lib/routes';
+import { avatarRoute, ROUTES } from '@/lib/routes';
 import {
   blankDraft,
   draftOf,
@@ -211,6 +211,26 @@ function PartTabs({ current, onChoose }: { current: Part; onChoose: (part: Part)
   );
 }
 
+/** The way from a partner's look to the avatar editor (6.16), where they can be seen moving. */
+function AvatarEditorLink({ id }: { id: string }) {
+  const { t } = useTranslation();
+  return (
+    <View className="gap-2">
+      <Button
+        variant="secondary"
+        label={t('partners.studio.look.editor')}
+        onPress={() => {
+          stepFeedback();
+          router.push(avatarRoute(id));
+        }}
+      />
+      <Text tone="muted" variant="caption">
+        {t('partners.studio.look.editorHint')}
+      </Text>
+    </View>
+  );
+}
+
 function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
   const { t } = useTranslation();
   const { partners } = useProfileServices();
@@ -222,6 +242,15 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+
+  // The look can also be changed in the avatar editor, which saves it by itself: it is taken in
+  // here without losing what has been typed in the other parts.
+  const [seenLook, setSeenLook] = useState(partner.look);
+  if (JSON.stringify(partner.look) !== JSON.stringify(seenLook)) {
+    setSeenLook(partner.look);
+    setSaved((current) => ({ ...current, look: partner.look }));
+    setDraft((current) => ({ ...current, look: partner.look }));
+  }
 
   const missing = draftProblems(draft);
   const changed = JSON.stringify(tidy(draft)) !== JSON.stringify(saved);
@@ -295,6 +324,7 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
       {/* Keyed by the part: each one enters as a new page. */}
       <View key={part} className="gap-6">
         <Section draft={draft} change={change} problems={pressed ? missing : []} />
+        {part === 'look' ? <AvatarEditorLink id={partner.id} /> : null}
       </View>
     </StepLayout>
   );
