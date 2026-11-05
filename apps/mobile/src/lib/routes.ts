@@ -123,6 +123,14 @@ export const callRoute = (
     },
   }) as const satisfies Href;
 
+/**
+ * 5.3 A guided lesson (spec §6.3) on a grammar topic: a short call that explains it, gives
+ * examples, has the learner produce it, corrects them and ends in free use. The server reads
+ * `lesson:<topic>` in the call's `practise`.
+ */
+export const lessonCallRoute = (personaId: string, topic: string) =>
+  callRoute(personaId, { practise: `lesson:${topic}` });
+
 /** 5.7 Learn with one card open, as a word of the day opens it. */
 export const learnCardRoute = (card: string) =>
   ({ pathname: '/learn', params: { card } }) as const satisfies Href;

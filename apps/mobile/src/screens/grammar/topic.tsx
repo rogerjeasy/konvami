@@ -21,7 +21,7 @@ import { TextButton } from '@/components/text-button';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
-import { askTutorRoute, callRoute, conversationRoute, ROUTES } from '@/lib/routes';
+import { askTutorRoute, callRoute, conversationRoute, lessonCallRoute, ROUTES } from '@/lib/routes';
 import { diffWords } from '@/lib/word-diff';
 import { useGrammarTopic, useSuggestedPartner } from '@/practice/services';
 import { useTheme } from '@/theme';
@@ -118,6 +118,16 @@ export function GrammarTopicScreen() {
                 if (!partner) return;
                 commitFeedback();
                 router.push(callRoute(partner, { practise: id }));
+              }}
+            />
+            <Button
+              variant="secondary"
+              label={t('grammar.topic.lesson')}
+              disabled={!partner}
+              onPress={() => {
+                if (!partner) return;
+                commitFeedback();
+                router.push(lessonCallRoute(partner, id));
               }}
             />
             <TextButton

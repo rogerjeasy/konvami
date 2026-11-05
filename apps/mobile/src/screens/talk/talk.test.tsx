@@ -57,6 +57,16 @@ describe('5.2 Talk', () => {
     expect(router.push).toHaveBeenCalledWith('/role-plays');
   });
 
+  it('leads to the grammar map, where a guided lesson is chosen', async () => {
+    await open();
+
+    const row = screen.getByRole('button', { name: 'Guided lessons' });
+    expect(row.props.accessibilityHint).toBe('Learn one topic step by step, then use it');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/grammar');
+  });
+
   it('includes the exam coach of a learner who is preparing an exam', async () => {
     await open(inApp({ exam: { type: 'goethe', target_level: 'B1', date: null } }));
 

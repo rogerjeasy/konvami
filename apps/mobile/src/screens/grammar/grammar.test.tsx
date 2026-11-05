@@ -135,6 +135,21 @@ describe('5.15 Grammar topic', () => {
     );
   });
 
+  it('starts a guided lesson on it, with the partner Today suggests', async () => {
+    await open();
+
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Take a short lesson on this' }),
+    );
+
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith({
+        pathname: '/call/[personaId]',
+        params: { personaId: expect.any(String), practise: 'lesson:dative' },
+      }),
+    );
+  });
+
   it('asks the tutor about it', async () => {
     await open();
 

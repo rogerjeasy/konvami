@@ -96,6 +96,13 @@ export function TalkScreen() {
             detail={t('rolePlays.rowHint')}
             onPress={() => router.push(ROUTES.rolePlays)}
           />
+          {/* A lesson is on one topic, so it starts from the grammar map (5.14). */}
+          <ListRow
+            icon="book"
+            title={t('talk.lessons')}
+            detail={t('talk.lessonsHint')}
+            onPress={() => router.push(ROUTES.grammar)}
+          />
         </ListGroup>
       </Reveal>
       {home.phase === 'ready' ? (
