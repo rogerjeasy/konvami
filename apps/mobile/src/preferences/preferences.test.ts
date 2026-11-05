@@ -11,7 +11,8 @@ import {
   setAnalytics,
   setReminders,
 } from '.';
-import { writeItem } from '@/lib/storage';
+import { forgetAnalyticsId, installId, INSTALL_ID_KEY } from '@/analytics/install-id';
+import { readItem, writeItem } from '@/lib/storage';
 
 const phone = (...tags: [string, ...string[]]) =>
   jest
@@ -164,5 +165,25 @@ describe('anonymous usage counts', () => {
     await setAnalytics(false);
     await loadPreferences();
     expect(getPreferences().analytics).toBe(false);
+  });
+
+  it('forget the install id the events carried once turned off, and start a new one after', async () => {
+    await setAnalytics(true);
+    const first = await installId();
+    expect(await readItem(INSTALL_ID_KEY)).toBe(first);
+
+    await setAnalytics(false);
+    expect(await readItem(INSTALL_ID_KEY)).toBeNull();
+
+    await setAnalytics(true);
+    expect(await installId()).not.toBe(first);
+  });
+
+  it('do not save an id that was being made while the learner turned them off', async () => {
+    const making = installId();
+    await forgetAnalyticsId();
+    await making;
+
+    expect(await readItem(INSTALL_ID_KEY)).toBeNull();
   });
 });

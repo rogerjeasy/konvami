@@ -3,10 +3,11 @@
 from uuid import UUID
 
 from konvami_api import observability
-from konvami_api.observability import DSN_VARIABLE, MAX_MESSAGE_LENGTH, USER_HASH_LENGTH
+from konvami_api.observability import DSN_VARIABLE, REDACTED, USER_HASH_LENGTH
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
 OTHER = UUID("22222222-2222-4222-8222-222222222222")
+SENTENCE = "Ich heisse Amara und ich wohne seit zwei Jahren in Zürich"
 
 
 def test_it_is_off_without_a_dsn() -> None:
@@ -51,12 +52,20 @@ def test_an_event_loses_what_a_learner_said_or_wrote() -> None:
         "user": {"id": "abc", "email": "amara@example.com", "username": "Amara"},
         "breadcrumbs": [{"message": "Ich habe gestern ..."}],
         "extra": {"transcript": "Hallo"},
+        "tags": {"question": SENTENCE},
+        "logentry": {"message": SENTENCE},
         "server_name": "ip-10-0-0-1",
+        "contexts": {
+            "runtime": {"name": "CPython"},
+            "trace": {"trace_id": "abc"},
+            "custom": {"text": SENTENCE},
+        },
         "exception": {
             "values": [
                 {
                     "type": "ValidationError",
-                    "value": "amara@example.com wrote: " + "x" * 500,
+                    "value": SENTENCE,
+                    "mechanism": {"type": "asgi", "data": {"text": SENTENCE}},
                     "stacktrace": {"frames": [{"function": "tutor", "vars": {"text": "Hallo"}}]},
                 }
             ]
@@ -71,8 +80,33 @@ def test_an_event_loses_what_a_learner_said_or_wrote() -> None:
         "method": "POST",
     }
     assert scrubbed["user"] == {"id": "abc"}
-    assert not {"breadcrumbs", "extra", "server_name"} & scrubbed.keys()
+    assert not {"breadcrumbs", "extra", "tags", "logentry", "server_name"} & scrubbed.keys()
+    assert scrubbed["contexts"] == {"runtime": {"name": "CPython"}}
     value = scrubbed["exception"]["values"][0]
-    assert "amara@example.com" not in value["value"]
-    assert len(value["value"]) <= MAX_MESSAGE_LENGTH
+    assert value["type"] == "ValidationError"
+    assert value["value"] == REDACTED
+    assert value["mechanism"] == {"type": "asgi"}
     assert value["stacktrace"]["frames"] == [{"function": "tutor"}]
+    assert "Amara" not in str(scrubbed)
+
+
+def test_a_message_with_a_sentence_and_a_name_becomes_the_placeholder() -> None:
+    scrubbed = observability.scrub({"message": SENTENCE})
+
+    assert scrubbed == {"message": REDACTED}
+
+
+def test_a_single_lowercase_word_is_replaced_because_it_may_be_a_name() -> None:
+    scrubbed = observability.scrub(
+        {"message": "amara", "exception": {"values": [{"value": "hallo"}]}}
+    )
+
+    assert scrubbed == {"message": REDACTED, "exception": {"values": [{"value": REDACTED}]}}
+
+
+def test_a_plain_error_code_is_kept() -> None:
+    event = {"message": "not_found", "exception": {"values": [{"value": "flag_limit"}]}}
+
+    scrubbed = observability.scrub(event)
+
+    assert scrubbed == {"message": "not_found", "exception": {"values": [{"value": "flag_limit"}]}}

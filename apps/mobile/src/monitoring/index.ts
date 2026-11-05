@@ -7,7 +7,11 @@ import { scrubEvent } from './scrub';
  *
  * No learner data: no account or user id (the app does not name the learner to Sentry), no
  * breadcrumbs, no screenshots or view hierarchies, no sessions, no performance traces, and
- * `scrubEvent` drops requests and trims messages.
+ * `scrubEvent` drops requests and replaces every free-text message.
+ *
+ * Limit: `beforeSend` runs on JavaScript errors. A crash in native code is captured and sent by the
+ * native SDK on the next launch, without it; the native options below keep scope text out of it,
+ * but a native crash's own reason string (an exception message) is not scrubbed by this code.
  */
 
 type SentryModule = typeof import('@sentry/react-native');
@@ -31,6 +35,16 @@ export function initMonitoring(): void {
     attachViewHierarchy: false,
     enableAutoSessionTracking: false,
     tracesSampleRate: 0,
+    // Native side (iOS and Android): the SDK reads these options itself, so the rules above hold
+    // there too. Features that add text from the phone to a report are off: the NDK scope copy
+    // (breadcrumbs and tags), app hangs, watchdog terminations and failed network requests.
+    enableNdkScopeSync: false,
+    enableAppHangTracking: false,
+    enableWatchdogTerminationTracking: false,
+    enableCaptureFailedRequests: false,
+    enableUserInteractionTracing: false,
+    enableAutoPerformanceTracing: false,
+    beforeBreadcrumb: () => null,
     beforeSend: (event) => scrubEvent(event),
   });
   sentry = loaded;

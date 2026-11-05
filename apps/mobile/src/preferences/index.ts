@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
+import { forgetAnalyticsId } from '@/analytics/install-id';
 import i18n, { deviceLanguage, isLanguage, type Language } from '@/i18n';
 import { readItem, removeItem, writeItem } from '@/lib/storage';
 import { DEFAULT_REMINDERS, REMINDER_TIMES, type ReminderSettings } from '@/reminders/schedule';
@@ -137,10 +138,17 @@ export async function setReminders(reminders: ReminderSettings | null): Promise<
     : removeItem(KEY.reminders));
 }
 
-/** Lets anonymous usage counts be sent, or stops them (6.7 Privacy and AI). */
+/**
+ * Lets anonymous usage counts be sent, or stops them (6.7 Privacy and AI). Stopping is at once
+ * (no event is sent after this is called) and forgets the install id the events carried.
+ */
 export async function setAnalytics(shared: boolean): Promise<void> {
   update({ ...current, analytics: shared });
-  await (shared ? writeItem(KEY.analytics, ON) : removeItem(KEY.analytics));
+  if (shared) {
+    await writeItem(KEY.analytics, ON);
+  } else {
+    await Promise.all([removeItem(KEY.analytics), forgetAnalyticsId()]);
+  }
 }
 
 /**
