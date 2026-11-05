@@ -226,14 +226,6 @@ export function PenPalScreen() {
                     void record();
                   }}
                 />
-                {idle ? (
-                  <TextButton
-                    tone="primary"
-                    label={t('penPal.ask', { name })}
-                    disabled={asking}
-                    onPress={() => void ask()}
-                  />
-                ) : null}
               </>
             )}
           </View>
@@ -313,6 +305,15 @@ export function PenPalScreen() {
               </Reveal>
             ))
           )}
+          {/* Under the notes, not pinned: two pinned buttons left a 320 x 568 phone a sliver of thread. */}
+          {idle ? (
+            <TextButton
+              tone="primary"
+              label={t('penPal.ask', { name })}
+              disabled={asking}
+              onPress={() => void ask()}
+            />
+          ) : null}
         </View>
       )}
       {settings ? (
