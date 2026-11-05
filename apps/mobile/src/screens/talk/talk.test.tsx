@@ -67,6 +67,16 @@ describe('5.2 Talk', () => {
     expect(router.push).toHaveBeenCalledWith('/grammar');
   });
 
+  it('leads to the pronunciation lab', async () => {
+    await open();
+
+    const row = screen.getByRole('button', { name: 'Pronunciation lab' });
+    expect(row.props.accessibilityHint).toBe('Practise the sounds that are hard to say');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/pronunciation');
+  });
+
   it('includes the exam coach of a learner who is preparing an exam', async () => {
     await open(inApp({ exam: { type: 'goethe', target_level: 'B1', date: null } }));
 

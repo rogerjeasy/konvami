@@ -2374,6 +2374,25 @@
         "title": "OnboardingOut",
         "type": "object"
       },
+      "PairOut": {
+        "additionalProperties": false,
+        "properties": {
+          "first": {
+            "title": "First",
+            "type": "string"
+          },
+          "second": {
+            "title": "Second",
+            "type": "string"
+          }
+        },
+        "required": [
+          "first",
+          "second"
+        ],
+        "title": "PairOut",
+        "type": "object"
+      },
       "PartScoreOut": {
         "additionalProperties": false,
         "properties": {
@@ -3482,6 +3501,54 @@
         "title": "PremiumVoicesOut",
         "type": "object"
       },
+      "ProblemWordOut": {
+        "additionalProperties": false,
+        "properties": {
+          "misses": {
+            "title": "Misses",
+            "type": "integer"
+          },
+          "soundId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundid"
+          },
+          "word": {
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "soundId",
+          "misses"
+        ],
+        "title": "ProblemWordOut",
+        "type": "object"
+      },
+      "ProblemWordsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/ProblemWordOut"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "words"
+        ],
+        "title": "ProblemWordsOut",
+        "type": "object"
+      },
       "ProfileAnswerIn": {
         "additionalProperties": false,
         "properties": {
@@ -3748,6 +3815,121 @@
           "lastWeek"
         ],
         "title": "ProgressOut",
+        "type": "object"
+      },
+      "PronunciationAttemptIn": {
+        "additionalProperties": false,
+        "description": "A drill said out loud: `target` is the text to say, `drill` how it is practised.",
+        "properties": {
+          "drill": {
+            "enum": [
+              "word",
+              "shadow"
+            ],
+            "title": "Drill",
+            "type": "string"
+          },
+          "recording": {
+            "$ref": "#/components/schemas/RecordingIn"
+          },
+          "soundId": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Soundid"
+          },
+          "target": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "drill",
+          "target",
+          "recording"
+        ],
+        "title": "PronunciationAttemptIn",
+        "type": "object"
+      },
+      "PronunciationAttemptOut": {
+        "additionalProperties": false,
+        "description": "What was heard and, word by word, where. An approximation: no phoneme scores.",
+        "properties": {
+          "heard": {
+            "title": "Heard",
+            "type": "string"
+          },
+          "right": {
+            "title": "Right",
+            "type": "boolean"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/WordMarkOut"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "heard",
+          "right",
+          "words"
+        ],
+        "title": "PronunciationAttemptOut",
+        "type": "object"
+      },
+      "PronunciationPickIn": {
+        "additionalProperties": false,
+        "description": "Which word of a pair the learner said they heard.",
+        "properties": {
+          "chosen": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Chosen",
+            "type": "string"
+          },
+          "played": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Played",
+            "type": "string"
+          },
+          "soundId": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Soundid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "soundId",
+          "played",
+          "chosen"
+        ],
+        "title": "PronunciationPickIn",
+        "type": "object"
+      },
+      "PronunciationPickOut": {
+        "additionalProperties": false,
+        "properties": {
+          "right": {
+            "title": "Right",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "right"
+        ],
+        "title": "PronunciationPickOut",
         "type": "object"
       },
       "PushDeviceIn": {
@@ -4663,6 +4845,43 @@
         "title": "SimulationSummaryOut",
         "type": "object"
       },
+      "SoundDetailOut": {
+        "additionalProperties": false,
+        "properties": {
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/PairOut"
+            },
+            "title": "Pairs",
+            "type": "array"
+          },
+          "sentences": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sentences",
+            "type": "array"
+          },
+          "sound": {
+            "$ref": "#/components/schemas/SoundSummaryOut"
+          },
+          "words": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sound",
+          "pairs",
+          "words",
+          "sentences"
+        ],
+        "title": "SoundDetailOut",
+        "type": "object"
+      },
       "SoundOut": {
         "additionalProperties": false,
         "properties": {
@@ -4675,6 +4894,68 @@
           "url"
         ],
         "title": "SoundOut",
+        "type": "object"
+      },
+      "SoundSummaryOut": {
+        "additionalProperties": false,
+        "description": "A problem sound of the language being learned, with what the learner did on it.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "listening": {
+            "title": "Listening",
+            "type": "boolean"
+          },
+          "pairs": {
+            "title": "Pairs",
+            "type": "integer"
+          },
+          "right": {
+            "title": "Right",
+            "type": "integer"
+          },
+          "tip": {
+            "title": "Tip",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "tries": {
+            "title": "Tries",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "tip",
+          "listening",
+          "pairs",
+          "tries",
+          "right"
+        ],
+        "title": "SoundSummaryOut",
+        "type": "object"
+      },
+      "SoundsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "sounds": {
+            "items": {
+              "$ref": "#/components/schemas/SoundSummaryOut"
+            },
+            "title": "Sounds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sounds"
+        ],
+        "title": "SoundsOut",
         "type": "object"
       },
       "Source": {
@@ -5853,6 +6134,25 @@
           "superlative"
         ],
         "title": "WordDetailsOut",
+        "type": "object"
+      },
+      "WordMarkOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "word": {
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "ok"
+        ],
+        "title": "WordMarkOut",
         "type": "object"
       }
     }
@@ -9686,6 +9986,341 @@
           }
         },
         "summary": "Get Progress"
+      }
+    },
+    "/v1/pronunciation/attempts": {
+      "post": {
+        "description": "Hears a drill said out loud and says, word by word, what was heard as asked.",
+        "operationId": "drillPronunciation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PronunciationAttemptIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PronunciationAttemptOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Drill Pronunciation"
+      }
+    },
+    "/v1/pronunciation/audio": {
+      "get": {
+        "description": "Where a word or sentence of the lab plays from, in the learner's partner's voice. Only\nthe lab's own texts and the learner's problem words can be asked for.",
+        "operationId": "getPronunciationAudio",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "text",
+            "required": true,
+            "schema": {
+              "title": "Text",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Pronunciation Audio"
+      }
+    },
+    "/v1/pronunciation/picks": {
+      "post": {
+        "description": "Remembers which word of a pair the learner heard; right if it was the one played.",
+        "operationId": "pickPronunciationWord",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PronunciationPickIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PronunciationPickOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Pick Pronunciation Word"
+      }
+    },
+    "/v1/pronunciation/sounds": {
+      "get": {
+        "description": "The problem sounds of the language the learner learns, with their practice so far\n(spec \u00a76.14). Empty for a language that has none yet.",
+        "operationId": "getPronunciationSounds",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Pronunciation Sounds"
+      }
+    },
+    "/v1/pronunciation/sounds/{sound_id}": {
+      "get": {
+        "operationId": "getPronunciationSound",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sound_id",
+            "required": true,
+            "schema": {
+              "title": "Sound Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pronunciation Sound"
+      }
+    },
+    "/v1/pronunciation/words": {
+      "get": {
+        "description": "The words the learner was asked to say and missed, not yet said right twice in a row.",
+        "operationId": "getProblemWords",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemWordsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Problem Words"
       }
     },
     "/v1/push/device": {

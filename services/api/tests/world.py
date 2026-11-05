@@ -38,6 +38,7 @@ from konvami_api.domain.premium_voices import (
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -91,6 +92,7 @@ from tests.fakes import (
     InMemoryPlacementRepository,
     InMemoryPremiumChoices,
     InMemoryProfileRepository,
+    InMemoryPronunciationRepository,
     InMemoryPushDeviceRepository,
     InMemoryQuestionRepository,
     InMemoryRecordingRepository,
@@ -425,6 +427,21 @@ class World:
             speech=self.premium_speech,
             profiles=self.profiles,
             files=self.files,
+        )
+        self.pronunciation_transcriber = ScriptedTranscriber()
+        self.pronunciation_store = InMemoryPronunciationRepository()
+        self.pronunciation = PronunciationService(
+            profiles=self.profiles,
+            personas=self.personas,
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.pronunciation_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            repository=self.pronunciation_store,
+            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
+            clock=self.clock,
         )
         self.exams = ExamService(
             profiles=self.profiles,

@@ -8,9 +8,10 @@ export interface ClipPlayer {
   /**
    * Plays the clip at `url` from its start, stopping the one before it. `onDone` is called
    * once, when the clip has ended or was stopped. `lengthMs` is how long the clip is, when
-   * known; without it the clip counts as a sample.
+   * known; without it the clip counts as a sample. `rate` slows the clip down (0.75) or speeds
+   * it up; 1, or none, is as recorded.
    */
-  play(url: string, onDone: () => void, lengthMs?: number): void;
+  play(url: string, onDone: () => void, lengthMs?: number, rate?: number): void;
   stop(): void;
 }
 
@@ -39,7 +40,7 @@ export function createClipPlayer(): ClipPlayer {
   }
 
   return {
-    play(url, onDone, lengthMs = SAMPLE_MS) {
+    play(url, onDone, lengthMs = SAMPLE_MS, rate = 1) {
       stop();
       // A clip the learner asked for should be heard with the ringer switch off, too.
       void setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -47,7 +48,9 @@ export function createClipPlayer(): ClipPlayer {
       const listener = player.addListener('playbackStatusUpdate', (status) => {
         if (status.didJustFinish) stop();
       });
-      const timer = setTimeout(stop, lengthMs + END_MARGIN_MS);
+      // A slower clip takes longer to end.
+      if (rate !== 1) player.setPlaybackRate(rate);
+      const timer = setTimeout(stop, lengthMs / rate + END_MARGIN_MS);
       current = { player, listener, timer, done: onDone };
       player.play();
     },

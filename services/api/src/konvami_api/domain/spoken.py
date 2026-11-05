@@ -6,6 +6,7 @@ mistake said again is not tidied away, and compared word for word: plain words, 
 opinion. The recording itself is not kept.
 """
 
+import difflib
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -46,6 +47,17 @@ def is_right(heard: str, said: str, better: str) -> bool:
 def says(heard: str, expected: Sequence[str]) -> bool:
     """Whether `heard` has the words `expected` (from `words_in`) together, in order."""
     return bool(expected) and within(tuple(expected), words_in(heard))
+
+
+def matched_words(expected: Sequence[str], heard: Sequence[str]) -> tuple[bool, ...]:
+    """Per word of `expected` (from `words_in`), whether `heard` has it, the words found in the
+    order they are said. A word said twice is found once per time it was said."""
+    blocks = difflib.SequenceMatcher(None, expected, heard, autojunk=False).get_matching_blocks()
+    found = [False] * len(expected)
+    for block in blocks:
+        for offset in range(block.size):
+            found[block.a + offset] = True
+    return tuple(found)
 
 
 class Listener:

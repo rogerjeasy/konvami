@@ -11,6 +11,7 @@ from konvami_api.domain.exams import GERMAN_EXAMS, SpeakingExam
 from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
 from konvami_api.domain.grammar_topics import GERMAN_MAP, GrammarTopic
 from konvami_api.domain.persona_parts import PersonaTemplate
+from konvami_api.domain.pronunciation_sounds import GERMAN_SOUNDS, ProblemSound
 from konvami_api.domain.scenarios import GERMAN_SCENARIOS, Scenario
 from konvami_api.domain.word_use import GERMAN_WORD_RULES, WordRules
 
@@ -64,6 +65,11 @@ class LanguagePack:
     word_rules: WordRules | None = None
     # The speaking tests of its exams, for simulations (spec §6.13, `exams.py`).
     speaking_exams: tuple[SpeakingExam, ...] = ()
+    # Its problem sounds for the pronunciation lab (spec §6.14, `pronunciation_sounds.py`).
+    pronunciation: tuple[ProblemSound, ...] = ()
+
+    def sound(self, sound_id: str) -> ProblemSound | None:
+        return next((sound for sound in self.pronunciation if sound.id == sound_id), None)
 
     def exam(self, exam_id: str) -> ExamFormat | None:
         return next((exam for exam in self.exams if exam.id == exam_id), None)
@@ -134,6 +140,7 @@ GERMAN = LanguagePack(
     grammar_map=GERMAN_MAP,
     word_rules=GERMAN_WORD_RULES,
     speaking_exams=GERMAN_EXAMS,
+    pronunciation=GERMAN_SOUNDS,
     scenarios=GERMAN_SCENARIOS,
     exams=(
         ExamFormat("goethe", "Goethe-Zertifikat", CEFR_LEVELS),

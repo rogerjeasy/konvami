@@ -1060,6 +1060,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pronunciation/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Drill Pronunciation
+         * @description Hears a drill said out loud and says, word by word, what was heard as asked.
+         */
+        post: operations["drillPronunciation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pronunciation/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pronunciation Audio
+         * @description Where a word or sentence of the lab plays from, in the learner's partner's voice. Only
+         *     the lab's own texts and the learner's problem words can be asked for.
+         */
+        get: operations["getPronunciationAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pronunciation/picks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pick Pronunciation Word
+         * @description Remembers which word of a pair the learner heard; right if it was the one played.
+         */
+        post: operations["pickPronunciationWord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pronunciation/sounds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pronunciation Sounds
+         * @description The problem sounds of the language the learner learns, with their practice so far
+         *     (spec §6.14). Empty for a language that has none yet.
+         */
+        get: operations["getPronunciationSounds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pronunciation/sounds/{sound_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pronunciation Sound */
+        get: operations["getPronunciationSound"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pronunciation/words": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Problem Words
+         * @description The words the learner was asked to say and missed, not yet said right twice in a row.
+         */
+        get: operations["getProblemWords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/push/device": {
         parameters: {
             query?: never;
@@ -2116,6 +2235,13 @@ export interface components {
             placement: components["schemas"]["PlacementStatus"];
             stage: components["schemas"]["Stage"];
         };
+        /** PairOut */
+        PairOut: {
+            /** First */
+            first: string;
+            /** Second */
+            second: string;
+        };
         /** PartScoreOut */
         PartScoreOut: {
             /** Feedback */
@@ -2484,6 +2610,20 @@ export interface components {
             /** Voices */
             voices: components["schemas"]["PremiumVoiceOut"][];
         };
+        /** ProblemWordOut */
+        ProblemWordOut: {
+            /** Misses */
+            misses: number;
+            /** Soundid */
+            soundId: string | null;
+            /** Word */
+            word: string;
+        };
+        /** ProblemWordsOut */
+        ProblemWordsOut: {
+            /** Words */
+            words: components["schemas"]["ProblemWordOut"][];
+        };
         /** ProfileAnswerIn */
         ProfileAnswerIn: {
             /** Option */
@@ -2572,6 +2712,51 @@ export interface components {
             talk: components["schemas"]["TalkShareOut"] | null;
             /** Weeks */
             weeks: components["schemas"]["WeekOut"][];
+        };
+        /**
+         * PronunciationAttemptIn
+         * @description A drill said out loud: `target` is the text to say, `drill` how it is practised.
+         */
+        PronunciationAttemptIn: {
+            /**
+             * Drill
+             * @enum {string}
+             */
+            drill: "word" | "shadow";
+            recording: components["schemas"]["RecordingIn"];
+            /** Soundid */
+            soundId?: string | null;
+            /** Target */
+            target: string;
+        };
+        /**
+         * PronunciationAttemptOut
+         * @description What was heard and, word by word, where. An approximation: no phoneme scores.
+         */
+        PronunciationAttemptOut: {
+            /** Heard */
+            heard: string;
+            /** Right */
+            right: boolean;
+            /** Words */
+            words: components["schemas"]["WordMarkOut"][];
+        };
+        /**
+         * PronunciationPickIn
+         * @description Which word of a pair the learner said they heard.
+         */
+        PronunciationPickIn: {
+            /** Chosen */
+            chosen: string;
+            /** Played */
+            played: string;
+            /** Soundid */
+            soundId: string;
+        };
+        /** PronunciationPickOut */
+        PronunciationPickOut: {
+            /** Right */
+            right: boolean;
         };
         /**
          * PushDeviceIn
@@ -2893,10 +3078,45 @@ export interface components {
             /** Total */
             total: number | null;
         };
+        /** SoundDetailOut */
+        SoundDetailOut: {
+            /** Pairs */
+            pairs: components["schemas"]["PairOut"][];
+            /** Sentences */
+            sentences: string[];
+            sound: components["schemas"]["SoundSummaryOut"];
+            /** Words */
+            words: string[];
+        };
         /** SoundOut */
         SoundOut: {
             /** Url */
             url: string;
+        };
+        /**
+         * SoundSummaryOut
+         * @description A problem sound of the language being learned, with what the learner did on it.
+         */
+        SoundSummaryOut: {
+            /** Id */
+            id: string;
+            /** Listening */
+            listening: boolean;
+            /** Pairs */
+            pairs: number;
+            /** Right */
+            right: number;
+            /** Tip */
+            tip: string;
+            /** Title */
+            title: string;
+            /** Tries */
+            tries: number;
+        };
+        /** SoundsOut */
+        SoundsOut: {
+            /** Sounds */
+            sounds: components["schemas"]["SoundSummaryOut"][];
         };
         /**
          * Source
@@ -3274,6 +3494,13 @@ export interface components {
             separable: boolean | null;
             /** Superlative */
             superlative: string | null;
+        };
+        /** WordMarkOut */
+        WordMarkOut: {
+            /** Ok */
+            ok: boolean;
+            /** Word */
+            word: string;
         };
     };
     responses: never;
@@ -6516,6 +6743,300 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    drillPronunciation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PronunciationAttemptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PronunciationAttemptOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getPronunciationAudio: {
+        parameters: {
+            query: {
+                text: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoundOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    pickPronunciationWord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PronunciationPickIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PronunciationPickOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getPronunciationSounds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoundsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getPronunciationSound: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sound_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoundDetailOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getProblemWords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemWordsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

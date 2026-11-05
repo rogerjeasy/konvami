@@ -44,6 +44,13 @@ export type SpokenRecording = Schemas['RecordingIn'];
 /** A card answered out loud (voice review): what was heard, how close, the rating it points to. */
 export type AnsweredCard = Schemas['AnsweredOut'];
 export type AnswerOutcome = AnsweredCard['outcome'];
+/** A problem sound of the language learned (5.22 Pronunciation lab), with the practice so far. */
+export type PronunciationSound = Schemas['SoundSummaryOut'];
+export type PronunciationSoundDetail = Schemas['SoundDetailOut'];
+export type ProblemWord = Schemas['ProblemWordOut'];
+export type PronunciationDrill = Schemas['PronunciationAttemptIn']['drill'];
+/** A drill said out loud, as heard: word by word, an approximation without phoneme scores. */
+export type PronunciationAttempt = Schemas['PronunciationAttemptOut'];
 /** The corrections of a report the learner said again, and whether they got one right. */
 export type Retries = Schemas['RetriesOut'];
 /** A partner's line or a correction the learner reported (spec §16.1). */
@@ -380,6 +387,33 @@ export interface ApiClient {
   resolveFlag(id: string, status: FlagStatus): Promise<QueuedFlag>;
   /** Where a card's sound plays from (made the first time). Fails with `not_found`, `unavailable`. */
   getCardAudio(id: string): Promise<{ url: string }>;
+  /** The problem sounds of the language learned, with what the learner did on each. */
+  getPronunciationSounds(): Promise<{ sounds: PronunciationSound[] }>;
+  /** One sound with its pairs, words and sentences. Fails `not_found`. */
+  getPronunciationSound(id: string): Promise<PronunciationSoundDetail>;
+  /** The words the learner missed and has not said right twice in a row since. */
+  getProblemWords(): Promise<{ words: ProblemWord[] }>;
+  /**
+   * Where a word or sentence of the lab plays from, in the first partner's voice. Fails
+   * `not_found` (not the lab's own text), `unavailable`.
+   */
+  getPronunciationAudio(text: string): Promise<{ url: string }>;
+  /**
+   * A drill said out loud. `soundId` is null for one of the learner's problem words. Fails with
+   * `not_found`, `invalid_value`, `drill_limit`, `consent_required` or `unavailable`.
+   */
+  drillPronunciation(input: {
+    drill: PronunciationDrill;
+    soundId: string | null;
+    target: string;
+    recording: SpokenRecording;
+  }): Promise<PronunciationAttempt>;
+  /** Which word of a pair the learner said they heard; right when it was the word played. */
+  pickPronunciationWord(input: {
+    soundId: string;
+    played: string;
+    chosen: string;
+  }): Promise<{ right: boolean }>;
   /** One of the learner's cards (a word of the day opens it). Rejects `not_found`. */
   getCard(id: string): Promise<Card>;
   /** Lets the server reach this phone by push (reports, scores, a nudge after a quiet week). */
@@ -615,6 +649,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     resolveFlag: (id, status) =>
       request('PUT', `/v1/owner/flags/${encodeURIComponent(id)}`, { status }),
     getCardAudio: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}/audio`),
+    getPronunciationSounds: () => request('GET', '/v1/pronunciation/sounds'),
+    getPronunciationSound: (id) =>
+      request('GET', `/v1/pronunciation/sounds/${encodeURIComponent(id)}`),
+    getProblemWords: () => request('GET', '/v1/pronunciation/words'),
+    getPronunciationAudio: (text) => request('GET', withQuery('/v1/pronunciation/audio', { text })),
+    drillPronunciation: (input) => request('POST', '/v1/pronunciation/attempts', input),
+    pickPronunciationWord: (input) => request('POST', '/v1/pronunciation/picks', input),
     getCard: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}`),
     registerPushDevice: (device) => request('PUT', '/v1/push/device', device),
     removePushDevice: (token) => request('DELETE', `/v1/push/devices/${encodeURIComponent(token)}`),

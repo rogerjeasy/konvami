@@ -98,6 +98,12 @@ export function LearnScreen() {
               onPress={() => router.push(ROUTES.phrasebook)}
             />
             <ListRow
+              icon="volume"
+              title={t('learn.pronunciationRow')}
+              detail={t('learn.pronunciationHint')}
+              onPress={() => router.push(ROUTES.pronunciation)}
+            />
+            <ListRow
               icon="message"
               title={t('learn.tutorRow')}
               detail={t('learn.tutorHint')}

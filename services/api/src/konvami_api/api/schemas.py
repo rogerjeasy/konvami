@@ -90,6 +90,10 @@ from konvami_api.domain.profile import (
 )
 from konvami_api.domain.profile_questions import Question
 from konvami_api.domain.progress import ProgressView
+from konvami_api.domain.pronunciation import (
+    TARGET_MAX as PRONUNCIATION_TARGET_MAX,
+)
+from konvami_api.domain.pronunciation import Attempt, SoundDetail, SoundSummary
 from konvami_api.domain.push import Platform
 from konvami_api.domain.reminders import ReminderNotes
 from konvami_api.domain.reports import Report, ReportState, Severity
@@ -946,6 +950,112 @@ class PhraseIn(ApiModel):
 
 class PhraseSuggestionsIn(ApiModel):
     situation: Annotated[str, Field(max_length=SITUATION_MAX)]
+
+
+class SoundSummaryOut(ApiModel):
+    """A problem sound of the language being learned, with what the learner did on it."""
+
+    id: str
+    # Its name and a short explanation, in the language the learner reads.
+    title: str
+    tip: str
+    # Whether pairs can be listened to (they sound different) or are only said.
+    listening: bool
+    pairs: int
+    # Drills made on it, and how many were right.
+    tries: int
+    right: int
+
+    @classmethod
+    def of(cls, sound: SoundSummary) -> "SoundSummaryOut":
+        return cls(
+            id=sound.id,
+            title=sound.title,
+            tip=sound.tip,
+            listening=sound.listening,
+            pairs=sound.pairs,
+            tries=sound.tries,
+            right=sound.right,
+        )
+
+
+class SoundsOut(ApiModel):
+    sounds: list[SoundSummaryOut]
+
+
+class PairOut(ApiModel):
+    first: str
+    second: str
+
+
+class SoundDetailOut(ApiModel):
+    sound: SoundSummaryOut
+    pairs: list[PairOut]
+    words: list[str]
+    sentences: list[str]
+
+    @classmethod
+    def of(cls, detail: SoundDetail) -> "SoundDetailOut":
+        return cls(
+            sound=SoundSummaryOut.of(detail.summary),
+            pairs=[PairOut(first=first, second=second) for first, second in detail.pairs],
+            words=list(detail.words),
+            sentences=list(detail.sentences),
+        )
+
+
+class ProblemWordOut(ApiModel):
+    word: str
+    # The sound it was practised with; null for a word drilled on its own.
+    sound_id: str | None
+    misses: int
+
+
+class ProblemWordsOut(ApiModel):
+    words: list[ProblemWordOut]
+
+
+class PronunciationAttemptIn(ApiModel):
+    """A drill said out loud: `target` is the text to say, `drill` how it is practised."""
+
+    drill: Literal["word", "shadow"]
+    # The sound practised; null for one of the learner's problem words.
+    sound_id: str | None = Field(default=None, max_length=40)
+    target: str = Field(min_length=1, max_length=PRONUNCIATION_TARGET_MAX)
+    recording: RecordingIn
+
+
+class WordMarkOut(ApiModel):
+    word: str
+    ok: bool
+
+
+class PronunciationAttemptOut(ApiModel):
+    """What was heard and, word by word, where. An approximation: no phoneme scores."""
+
+    heard: str
+    right: bool
+    words: list[WordMarkOut]
+
+    @classmethod
+    def of(cls, attempt: Attempt) -> "PronunciationAttemptOut":
+        return cls(
+            heard=attempt.heard,
+            right=attempt.right,
+            words=[WordMarkOut(word=mark.word, ok=mark.ok) for mark in attempt.words],
+        )
+
+
+class PronunciationPickIn(ApiModel):
+    """Which word of a pair the learner said they heard."""
+
+    sound_id: str = Field(min_length=1, max_length=40)
+    played: str = Field(min_length=1, max_length=PRONUNCIATION_TARGET_MAX)
+    chosen: str = Field(min_length=1, max_length=PRONUNCIATION_TARGET_MAX)
+
+
+class PronunciationPickOut(ApiModel):
+    right: bool
 
 
 class PhraseOut(ApiModel):

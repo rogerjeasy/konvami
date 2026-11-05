@@ -28,6 +28,7 @@ from konvami_api.domain.phrasebook import PhrasebookError
 from konvami_api.domain.premium_voices import PremiumError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.profile_questions import QuestionError
+from konvami_api.domain.pronunciation import PronunciationError
 from konvami_api.domain.reports import ReportError
 from konvami_api.domain.retries import RetryError
 from konvami_api.domain.scenarios import ScenarioError
@@ -119,6 +120,12 @@ _RETRY_STATUS = {
     "invalid_value": 422,
     "consent_required": 403,
     "retry_limit": 429,
+}
+_PRONUNCIATION_STATUS = {
+    "not_found": 404,
+    "invalid_value": 422,
+    "consent_required": 403,
+    "drill_limit": 429,
 }
 _FLAG_STATUS = {"not_owner": 403, "not_found": 404, "invalid_value": 422, "flag_limit": 429}
 _UNAVAILABLE = 503
@@ -215,6 +222,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PhrasebookError)
     async def _phrasebook_error(_: Request, error: PhrasebookError) -> JSONResponse:
         return _response(_PHRASEBOOK_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(PronunciationError)
+    async def _pronunciation_error(_: Request, error: PronunciationError) -> JSONResponse:
+        return _response(_PRONUNCIATION_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(CostError)
     async def _cost_error(_: Request, error: CostError) -> JSONResponse:

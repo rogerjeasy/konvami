@@ -60,6 +60,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0028_content_flag",
         "0050_moderation_refusal",
         "0055_premium_voice_choice",
+        "0065_pronunciation",
     ]
     assert {
         "app_user",
@@ -86,6 +87,9 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "content_flag",
         "moderation_refusal",
         "premium_voice_choice",
+        "pronunciation_day",
+        "pronunciation_drill",
+        "pronunciation_word",
     } <= tables(empty_db)
 
 

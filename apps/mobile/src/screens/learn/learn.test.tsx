@@ -82,6 +82,16 @@ describe('5.7 Learn', () => {
     expect(router.push).toHaveBeenCalledWith('/phrasebook');
   });
 
+  it('leads to the pronunciation lab', async () => {
+    await open(inApp());
+
+    const row = screen.getByRole('button', { name: 'Pronunciation lab' });
+    expect(row.props.accessibilityHint).toBe('Sounds that are hard to say, with drills');
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith('/pronunciation');
+  });
+
   it('leads to the grammar map', async () => {
     await open(inApp());
 

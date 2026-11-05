@@ -21,6 +21,9 @@ import {
   type Placement,
   type PlacementResult,
   type PlacementStatus,
+  type ProblemWord,
+  type PronunciationSound,
+  type PronunciationSoundDetail,
   type Profile,
   type ProfileChange,
   type ProfileChangeEntry,
@@ -720,6 +723,10 @@ export interface FakeApi extends ApiClient {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
   /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
   hearsNextRetry(heard: string): void;
+  /** What the next drill of the pronunciation lab is heard as (the target, said as asked, if not set). */
+  hearsNextDrill(heard: string): void;
+  /** Words the learner missed in the pronunciation lab earlier. */
+  missedWords(words: ProblemWord[]): void;
   /** What the next card answered out loud is heard as; by default, its answer. */
   hearsNextAnswer(heard: string | ApiError): void;
   /** Every call so far, as `[method, ...arguments]`, in order. */
@@ -927,6 +934,52 @@ export function createFakeApi(): FakeApi {
     };
     phrases = [kept, ...phrases];
     return kept;
+  };
+  // The pronunciation lab: two sounds (one listened to, one only said), the tallies of their
+  // drills, the words missed, and what the next drill is heard as.
+  const labSounds: PronunciationSound[] = [
+    {
+      id: 'ue',
+      title: 'ü',
+      tip: 'Say i and round your lips as if for u.',
+      listening: true,
+      pairs: 2,
+      tries: 0,
+      right: 0,
+    },
+    {
+      id: 'final_devoicing',
+      title: 'b, d, g at the end',
+      tip: 'At the end of a syllable b, d and g sound like p, t and k.',
+      listening: false,
+      pairs: 1,
+      tries: 0,
+      right: 0,
+    },
+  ];
+  const labDetails: Record<string, Omit<PronunciationSoundDetail, 'sound'>> = {
+    ue: {
+      pairs: [
+        { first: 'vier', second: 'für' },
+        { first: 'Tier', second: 'Tür' },
+      ],
+      words: ['fühlen'],
+      sentences: ['Die Tür ist für dich.'],
+    },
+    final_devoicing: {
+      pairs: [{ first: 'Hund', second: 'Hunde' }],
+      words: ['Rad'],
+      sentences: ['Der Hund liegt im Korb.'],
+    },
+  };
+  let labWords: ProblemWord[] = [];
+  let nextDrillHeard: string | null = null;
+  const labTally = (soundId: string | null, right: boolean) => {
+    const sound = labSounds.find((candidate) => candidate.id === soundId);
+    if (sound) {
+      sound.tries += 1;
+      sound.right += right ? 1 : 0;
+    }
   };
   let recordingsKept = true;
   let premium: Omit<PremiumVoices, 'consent'> & { consent: boolean | (() => boolean) } = {
@@ -1826,6 +1879,56 @@ export function createFakeApi(): FakeApi {
     },
     hearsNextRetry(heard) {
       nextRetryHeard = heard;
+    },
+    hearsNextDrill(heard) {
+      nextDrillHeard = heard;
+    },
+    missedWords(words) {
+      labWords = words;
+    },
+    async getPronunciationSounds() {
+      await record('getPronunciationSounds');
+      return { sounds: labSounds.map((sound) => ({ ...sound })) };
+    },
+    async getPronunciationSound(id) {
+      await record('getPronunciationSound', id);
+      const sound = labSounds.find((candidate) => candidate.id === id);
+      const detail = labDetails[id];
+      if (!sound || !detail) throw new ApiError('not_found', 404);
+      return { sound: { ...sound }, ...detail };
+    },
+    async getProblemWords() {
+      await record('getProblemWords');
+      return { words: labWords };
+    },
+    async getPronunciationAudio(text) {
+      await record('getPronunciationAudio', text);
+      return { url: `https://files.test/pronunciation/${encodeURIComponent(text)}.mp3` };
+    },
+    async drillPronunciation(input) {
+      await record('drillPronunciation', input);
+      const heard = nextDrillHeard ?? input.target;
+      nextDrillHeard = null;
+      const said = new Set(heard.toLowerCase().match(/\p{L}+/gu) ?? []);
+      const words = (input.target.match(/\p{L}+/gu) ?? []).map((word) => ({
+        word,
+        ok: said.has(word.toLowerCase()),
+      }));
+      const right = words.every((mark) => mark.ok);
+      labTally(input.soundId, right);
+      for (const mark of words.filter((candidate) => !candidate.ok)) {
+        const known = labWords.find((word) => word.word === mark.word);
+        labWords = known
+          ? labWords.map((word) => (word === known ? { ...word, misses: word.misses + 1 } : word))
+          : [...labWords, { word: mark.word, soundId: input.soundId, misses: 1 }];
+      }
+      return { heard, right, words };
+    },
+    async pickPronunciationWord(input) {
+      await record('pickPronunciationWord', input);
+      const right = input.played === input.chosen;
+      labTally(input.soundId, right);
+      return { right };
     },
     async retryCorrection(conversationId, index, attempt) {
       await record('retryCorrection', conversationId, index, attempt);

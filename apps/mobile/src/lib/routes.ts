@@ -70,6 +70,8 @@ export const ROUTES = {
   phrasebook: '/phrasebook',
   /** 5.20 Then vs Now: the learner's voice from their first weeks next to a recent conversation. */
   thenVsNow: '/then-vs-now',
+  /** 5.22 Pronunciation lab: drills for the sounds that are hard, and the learner's missed words. */
+  pronunciation: '/pronunciation',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
@@ -188,6 +190,10 @@ export const memoryRoute = (id: string) =>
 /** 5.15 One topic of the grammar map. */
 export const grammarTopicRoute = (topic: string) =>
   ({ pathname: '/grammar/[topic]', params: { topic } }) as const satisfies Href;
+
+/** 5.22 One sound of the pronunciation lab. */
+export const pronunciationSoundRoute = (sound: string) =>
+  ({ pathname: '/pronunciation/[sound]', params: { sound } }) as const satisfies Href;
 
 /** 5.12 Ask the tutor, with `question` written in the field, ready to send. */
 export const askTutorRoute = (question: string) =>

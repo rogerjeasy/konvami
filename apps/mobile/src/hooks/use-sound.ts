@@ -10,6 +10,8 @@ import { usePracticeServices } from '@/practice/services';
 export function useSound(
   key: string,
   address: (key: string) => Promise<string>,
+  /** How fast it plays: 1 as spoken, less is slower (shadowing a sentence). */
+  rate = 1,
 ): { state: PlayState; toggle: () => void } {
   const { clips } = usePracticeServices();
   const [state, setState] = useState<PlayState>('idle');
@@ -28,7 +30,7 @@ export function useSound(
       address(key).then(
         (url) => {
           setState('playing');
-          clips.play(url, () => setState('idle'));
+          clips.play(url, () => setState('idle'), undefined, rate);
         },
         () => setState('idle'),
       );

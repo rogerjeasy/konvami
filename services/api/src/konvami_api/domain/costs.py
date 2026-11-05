@@ -63,6 +63,10 @@ class Feature(StrEnum):
     # The check of what a learner wrote for a partner's instructions (moderation, spec §6.21.4).
     # The provider does not charge for it: the requests are counted.
     MODERATION = "moderation"
+    # A drill said out loud in the pronunciation lab, and the sound of a word or sentence there
+    # (spec §6.14).
+    PRONUNCIATION = "pronunciation"
+    PRONUNCIATION_AUDIO = "pronunciation_audio"
 
 
 @dataclass(frozen=True)
