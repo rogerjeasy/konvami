@@ -154,7 +154,15 @@ export const avatar = {
     sand: '#F0E4D3',
     slate: '#D9DFDE',
   },
-  /** Brows, lashes and irises. */
+  /** Iris colors; the pupil and the lid line use `feature`. */
+  eyes: {
+    brown: '#5A3A28',
+    hazel: '#7A5A2E',
+    green: '#4F6B45',
+    blue: '#4A6D8C',
+    grey: '#6B7479',
+  },
+  /** Brows, lashes and pupils. */
   feature: '#231B17',
   eyeWhite: '#FFFFFF',
   lip: '#B4574F',
@@ -167,6 +175,7 @@ export type AvatarSkin = keyof typeof avatar.skin;
 export type AvatarHairColor = keyof typeof avatar.hair;
 export type AvatarTop = keyof typeof avatar.top;
 export type AvatarBackdrop = keyof typeof avatar.backdrop;
+export type AvatarEyes = keyof typeof avatar.eyes;
 
 /** Other companies' logo colors, drawn exactly as their brand rules require. */
 export const thirdParty = {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { motion } from '@konvami/design-tokens';
 import type { CallPlan, CallPurpose } from '@konvami/api-client';
-import { mouthOpenness } from '@/lib/lip-sync';
+import { mouthOpenness, visemeAt, visemeIndex } from '@/lib/lip-sync';
 import { conversationReducer, INITIAL_CONVERSATION, type ConversationState } from './conversation';
 import { VoiceError, type StartedCall, type VoiceEngine, type VoiceErrorCode } from './engine';
 import type { HelpKind } from './help';
@@ -30,6 +30,8 @@ export interface VoiceCall {
   stop: () => void;
   /** How far the persona's mouth is open, 0–1 (for the avatar). */
   mouth: SharedValue<number>;
+  /** Which mouth shape the persona's voice is in: an index into `VISEMES` (for the avatar). */
+  viseme: SharedValue<number>;
   /** How loud the learner is, 0–1 (for the listening ring). */
   voice: SharedValue<number>;
 }
@@ -57,6 +59,7 @@ export function useVoiceCall(
   const [muted, setMuted] = useState(false);
   const engine = useRef<VoiceEngine | null>(null);
   const mouth = useSharedValue(0);
+  const viseme = useSharedValue(0);
   const voice = useSharedValue(0);
 
   useEffect(() => {
@@ -98,9 +101,12 @@ export function useVoiceCall(
     if (status !== 'live') return;
     const follow = (target: SharedValue<number>, level: number) =>
       target.set(withTiming(level, { duration: motion.lipSync }));
+    let tick = 0;
     const timer = setInterval(() => {
       void engine.current?.levels().then((levels) => {
         follow(mouth, speaking ? mouthOpenness(levels.persona) : 0);
+        // A shape, not a blend: it changes at once and the open mouth fades it in and out.
+        viseme.set(speaking ? visemeIndex(visemeAt(levels.persona, tick++)) : 0);
         follow(voice, muted ? 0 : mouthOpenness(levels.learner));
       });
     }, LEVEL_INTERVAL_MS);
@@ -108,8 +114,9 @@ export function useVoiceCall(
       clearInterval(timer);
       follow(mouth, 0);
       follow(voice, 0);
+      viseme.set(0);
     };
-  }, [status, speaking, muted, mouth, voice]);
+  }, [status, speaking, muted, mouth, viseme, voice]);
 
   const toggleMute = useCallback(() => {
     setMuted((current) => {
@@ -135,6 +142,7 @@ export function useVoiceCall(
     help,
     stop,
     mouth,
+    viseme,
     voice,
   };
 }

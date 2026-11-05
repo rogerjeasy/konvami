@@ -243,6 +243,58 @@ describe('a setting the partner changes by voice', () => {
   });
 });
 
+describe('the face the partner shows', () => {
+  const asked = (expression: string, gesture = 'none', callId = 'call_e1') => ({
+    type: 'response.function_call_arguments.done',
+    call_id: callId,
+    name: 'set_expression',
+    arguments: JSON.stringify({ expression, gesture }),
+  });
+
+  it('is taken from the call as soon as its arguments are complete', () => {
+    const state = after(asked('amused', 'thumbs_up'));
+
+    expect(state.expression).toEqual({
+      expression: 'amused',
+      gesture: 'thumbsUp',
+      seq: 1,
+      callId: 'call_e1',
+    });
+  });
+
+  it('counts one call once, whether it is reported early or with the answer', () => {
+    const state = after(
+      asked('happy', 'none', 'call_sR7FXgF1JlqwaiUU'),
+      toolResult({ expression: 'happy', gesture: 'none' }),
+    );
+
+    expect(state.expression?.seq).toBe(1);
+  });
+
+  it('shows a second request again, even for the same face', () => {
+    const state = after(asked('happy'), asked('happy', 'none', 'call_e2'));
+
+    expect(state.expression?.seq).toBe(2);
+  });
+
+  it('is taken from the answer when the early report is missed', () => {
+    const state = after(toolResult({ expression: 'confused', gesture: 'none' }));
+
+    expect(state.expression?.expression).toBe('confused');
+  });
+
+  it('ignores faces it cannot draw, other tools and arguments it cannot read', () => {
+    const state = after(
+      asked('furious'),
+      { ...asked('happy'), name: 'ask_tutor' },
+      { ...asked('happy'), arguments: '{not json' },
+      toolResult({ shown: false, reason: 'invalid_arguments' }),
+    );
+
+    expect(state).toEqual(INITIAL_CONVERSATION);
+  });
+});
+
 describe('an exam simulation', () => {
   it('shows no part before the examiner begins one', () => {
     expect(after(SESSION_CREATED).examPart).toBeNull();

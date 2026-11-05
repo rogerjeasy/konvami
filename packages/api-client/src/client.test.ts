@@ -125,6 +125,9 @@ describe('api client', () => {
       backdrop: 'mist',
       glasses: false,
       beard: false,
+      face: 'oval',
+      eyes: 'brown',
+      aged: false,
     };
     const lena = {
       id: '7b1c2f0e-6c1b-4a8e-9a55-0d2f6a1c9e11',
@@ -216,6 +219,9 @@ describe('api client', () => {
         backdrop: 'sand',
         glasses: true,
         beard: false,
+        face: 'oval',
+        eyes: 'brown',
+        aged: false,
       },
       voice: 'coral',
       personality: {

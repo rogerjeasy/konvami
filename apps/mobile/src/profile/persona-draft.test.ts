@@ -27,6 +27,9 @@ const GRETA: PersonaDraft = {
     backdrop: 'sand',
     glasses: true,
     beard: false,
+    face: 'oval',
+    eyes: 'brown',
+    aged: false,
   },
   voice: 'coral',
   personality: {

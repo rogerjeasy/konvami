@@ -1,4 +1,27 @@
-import { mouthOpenness } from './lip-sync';
+import { mouthOpenness, visemeAt, visemeIndex, VISEMES } from './lip-sync';
+
+describe('visemeAt', () => {
+  it('closes the mouth in silence', () => {
+    expect(visemeAt(0, 5)).toBe('closed');
+    expect(visemeAt(0.01, 0)).toBe('closed');
+  });
+
+  it('opens widest for a loud voice and narrower for a soft one', () => {
+    expect(visemeAt(0.3, 0)).toBe('open');
+    expect(['narrow', 'pucker', 'teeth']).toContain(visemeAt(0.04, 0));
+  });
+
+  it('holds a shape for a moment and then moves on', () => {
+    expect(visemeAt(0.3, 0)).toBe(visemeAt(0.3, 1));
+    expect(visemeAt(0.3, 2)).not.toBe(visemeAt(0.3, 0));
+  });
+
+  it('names every shape once, with closed first', () => {
+    expect(VISEMES[0]).toBe('closed');
+    expect(new Set(VISEMES).size).toBe(VISEMES.length);
+    expect(visemeIndex('open')).toBe(3);
+  });
+});
 
 describe('mouthOpenness', () => {
   it('keeps the mouth closed in silence and in room noise', () => {
