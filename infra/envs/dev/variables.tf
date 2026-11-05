@@ -186,7 +186,7 @@ variable "prices" {
     What each model costs, in US dollars per million units (see modules/api, var.costs). From
     OpenAI's pricing page on 2026-10-22. Speech is billed per audio token, which the API cannot
     see: 17 per million characters is about $0.015 per spoken minute (900 characters).
-    Transcription is $0.0045 a minute, 75 per million seconds; gpt-4o-transcribe $0.006 a
+    Moderation is free (counted, not charged). Transcription is $0.0045 a minute, 75 per million seconds; gpt-4o-transcribe $0.006 a
     minute, 100 per million seconds (its last published price: check it on the pricing page).
   EOT
   type        = map(map(number))
@@ -220,6 +220,8 @@ variable "prices" {
     "gpt-transcribe"    = { audio_seconds = 75 }
     "gpt-4o-transcribe" = { audio_seconds = 100 }
     "gpt-4o-mini-tts"   = { characters = 17 }
+    # Moderation of what learners write for a partner is free: its requests are only counted.
+    "omni-moderation-latest" = { requests = 0 }
   }
 }
 
