@@ -10,6 +10,7 @@ import {
   type GrammarTopic,
   type GrammarTopicPage,
   type ConversationReport,
+  type Flag,
   type Home,
   type HomePartner,
   type Memories,
@@ -25,6 +26,7 @@ import {
   type ProfileSource,
   type LevelPoint,
   type Progress,
+  type QueuedFlag,
   type Rating,
   type SessionReport,
   type TranscriptTurn,
@@ -848,6 +850,8 @@ export function createFakeApi(): FakeApi {
   let nextRetryHeard: string | null = null;
   let nextAnswerHeard: string | ApiError | null = null;
   const retried = new Map<string, Map<number, boolean>>();
+  // What the learner reported, as the owner's queue holds it (one per conversation, kind, index).
+  const flagged: QueuedFlag[] = [];
   let tutorAnswer: TutorAnswer = FAKE_TUTOR_ANSWER;
   const keepQuestion = (question: string, source: TutorQuestion['source'], at: number) => {
     const kept: TutorQuestion = {
@@ -1726,6 +1730,67 @@ export function createFakeApi(): FakeApi {
       tried.set(index, (tried.get(index) ?? false) || right);
       retried.set(conversationId, tried);
       return { heard, right, said: mistake.original, better: mistake.corrected };
+    },
+    async flagItem(conversationId, input) {
+      await record('flagItem', conversationId, input);
+      const entry = practice.find(({ conversation }) => conversation.id === conversationId);
+      if (!entry) throw new ApiError('not_found', 404);
+      const { kind, index, reason, note } = input;
+      if (reason === 'not_said' && kind === 'turn') throw new ApiError('invalid_value', 422);
+      let excerpt: string;
+      if (kind === 'turn') {
+        const turn = entry.turns[index];
+        if (turn?.speaker !== 'persona') throw new ApiError('not_found', 404);
+        excerpt = turn.text;
+      } else {
+        const mistake = (reports.get(conversationId)?.report ?? FAKE_REPORT).mistakes[index];
+        if (!mistake) throw new ApiError('not_found', 404);
+        excerpt = `${mistake.original} → ${mistake.corrected}`;
+      }
+      const kept = flagged.find(
+        (one) => one.conversationId === conversationId && one.kind === kind && one.index === index,
+      );
+      const made: QueuedFlag = {
+        id: kept?.id ?? `flag_${flagged.length + 1}`,
+        conversationId,
+        kind,
+        index,
+        reason,
+        note: note?.trim() || null,
+        status: 'open',
+        flaggedAt: new Date(now).toISOString(),
+        excerpt,
+        resolvedAt: null,
+      };
+      if (kept) flagged[flagged.indexOf(kept)] = made;
+      else flagged.push(made);
+      const { excerpt: _excerpt, resolvedAt: _resolvedAt, ...flag } = made;
+      return flag satisfies Flag;
+    },
+    async getFlags(conversationId) {
+      await record('getFlags', conversationId);
+      if (!practice.some(({ conversation }) => conversation.id === conversationId)) {
+        throw new ApiError('not_found', 404);
+      }
+      return {
+        flags: flagged
+          .filter((one) => one.conversationId === conversationId)
+          .map(({ excerpt: _excerpt, resolvedAt: _resolvedAt, ...flag }) => flag),
+      };
+    },
+    async getFlagQueue(status = 'open') {
+      await record('getFlagQueue', status);
+      if (!owner) throw new ApiError('not_owner', 403);
+      return { flags: flagged.filter((one) => one.status === status).reverse() };
+    },
+    async resolveFlag(id, status) {
+      await record('resolveFlag', id, status);
+      if (!owner) throw new ApiError('not_owner', 403);
+      const kept = flagged.find((one) => one.id === id);
+      if (!kept) throw new ApiError('not_found', 404);
+      kept.status = status;
+      kept.resolvedAt = status === 'open' ? null : new Date(now).toISOString();
+      return { ...kept };
     },
     async getRetries(conversationId) {
       await record('getRetries', conversationId);

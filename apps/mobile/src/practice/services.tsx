@@ -14,6 +14,10 @@ import type {
   PushDevice,
   Catalog,
   ExamCentre,
+  Flag,
+  FlagInput,
+  FlagStatus,
+  QueuedFlag,
   NextSimulation,
   GrammarMap,
   GrammarTopicPage,
@@ -97,6 +101,17 @@ export interface PracticeServices {
   ) => Promise<Retried>;
   /** The corrections of a conversation's report the learner said again, and whether right. */
   readRetries: (conversationId: string) => Promise<Retries>;
+  /**
+   * Reports a partner's line or a correction of a conversation (spec §16.1). Rejects with an
+   * `ApiError` (`flag_limit`, `network`, …).
+   */
+  flagItem: (conversationId: string, input: FlagInput) => Promise<Flag>;
+  /** What the learner reported in a conversation. */
+  readFlags: (conversationId: string) => Promise<{ flags: Flag[] }>;
+  /** The owner's review queue. Rejects with an `ApiError` (`not_owner`, …). */
+  readFlagQueue: (status: FlagStatus) => Promise<{ flags: QueuedFlag[] }>;
+  /** Closes a flag as resolved or dismissed, or opens it again (the owner). */
+  resolveFlag: (id: string, status: FlagStatus) => Promise<QueuedFlag>;
   /** Where a card's sound plays from (made the first time). Rejects with an `ApiError`. */
   cardSound: (id: string) => Promise<string>;
   /** One of the learner's cards. Rejects with an `ApiError` (`not_found`, …). */
@@ -156,6 +171,10 @@ export function createPracticeServices(
     | 'getGrammarTopic'
     | 'retryCorrection'
     | 'getRetries'
+    | 'flagItem'
+    | 'getFlags'
+    | 'getFlagQueue'
+    | 'resolveFlag'
     | 'getCardAudio'
     | 'getCard'
     | 'registerPushDevice'
@@ -211,6 +230,10 @@ export function createPracticeServices(
       api.retryCorrection(conversationId, index, spoken(recording)),
     answerCard: (id, recording) => api.answerCard(id, spoken(recording)),
     readRetries: (conversationId) => api.getRetries(conversationId),
+    flagItem: (conversationId, input) => api.flagItem(conversationId, input),
+    readFlags: (conversationId) => api.getFlags(conversationId),
+    readFlagQueue: (status) => api.getFlagQueue(status),
+    resolveFlag: (id, status) => api.resolveFlag(id, status),
     askTutor: (asked) =>
       tutor.mutate(
         () =>
