@@ -2,6 +2,7 @@ import { Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { startActivityAsync } from 'expo-intent-launcher';
 import { legalUrl } from '@/lib/legal';
+import { supportMailto } from '@/lib/support';
 import { ROUTES } from '@/lib/routes';
 
 /**
@@ -20,6 +21,11 @@ export function openLegal(page: keyof typeof LEGAL_URL, language: string): void 
   const url = legalUrl(LEGAL_URL[page], language);
   if (url) void Linking.openURL(url).catch(() => {});
   else router.push(ROUTES.comingNext);
+}
+
+/** Opens a new message to the support address in the phone's mail app. */
+export function openSupportEmail(email: string, subject: string): void {
+  void Linking.openURL(supportMailto(email, subject)).catch(() => {});
 }
 
 /** Whether this platform has a mail app the app can bring to the front. */

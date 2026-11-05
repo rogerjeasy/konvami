@@ -91,6 +91,7 @@ describe('6.1 Profile', () => {
     ['What my partners know', '/account/memory'],
     ['Privacy and AI', '/account/privacy'],
     ['Security', '/account/security'],
+    ['Help and feedback', '/account/help'],
   ])('leads to %s', async (row, route) => {
     await open();
 
@@ -153,6 +154,22 @@ describe('6.1 Profile', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Reports' }));
 
     expect(router.push).toHaveBeenCalledWith('/account/flags');
+  });
+
+  it('shows the owner’s feedback inbox to the owner only', async () => {
+    await open();
+    await screen.findByText(/minutes left/);
+    expect(screen.queryByRole('button', { name: 'Feedback' })).toBeNull();
+  });
+
+  it('leads the owner to the feedback learners sent', async () => {
+    const api = inApp();
+    api.beOwner();
+    await open(api);
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Feedback' }));
+
+    expect(router.push).toHaveBeenCalledWith('/account/feedback');
   });
 
   it('still shows the account and its rows when the practice could not be loaded', async () => {

@@ -104,6 +104,10 @@ export const ROUTES = {
   accountCosts: '/account/costs',
   /** 6.15 Reports: what learners flagged, for the owner's account only (spec §16.1). */
   accountFlags: '/account/flags',
+  /** 6.20 Help and feedback: the FAQ, support and the feedback form (spec §6.21.4). */
+  accountHelp: '/account/help',
+  /** 6.21 Feedback: what learners sent, for the owner's account only (spec §6.21.4). */
+  accountFeedbackInbox: '/account/feedback',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;
