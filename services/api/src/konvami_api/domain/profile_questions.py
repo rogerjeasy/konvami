@@ -49,11 +49,11 @@ RECORDINGS = "recordings"
 MEMORY = "memory"
 HABIT = "weekly_habit"
 
-# The answers to the weekly habit question, as (days, minutes) of practice.
+# The answers to the weekly habit question, as (days, minutes in all) of practice a week.
 HABIT_OPTIONS: dict[str, tuple[int, int]] = {
-    "light": (2, 15),
-    "steady": (3, 20),
-    "daily": (5, 20),
+    "light": (2, 30),
+    "steady": (3, 60),
+    "daily": (5, 90),
 }
 
 

@@ -40,7 +40,10 @@ VOICE_FIELDS: dict[str, str] = {
         "no exam; fields you leave out stay as they are"
     ),
     "level_goal": 'JSON like {"level": "B2", "by": "2027-01-31"}, or null for no goal',
-    "weekly_habit": 'JSON like {"days": 3, "minutes": 20}, or null for none',
+    "weekly_habit": (
+        'JSON like {"days": 3, "minutes": 60}, where minutes are the total for the week, or null '
+        "for none"
+    ),
     "course": (
         'JSON like {"name": "Menschen A2", "chapter": "7"}, or null for none; fields you leave '
         "out stay as they are"

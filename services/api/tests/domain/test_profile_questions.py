@@ -123,7 +123,7 @@ def test_answering_the_memory_question_applies_it(world: World) -> None:
 def test_answering_the_habit_question_sets_the_weekly_habit(world: World) -> None:
     world.questions.answer(USER, HABIT, "steady")
 
-    assert world.profiles.get(USER).value("de", "weekly_habit") == {"days": 3, "minutes": 20}
+    assert world.profiles.get(USER).value("de", "weekly_habit") == {"days": 3, "minutes": 60}
 
 
 def test_an_answer_that_is_not_offered_is_refused(world: World) -> None:
