@@ -171,6 +171,8 @@ export type PhraseDraft = { phrase: string; meaning: string; situation?: string 
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
+export type PremiumVoices = Schemas['PremiumVoicesOut'];
+export type PremiumVoice = Schemas['PremiumVoiceOut'];
 export type Costs = Schemas['CostsOut'];
 export type CostLevel = Costs['level'];
 /** A turn's recording: a short-lived address to play it from, and how long it lasts. */
@@ -419,6 +421,22 @@ export interface ApiClient {
   /** The learner's voice minutes this week (in seconds) and when they come back. */
   getVoiceAllowance(): Promise<VoiceAllowance>;
   /**
+   * The premium voices (ElevenLabs, spec §6.21.2): whether they are on offer at all, whether the
+   * learner agreed to ElevenLabs and may use them, and which one reads aloud (null: the standard
+   * voice).
+   */
+  getPremiumVoices(): Promise<PremiumVoices>;
+  /**
+   * Picks the voice that reads cards and check-ins aloud, or null for the standard voice. Fails
+   * with `consent_needed`, `not_allowed`, `not_offered` or `unknown_voice`.
+   */
+  choosePremiumVoice(voiceId: string | null): Promise<PremiumVoices>;
+  /**
+   * A short-lived address of a premium voice's sample in the language being learned. Fails with
+   * `consent_needed`, `not_allowed` or `voice_unavailable`.
+   */
+  getPremiumVoiceSample(voiceId: string): Promise<string>;
+  /**
    * A month's estimated spending, for the owner only (fails with `not_owner`). `month` is the
    * first day of the month (`2026-09-01`); this month when left out.
    */
@@ -612,6 +630,15 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getRecordings: () => request('GET', '/v1/recordings'),
     configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
     getVoiceAllowance: () => request('GET', '/v1/voice/allowance'),
+    getPremiumVoices: () => request('GET', '/v1/premium-voices'),
+    choosePremiumVoice: (voiceId) => request('PUT', '/v1/premium-voices/choice', { voiceId }),
+    getPremiumVoiceSample: async (voiceId) =>
+      (
+        await request<Schemas['VoiceSampleOut']>(
+          'GET',
+          `/v1/premium-voices/${encodeURIComponent(voiceId)}/sample`,
+        )
+      ).url,
     getCosts: (month) => request('GET', withQuery('/v1/owner/costs', { month })),
     changeMemory: (id, change) =>
       request('PATCH', `/v1/memories/${encodeURIComponent(id)}`, change),
