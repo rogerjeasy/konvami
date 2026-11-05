@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { Persona, PersonaDraft } from '@konvami/api-client';
-import { apiErrorCode, apiErrorKey } from '@/api/messages';
+import { apiErrorCode, apiErrorKey, failureOf, type Failure } from '@/api/messages';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { LoadState } from '@/components/load-state';
@@ -60,12 +60,12 @@ function problemKey(error: unknown) {
   return code === 'too_many' ? ('partners.create.problems.too_many' as const) : apiErrorKey(code);
 }
 
-function Problem({ message }: { message: string | null }) {
-  if (!message) return null;
+function Problem({ failure }: { failure: Failure | null }) {
+  if (!failure) return null;
   return (
     <View className="pb-2">
-      <NoticeBox icon="alert" tone="danger">
-        {message}
+      <NoticeBox icon={failure.tone === 'danger' ? 'alert' : 'info'} tone={failure.tone}>
+        {failure.message}
       </NoticeBox>
     </View>
   );
@@ -88,7 +88,7 @@ export function NewStudioScreen() {
   /** Whether the learner has tried to move on, so that what is missing may be pointed out. */
   const [pressed, setPressed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Failure | null>(null);
 
   const step = STEPS[index] ?? 'identity';
   const missing = draftProblems(draft);
@@ -125,7 +125,7 @@ export function NewStudioScreen() {
       // The steps behind are done with: Back from the partners leads to the profile.
       router.replace(ROUTES.accountPartners);
     } catch (error) {
-      setProblem(t(problemKey(error)));
+      setProblem(failureOf(t(problemKey(error)), apiErrorCode(error)));
       setSaving(false);
     }
   }
@@ -140,7 +140,7 @@ export function NewStudioScreen() {
       header={<StepHeader step={index + 1} total={STEPS.length} onBack={back} />}
       actions={
         <>
-          <Problem message={problem} />
+          <Problem failure={problem} />
           {step === 'review' ? (
             <Button
               label={t('partners.studio.add')}
@@ -221,7 +221,7 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
   const [pressed, setPressed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Failure | null>(null);
 
   const missing = draftProblems(draft);
   const changed = JSON.stringify(tidy(draft)) !== JSON.stringify(saved);
@@ -250,7 +250,7 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
       setJustSaved(true);
       successFeedback();
     } catch (error) {
-      setProblem(t(problemKey(error)));
+      setProblem(failureOf(t(problemKey(error)), apiErrorCode(error)));
     } finally {
       setSaving(false);
     }
@@ -262,7 +262,7 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
       header={header}
       actions={
         <>
-          <Problem message={problem} />
+          <Problem failure={problem} />
           <Button
             label={t('partners.studio.save')}
             disabled={!changed}

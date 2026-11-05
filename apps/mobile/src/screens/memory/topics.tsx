@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { apiErrorCode, apiErrorKey, failureOf, type Failure } from '@/api/messages';
 import { NoticeBox } from '@/components/notice-box';
 import { RemovableChip } from '@/components/removable-chip';
 import { Section } from '@/components/section';
@@ -32,7 +33,7 @@ export function OffLimitsTopics({
   const { t } = useTranslation();
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
-  const [problem, setProblem] = useState<'duplicate' | 'failed' | null>(null);
+  const [problem, setProblem] = useState<'duplicate' | Failure | null>(null);
 
   async function save(next: string[], then?: () => void) {
     commitFeedback();
@@ -41,8 +42,13 @@ export function OffLimitsTopics({
     try {
       await onChange(next);
       then?.();
-    } catch {
-      setProblem('failed');
+    } catch (error) {
+      // Words that were turned down say why; any other failure is the general one.
+      const code = apiErrorCode(error);
+      const failure = failureOf(t('memory.saveFailed'), code);
+      setProblem(
+        failure.tone === 'surface' ? { ...failure, message: t(apiErrorKey(code)) } : failure,
+      );
     } finally {
       setSaving(false);
     }
@@ -106,9 +112,9 @@ export function OffLimitsTopics({
             {t('memory.topics.full')}
           </Text>
         )}
-        {problem === 'failed' ? (
-          <NoticeBox icon="alert" tone="danger">
-            {t('memory.saveFailed')}
+        {problem && problem !== 'duplicate' ? (
+          <NoticeBox icon={problem.tone === 'danger' ? 'alert' : 'info'} tone={problem.tone}>
+            {problem.message}
           </NoticeBox>
         ) : null}
       </View>

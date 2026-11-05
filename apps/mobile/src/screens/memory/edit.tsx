@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Memory, MemoryChange } from '@konvami/api-client';
-import { apiErrorCode, apiErrorKey } from '@/api/messages';
+import { apiErrorCode, apiErrorKey, failureOf, type Failure } from '@/api/messages';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { ConfirmSheet } from '@/components/confirm-sheet';
@@ -53,7 +53,7 @@ function MemoryForm({ memory, onForget }: { memory: Memory; onForget: () => Prom
   const [saving, setSaving] = useState(false);
   const [asking, setAsking] = useState(false);
   const [forgetting, setForgetting] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Failure | null>(null);
 
   const words = text.trim();
   const change: MemoryChange = {
@@ -72,7 +72,7 @@ function MemoryForm({ memory, onForget }: { memory: Memory; onForget: () => Prom
       await store.change(memory.id, change);
       backOr(ROUTES.accountMemory);
     } catch (error) {
-      setProblem(t(problemKey(apiErrorCode(error))));
+      setProblem(failureOf(t(problemKey(apiErrorCode(error))), apiErrorCode(error)));
     } finally {
       setSaving(false);
     }
@@ -87,7 +87,7 @@ function MemoryForm({ memory, onForget }: { memory: Memory; onForget: () => Prom
       backOr(ROUTES.accountMemory);
     } catch (error) {
       setAsking(false);
-      setProblem(t(problemKey(apiErrorCode(error))));
+      setProblem(failureOf(t(problemKey(apiErrorCode(error))), apiErrorCode(error)));
     } finally {
       setForgetting(false);
     }
@@ -152,8 +152,8 @@ function MemoryForm({ memory, onForget }: { memory: Memory; onForget: () => Prom
             />
           ) : null}
           {problem ? (
-            <NoticeBox icon="alert" tone="danger">
-              {problem}
+            <NoticeBox icon={problem.tone === 'danger' ? 'alert' : 'info'} tone={problem.tone}>
+              {problem.message}
             </NoticeBox>
           ) : null}
         </View>

@@ -72,6 +72,17 @@ export const it: Translation = {
     tooManyAttempts: 'Troppi tentativi. Aspetta qualche minuto e riprova.',
     notConfigured: 'La registrazione non è ancora configurata in questa versione.',
     unknown: 'Qualcosa è andato storto. Riprova.',
+    moderation: {
+      text_instructions:
+        'Sembra un’istruzione data all’IA più che qualcosa su una persona. Descrivi chi è e riprova.',
+      text_link: 'Link e indirizzi web non sono ammessi qui. Toglili e riprova.',
+      text_contact: 'Lascia fuori indirizzi email, numeri di telefono e nomi utente, poi riprova.',
+      text_unsafe:
+        'Una parte di ciò che hai scritto non può essere usata da un partner. Riformulala e riprova.',
+      moderation_unavailable:
+        'Non sono riuscito a controllare il testo in questo momento, quindi non è stato salvato nulla. Riprova tra poco.',
+      moderation_limit: 'Oggi diversi tuoi testi sono stati rifiutati. Riprova domani.',
+    },
   },
   ageCheck: {
     title: 'Quando sei nato?',
@@ -1677,6 +1688,7 @@ export const it: Translation = {
       voice_review: 'Carte risposte a voce',
       voice_sample: 'Campioni di voce',
       phrasebook: 'Frasario',
+      moderation: 'Controllo dei tuoi testi',
     },
   },
   profile: {

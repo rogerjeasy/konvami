@@ -4,7 +4,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { Persona, PersonaLook } from '@konvami/api-client';
-import { apiErrorCode, apiErrorKey } from '@/api/messages';
+import { apiErrorCode, apiErrorKey, failureOf, type Failure } from '@/api/messages';
 import { Avatar } from '@/components/avatar/avatar';
 import { Button } from '@/components/button';
 import { LoadState } from '@/components/load-state';
@@ -33,7 +33,7 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
   const [name, setName] = useState(partner.name);
   const [look, setLook] = useState<PersonaLook>(partner.look);
   const [saving, setSaving] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Failure | null>(null);
 
   async function save() {
     commitFeedback();
@@ -43,7 +43,8 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
       await store.changePartner(partner.id, { name: name.trim(), look });
       router.back();
     } catch (error) {
-      setProblem(t(apiErrorKey(apiErrorCode(error))));
+      const code = apiErrorCode(error);
+      setProblem(failureOf(t(apiErrorKey(code)), code));
     } finally {
       setSaving(false);
     }
@@ -56,8 +57,8 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
         <>
           {problem ? (
             <View className="pb-2">
-              <NoticeBox icon="alert" tone="danger">
-                {problem}
+              <NoticeBox icon={problem.tone === 'danger' ? 'alert' : 'info'} tone={problem.tone}>
+                {problem.message}
               </NoticeBox>
             </View>
           ) : null}

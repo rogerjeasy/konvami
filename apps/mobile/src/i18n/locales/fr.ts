@@ -72,6 +72,18 @@ export const fr: Translation = {
     tooManyAttempts: 'Trop de tentatives. Attends quelques minutes et réessaie.',
     notConfigured: 'L’inscription n’est pas encore configurée dans cette version.',
     unknown: 'Un problème est survenu. Réessaie.',
+    moderation: {
+      text_instructions:
+        'Cela ressemble à une consigne donnée à l’IA plutôt qu’à la description d’une personne. Décris qui il ou elle est, puis réessaie.',
+      text_link: 'Les liens et les adresses web ne sont pas acceptés ici. Retire-les et réessaie.',
+      text_contact:
+        'Évite les adresses e-mail, les numéros de téléphone et les noms d’utilisateur, puis réessaie.',
+      text_unsafe:
+        'Une partie de ton texte ne peut pas être utilisée par un partenaire. Reformule-la et réessaie.',
+      moderation_unavailable:
+        'Je n’ai pas pu vérifier ton texte à l’instant, donc rien n’a été enregistré. Réessaie dans un moment.',
+      moderation_limit: 'Plusieurs de tes textes ont été refusés aujourd’hui. Réessaie demain.',
+    },
   },
   ageCheck: {
     title: 'Quelle est ta date de naissance ?',
@@ -1683,6 +1695,7 @@ export const fr: Translation = {
       voice_review: 'Cartes répondues à voix haute',
       voice_sample: 'Échantillons de voix',
       phrasebook: 'Carnet de phrases',
+      moderation: 'Vérification de tes textes',
     },
   },
   profile: {

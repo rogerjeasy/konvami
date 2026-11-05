@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { apiErrorCode, apiErrorKey } from '@/api/messages';
+import { apiErrorCode, apiErrorKey, failureOf, type Failure } from '@/api/messages';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ChoiceChip } from '@/components/choice-chip';
@@ -69,7 +69,7 @@ function GoalsForm({
   const [level, setLevel] = useState<string | null>(goal?.level ?? null);
   const [by, setBy] = useState<string | null>(goal?.by ?? null);
   const [saving, setSaving] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Failure | null>(null);
 
   useEffect(() => {
     void allowance.load();
@@ -93,7 +93,8 @@ function GoalsForm({
       void home.refresh();
       backOr(ROUTES.accountLearning);
     } catch (error) {
-      setProblem(t(apiErrorKey(apiErrorCode(error))));
+      const code = apiErrorCode(error);
+      setProblem(failureOf(t(apiErrorKey(code)), code));
     } finally {
       setSaving(false);
     }
@@ -106,8 +107,8 @@ function GoalsForm({
         <>
           {problem ? (
             <View className="pb-2">
-              <NoticeBox icon="alert" tone="danger">
-                {problem}
+              <NoticeBox icon={problem.tone === 'danger' ? 'alert' : 'info'} tone={problem.tone}>
+                {problem.message}
               </NoticeBox>
             </View>
           ) : null}

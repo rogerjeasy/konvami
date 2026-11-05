@@ -75,6 +75,18 @@ export const en = {
     tooManyAttempts: 'Too many tries. Wait a few minutes and try again.',
     notConfigured: 'Sign-up isn’t set up in this build yet.',
     unknown: 'Something went wrong. Please try again.',
+    moderation: {
+      text_instructions:
+        'That reads like an instruction to the AI rather than something about a person. Describe who they are, and try again.',
+      text_link: 'Links and web addresses can’t be used here. Take them out and try again.',
+      text_contact:
+        'Please leave out email addresses, phone numbers and usernames, then try again.',
+      text_unsafe:
+        'Part of what you wrote isn’t something a partner can use. Please reword it and try again.',
+      moderation_unavailable:
+        'I couldn’t check your words just now, so nothing was saved. Try again in a moment.',
+      moderation_limit: 'Several of your texts were turned down today. Try again tomorrow.',
+    },
   },
   ageCheck: {
     title: 'When’s your birthday?',
@@ -1660,6 +1672,7 @@ export const en = {
       voice_review: 'Cards answered out loud',
       voice_sample: 'Voice samples',
       phrasebook: 'Phrasebook',
+      moderation: 'Checking what you write',
     },
   },
   profile: {
