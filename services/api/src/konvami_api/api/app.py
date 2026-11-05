@@ -9,7 +9,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Query, Request
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from konvami_api.api.auth import CurrentUser, recently_signed_in
 from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
@@ -59,6 +59,7 @@ from konvami_api.api.schemas import (
     PictureUploadOut,
     PlacementDecision,
     PlacementOut,
+    PlanOut,
     ProfileAnswerIn,
     ProfileChangesOut,
     ProfileOut,
@@ -110,6 +111,7 @@ from konvami_api.domain.persona_parts import Voice
 from konvami_api.domain.personas import Persona, PersonaService
 from konvami_api.domain.phrasebook import PhrasebookEntry, PhrasebookService
 from konvami_api.domain.placement import PlacementService
+from konvami_api.domain.plans import Perk, PlanService, StoreEvent, token_matches
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
@@ -119,7 +121,7 @@ from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
 from konvami_api.domain.tutor import TutorService
-from konvami_api.domain.voice import VoiceCallService
+from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.week_review import WeekReviewService
@@ -160,6 +162,9 @@ class Services:
     week_reviews: WeekReviewService
     exams: ExamService
     flags: FlagService
+    plans: PlanService
+    # Reads the secret RevenueCat's webhook sends (Secrets Manager); empty when not set up.
+    store_secret: Callable[[], str]
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -181,6 +186,8 @@ MAX_CHANGES_SHOWN = 20
 
 
 FORBIDDEN: Responses = {403: {"model": ErrorBody}}
+# The plan does not include it: the app offers the paywall (spec §6.21.2).
+PLAN_REQUIRED: Responses = {402: {"model": ErrorBody}}
 
 
 def recorded(
@@ -302,8 +309,13 @@ def _router(services: Services) -> APIRouter:
     def get_personas(user: CurrentUser) -> PersonasOut:
         return PersonasOut.of(services.personas.partners(user))
 
-    @router.post("/personas", operation_id="createPersona", responses=REFUSED | CONFLICT)
+    @router.post(
+        "/personas",
+        operation_id="createPersona",
+        responses=REFUSED | CONFLICT | PLAN_REQUIRED,
+    )
     def create_persona(user: CurrentUser, persona: PersonaIn) -> PersonaOut:
+        services.plans.require_room_for_persona(user, len(services.personas.partners(user)))
         return PersonaOut.of(services.personas.create(user, persona.model_dump(exclude_unset=True)))
 
     @router.get("/personas/templates", operation_id="getPersonaTemplates")
@@ -357,8 +369,12 @@ def _router(services: Services) -> APIRouter:
         services.onboarding.complete(user)
         return onboarding_of(user)
 
-    @router.post("/voice/calls", operation_id="startVoiceCall", responses=CALL_REFUSED)
+    @router.post(
+        "/voice/calls", operation_id="startVoiceCall", responses=CALL_REFUSED | PLAN_REQUIRED
+    )
     def start_voice_call(user: CurrentUser, offer: VoiceCallIn) -> VoiceCallOut:
+        if offer.purpose is CallPurpose.EXAM:
+            services.plans.require(user, Perk.EXAM_SIMULATIONS)
         started = services.voice.start(
             user,
             offer.purpose,
@@ -369,6 +385,11 @@ def _router(services: Services) -> APIRouter:
             offer.practise,
         )
         return VoiceCallOut.of(started)
+
+    @router.get("/plan", operation_id="getPlan")
+    def get_plan(user: CurrentUser) -> PlanOut:
+        """What the learner has bought and what it includes (spec §6.21.2)."""
+        return PlanOut.of(services.plans.plan(user))
 
     @router.get("/voice/allowance", operation_id="getVoiceAllowance")
     def get_voice_allowance(user: CurrentUser) -> AllowanceOut:
@@ -806,6 +827,72 @@ def _deletion_router(services: Services) -> APIRouter:
     return router
 
 
+# RevenueCat's event fields the plans need. It sends more; the rest is ignored.
+class _StoreEventBody(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = ""
+    type: str
+    app_user_id: str = ""
+    aliases: list[str] | None = None
+    product_id: str = ""
+    entitlement_ids: list[str] | None = None
+    period_type: str = ""
+    store: str = ""
+    expiration_at_ms: int | None = None
+    event_timestamp_ms: int
+    transaction_id: str | None = None
+    cancel_reason: str | None = None
+
+
+class _StoreHook(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    event: _StoreEventBody
+
+
+def _store_event(body: _StoreEventBody) -> StoreEvent | None:
+    """RevenueCat's event for a Konvami learner, or None for one about nobody we know: the app
+    names the learner to RevenueCat by their id, so an anonymous id is not ours."""
+    for name in [body.app_user_id, *(body.aliases or [])]:
+        try:
+            user_id = UUID(name)
+        except ValueError:
+            continue
+        expires = body.expiration_at_ms
+        return StoreEvent(
+            id=body.id,
+            type=body.type,
+            user_id=user_id,
+            product_id=body.product_id,
+            entitlement_ids=tuple(body.entitlement_ids or ()),
+            trial=body.period_type == "TRIAL",
+            store=body.store.lower(),
+            expires_at=dt.datetime.fromtimestamp(expires / 1000, dt.UTC) if expires else None,
+            at=dt.datetime.fromtimestamp(body.event_timestamp_ms / 1000, dt.UTC),
+            transaction_id=body.transaction_id or "",
+            cancel_reason=body.cancel_reason or "",
+        )
+    return None
+
+
+def _webhook_router(services: Services) -> APIRouter:
+    """The one route the app does not call and that carries no access token: RevenueCat's
+    webhook. It is closed unless the shared secret is set up and sent back in `Authorization`."""
+    router = APIRouter(prefix="/webhooks", include_in_schema=False)
+
+    @router.post("/revenuecat")
+    def revenuecat(request: Request, hook: _StoreHook) -> dict[str, bool]:
+        if not token_matches(request.headers.get("authorization"), services.store_secret()):
+            raise ApiError(401, "not_authenticated")
+        event = _store_event(hook.event)
+        if event is not None:
+            services.plans.apply(event)
+        return {"ok": True}
+
+    return router
+
+
 def create_app(services: Services) -> FastAPI:
     # The interactive docs and the schema are not served; the schema is exported at build time
     # for the generated TypeScript client.
@@ -813,4 +900,5 @@ def create_app(services: Services) -> FastAPI:
     install_error_handlers(app)
     app.include_router(_router(services))
     app.include_router(_deletion_router(services))
+    app.include_router(_webhook_router(services))
     return app

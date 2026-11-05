@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from konvami_api.domain import plans
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
 from konvami_api.domain.cards import Card, CardTotals, WordDetails
 from konvami_api.domain.conversations import (
@@ -1214,3 +1215,37 @@ class InMemoryFlagRepository:
                 self.flags[key] = changed
                 return changed
         return None
+
+
+class InMemoryEntitlementRepository:
+    def __init__(self) -> None:
+        self.entitlements: dict[UUID, plans.Entitlement] = {}
+
+    def get(self, user_id: UUID) -> plans.Entitlement | None:
+        return self.entitlements.get(user_id)
+
+    def save(self, entitlement: plans.Entitlement) -> None:
+        # An event older than the stored one changes nothing, as in SQL.
+        kept = self.entitlements.get(entitlement.user_id)
+        if kept is None or kept.event_at <= entitlement.event_at:
+            self.entitlements[entitlement.user_id] = entitlement
+
+
+class InMemoryPackRepository:
+    def __init__(self) -> None:
+        self.purchases: dict[str, tuple[UUID, int]] = {}
+        self.weeks: dict[tuple[UUID, date], int] = {}
+
+    def credit(self, transaction_id: str, user_id: UUID, seconds: int, at: datetime) -> bool:
+        if transaction_id in self.purchases:
+            return False
+        self.purchases[transaction_id] = (user_id, seconds)
+        return True
+
+    def balance(self, user_id: UUID, week: date) -> plans.PackBalance:
+        bought = sum(s for u, s in self.purchases.values() if u == user_id)
+        other = sum(s for (u, w), s in self.weeks.items() if u == user_id and w != week)
+        return plans.PackBalance(bought, other, self.weeks.get((user_id, week), 0))
+
+    def draw(self, user_id: UUID, week: date, seconds: int) -> None:
+        self.weeks[(user_id, week)] = seconds

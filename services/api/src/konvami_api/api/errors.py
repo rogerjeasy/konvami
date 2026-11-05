@@ -22,6 +22,7 @@ from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.phrasebook import PhrasebookError
+from konvami_api.domain.plans import PlanError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.profile_questions import QuestionError
 from konvami_api.domain.reports import ReportError
@@ -107,6 +108,8 @@ _RETRY_STATUS = {
     "retry_limit": 429,
 }
 _FLAG_STATUS = {"not_owner": 403, "not_found": 404, "invalid_value": 422, "flag_limit": 429}
+# The plan does not include what was asked: HTTP 402, "payment required".
+_PLAN_STATUS = {"plan_required": 402}
 _UNAVAILABLE = 503
 
 
@@ -157,6 +160,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RetryError)
     async def _retry_error(_: Request, error: RetryError) -> JSONResponse:
         return _response(_RETRY_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(PlanError)
+    async def _plan_error(_: Request, error: PlanError) -> JSONResponse:
+        return _response(_PLAN_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(FlagError)
     async def _flag_error(_: Request, error: FlagError) -> JSONResponse:

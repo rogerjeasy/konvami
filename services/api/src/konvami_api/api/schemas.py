@@ -75,6 +75,7 @@ from konvami_api.domain.phrasebook import MEANING_MAX as PHRASE_MEANING_MAX
 from konvami_api.domain.phrasebook import PHRASE_MAX, SITUATION_MAX, PhrasebookEntry, Suggestion
 from konvami_api.domain.placement import PlacementView
 from konvami_api.domain.plan import SessionPlan
+from konvami_api.domain.plans import Perk, Plan, Tier
 from konvami_api.domain.profile import (
     AVOID_TOPIC_MAX,
     GLOBAL_SCOPE,
@@ -1961,6 +1962,42 @@ class AllowanceOut(ApiModel):
             used_seconds=allowance.used_seconds,
             remaining_seconds=allowance.remaining_seconds,
             resets_at=allowance.resets_at,
+        )
+
+
+class PlanOut(ApiModel):
+    """The learner's plan (spec §6.21.2): what they have and what it includes."""
+
+    tier: Tier
+    # In a free trial, not yet paying.
+    trial: bool
+    # False once cancelled: the plan runs to `expires_at` and ends.
+    auto_renew: bool
+    billing_issue: bool
+    expires_at: AwareDatetime | None
+    # False while the testers' time lasts: nothing is limited by the plan.
+    enforced: bool
+    # Voice minutes per week the plan gives, in seconds.
+    weekly_seconds: int
+    # How many partners the plan allows; none for as many as the learner likes.
+    personas: int | None
+    perks: list[Perk]
+    # Minutes bought in packs and not yet used, in seconds.
+    pack_seconds: int
+
+    @classmethod
+    def of(cls, plan: Plan) -> "PlanOut":
+        return cls(
+            tier=plan.tier,
+            trial=plan.trial,
+            auto_renew=plan.auto_renew,
+            billing_issue=plan.billing_issue,
+            expires_at=plan.expires_at,
+            enforced=plan.enforced,
+            weekly_seconds=plan.weekly_seconds,
+            personas=plan.personas,
+            perks=sorted(plan.perks),
+            pack_seconds=plan.pack_seconds,
         )
 
 

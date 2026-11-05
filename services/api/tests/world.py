@@ -28,6 +28,7 @@ from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.planner import SessionPlanner
+from konvami_api.domain.plans import PlanService, PlanSettings
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.profile_questions import ProfileQuestionService
@@ -73,12 +74,14 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
+    InMemoryEntitlementRepository,
     InMemoryExamRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryPackRepository,
     InMemoryPersonaRepository,
     InMemoryPhraseRepository,
     InMemoryPlacementRepository,
@@ -175,6 +178,17 @@ class World:
         self.clock = FixedClock(now)
         self.charges = InMemoryChargeRepository()
         self.notifier = RecordingNotifier()
+        self.entitlement_store = InMemoryEntitlementRepository()
+        self.pack_store = InMemoryPackRepository()
+        self.plan_settings = PlanSettings()
+        self.plans = PlanService(
+            settings=self.plan_settings,
+            entitlements=self.entitlement_store,
+            packs=self.pack_store,
+            owners=frozenset({OWNER}),
+            legacy_weekly_seconds=VOICE.weekly_seconds,
+            clock=self.clock,
+        )
         self.guard = SpendGuard(
             budget=BUDGET,
             charges=self.charges,
@@ -430,6 +444,7 @@ class World:
             guard=self.guard,
             meter=self.meter,
             checker=self.spotter,
+            weekly_seconds=self.plans.weekly_seconds,
         )
         self.costs = CostService(
             owners=frozenset({OWNER}),
