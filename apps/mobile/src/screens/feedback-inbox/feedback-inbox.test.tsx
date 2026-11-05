@@ -38,7 +38,7 @@ describe('6.21 Feedback', () => {
     expect(screen.getByText('A dark mode switch')).toBeTruthy();
     expect(screen.getByText('A problem')).toBeTruthy();
     expect(screen.getByText('An idea')).toBeTruthy();
-    expect(screen.getByText('ios · app 0.1.0 · system 19.1')).toBeTruthy();
+    expect(screen.getByText('iOS · app 0.1.0 · system 19.1')).toBeTruthy();
   });
 
   it('marks a message done, finds it under Done and opens it again', async () => {

@@ -18,6 +18,9 @@ import { staggerDelay } from '@/lib/motion';
 import { usePracticeServices } from '@/practice/services';
 import { ProfilePage } from '@/screens/profile/page';
 
+// The platforms' own spellings (names, not words to translate).
+const PLATFORM_NAMES = { ios: 'iOS', android: 'Android', web: 'Web' } as const;
+
 const STATUSES: readonly FeedbackStatus[] = ['open', 'done'];
 
 type Loaded =
@@ -48,7 +51,7 @@ function MessageCard({
       {device ? (
         <Text variant="small" tone="muted">
           {t('feedbackInbox.device', {
-            platform: device.platform,
+            platform: PLATFORM_NAMES[device.platform],
             appVersion: device.appVersion,
             osVersion: device.osVersion,
           })}
