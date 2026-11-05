@@ -18,6 +18,17 @@ budget_alert_emails = ["you@example.com"]
 openai_api_key = "sk-..."
 # openai_api_key_version = 1
 
+# Subscriptions (spec §6.21.2). Off until RevenueCat and the store products exist; see
+# docs/superpowers/specs/2026-11-06-subscriptions-design.md for the setup. With enforce = false
+# every learner keeps the testers' time and every feature.
+# revenuecat_enabled        = true
+# revenuecat_webhook_secret = "a-long-random-string-also-entered-in-revenuecat"
+# plans = {
+#   enforce      = true
+#   products     = { "konvami_plus_monthly" = "plus", "konvami_pro_monthly" = "pro" }
+#   pack_minutes = { "konvami_minutes_60" = 60 }
+# }
+
 # Publish the website with the privacy policy, once apps/site/site.config.ts is filled in and the
 # site is built (pnpm --filter @konvami/site build).
 # publish_site = true

@@ -223,6 +223,42 @@ variable "prices" {
   }
 }
 
+variable "plans" {
+  description = <<-EOT
+    Plans and subscriptions (see modules/api `plans`). Off by default: every learner keeps the
+    testers' time (voice.weekly_minutes) and every feature until `enforce` is true, which is the
+    step that opens the app to the stores. Fill in `products` and `pack_minutes` with the product
+    ids from App Store Connect and Google Play (the same ids as in RevenueCat).
+  EOT
+  type = object({
+    enforce        = optional(bool, false)
+    weekly_minutes = optional(map(number), {})
+    products       = optional(map(string), {})
+    pack_minutes   = optional(map(number), {})
+  })
+  default = {}
+}
+
+variable "revenuecat_enabled" {
+  description = "Create the secret for RevenueCat's webhook and open its route. Turn it on after RevenueCat is set up (docs/superpowers/specs/2026-11-06-subscriptions-design.md), together with revenuecat_webhook_secret."
+  type        = bool
+  default     = false
+}
+
+variable "revenuecat_webhook_secret" {
+  description = "The value RevenueCat sends in the Authorization header of its webhook (choose a long random string, enter the same in RevenueCat). Set it in terraform.tfvars (gitignored). It goes to Secrets Manager and is never written to state or plans."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = ""
+}
+
+variable "revenuecat_webhook_secret_version" {
+  description = "Increase by one after changing revenuecat_webhook_secret, so the new value is stored."
+  type        = number
+  default     = 1
+}
+
 variable "cost_owners" {
   description = "User pool subjects (sub) of the accounts that may open the costs page in the app. Set in terraform.tfvars."
   type        = list(string)

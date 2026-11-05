@@ -53,6 +53,18 @@ module "openai_key" {
   value_version = var.openai_api_key_version
 }
 
+# The secret RevenueCat's webhook sends back so the API knows a purchase event is genuine
+# (spec §6.21.2). Off until RevenueCat is set up.
+module "revenuecat_webhook" {
+  source = "../../modules/secret"
+  count  = var.revenuecat_enabled ? 1 : 0
+
+  name          = "${local.name}-revenuecat-webhook"
+  description   = "Shared secret of RevenueCat's webhook to the Konvami API (${var.environment})"
+  value         = var.revenuecat_webhook_secret
+  value_version = var.revenuecat_webhook_secret_version
+}
+
 # Private files: learners' photos and the voices' samples (profile design P2–P4, P9).
 module "media" {
   source = "../../modules/media"
@@ -75,6 +87,13 @@ module "api" {
     client_id     = module.auth.client_id
   }
   openai_secret_arn = module.openai_key.arn
+  plans = {
+    enforce        = var.plans.enforce
+    weekly_minutes = var.plans.weekly_minutes
+    products       = var.plans.products
+    pack_minutes   = var.plans.pack_minutes
+  }
+  store_secret_arn = try(module.revenuecat_webhook[0].arn, "")
   media_bucket = {
     name = module.media.bucket
     arn  = module.media.arn
