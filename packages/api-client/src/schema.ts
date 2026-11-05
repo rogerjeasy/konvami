@@ -1073,6 +1073,26 @@ export interface paths {
         patch: operations["configureRecordings"];
         trace?: never;
     };
+    "/v1/then-vs-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Then Vs Now
+         * @description Two recorded conversations of the same kind, weeks apart, to hear side by side.
+         */
+        get: operations["getThenVsNow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tutor/corrections": {
         parameters: {
             query?: never;
@@ -2847,6 +2867,18 @@ export interface components {
              * @enum {string}
              */
             strictness: "meaning" | "important" | "everything";
+        };
+        /** ThenVsNowOut */
+        ThenVsNowOut: {
+            now: components["schemas"]["ConversationOut"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "off" | "none" | "not_yet" | "ready";
+            then: components["schemas"]["ConversationOut"] | null;
+            /** Weeksapart */
+            weeksApart: number;
         };
         /** TopicMistakeOut */
         TopicMistakeOut: {
@@ -6383,6 +6415,35 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getThenVsNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThenVsNowOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
