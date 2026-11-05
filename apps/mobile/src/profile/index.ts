@@ -1,4 +1,5 @@
 import { api } from '@/api';
+import { onboardingStore } from '@/onboarding';
 import { practiceServices } from '@/practice';
 import { devicePictures } from './device-pictures';
 import { createProfileServices } from './services';
@@ -14,4 +15,9 @@ export const profileServices = createProfileServices(api, {
   // One player for the whole app: a sample and a recording never play over each other.
   samples: practiceServices.clips,
   onPartnersChanged: () => void practiceServices.home.refresh(),
+  // The Learning screen and Today read the profile again.
+  onSettingsChanged: () => {
+    void onboardingStore.refresh().catch(() => undefined);
+    void practiceServices.home.refresh();
+  },
 });

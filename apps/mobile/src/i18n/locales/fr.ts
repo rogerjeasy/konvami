@@ -616,6 +616,29 @@ export const fr: Translation = {
     },
   },
   today: {
+    question: {
+      later: 'Pas maintenant',
+      failed: 'Ça n’a pas marché. Réessaie, s’il te plaît.',
+      recordings: {
+        title: 'Garder ton audio ?',
+        body: 'Garde l’audio de tes conversations pour te réécouter sur n’importe quel appareil. Si tu arrêtes, ce qui est enregistré est supprimé. Tu peux changer cela à tout moment dans Confidentialité.',
+        options: { keep: 'Garder mon audio', stop: 'Ne pas garder l’audio' },
+      },
+      memory: {
+        title: 'Tes partenaires doivent-ils se souvenir ?',
+        body: 'Ils viennent de noter quelque chose que tu leur as dit, pour pouvoir demander comment ça s’est passé la prochaine fois. Tu vois tout ce qu’ils retiennent et tu peux tout supprimer.',
+        options: { remember: 'Oui, se souvenir', forget: 'Non, ne rien retenir' },
+      },
+      weekly_habit: {
+        title: 'À quelle fréquence veux-tu t’entraîner ?',
+        body: 'Konvami organise ta semaine en fonction. Tu peux le changer à tout moment dans tes objectifs.',
+        options: {
+          light: '2 jours, 30 minutes par semaine',
+          steady: '3 jours, 60 minutes par semaine',
+          daily: '5 jours, 90 minutes par semaine',
+        },
+      },
+    },
     reminders: {
       title: 'Un rappel les jours où tu t’entraînes ?',
       body: '{{name}} peut t’envoyer un petit mot à {{time}} les jours prévus. Un par jour au plus, et tu peux changer d’avis à tout moment.',
@@ -750,6 +773,14 @@ export const fr: Translation = {
     manage: 'Modifier mes partenaires',
   },
   conversation: {
+    settings: {
+      changed: '{{setting}} modifié',
+      undo: 'Annuler',
+      undoLabel: 'Annuler le changement de {{setting}}',
+      restored: '{{setting}} est remis comme avant',
+      failed:
+        'Impossible d’annuler. Tu peux le faire dans ton profil, sous Changements faits à la voix.',
+    },
     goals: {
       chipDone: '{{goal}} : atteint',
       chipOpen: '{{goal}} : encore à faire',
@@ -1660,6 +1691,8 @@ export const fr: Translation = {
       newPartnerHint: 'Crée quelqu’un de nouveau à qui parler',
       memory: 'Ce que savent mes partenaires',
       memoryHint: 'Lire, corriger ou supprimer ce qu’ils retiennent',
+      changes: 'Changements faits à la voix',
+      changesHint: 'Ce que tes partenaires ont changé, avec Annuler',
       privacy: 'Confidentialité et IA',
       privacyHint: 'Ce que reçoit chaque fournisseur d’IA',
       security: 'Sécurité',
@@ -1682,11 +1715,41 @@ export const fr: Translation = {
       language: 'Langue de l’app',
       email: 'E-mail',
     },
+    changes: {
+      title: 'Changements faits à la voix',
+      body: 'Quand tu demandes à un partenaire de changer un réglage pendant une conversation, il apparaît ici. Tu peux le remettre comme avant.',
+      empty:
+        'Rien pour l’instant. Pendant une conversation, demande à un partenaire d’expliquer désormais dans une autre langue.',
+      loadFailed: 'Tes changements ne peuvent pas être affichés pour le moment.',
+      none: 'Aucun',
+      was: 'Avant : {{value}}',
+      now: 'Maintenant : {{value}}',
+      undo: 'Annuler',
+      undoLabel: 'Annuler : {{setting}}',
+      restored: 'Remis comme avant',
+      undoFailed: 'Impossible d’annuler. Réessaie, s’il te plaît.',
+      superseded: 'Tu as de nouveau changé ce réglage depuis, donc on ne peut plus l’annuler ici.',
+      fields: {
+        explanation_language: 'Langue des explications',
+        explanation_usage: 'Quantité d’explications',
+        exam: 'Examen',
+        level_goal: 'Niveau visé',
+        weekly_habit: 'Objectif de la semaine',
+        course: 'Cours',
+      },
+    },
     learningScreen: {
       title: 'Ce que je sais de ton apprentissage',
       body: 'Tes partenaires s’en servent à chaque conversation. Tu peux tout modifier, à tout moment.',
       changed: 'Modifié le {{date}}',
       edit: 'Modifier : {{item}}',
+      askAgain: {
+        title: 'Redemande-moi',
+        body: 'Un partenaire passe cela en revue avec toi lors d’un court appel et change ce qui n’est plus juste.',
+        learning: 'Sur ma façon d’apprendre',
+        goals: 'Sur mes objectifs',
+        unavailable: 'Il faut un partenaire pour cela. Ajoutes-en un dans Partenaires.',
+      },
       goals: 'Tes objectifs',
     },
     reminders: {

@@ -96,6 +96,8 @@ export const ROUTES = {
   accountEmail: '/account/security/email',
   /** 6.9 Delete account. */
   accountDelete: '/account/delete',
+  /** 6.14 Changes made by voice: what partners changed in the settings, with Undo. */
+  accountChanges: '/account/changes',
   /** 6.12 Costs: what Konvami spends, for the owner's account only (spec §6.19). */
   accountCosts: '/account/costs',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
@@ -122,6 +124,13 @@ export const callRoute = (
       ...(practise ? { practise } : {}),
     },
   }) as const satisfies Href;
+
+/**
+ * 5.3 A short spoken re-check of one group of settings ("Ask me again", spec §14.2): a call in
+ * which the partner reads them out and changes what is no longer right.
+ */
+export const recheckCallRoute = (personaId: string, group: 'learning' | 'goals') =>
+  callRoute(personaId, { practise: `check:${group}` });
 
 /** 5.7 Learn with one card open, as a word of the day opens it. */
 export const learnCardRoute = (card: string) =>

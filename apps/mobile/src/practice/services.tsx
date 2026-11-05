@@ -413,6 +413,15 @@ export function useTutor(): ResourceState<{ questions: TutorQuestion[] }> {
   return useSyncExternalStore(tutor.subscribe, tutor.getState, tutor.getState);
 }
 
+/** What the app offers (languages, exams, role-plays), read when first asked; re-renders on change. */
+export function useCatalog(): ResourceState<Catalog> {
+  const { catalog } = usePracticeServices();
+  useEffect(() => {
+    void catalog.load();
+  }, [catalog]);
+  return useSyncExternalStore(catalog.subscribe, catalog.getState, catalog.getState);
+}
+
 export interface ScenarioReading {
   phase: 'loading' | 'ready' | 'failed';
   /** Null until ready. */

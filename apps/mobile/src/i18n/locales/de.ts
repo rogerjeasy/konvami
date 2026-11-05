@@ -619,6 +619,29 @@ export const de: Translation = {
     },
   },
   today: {
+    question: {
+      later: 'Jetzt nicht',
+      failed: 'Das hat nicht geklappt. Bitte versuche es noch einmal.',
+      recordings: {
+        title: 'Audio behalten?',
+        body: 'Behalte das Audio deiner Gespräche, um dich auf jedem Gerät wieder anzuhören. Wenn du darauf verzichtest, wird Gespeichertes gelöscht. Du kannst das jederzeit unter Datenschutz ändern.',
+        options: { keep: 'Audio behalten', stop: 'Kein Audio behalten' },
+      },
+      memory: {
+        title: 'Sollen sich deine Partner etwas merken?',
+        body: 'Sie haben sich gerade etwas notiert, das du erzählt hast, damit sie beim nächsten Mal nachfragen können. Du siehst alles, was sie behalten, und kannst jedes löschen.',
+        options: { remember: 'Ja, merken', forget: 'Nein, nichts merken' },
+      },
+      weekly_habit: {
+        title: 'Wie oft möchtest du üben?',
+        body: 'Konvami plant deine Woche danach. Du kannst es jederzeit in deinen Zielen ändern.',
+        options: {
+          light: '2 Tage, 30 Minuten pro Woche',
+          steady: '3 Tage, 60 Minuten pro Woche',
+          daily: '5 Tage, 90 Minuten pro Woche',
+        },
+      },
+    },
     reminders: {
       title: 'Eine Erinnerung an deinen Übungstagen?',
       body: '{{name}} kann dir an deinen geplanten Tagen um {{time}} eine kurze Nachricht schicken. Höchstens eine am Tag, und du kannst es jederzeit ändern.',
@@ -752,6 +775,14 @@ export const de: Translation = {
     manage: 'Meine Partner bearbeiten',
   },
   conversation: {
+    settings: {
+      changed: '{{setting}} geändert',
+      undo: 'Rückgängig',
+      undoLabel: 'Änderung von {{setting}} rückgängig machen',
+      restored: '{{setting}} ist wieder wie vorher',
+      failed:
+        'Das ließ sich nicht rückgängig machen. Du findest es in deinem Profil unter Änderungen per Sprache.',
+    },
     goals: {
       chipDone: '{{goal}}: erreicht',
       chipOpen: '{{goal}}: noch offen',
@@ -1658,6 +1689,8 @@ export const de: Translation = {
       newPartnerHint: 'Gestalte jemand Neuen zum Sprechen',
       memory: 'Was meine Partner wissen',
       memoryHint: 'Lesen, berichtigen oder löschen, was sie sich merken',
+      changes: 'Änderungen per Sprache',
+      changesHint: 'Was deine Partner geändert haben, mit Rückgängig',
       privacy: 'Datenschutz und KI',
       privacyHint: 'Was jeder KI-Anbieter erhält',
       security: 'Sicherheit',
@@ -1681,11 +1714,42 @@ export const de: Translation = {
       language: 'App-Sprache',
       email: 'E-Mail',
     },
+    changes: {
+      title: 'Änderungen per Sprache',
+      body: 'Wenn du einen Partner im Gespräch bittest, eine Einstellung zu ändern, steht es hier. Du kannst es rückgängig machen.',
+      empty:
+        'Noch nichts. Bitte in einem Gespräch einen Partner, ab jetzt in einer anderen Sprache zu erklären.',
+      loadFailed: 'Deine Änderungen können gerade nicht angezeigt werden.',
+      none: 'Keine',
+      was: 'Vorher: {{value}}',
+      now: 'Jetzt: {{value}}',
+      undo: 'Rückgängig',
+      undoLabel: 'Rückgängig: {{setting}}',
+      restored: 'Zurückgesetzt',
+      undoFailed: 'Das ließ sich nicht rückgängig machen. Bitte versuche es noch einmal.',
+      superseded:
+        'Du hast diese Einstellung seitdem erneut geändert, daher geht es hier nicht mehr rückgängig.',
+      fields: {
+        explanation_language: 'Erklärsprache',
+        explanation_usage: 'Wie viel erklärt wird',
+        exam: 'Prüfung',
+        level_goal: 'Niveauziel',
+        weekly_habit: 'Wochenziel',
+        course: 'Kurs',
+      },
+    },
     learningScreen: {
       title: 'Was ich über dein Lernen weiß',
       body: 'Deine Partner nutzen das in jedem Gespräch. Du kannst alles jederzeit ändern.',
       changed: 'Geändert am {{date}}',
       edit: 'Ändern: {{item}}',
+      askAgain: {
+        title: 'Frag mich noch einmal',
+        body: 'Ein Partner geht das in einem kurzen Gespräch mit dir durch und ändert, was nicht mehr stimmt.',
+        learning: 'Zu meinem Lernen',
+        goals: 'Zu meinen Zielen',
+        unavailable: 'Dafür brauchst du einen Partner. Füge unter Partner einen hinzu.',
+      },
       goals: 'Deine Ziele',
     },
     reminders: {

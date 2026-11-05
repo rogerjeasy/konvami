@@ -22,6 +22,8 @@ import {
   type PlacementStatus,
   type Profile,
   type ProfileChange,
+  type ProfileChangeEntry,
+  type ProfileQuestion,
   type ProfileSource,
   type LevelPoint,
   type Progress,
@@ -774,6 +776,13 @@ export interface FakeApi extends ApiClient {
   /** The level over time, as the server's log of the learner's level would give it. Until this
    * is called, the history is the level set during onboarding, if any. */
   leveled(points: LevelPoint[]): void;
+  /**
+   * A setting a partner changed by voice earlier: it now holds `to` and an undo puts `from`
+   * back. Changing the same setting again makes the earlier change impossible to undo.
+   */
+  changedByVoice(field: string, from: unknown, to: unknown): void;
+  /** The question the server finds due now (progressive profiling), or none. */
+  asking(question: ProfileQuestion | null): void;
   /** Whether `deleteAccount` was called (and went through). */
   readonly deleted: boolean;
   /** The upload ids handed out so far, in order. */
@@ -862,6 +871,9 @@ export function createFakeApi(): FakeApi {
     return kept;
   };
   let recordingsKept = true;
+  // What partners changed by voice, newest first, and the question the server finds due.
+  let voiceChanges: ProfileChangeEntry[] = [];
+  let dueQuestion: ProfileQuestion | null = null;
   let avoidTopics: string[] = [];
   let picture: string | null = null;
   let usedSeconds = 0;
@@ -1230,6 +1242,26 @@ export function createFakeApi(): FakeApi {
       return deleted;
     },
     uploads,
+    changedByVoice(field, from, to) {
+      apply([{ field, value: to }]);
+      voiceChanges = [
+        {
+          id: voiceChanges.length + 1,
+          field,
+          scope: target() ?? 'global',
+          oldValue: from,
+          newValue: to,
+          changedAt: FAKE_NOW,
+          undoable: true,
+        },
+        ...voiceChanges.map((entry) =>
+          entry.field === field ? { ...entry, undoable: false } : entry,
+        ),
+      ];
+    },
+    asking(question) {
+      dueQuestion = question;
+    },
     havePicture() {
       picture = `${FILES}/users/amara/picture/earlier.jpg`;
     },
@@ -1795,6 +1827,44 @@ export function createFakeApi(): FakeApi {
       const mistake = reports.get(conversationId)?.report?.mistakes[index];
       if (!mistake) throw new ApiError('not_found', 404);
       return keepQuestion(`${mistake.original} → ${mistake.corrected}`, 'report', now);
+    },
+    async getProfileChanges() {
+      await record('getProfileChanges');
+      return { changes: voiceChanges };
+    },
+    async undoProfileChange(id) {
+      await record('undoProfileChange', id);
+      const entry = voiceChanges.find((change) => change.id === id);
+      if (!entry) throw new ApiError('not_found', 404);
+      if (!entry.undoable) throw new ApiError('superseded', 409, entry.field);
+      apply([{ field: entry.field, value: entry.oldValue }]);
+      voiceChanges = voiceChanges.map((change) =>
+        change.id === id ? { ...change, undoable: false } : change,
+      );
+      return { changes: voiceChanges };
+    },
+    async getProfileQuestion() {
+      await record('getProfileQuestion');
+      return { question: dueQuestion };
+    },
+    async answerProfileQuestion(id, option) {
+      await record('answerProfileQuestion', id, option);
+      if (dueQuestion?.id !== id || !dueQuestion.options.includes(option)) {
+        throw new ApiError('invalid_option', 422);
+      }
+      if (id === 'recordings') recordingsKept = option === 'keep';
+      if (id === 'memory') memoryEnabled = option === 'remember';
+      if (id === 'weekly_habit') {
+        const habit = { light: [2, 30], steady: [3, 60], daily: [5, 90] }[option] ?? [3, 60];
+        apply([{ field: 'weekly_habit', value: { days: habit[0], minutes: habit[1] } }]);
+      }
+      dueQuestion = null;
+      return { question: null };
+    },
+    async dismissProfileQuestion(id) {
+      await record('dismissProfileQuestion', id);
+      dueQuestion = null;
+      return { question: null };
     },
     async getRecordings() {
       await record('getRecordings');

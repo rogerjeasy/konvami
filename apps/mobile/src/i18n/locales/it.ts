@@ -615,6 +615,29 @@ export const it: Translation = {
     },
   },
   today: {
+    question: {
+      later: 'Non ora',
+      failed: 'Non è andata a buon fine. Riprova, per favore.',
+      recordings: {
+        title: 'Conservare il tuo audio?',
+        body: 'Conserva l’audio delle tue conversazioni per riascoltarti su qualsiasi dispositivo. Se smetti, ciò che è salvato viene eliminato. Puoi cambiarlo in qualsiasi momento in Privacy.',
+        options: { keep: 'Conserva il mio audio', stop: 'Non conservare l’audio' },
+      },
+      memory: {
+        title: 'I tuoi partner devono ricordare?',
+        body: 'Hanno appena annotato qualcosa che hai detto, così la prossima volta possono chiederti com’è andata. Vedi tutto ciò che conservano e puoi eliminarlo.',
+        options: { remember: 'Sì, ricordare', forget: 'No, non ricordare' },
+      },
+      weekly_habit: {
+        title: 'Quanto spesso vuoi esercitarti?',
+        body: 'Konvami pianifica la tua settimana di conseguenza. Puoi cambiarlo in qualsiasi momento nei tuoi obiettivi.',
+        options: {
+          light: '2 giorni, 30 minuti a settimana',
+          steady: '3 giorni, 60 minuti a settimana',
+          daily: '5 giorni, 90 minuti a settimana',
+        },
+      },
+    },
     reminders: {
       title: 'Un promemoria nei giorni di pratica?',
       body: '{{name}} può mandarti un breve messaggio alle {{time}} nei giorni previsti. Al massimo uno al giorno, e puoi cambiarlo quando vuoi.',
@@ -747,6 +770,13 @@ export const it: Translation = {
     manage: 'Modifica i miei partner',
   },
   conversation: {
+    settings: {
+      changed: '{{setting}} modificato',
+      undo: 'Annulla',
+      undoLabel: 'Annulla la modifica di {{setting}}',
+      restored: '{{setting}} è tornato com’era',
+      failed: 'Non è stato possibile annullare. Puoi farlo nel profilo, in Modifiche fatte a voce.',
+    },
     goals: {
       chipDone: '{{goal}}: raggiunto',
       chipOpen: '{{goal}}: ancora da fare',
@@ -1656,6 +1686,8 @@ export const it: Translation = {
       newPartnerHint: 'Crea qualcuno di nuovo con cui parlare',
       memory: 'Che cosa sanno i miei partner',
       memoryHint: 'Leggere, correggere o eliminare ciò che ricordano',
+      changes: 'Modifiche fatte a voce',
+      changesHint: 'Che cosa hanno cambiato i tuoi partner, con Annulla',
       privacy: 'Privacy e IA',
       privacyHint: 'Che cosa riceve ogni fornitore di IA',
       security: 'Sicurezza',
@@ -1678,11 +1710,41 @@ export const it: Translation = {
       language: 'Lingua dell’app',
       email: 'Email',
     },
+    changes: {
+      title: 'Modifiche fatte a voce',
+      body: 'Quando chiedi a un partner di cambiare un’impostazione durante una conversazione, la trovi qui. Puoi ripristinarla.',
+      empty:
+        'Ancora niente. In una conversazione prova a chiedere a un partner di spiegare d’ora in poi in un’altra lingua.',
+      loadFailed: 'Le tue modifiche non possono essere mostrate ora.',
+      none: 'Nessuno',
+      was: 'Prima: {{value}}',
+      now: 'Ora: {{value}}',
+      undo: 'Annulla',
+      undoLabel: 'Annulla: {{setting}}',
+      restored: 'Ripristinato',
+      undoFailed: 'Non è stato possibile annullare. Riprova, per favore.',
+      superseded: 'Hai cambiato di nuovo questa impostazione, quindi qui non si può più annullare.',
+      fields: {
+        explanation_language: 'Lingua delle spiegazioni',
+        explanation_usage: 'Quanto spiegare',
+        exam: 'Esame',
+        level_goal: 'Livello obiettivo',
+        weekly_habit: 'Obiettivo settimanale',
+        course: 'Corso',
+      },
+    },
     learningScreen: {
       title: 'Che cosa so del tuo apprendimento',
       body: 'I tuoi partner lo usano in ogni conversazione. Puoi cambiare tutto, quando vuoi.',
       changed: 'Modificato il {{date}}',
       edit: 'Modifica: {{item}}',
+      askAgain: {
+        title: 'Chiedimelo di nuovo',
+        body: 'Un partner li rivede con te in una breve chiamata e cambia ciò che non è più giusto.',
+        learning: 'Su come imparo',
+        goals: 'Sui miei obiettivi',
+        unavailable: 'Serve un partner. Aggiungine uno in Partner.',
+      },
       goals: 'I tuoi obiettivi',
     },
     reminders: {
