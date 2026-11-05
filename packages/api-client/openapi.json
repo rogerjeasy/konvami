@@ -184,6 +184,21 @@
             "title": "Lesson",
             "type": "boolean"
           },
+          "material": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Material"
+          },
+          "rehearse": {
+            "title": "Rehearse",
+            "type": "boolean"
+          },
           "review": {
             "title": "Review",
             "type": "boolean"
@@ -201,7 +216,9 @@
           "focus",
           "words",
           "review",
-          "lesson"
+          "lesson",
+          "material",
+          "rehearse"
         ],
         "title": "CallPlanOut",
         "type": "object"
@@ -1708,6 +1725,452 @@
           "lastTalkedAt"
         ],
         "title": "HomePartnerOut",
+        "type": "object"
+      },
+      "ImportIn": {
+        "additionalProperties": false,
+        "description": "Something to work out: a pasted text, a web page's address, or an uploaded photo. The\nfield for the `kind` is required, the others are ignored.",
+        "properties": {
+          "chapter": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "link",
+              "photo"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "textbook": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textbook"
+          },
+          "uploadId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploadid"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "ImportIn",
+        "type": "object"
+      },
+      "ImportLetterOut": {
+        "additionalProperties": false,
+        "properties": {
+          "replyGoal": {
+            "title": "Replygoal",
+            "type": "string"
+          },
+          "says": {
+            "title": "Says",
+            "type": "string"
+          },
+          "sender": {
+            "title": "Sender",
+            "type": "string"
+          },
+          "toDo": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Todo",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sender",
+          "says",
+          "toDo",
+          "replyGoal"
+        ],
+        "title": "ImportLetterOut",
+        "type": "object"
+      },
+      "ImportOut": {
+        "additionalProperties": false,
+        "properties": {
+          "chapter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "explainedIn": {
+            "title": "Explainedin",
+            "type": "string"
+          },
+          "genre": {
+            "enum": [
+              "letter",
+              "menu",
+              "article",
+              "textbook",
+              "other"
+            ],
+            "title": "Genre",
+            "type": "string"
+          },
+          "grammar": {
+            "items": {
+              "$ref": "#/components/schemas/ImportPointOut"
+            },
+            "title": "Grammar",
+            "type": "array"
+          },
+          "hardSentences": {
+            "items": {
+              "$ref": "#/components/schemas/ImportSentenceOut"
+            },
+            "title": "Hardsentences",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "link",
+              "photo"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "letter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportLetterOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "textbook": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textbook"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "vocabulary": {
+            "items": {
+              "$ref": "#/components/schemas/ImportWordOut"
+            },
+            "title": "Vocabulary",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "genre",
+          "title",
+          "source",
+          "textbook",
+          "chapter",
+          "level",
+          "summary",
+          "text",
+          "vocabulary",
+          "grammar",
+          "hardSentences",
+          "letter",
+          "explainedIn",
+          "createdAt"
+        ],
+        "title": "ImportOut",
+        "type": "object"
+      },
+      "ImportPointOut": {
+        "additionalProperties": false,
+        "properties": {
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "point": {
+            "title": "Point",
+            "type": "string"
+          }
+        },
+        "required": [
+          "point",
+          "explanation"
+        ],
+        "title": "ImportPointOut",
+        "type": "object"
+      },
+      "ImportSentenceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "sentence": {
+            "title": "Sentence",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sentence",
+          "explanation"
+        ],
+        "title": "ImportSentenceOut",
+        "type": "object"
+      },
+      "ImportSummaryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "chapter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "genre": {
+            "enum": [
+              "letter",
+              "menu",
+              "article",
+              "textbook",
+              "other"
+            ],
+            "title": "Genre",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "link",
+              "photo"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "textbook": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textbook"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "genre",
+          "title",
+          "textbook",
+          "chapter",
+          "level",
+          "words",
+          "createdAt"
+        ],
+        "title": "ImportSummaryOut",
+        "type": "object"
+      },
+      "ImportUploadOut": {
+        "additionalProperties": false,
+        "description": "How to send a photo to read: a form POST to `url` with `fields`, then the JPEG as `file`.",
+        "properties": {
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "type": "object"
+          },
+          "uploadId": {
+            "format": "uuid",
+            "title": "Uploadid",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uploadId",
+          "url",
+          "fields"
+        ],
+        "title": "ImportUploadOut",
+        "type": "object"
+      },
+      "ImportWordOut": {
+        "additionalProperties": false,
+        "properties": {
+          "inDeck": {
+            "title": "Indeck",
+            "type": "boolean"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "word": {
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "meaning",
+          "inDeck"
+        ],
+        "title": "ImportWordOut",
+        "type": "object"
+      },
+      "ImportsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "imports": {
+            "items": {
+              "$ref": "#/components/schemas/ImportSummaryOut"
+            },
+            "title": "Imports",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imports",
+          "limit"
+        ],
+        "title": "ImportsOut",
         "type": "object"
       },
       "LanguageOut": {
@@ -7514,6 +7977,371 @@
           }
         },
         "summary": "Get Home"
+      }
+    },
+    "/v1/imports": {
+      "get": {
+        "description": "What the learner brought, for the language they are learning, newest first (\u00a76.17).",
+        "operationId": "getImports",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Imports"
+      },
+      "post": {
+        "description": "Works out a pasted text, a web page or an uploaded photo at the learner's level.",
+        "operationId": "createImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create Import"
+      }
+    },
+    "/v1/imports/upload": {
+      "post": {
+        "description": "A form for one photo (a JPEG) to read: a menu, a letter, an article, a book page.",
+        "operationId": "startImportUpload",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportUploadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Start Import Upload"
+      }
+    },
+    "/v1/imports/{import_id}": {
+      "delete": {
+        "operationId": "removeImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Import"
+      },
+      "get": {
+        "operationId": "getImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Import"
+      }
+    },
+    "/v1/imports/{import_id}/words/{index}/card": {
+      "post": {
+        "description": "Makes a flashcard of one of an import's words. One that is a card already answers\nwith it.",
+        "operationId": "makeImportWordCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Make Import Word Card"
       }
     },
     "/v1/memories": {

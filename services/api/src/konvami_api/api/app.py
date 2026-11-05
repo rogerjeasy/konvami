@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, FastAPI, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request
 from pydantic import AwareDatetime
 
 from konvami_api.api.auth import CurrentUser, recently_signed_in
@@ -36,6 +36,10 @@ from konvami_api.api.schemas import (
     GrammarMapOut,
     GrammarTopicPageOut,
     HomeOut,
+    ImportIn,
+    ImportOut,
+    ImportsOut,
+    ImportUploadOut,
     MemoriesOut,
     MemoryOut,
     MemoryPatch,
@@ -98,6 +102,7 @@ from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
 from konvami_api.domain.costs import CostService
+from konvami_api.domain.course_import import CourseImportError, CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamService, Simulation
 from konvami_api.domain.flags import FlagService, FlagStatus
@@ -149,6 +154,7 @@ class Services:
     recordings: RecordingService
     tutor: TutorService
     phrasebook: PhrasebookService
+    course_imports: CourseImportService
     voices: VoiceSampleService
     costs: CostService
     grammar: GrammarMapService
@@ -722,6 +728,61 @@ def _router(services: Services) -> APIRouter:
     def remove_phrase(user: CurrentUser, phrase_id: UUID) -> PhrasebookOut:
         services.phrasebook.remove(user, phrase_id)
         return PhrasebookOut(phrases=[PhraseOut.of(e) for e in services.phrasebook.phrases(user)])
+
+    @router.get("/imports", operation_id="getImports", responses=REFUSED)
+    def get_imports(user: CurrentUser) -> ImportsOut:
+        """What the learner brought, for the language they are learning, newest first (§6.17)."""
+        return ImportsOut.of(services.course_imports.imports(user))
+
+    @router.post("/imports/upload", operation_id="startImportUpload")
+    def start_import_upload(user: CurrentUser) -> ImportUploadOut:
+        """A form for one photo (a JPEG) to read: a menu, a letter, an article, a book page."""
+        return ImportUploadOut.of(services.course_imports.start_upload(user))
+
+    @router.post(
+        "/imports",
+        operation_id="createImport",
+        responses=REFUSED | CONFLICT | NOT_FOUND | TUTOR_REFUSED | LIMITED,
+    )
+    def create_import(user: CurrentUser, brought: ImportIn) -> ImportOut:
+        """Works out a pasted text, a web page or an uploaded photo at the learner's level."""
+        imports = services.course_imports
+        if brought.kind == "text":
+            made = imports.create_from_text(
+                user, brought.text or "", brought.textbook, brought.chapter
+            )
+        elif brought.kind == "link":
+            made = imports.create_from_link(
+                user, brought.url or "", brought.textbook, brought.chapter
+            )
+        else:
+            if brought.upload_id is None:
+                raise CourseImportError("invalid_value")
+            made = imports.create_from_photo(
+                user, brought.upload_id, brought.textbook, brought.chapter
+            )
+        return ImportOut.of(imports.entry(user, made.id))
+
+    @router.get("/imports/{import_id}", operation_id="getImport", responses=NOT_FOUND)
+    def get_import(user: CurrentUser, import_id: UUID) -> ImportOut:
+        return ImportOut.of(services.course_imports.entry(user, import_id))
+
+    @router.delete("/imports/{import_id}", operation_id="removeImport", responses=NOT_FOUND)
+    def remove_import(user: CurrentUser, import_id: UUID) -> ImportsOut:
+        services.course_imports.remove(user, import_id)
+        return ImportsOut.of(services.course_imports.imports(user))
+
+    @router.post(
+        "/imports/{import_id}/words/{index}/card",
+        operation_id="makeImportWordCard",
+        responses=NOT_FOUND | CONFLICT | REFUSED,
+    )
+    def make_import_word_card(
+        user: CurrentUser, import_id: UUID, index: Annotated[int, Path(ge=0, le=100)]
+    ) -> CardOut:
+        """Makes a flashcard of one of an import's words. One that is a card already answers
+        with it."""
+        return CardOut.of(services.course_imports.save_word(user, import_id, index))
 
     @router.get("/recordings", operation_id="getRecordings")
     def get_recordings(user: CurrentUser) -> RecordingsOut:

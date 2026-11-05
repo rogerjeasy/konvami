@@ -465,6 +465,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Imports
+         * @description What the learner brought, for the language they are learning, newest first (§6.17).
+         */
+        get: operations["getImports"];
+        put?: never;
+        /**
+         * Create Import
+         * @description Works out a pasted text, a web page or an uploaded photo at the learner's level.
+         */
+        post: operations["createImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/imports/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Import Upload
+         * @description A form for one photo (a JPEG) to read: a menu, a letter, an article, a book page.
+         */
+        post: operations["startImportUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Import */
+        get: operations["getImport"];
+        put?: never;
+        post?: never;
+        /** Remove Import */
+        delete: operations["removeImport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/imports/{import_id}/words/{index}/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make Import Word Card
+         * @description Makes a flashcard of one of an import's words. One that is a card already answers
+         *     with it.
+         */
+        post: operations["makeImportWordCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memories": {
         parameters: {
             query?: never;
@@ -1307,6 +1390,10 @@ export interface components {
             language: string;
             /** Lesson */
             lesson: boolean;
+            /** Material */
+            material: string | null;
+            /** Rehearse */
+            rehearse: boolean;
             /** Review */
             review: boolean;
             /** Words */
@@ -1791,6 +1878,165 @@ export interface components {
             /** Lasttalkedat */
             lastTalkedAt: string | null;
             persona: components["schemas"]["PersonaOut"];
+        };
+        /**
+         * ImportIn
+         * @description Something to work out: a pasted text, a web page's address, or an uploaded photo. The
+         *     field for the `kind` is required, the others are ignored.
+         */
+        ImportIn: {
+            /** Chapter */
+            chapter?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "link" | "photo";
+            /** Text */
+            text?: string | null;
+            /** Textbook */
+            textbook?: string | null;
+            /** Uploadid */
+            uploadId?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** ImportLetterOut */
+        ImportLetterOut: {
+            /** Replygoal */
+            replyGoal: string;
+            /** Says */
+            says: string;
+            /** Sender */
+            sender: string;
+            /** Todo */
+            toDo: string[];
+        };
+        /** ImportOut */
+        ImportOut: {
+            /** Chapter */
+            chapter: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Explainedin */
+            explainedIn: string;
+            /**
+             * Genre
+             * @enum {string}
+             */
+            genre: "letter" | "menu" | "article" | "textbook" | "other";
+            /** Grammar */
+            grammar: components["schemas"]["ImportPointOut"][];
+            /** Hardsentences */
+            hardSentences: components["schemas"]["ImportSentenceOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "link" | "photo";
+            letter: components["schemas"]["ImportLetterOut"] | null;
+            /** Level */
+            level: string;
+            /** Source */
+            source: string | null;
+            /** Summary */
+            summary: string;
+            /** Text */
+            text: string;
+            /** Textbook */
+            textbook: string | null;
+            /** Title */
+            title: string;
+            /** Vocabulary */
+            vocabulary: components["schemas"]["ImportWordOut"][];
+        };
+        /** ImportPointOut */
+        ImportPointOut: {
+            /** Explanation */
+            explanation: string;
+            /** Point */
+            point: string;
+        };
+        /** ImportSentenceOut */
+        ImportSentenceOut: {
+            /** Explanation */
+            explanation: string;
+            /** Sentence */
+            sentence: string;
+        };
+        /** ImportSummaryOut */
+        ImportSummaryOut: {
+            /** Chapter */
+            chapter: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /**
+             * Genre
+             * @enum {string}
+             */
+            genre: "letter" | "menu" | "article" | "textbook" | "other";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "link" | "photo";
+            /** Level */
+            level: string;
+            /** Textbook */
+            textbook: string | null;
+            /** Title */
+            title: string;
+            /** Words */
+            words: number;
+        };
+        /**
+         * ImportUploadOut
+         * @description How to send a photo to read: a form POST to `url` with `fields`, then the JPEG as `file`.
+         */
+        ImportUploadOut: {
+            /** Fields */
+            fields: {
+                [key: string]: string;
+            };
+            /**
+             * Uploadid
+             * Format: uuid
+             */
+            uploadId: string;
+            /** Url */
+            url: string;
+        };
+        /** ImportWordOut */
+        ImportWordOut: {
+            /** Indeck */
+            inDeck: boolean;
+            /** Meaning */
+            meaning: string;
+            /** Word */
+            word: string;
+        };
+        /** ImportsOut */
+        ImportsOut: {
+            /** Imports */
+            imports: components["schemas"]["ImportSummaryOut"][];
+            /** Limit */
+            limit: number;
         };
         /** LanguageOut */
         LanguageOut: {
@@ -4644,6 +4890,317 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getImports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    createImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    startImportUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportUploadOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    removeImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    makeImportWordCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

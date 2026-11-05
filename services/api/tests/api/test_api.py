@@ -510,6 +510,8 @@ def test_a_practice_call_starts_with_the_chosen_partner(
             "words": [],
             "review": False,
             "lesson": False,
+            "material": None,
+            "rehearse": False,
         },
     }
     session = voice_provider.created[0][1]
