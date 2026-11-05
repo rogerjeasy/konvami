@@ -210,6 +210,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/conversations/{call_id}/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Flags
+         * @description What the learner reported in a conversation.
+         */
+        get: operations["getFlags"];
+        /**
+         * Flag Item
+         * @description Reports a partner's line or a correction (spec §16.1). Reporting one again changes the
+         *     reason and puts it back in the owner's queue.
+         */
+        put: operations["flagItem"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/conversations/{call_id}/report/mistakes/{index}/retries": {
         parameters: {
             query?: never;
@@ -566,6 +591,46 @@ export interface paths {
          */
         get: operations["getCosts"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/owner/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Flag Queue
+         * @description The owner's review queue (open flags unless `status` says otherwise).
+         */
+        get: operations["getFlagQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/owner/flags/{flag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Resolve Flag
+         * @description Closes a flag as resolved or dismissed, or opens it again.
+         */
+        put: operations["resolveFlag"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1375,6 +1440,61 @@ export interface components {
             /** Value */
             value: unknown;
         };
+        /**
+         * FlagIn
+         * @description Reports a partner's line or a correction. The server reads the text from the conversation;
+         *     the app sends none.
+         */
+        FlagIn: {
+            /** Index */
+            index: number;
+            kind: components["schemas"]["FlagKind"];
+            /** Note */
+            note?: string | null;
+            reason: components["schemas"]["FlagReason"];
+        };
+        /** @enum {string} */
+        FlagKind: "turn" | "correction";
+        /** FlagOut */
+        FlagOut: {
+            /** Conversationid */
+            conversationId: string;
+            /**
+             * Flaggedat
+             * Format: date-time
+             */
+            flaggedAt: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Index */
+            index: number;
+            kind: components["schemas"]["FlagKind"];
+            /** Note */
+            note: string | null;
+            reason: components["schemas"]["FlagReason"];
+            status: components["schemas"]["FlagStatus"];
+        };
+        /** FlagQueueOut */
+        FlagQueueOut: {
+            /** Flags */
+            flags: components["schemas"]["QueuedFlagOut"][];
+        };
+        /** @enum {string} */
+        FlagReason: "offensive" | "wrong" | "not_said" | "other";
+        /** FlagResolution */
+        FlagResolution: {
+            status: components["schemas"]["FlagStatus"];
+        };
+        /** @enum {string} */
+        FlagStatus: "open" | "resolved" | "dismissed";
+        /** FlagsOut */
+        FlagsOut: {
+            /** Flags */
+            flags: components["schemas"]["FlagOut"][];
+        };
         /** FollowUpOut */
         FollowUpOut: {
             /**
@@ -2098,6 +2218,35 @@ export interface components {
             due: number;
             /** Language */
             language: string;
+        };
+        /**
+         * QueuedFlagOut
+         * @description A flag as the owner reads it: with the text that was flagged. Nobody is named.
+         */
+        QueuedFlagOut: {
+            /** Conversationid */
+            conversationId: string;
+            /** Excerpt */
+            excerpt: string;
+            /**
+             * Flaggedat
+             * Format: date-time
+             */
+            flaggedAt: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Index */
+            index: number;
+            kind: components["schemas"]["FlagKind"];
+            /** Note */
+            note: string | null;
+            reason: components["schemas"]["FlagReason"];
+            /** Resolvedat */
+            resolvedAt: string | null;
+            status: components["schemas"]["FlagStatus"];
         };
         /** ReadinessOut */
         ReadinessOut: {
@@ -3409,6 +3558,117 @@ export interface operations {
             };
         };
     };
+    getFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlagsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    flagItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlagIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlagOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     retryCorrection: {
         parameters: {
             query?: never;
@@ -4458,6 +4718,117 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getFlagQueue: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["FlagStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlagQueueOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolveFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlagResolution"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedFlagOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

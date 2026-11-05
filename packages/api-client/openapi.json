@@ -1122,6 +1122,169 @@
         "title": "FieldOut",
         "type": "object"
       },
+      "FlagIn": {
+        "additionalProperties": false,
+        "description": "Reports a partner's line or a correction. The server reads the text from the conversation;\nthe app sends none.",
+        "properties": {
+          "index": {
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FlagKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/FlagReason"
+          }
+        },
+        "required": [
+          "kind",
+          "index",
+          "reason"
+        ],
+        "title": "FlagIn",
+        "type": "object"
+      },
+      "FlagKind": {
+        "enum": [
+          "turn",
+          "correction"
+        ],
+        "type": "string"
+      },
+      "FlagOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversationId": {
+            "title": "Conversationid",
+            "type": "string"
+          },
+          "flaggedAt": {
+            "format": "date-time",
+            "title": "Flaggedat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FlagKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/FlagReason"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FlagStatus"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "kind",
+          "index",
+          "reason",
+          "note",
+          "status",
+          "flaggedAt"
+        ],
+        "title": "FlagOut",
+        "type": "object"
+      },
+      "FlagQueueOut": {
+        "additionalProperties": false,
+        "properties": {
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/QueuedFlagOut"
+            },
+            "title": "Flags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "flags"
+        ],
+        "title": "FlagQueueOut",
+        "type": "object"
+      },
+      "FlagReason": {
+        "enum": [
+          "offensive",
+          "wrong",
+          "not_said",
+          "other"
+        ],
+        "type": "string"
+      },
+      "FlagResolution": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/FlagStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "FlagResolution",
+        "type": "object"
+      },
+      "FlagStatus": {
+        "enum": [
+          "open",
+          "resolved",
+          "dismissed"
+        ],
+        "type": "string"
+      },
+      "FlagsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/FlagOut"
+            },
+            "title": "Flags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "flags"
+        ],
+        "title": "FlagsOut",
+        "type": "object"
+      },
       "FollowUpOut": {
         "additionalProperties": false,
         "properties": {
@@ -3309,6 +3472,80 @@
           "language"
         ],
         "title": "QueueOut",
+        "type": "object"
+      },
+      "QueuedFlagOut": {
+        "additionalProperties": false,
+        "description": "A flag as the owner reads it: with the text that was flagged. Nobody is named.",
+        "properties": {
+          "conversationId": {
+            "title": "Conversationid",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "flaggedAt": {
+            "format": "date-time",
+            "title": "Flaggedat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FlagKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/FlagReason"
+          },
+          "resolvedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolvedat"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FlagStatus"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "kind",
+          "index",
+          "reason",
+          "note",
+          "status",
+          "flaggedAt",
+          "excerpt",
+          "resolvedAt"
+        ],
+        "title": "QueuedFlagOut",
         "type": "object"
       },
       "ReadinessOut": {
@@ -6010,6 +6247,144 @@
         "summary": "Get Conversations"
       }
     },
+    "/v1/conversations/{call_id}/flags": {
+      "get": {
+        "description": "What the learner reported in a conversation.",
+        "operationId": "getFlags",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlagsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Flags"
+      },
+      "put": {
+        "description": "Reports a partner's line or a correction (spec \u00a716.1). Reporting one again changes the\nreason and puts it back in the owner's queue.",
+        "operationId": "flagItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlagOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Flag Item"
+      }
+    },
     "/v1/conversations/{call_id}/report/mistakes/{index}/retries": {
       "post": {
         "description": "Says correction `index` of a conversation's report again (\"Say it better\").",
@@ -7280,6 +7655,155 @@
           }
         },
         "summary": "Get Costs"
+      }
+    },
+    "/v1/owner/flags": {
+      "get": {
+        "description": "The owner's review queue (open flags unless `status` says otherwise).",
+        "operationId": "getFlagQueue",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FlagStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "open",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlagQueueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Flag Queue"
+      }
+    },
+    "/v1/owner/flags/{flag_id}": {
+      "put": {
+        "description": "Closes a flag as resolved or dismissed, or opens it again.",
+        "operationId": "resolveFlag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flag_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flag Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagResolution"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuedFlagOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Flag"
       }
     },
     "/v1/personas": {
