@@ -1369,6 +1369,45 @@ class SqlDraftLog:
         return bool(rows)
 
 
+_ADD_REFUSAL = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO moderation_refusal (user_id, day, reason, refusals)
+    VALUES (CAST(:user_id AS uuid), CAST(:day AS date), :reason, 1)
+    ON CONFLICT (user_id, day, reason)
+        DO UPDATE SET refusals = moderation_refusal.refusals + 1
+"""
+
+
+class SqlAttemptLog:
+    """The refusals of a learner's free text, counted per day and reason (moderation)."""
+
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def add(self, user_id: UUID, day: dt.date, reason: str) -> None:
+        self._client.execute(
+            _ADD_REFUSAL, {"user_id": str(user_id), "day": day.isoformat(), "reason": reason}
+        )
+
+    def count(self, user_id: UUID, day: dt.date, reasons: Sequence[str]) -> int:
+        # One named parameter per reason: the Data API takes no list.
+        names = [f"reason{index}" for index in range(len(reasons))]
+        query = (
+            "SELECT COALESCE(SUM(refusals), 0) AS refusals FROM moderation_refusal "
+            "WHERE user_id = CAST(:user_id AS uuid) AND day = CAST(:day AS date) "
+            f"AND reason IN ({', '.join(f':{name}' for name in names)})"
+        )
+        rows = self._client.execute(
+            query,
+            {
+                "user_id": str(user_id),
+                "day": day.isoformat(),
+                **dict(zip(names, reasons, strict=True)),
+            },
+        )
+        return int(rows[0]["refusals"]) if rows else 0
+
+
 def _conversation(row: dict[str, Any]) -> Conversation:
     return Conversation(
         id=row["call_id"],

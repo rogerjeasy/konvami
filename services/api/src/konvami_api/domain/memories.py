@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.live_call import Turn
+from konvami_api.domain.moderation import Screen
 from konvami_api.domain.personas import Persona
 from konvami_api.domain.profile import (
     AVOID_TOPICS,
@@ -326,7 +327,10 @@ class MemoryService:
         model: str,
         clock: Callable[[], dt.datetime],
         new_id: Callable[[], UUID] = uuid4,
+        guard: Screen | None = None,
     ) -> None:
+        # None: what a learner writes is not read (tests of other things).
+        self._guard = guard
         self._profiles = profiles
         self._conversations = conversations
         self._sessions = sessions
@@ -376,6 +380,9 @@ class MemoryService:
             # Their own words are not cut for them: a note that is too long is refused.
             if not memory_key(text) or len(text) > TEXT_MAX:
                 raise MemoriesError("invalid_value")
+            # Their words go to every partner's instructions: read them like a partner's backstory.
+            if self._guard is not None and text != memory.text:
+                self._guard.check(user_id, [text])
             # The question was asked about the old words.
             memory = replace(memory, text=text, ask=None)
         if "day" in changes:

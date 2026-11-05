@@ -30,6 +30,7 @@ from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
+from konvami_api.domain.moderation import TextGuard
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.phrasebook import PhrasebookService
@@ -58,6 +59,7 @@ from konvami_api.persistence.repositories import (
     SqlAccountRepository,
     SqlAlertLog,
     SqlAnswerAllowance,
+    SqlAttemptLog,
     SqlCardRepository,
     SqlChargeRepository,
     SqlConversationRepository,
@@ -95,6 +97,7 @@ from konvami_api.providers.aws import (
 )
 from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
 from konvami_api.providers.expo_push import ExpoPush
+from konvami_api.providers.openai_moderation import OpenAiModerator
 from konvami_api.providers.openai_realtime import OpenAiRealtime
 from konvami_api.providers.openai_speech import OpenAiSpeech
 from konvami_api.providers.openai_text import OpenAiText
@@ -166,8 +169,6 @@ def build_backend(
     sleep: Callable[[float], object] = time.sleep,
 ) -> Backend:
     sql = _sql_client(environment, clients.rds_data, sleep)
-    profiles = ProfileService(SqlProfileRepository(sql), CATALOG, _now)
-    onboarding = OnboardingService(profiles, SqlOnboardingRepository(sql), _now)
     openai_key = cached_secret(clients.secrets, environment.get(_OPENAI_SECRET, ""))
     costs = cost_settings(environment.get(COSTS_VARIABLE))
     charges = SqlChargeRepository(sql)
@@ -181,6 +182,14 @@ def build_backend(
     meter = Meter(prices=costs.prices, charges=charges, guard=guard, clock=_now)
     realtime = OpenAiRealtime(openai_key)
     text = OpenAiText(openai_key, meter=meter)
+    # Reads what a learner writes for a partner's instructions before it is kept (moderation).
+    text_guard = TextGuard(
+        moderator=OpenAiModerator(openai_key, meter=meter),
+        attempts=SqlAttemptLog(sql),
+        clock=_now,
+    )
+    profiles = ProfileService(SqlProfileRepository(sql), CATALOG, _now, guard=text_guard)
+    onboarding = OnboardingService(profiles, SqlOnboardingRepository(sql), _now)
     models = text_models(environment.get(TEXT_MODELS_VARIABLE))
     placement = PlacementService(
         profiles=profiles,
@@ -197,6 +206,7 @@ def build_backend(
         text_model=text,
         model=models.personas,
         drafts=SqlDraftLog(sql),
+        guard=text_guard,
         clock=_now,
     )
     conversations = ConversationService(SqlConversationRepository(sql), personas)
@@ -245,6 +255,7 @@ def build_backend(
         text_model=text,
         model=models.memory,
         clock=_now,
+        guard=text_guard,
     )
     files = S3FileStore(clients.s3, environment.get(_MEDIA_BUCKET, ""))
     transcriber = OpenAiTranscription(openai_key, meter=meter)
