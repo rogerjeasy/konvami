@@ -14,6 +14,14 @@ describe('nextRecorded', () => {
     expect(nextRecorded([{ audio: null }], 0)).toBeNull();
   });
 
+  it('does not go on into the next group', () => {
+    const grouped = [
+      { audio: AUDIO, group: 'then' },
+      { audio: AUDIO, group: 'now' },
+    ];
+    expect(nextRecorded(grouped, 0)).toBeNull();
+  });
+
   it('can start before the first turn', () => {
     expect(nextRecorded(TURNS.slice(1), -1)).toBe(1);
   });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -16,70 +16,16 @@ import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
 import { formatClock, wholeMinutes } from '@/lib/format';
-import { stepFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
-import { nextRecorded } from '@/lib/playlist';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { reportRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices } from '@/practice/services';
+import { usePlayback } from '@/practice/use-playback';
 import { useFlags } from '@/practice/use-flags';
 
 // Stands between the parts of the line under the title ("Today · 14:05 · 8 min").
 const SEPARATOR = ' · ';
-
-/**
- * Plays the recordings of a conversation: a turn, then the recorded turns after it, until the
- * last one or until stopped. Leaving the screen stops it.
- */
-function usePlayback(turns: Transcript['turns']) {
-  const { clips } = usePracticeServices();
-  const [playing, setPlaying] = useState<number | null>(null);
-  // The turn whose clip may go on to the next; a clip that was stopped or replaced may not.
-  const current = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      current.current = null;
-      clips.stop();
-    },
-    [clips],
-  );
-
-  function play(index: number) {
-    const audio = turns[index]?.audio;
-    if (!audio) return;
-    current.current = index;
-    setPlaying(index);
-    clips.play(
-      audio.url,
-      () => {
-        if (current.current !== index) return;
-        const next = nextRecorded(turns, index);
-        if (next === null) {
-          current.current = null;
-          setPlaying(null);
-        } else {
-          play(next);
-        }
-      },
-      audio.milliseconds,
-    );
-  }
-
-  function toggle(index: number) {
-    stepFeedback();
-    if (playing === index) {
-      current.current = null;
-      setPlaying(null);
-      clips.stop();
-    } else {
-      play(index);
-    }
-  }
-
-  return { playing, toggle };
-}
 
 function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
   const { t, i18n } = useTranslation();
