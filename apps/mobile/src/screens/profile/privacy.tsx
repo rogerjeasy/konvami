@@ -170,6 +170,11 @@ export function PrivacyScreen() {
             label={t('aiConsent.readNotice')}
             onPress={() => openLegal('privacy', i18n.language)}
           />
+          <TextButton
+            tone="primary"
+            label={t('profile.privacy.terms')}
+            onPress={() => openLegal('terms', i18n.language)}
+          />
         </View>
       </Reveal>
       <Reveal delay={staggerDelay(2)}>
@@ -182,6 +187,12 @@ export function PrivacyScreen() {
       ) : null}
       <Reveal delay={staggerDelay(4)}>
         <ListGroup>
+          <ListRow
+            icon="file"
+            title={t('profile.privacy.export')}
+            detail={t('profile.privacy.exportHint')}
+            onPress={() => router.push(ROUTES.accountExport)}
+          />
           <ListRow
             icon="trash"
             tone="danger"

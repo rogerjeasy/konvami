@@ -2141,6 +2141,21 @@ export const de: Translation = {
       sampleFailed: 'Diese Probe lässt sich gerade nicht abspielen. Versuch es gleich noch einmal.',
       loadFailed: 'Die Premium-Stimmen lassen sich gerade nicht anzeigen.',
     },
+
+    export: {
+      title: 'Meine Daten exportieren',
+      body: 'Erhalte eine Kopie dessen, was Konvami über dich speichert, als eine Datei, die du lesen oder mitnehmen kannst.',
+      includesTitle: 'Was darin steht',
+      includes:
+        'Dein Profil und deine Ziele, deine Partner, deine Gespräche mit Transkripten und Berichten, deine Notizen, Karten und Wendungen, deine Meldungen an uns und die per Sprache vorgenommenen Änderungen. Aufnahmen sind als Links enthalten, die kurze Zeit gelten. Dein Passwort ist nicht enthalten.',
+      prepare: 'Meine Daten vorbereiten',
+      preparing: 'Deine Daten werden vorbereitet …',
+      ready: 'Deine Daten sind bereit',
+      readyBody:
+        'Der Link gilt {{minutes}} Minuten. Öffne die Datei, um sie zu speichern oder zu teilen. Du kannst bis zu dreimal pro Tag eine neue Kopie vorbereiten.',
+      open: 'Datei öffnen',
+      limit: 'Du hast deine Daten heute schon dreimal vorbereitet. Versuche es morgen wieder.',
+    },
     privacy: {
       title: 'Datenschutz und KI',
       elevenlabsNew:
@@ -2154,6 +2169,10 @@ export const de: Translation = {
         on: 'Konvami zählt ein paar Ereignisse, etwa das Öffnen der App oder den Start eines Gesprächs. Nie dein Name, dein Konto, deine Aufnahmen oder etwas, das du sagst. Du kannst es jederzeit ausschalten.',
         off: 'Es wird nichts gezählt. Schalte das ein, damit wir sehen, was genutzt wird.',
       },
+
+      terms: 'Nutzungsbedingungen lesen',
+      export: 'Meine Daten exportieren',
+      exportHint: 'Eine Kopie dessen, was Konvami über dich speichert',
       recordings: {
         label: 'Aufnahmen meiner Gespräche behalten',
         on: 'Du kannst deine Gespräche noch einmal anhören. Nur du kannst sie abspielen.',
@@ -2546,6 +2565,12 @@ export const de: Translation = {
     title: 'Etwas ist schiefgelaufen',
     body: 'Dieser Bildschirm konnte nicht angezeigt werden. Bitte versuch es noch einmal.',
     home: 'Zurück zum Start',
+  },
+  legal: {
+    unset: 'nicht angegeben',
+    draftTitle: 'Entwurf',
+    draftBody:
+      'Name, Adresse und E-Mail des Anbieters sind noch nicht eingetragen, daher ist dieser Text nicht endgültig. Er wird so gezeigt, wie er mit diesen Angaben lauten wird.',
   },
   upcoming: {
     title: 'Kommt als Nächstes',

@@ -7,7 +7,9 @@
   "scripts": {
     "build": "node src/build.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "legal:generate": "node src/export-app.ts",
+    "legal:check": "node src/check-settings.ts"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

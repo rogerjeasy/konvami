@@ -2110,6 +2110,21 @@ export const en = {
       sampleFailed: 'This sample can’t be played right now. Try again in a moment.',
       loadFailed: 'Premium voices can’t be shown right now.',
     },
+
+    export: {
+      title: 'Export my data',
+      body: 'Get a copy of what Konvami keeps about you, as one file you can read or take elsewhere.',
+      includesTitle: 'What is in it',
+      includes:
+        'Your profile and goals, your partners, your conversations with their transcripts and reports, your memories, cards and phrases, your reports to us and the changes made by voice. Recordings are in it as links that work for a short time. Your password is not.',
+      prepare: 'Prepare my data',
+      preparing: 'Preparing your data…',
+      ready: 'Your data is ready',
+      readyBody:
+        'The link works for {{minutes}} minutes. Open the file to save or share it. You can prepare a new copy up to three times a day.',
+      open: 'Open the file',
+      limit: 'You have prepared your data three times today. Try again tomorrow.',
+    },
     privacy: {
       title: 'Privacy and AI',
       elevenlabsNew:
@@ -2123,6 +2138,10 @@ export const en = {
         on: 'Konvami counts a few events, like opening the app or starting a conversation. Never your name, account, recordings or anything you say. Turn it off anytime.',
         off: 'Nothing is counted. Turn this on to help us see what gets used.',
       },
+
+      terms: 'Read the Terms of Use',
+      export: 'Export my data',
+      exportHint: 'A copy of what Konvami keeps about you',
       recordings: {
         label: 'Keep recordings of my conversations',
         on: 'You can listen to your conversations again. Only you can play them.',
@@ -2508,6 +2527,12 @@ export const en = {
     title: 'Something went wrong',
     body: 'This screen couldn’t be shown. Please try again.',
     home: 'Back to the start',
+  },
+  legal: {
+    unset: 'not set',
+    draftTitle: 'Draft',
+    draftBody:
+      'The provider’s name, address and email are not filled in yet, so this text is not final. It is shown as it will read once they are.',
   },
   upcoming: {
     title: 'Coming next',

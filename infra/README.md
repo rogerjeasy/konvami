@@ -97,13 +97,21 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
   No versioning, so deleting an account really deletes its files. The API's role may use this
   bucket and delete a user from the pool (the last step of deleting an account). The web
   preview's origins are allowed to send and read files (CORS); native apps need none.
-  `text_models.speech` names the model that speaks a voice's sample.
-- **Website (`modules/site`):** the privacy policy in the four UI languages (`apps/site`), in
+  `text_models.speech` names the model that speaks a voice's sample. A learner's copy of their
+  data (6.19) is written under `exports/` and deleted by the bucket after a day
+  (`export_expiry_days`).
+- **Account deletion from the web (spec §6.21.3):** `GET`/`POST /public/*` are the only routes
+  without a token: a page at `/public/delete-account` and its two requests, throttled on their own
+  (`public_throttle`). The code that proves the account is Cognito's own emailed code.
+  `terraform output delete_account_url` is the address for the stores' listings (design note
+  `docs/superpowers/specs/2026-11-06-legal-export-design.md`).
+- **Website (`modules/site`):** the privacy policy and the terms of use in the four UI languages (`apps/site`), in
   the private bucket `kv-dev-site-<account id>` behind a CloudFront distribution on its own
   `*.cloudfront.net` address. Off until `publish_site = true`; the plan stops if the site is not
   built (`pnpm --filter @konvami/site build`, which needs the controller's details in
   `apps/site/site.config.ts`). `terraform output -raw mobile_env` then gives the app
-  `EXPO_PUBLIC_PRIVACY_URL`, with `{lang}` in place of the language.
+  `EXPO_PUBLIC_TERMS_URL` and `EXPO_PUBLIC_PRIVACY_URL`, with `{lang}` in place of the language.
+  The app shows the same text itself (`pnpm legal:generate`) while these are empty.
 - **Next, in build order (spec §10):** Sign in with Apple and Google on the user pool → S3 audio +
   CloudFront signed URLs → SQS / Step Functions for the rest of the post-session pipeline (the
   report is written by the call worker for now) → CloudWatch dashboards,

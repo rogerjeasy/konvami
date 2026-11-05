@@ -16,5 +16,5 @@ export const config: Settings = {
     /** The address learners write to about their data. */
     email: '',
   },
-  updated: '2026-10-23',
+  updated: '2026-11-06',
 };

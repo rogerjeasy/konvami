@@ -19,6 +19,7 @@ from konvami_api.domain.costs import Budget, CostService, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -55,9 +56,11 @@ from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakeEmailProof,
     FakePageFetcher,
     FakeSpeechModel,
     FakeTranscriber,
@@ -71,6 +74,7 @@ from tests.fakes import (
     InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryExamRepository,
+    InMemoryExportRepository,
     InMemoryFeedbackRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
@@ -278,6 +282,17 @@ def account_records() -> InMemoryAccountRepository:
 
 
 @pytest.fixture
+def export_records() -> InMemoryExportRepository:
+    return InMemoryExportRepository()
+
+
+@pytest.fixture
+def email_proof() -> FakeEmailProof:
+    """The identity provider's email codes; the signed-in test learner has an account."""
+    return FakeEmailProof({"amara.diallo@mail.com": UUID(USER)})
+
+
+@pytest.fixture
 def speech() -> FakeSpeechModel:
     return FakeSpeechModel()
 
@@ -337,6 +352,8 @@ def services(
     files: InMemoryFileStore,
     directory: FakeAccountDirectory,
     account_records: InMemoryAccountRepository,
+    export_records: InMemoryExportRepository,
+    email_proof: FakeEmailProof,
     speech: FakeSpeechModel,
     premium_speech: FakeSpeechModel,
     report_starter: RecordingReportStarter,
@@ -639,6 +656,10 @@ def services(
             repository=InMemoryFeedbackRepository(),
             owners=frozenset({UUID(OWNER)}),
             clock=clock,
+        ),
+        web_deletion=WebDeletionService(proof=email_proof, accounts=accounts),
+        exports=DataExportService(
+            records=export_records, accounts=directory, files=files, clock=clock
         ),
         flags=FlagService(
             conversations=conversations,

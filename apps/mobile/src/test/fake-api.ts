@@ -2699,6 +2699,15 @@ export function createFakeApi(): FakeApi {
       await record('deleteAccount');
       deleted = true;
     },
+    async exportData() {
+      await record('exportData');
+      return {
+        url: 'https://files.test/exports/copy.json',
+        expiresInSeconds: 3600,
+        createdAt: new Date(FAKE_NOW).toISOString(),
+        sizeBytes: 2048,
+      };
+    },
     async removePersona(id) {
       await record('removePersona', id);
       persona(id);

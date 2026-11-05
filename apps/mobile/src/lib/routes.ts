@@ -121,6 +121,13 @@ export const ROUTES = {
   /** 6.21 Feedback: what learners sent, for the owner's account only (spec §6.21.4). */
   accountFeedbackInbox: '/account/feedback',
   /** Placeholder for pages that do not exist yet (Terms of Use, Privacy Policy). */
+
+  /** 6.19 Export my data: a copy of everything Konvami keeps about the learner. */
+  accountExport: '/account/export',
+  /** 6.18 Terms of Use and Privacy Policy, shown by the app until a website address is set. */
+  legalTerms: '/legal/terms',
+  legalPrivacy: '/legal/privacy',
+  /** Placeholder for pages that do not exist yet. */
   comingNext: '/coming-next',
 } as const satisfies Record<string, Href>;
 

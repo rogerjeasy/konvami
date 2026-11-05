@@ -26,6 +26,7 @@ from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -59,8 +60,10 @@ from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
+from konvami_api.persistence.export_repository import SqlExportRepository
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.pronunciation_repository import SqlPronunciationRepository
 from konvami_api.persistence.repositories import (
@@ -108,7 +111,8 @@ from konvami_api.providers.aws import (
     SnsNotifier,
     cached_secret,
 )
-from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
+from konvami_api.providers.cognito_accounts import CognitoAccounts
+from konvami_api.providers.cognito_email_proof import CognitoClient, CognitoEmailProof
 from konvami_api.providers.elevenlabs_speech import ElevenLabsSpeech
 from konvami_api.providers.expo_push import ExpoPush
 from konvami_api.providers.openai_moderation import OpenAiModerator
@@ -137,6 +141,7 @@ _DB_SETTINGS = {
 }
 # Set once the voice infrastructure exists; until then no voice call can start.
 _USER_POOL = "KONVAMI_USER_POOL_ID"
+_APP_CLIENT_ID = "KONVAMI_APP_CLIENT_ID"
 _OPENAI_SECRET = "KONVAMI_OPENAI_SECRET_ARN"  # noqa: S105 - the name of a setting
 # Empty until ElevenLabs is turned on (infra/envs/dev `elevenlabs_enabled`).
 _ELEVENLABS_SECRET = "KONVAMI_ELEVENLABS_SECRET_ARN"  # noqa: S105 - the name of a setting
@@ -155,7 +160,7 @@ class Clients:
     """The AWS clients. boto3's in Lambda; stubs in tests."""
 
     rds_data: RdsData
-    cognito: CognitoIdp
+    cognito: CognitoClient
     functions: LambdaClient
     secrets: SecretsClient
     s3: S3
@@ -514,6 +519,17 @@ def build_backend(
         then_vs_now=ThenVsNowService(conversations=conversations, recordings=recordings),
         feedback=FeedbackService(
             repository=SqlFeedbackRepository(sql), owners=costs.owners, clock=_now
+        ),
+        web_deletion=WebDeletionService(
+            proof=CognitoEmailProof(
+                clients.cognito,
+                user_pool_id=environment.get(_USER_POOL, ""),
+                client_id=environment.get(_APP_CLIENT_ID, ""),
+            ),
+            accounts=accounts,
+        ),
+        exports=DataExportService(
+            records=SqlExportRepository(sql), accounts=directory, files=files, clock=_now
         ),
         flags=FlagService(
             conversations=conversations,

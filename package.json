@@ -18,7 +18,9 @@
     "check:secrets": "sh scripts/check-no-secrets.sh",
     "check:store": "node scripts/check-store-listings.mjs",
     "brand:export": "node scripts/export-brand-assets.ts",
-    "api:generate": "cd services/api && poetry run python -m tools.export_openapi && pnpm --filter @konvami/api-client generate"
+    "api:generate": "cd services/api && poetry run python -m tools.export_openapi && pnpm --filter @konvami/api-client generate",
+    "legal:generate": "pnpm --filter @konvami/site legal:generate",
+    "legal:check": "pnpm --filter @konvami/site legal:check"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

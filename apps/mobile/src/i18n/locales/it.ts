@@ -2130,6 +2130,21 @@ export const it: Translation = {
         'Questa anteprima non può essere riprodotta in questo momento. Riprova tra poco.',
       loadFailed: 'Le voci premium non possono essere mostrate in questo momento.',
     },
+
+    export: {
+      title: 'Esporta i miei dati',
+      body: 'Ricevi una copia di ciò che Konvami conserva su di te, in un solo file che puoi leggere o portare altrove.',
+      includesTitle: 'Che cosa contiene',
+      includes:
+        'Il tuo profilo e i tuoi obiettivi, i tuoi partner, le tue conversazioni con trascrizioni e resoconti, le tue note, schede e frasi, le tue segnalazioni e le modifiche fatte a voce. Le registrazioni ci sono come link validi per poco tempo. La tua password non c’è.',
+      prepare: 'Prepara i miei dati',
+      preparing: 'Preparazione dei tuoi dati…',
+      ready: 'I tuoi dati sono pronti',
+      readyBody:
+        'Il link vale {{minutes}} minuti. Apri il file per salvarlo o condividerlo. Puoi preparare una nuova copia fino a tre volte al giorno.',
+      open: 'Apri il file',
+      limit: 'Oggi hai già preparato i tuoi dati tre volte. Riprova domani.',
+    },
     privacy: {
       title: 'Privacy e IA',
       elevenlabsNew:
@@ -2143,6 +2158,10 @@ export const it: Translation = {
         on: 'Konvami conta pochi eventi, come l’apertura dell’app o l’inizio di una conversazione. Mai il tuo nome, il tuo account, le tue registrazioni o ciò che dici. Puoi disattivarlo in qualsiasi momento.',
         off: 'Non viene contato nulla. Attivalo per aiutarci a capire cosa viene usato.',
       },
+
+      terms: 'Leggi le condizioni d’uso',
+      export: 'Esporta i miei dati',
+      exportHint: 'Una copia di ciò che Konvami conserva su di te',
       recordings: {
         label: 'Conserva le registrazioni delle mie conversazioni',
         on: 'Puoi riascoltare le tue conversazioni. Solo tu puoi ascoltarle.',
@@ -2532,6 +2551,12 @@ export const it: Translation = {
     title: 'Qualcosa è andato storto',
     body: 'Non è stato possibile mostrare questa schermata. Riprova.',
     home: 'Torna all’inizio',
+  },
+  legal: {
+    unset: 'non indicato',
+    draftTitle: 'Bozza',
+    draftBody:
+      'Nome, indirizzo ed e-mail del fornitore non sono ancora indicati, quindi questo testo non è definitivo. È mostrato com’è destinato a essere una volta indicati.',
   },
   upcoming: {
     title: 'In arrivo',

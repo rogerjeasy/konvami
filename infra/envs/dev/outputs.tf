@@ -18,6 +18,11 @@ output "api_url" {
   value       = module.api.url
 }
 
+output "delete_account_url" {
+  description = "The web page for deleting an account without the app: the address for the stores' listings (Google Play asks for one). Add ?lang=de|fr|it for another language."
+  value       = "${module.api.url}/public/delete-account"
+}
+
 output "migrations_applied" {
   description = "Database migrations applied by the last deploy."
   value       = module.api.migrations_applied
@@ -26,6 +31,7 @@ output "migrations_applied" {
 locals {
   # The app puts its UI language in place of {lang} (apps/mobile/src/lib/external.ts).
   privacy_url = var.publish_site ? "${module.site[0].url}/{lang}/privacy.html" : ""
+  terms_url   = var.publish_site ? "${module.site[0].url}/{lang}/terms.html" : ""
 }
 
 # Public values for the app, never secrets (EXPO_PUBLIC_* ships inside the app):
@@ -37,7 +43,7 @@ output "mobile_env" {
     EXPO_PUBLIC_API_URL=${module.api.url}
     EXPO_PUBLIC_AUTH_REGION=${var.region}
     EXPO_PUBLIC_AUTH_CLIENT_ID=${module.auth.client_id}
-    EXPO_PUBLIC_TERMS_URL=
+    EXPO_PUBLIC_TERMS_URL=${local.terms_url}
     EXPO_PUBLIC_PRIVACY_URL=${local.privacy_url}
   EOT
 }

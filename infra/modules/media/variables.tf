@@ -15,6 +15,12 @@ variable "upload_expiry_days" {
   default     = 1
 }
 
+variable "export_expiry_days" {
+  description = "Days after which a learner's copy of their data (exports/) is deleted. S3 counts in whole days."
+  type        = number
+  default     = 1
+}
+
 variable "force_destroy" {
   description = "Let Terraform delete the bucket while it still holds files. Turn on only to tear an environment down."
   type        = bool

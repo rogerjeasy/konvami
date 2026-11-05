@@ -37,6 +37,10 @@ class Account:
     # Agreed to ElevenLabs speaking text aloud (consent record v3, 2.5 and 6.7).
     premium_voice_consent: bool = False
 
+    # The sign-in address; empty when the provider did not give one. Only the learner's own copy
+    # of their data shows it (domain/exports.py).
+    email: str = ""
+
 
 class AccountNotFound(Exception):  # noqa: N818 - reads as a fact, like KeyError
     """No such account (it was deleted while its last token was still valid)."""
@@ -95,6 +99,7 @@ def account_from_attributes(attributes: Mapping[str, str]) -> Account:
         language=language,
         voice_consent=_voice_consent(attributes.get("custom:ai_consent")),
         premium_voice_consent=_premium_voice_consent(attributes.get("custom:ai_consent")),
+        email=attributes.get("email", "").strip(),
     )
 
 
@@ -156,6 +161,12 @@ def upload_folder(user_id: UUID) -> str:
 
 def _user_folder(user_id: UUID) -> str:
     return f"users/{user_id}/"
+
+
+def export_folder(user_id: UUID) -> str:
+    """Where a learner's archives of their data are kept (domain/exports.py). The bucket deletes
+    what is in it after a day; deleting the account deletes it at once."""
+    return f"exports/{user_id}/"
 
 
 class AccountService:
@@ -231,6 +242,8 @@ class AccountService:
         """
         self._files.remove_all(_user_folder(user_id))
         self._files.remove_all(upload_folder(user_id))
+
+        self._files.remove_all(export_folder(user_id))
         self._records.delete(user_id, self._clock())
         try:
             self._directory.delete(user_id)

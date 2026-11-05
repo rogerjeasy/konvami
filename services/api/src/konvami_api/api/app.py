@@ -13,6 +13,7 @@ from pydantic import AwareDatetime
 
 from konvami_api.api.auth import CurrentUser, recently_signed_in
 from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
+from konvami_api.api.public import public_router
 from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
@@ -24,6 +25,7 @@ from konvami_api.api.schemas import (
     CatalogOut,
     ConversationsOut,
     CostsOut,
+    DataExportOut,
     DeckOut,
     DeckSummaryOut,
     ExamCardOut,
@@ -128,6 +130,7 @@ from konvami_api.domain.costs import CostService
 from konvami_api.domain.course_import import CourseImportError, CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamService, Simulation
+from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService, FeedbackStatus
 from konvami_api.domain.flags import FlagService, FlagStatus
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -155,6 +158,7 @@ from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
 
 
@@ -201,6 +205,9 @@ class Services:
     pen_pal: PenPalService
 
     feedback: FeedbackService
+
+    exports: DataExportService
+    web_deletion: WebDeletionService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -1054,6 +1061,11 @@ def _router(services: Services) -> APIRouter:
     def remove_picture(user: CurrentUser) -> AccountOut:
         return account_of(user, services.accounts.remove_picture(user))
 
+    @router.post("/account/export", operation_id="exportData", responses=LIMITED)
+    def export_data(user: CurrentUser) -> DataExportOut:
+        """Writes a copy of everything kept for the learner and says where to read it."""
+        return DataExportOut.of(services.exports.export(user))
+
     return router
 
 
@@ -1084,4 +1096,5 @@ def create_app(services: Services) -> FastAPI:
     install_error_handlers(app)
     app.include_router(_router(services))
     app.include_router(_deletion_router(services))
+    app.include_router(public_router(lambda: services.web_deletion))
     return app

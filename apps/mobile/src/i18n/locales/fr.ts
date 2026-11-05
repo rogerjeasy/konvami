@@ -2140,6 +2140,21 @@ export const fr: Translation = {
       sampleFailed: 'Cet échantillon ne peut pas être lu pour le moment. Réessaie dans un instant.',
       loadFailed: 'Les voix premium ne peuvent pas être affichées pour le moment.',
     },
+
+    export: {
+      title: 'Exporter mes données',
+      body: 'Obtiens une copie de ce que Konvami conserve sur toi, dans un seul fichier que tu peux lire ou emporter ailleurs.',
+      includesTitle: 'Ce qu’il contient',
+      includes:
+        'Ton profil et tes objectifs, tes partenaires, tes conversations avec leurs transcriptions et leurs bilans, tes notes, tes cartes et tes expressions, tes signalements et les changements faits par la voix. Les enregistrements y figurent sous forme de liens valables peu de temps. Ton mot de passe n’y figure pas.',
+      prepare: 'Préparer mes données',
+      preparing: 'Préparation de tes données…',
+      ready: 'Tes données sont prêtes',
+      readyBody:
+        'Le lien est valable {{minutes}} minutes. Ouvre le fichier pour l’enregistrer ou le partager. Tu peux préparer une nouvelle copie jusqu’à trois fois par jour.',
+      open: 'Ouvrir le fichier',
+      limit: 'Tu as déjà préparé tes données trois fois aujourd’hui. Réessaie demain.',
+    },
     privacy: {
       title: 'Confidentialité et IA',
       elevenlabsNew:
@@ -2153,6 +2168,10 @@ export const fr: Translation = {
         on: 'Konvami compte quelques événements, comme l’ouverture de l’app ou le début d’une conversation. Jamais ton nom, ton compte, tes enregistrements ni ce que tu dis. Tu peux désactiver cela à tout moment.',
         off: 'Rien n’est compté. Active cette option pour nous aider à voir ce qui est utilisé.',
       },
+
+      terms: 'Lire les conditions d’utilisation',
+      export: 'Exporter mes données',
+      exportHint: 'Une copie de ce que Konvami conserve sur toi',
       recordings: {
         label: 'Garder les enregistrements de mes conversations',
         on: 'Tu peux réécouter tes conversations. Personne d’autre ne peut les écouter.',
@@ -2551,6 +2570,12 @@ export const fr: Translation = {
     title: 'Un problème est survenu',
     body: 'Cet écran n’a pas pu s’afficher. Réessaie, s’il te plaît.',
     home: 'Retour au début',
+  },
+  legal: {
+    unset: 'non renseigné',
+    draftTitle: 'Brouillon',
+    draftBody:
+      'Le nom, l’adresse et l’e-mail du fournisseur ne sont pas encore renseignés : ce texte n’est pas définitif. Il est montré tel qu’il sera une fois ces informations ajoutées.',
   },
   upcoming: {
     title: 'Bientôt disponible',

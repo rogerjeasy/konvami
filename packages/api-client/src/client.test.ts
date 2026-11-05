@@ -201,6 +201,23 @@ describe('api client', () => {
     });
   });
 
+  it('asks for a copy of the learner’s data', async () => {
+    const copy = {
+      url: 'https://files.example.test/exports/a.json',
+      expiresInSeconds: 3600,
+      createdAt: '2026-11-06T12:00:00Z',
+      sizeBytes: 1234,
+    };
+    const { fetch, calls } = fakeFetch(json(200, copy));
+
+    await expect(client(fetch).api.exportData()).resolves.toEqual(copy);
+
+    expect(calls[0]).toMatchObject({
+      url: 'https://api.example.test/v1/account/export',
+      method: 'POST',
+    });
+  });
+
   it('creates, drafts, copies partners and reads the templates', async () => {
     const draft = {
       role: 'teacher',

@@ -104,6 +104,8 @@ export type PersonaChange = Partial<PersonaInput>;
 export type Account = Schemas['AccountOut'];
 /** How to send a photo: a form POST to `url` with `fields`, then the JPEG as `file`. */
 export type PictureUpload = Schemas['PictureUploadOut'];
+/** The learner's copy of their data: where to read the file, for a short time (6.19). */
+export type DataExport = Schemas['DataExportOut'];
 export type Home = Schemas['HomeOut'];
 export type HomeLevel = Schemas['HomeLevelOut'];
 export type HomeExam = Schemas['HomeExamOut'];
@@ -316,6 +318,8 @@ export interface ApiClient {
   removePicture(): Promise<Account>;
   /** Deletes the account and everything stored for it. This cannot be undone. */
   deleteAccount(): Promise<void>;
+  /** Writes a copy of everything kept for the learner. Fails with `export_limit` after three a day. */
+  exportData(): Promise<DataExport>;
   /** Removes a partner and returns the ones that remain. */
   removePersona(id: string): Promise<Persona[]>;
   /** Fails with `no_partners` when none is left. */
@@ -673,6 +677,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     confirmPicture: (uploadId) => request('POST', '/v1/account/picture', { uploadId }),
     removePicture: () => request('DELETE', '/v1/account/picture'),
     deleteAccount: async () => void (await request('DELETE', '/v1/account')),
+    exportData: () => request('POST', '/v1/account/export'),
     confirmPartners: () => request('POST', '/v1/onboarding/partners/confirm'),
     completeOnboarding: () => request('POST', '/v1/onboarding/complete'),
     startVoiceCall: (purpose, sdp, details = {}) =>

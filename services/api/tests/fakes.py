@@ -64,6 +64,7 @@ from konvami_api.domain.voice import (
     VoiceProviderError,
     VoiceSession,
 )
+from konvami_api.domain.web_deletion import CodeRejected, TooManyAttempts
 from konvami_api.domain.week_review import Status as WeekStatus
 from konvami_api.domain.week_review import StoredReview
 
@@ -1521,3 +1522,53 @@ class InMemoryFeedbackRepository:
                 self.messages[position] = changed
                 return changed
         return None
+
+
+class InMemoryExportRepository:
+    """What is stored for a learner, by table, and the archives made so far."""
+
+    def __init__(self) -> None:
+        self.tables: dict[UUID, dict[str, list[dict[str, Any]]]] = {}
+        self.made: list[tuple[UUID, datetime]] = []
+
+    def rows(self, user_id: UUID) -> dict[str, list[dict[str, Any]]]:
+        return {
+            table: [dict(row) for row in rows]
+            for table, rows in self.tables.get(user_id, {}).items()
+        }
+
+    def made_since(self, user_id: UUID, since: datetime) -> int:
+        return sum(1 for who, at in self.made if who == user_id and at >= since)
+
+    def record(self, export_id: UUID, user_id: UUID, at: datetime) -> None:
+        self.made.append((user_id, at))
+
+
+class FakeEmailProof:
+    """The identity provider's email codes: an account is known by its address, and a code is
+    only sent to an address that has one, though nothing visible tells the difference."""
+
+    CODE = "123456"
+
+    def __init__(self, accounts: dict[str, UUID]) -> None:
+        self.accounts = accounts
+        # The addresses a code was really sent to.
+        self.emailed: list[str] = []
+        self.asked: list[str] = []
+        self.limited = False
+        self.tries: list[tuple[str, str]] = []
+
+    def send_code(self, email: str) -> None:
+        if self.limited:
+            raise TooManyAttempts
+        self.asked.append(email)
+        if email in self.accounts:
+            self.emailed.append(email)
+
+    def verify(self, email: str, code: str) -> UUID:
+        if self.limited:
+            raise TooManyAttempts
+        self.tries.append((email, code))
+        if email not in self.emailed or code != self.CODE:
+            raise CodeRejected
+        return self.accounts[email]

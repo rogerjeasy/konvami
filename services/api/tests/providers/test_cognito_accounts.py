@@ -53,7 +53,9 @@ def test_an_account_is_read_from_the_user_pool_by_its_subject(stub: Stubber) -> 
 
     account = CognitoAccounts(stub.client, POOL).get(USER)
 
-    assert account == Account(first_name="Amara", language="fr", voice_consent=True)
+    assert account == Account(
+        first_name="Amara", language="fr", voice_consent=True, email="amara.diallo@mail.com"
+    )
 
 
 def test_a_disabled_account_has_no_voice_consent(stub: Stubber) -> None:

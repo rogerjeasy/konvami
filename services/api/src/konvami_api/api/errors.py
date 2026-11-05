@@ -17,6 +17,7 @@ from konvami_api.domain.costs import CostError
 from konvami_api.domain.course_import import CourseImportError
 from konvami_api.domain.errors import ServiceUnavailable
 from konvami_api.domain.exam_centre import ExamError
+from konvami_api.domain.exports import ExportError
 from konvami_api.domain.feedback import FeedbackError
 from konvami_api.domain.flags import FlagError
 from konvami_api.domain.grammar_map import GrammarMapError
@@ -38,6 +39,7 @@ from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.voice import VoiceError
 from konvami_api.domain.voices import SampleError
+from konvami_api.domain.web_deletion import WebDeletionError
 from konvami_api.domain.week_review import WeekReviewError
 
 
@@ -152,6 +154,9 @@ _FEEDBACK_STATUS = {
     "invalid_value": 422,
     "feedback_limit": 429,
 }
+
+_EXPORT_STATUS = {"export_limit": 429}
+_WEB_DELETION_STATUS = {"invalid_email": 422, "invalid_code": 422, "too_many_attempts": 429}
 _FLAG_STATUS = {"not_owner": 403, "not_found": 404, "invalid_value": 422, "flag_limit": 429}
 _PEN_PAL_STATUS = {
     "not_found": 404,
@@ -231,6 +236,14 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PenPalError)
     async def _pen_pal_error(_: Request, error: PenPalError) -> JSONResponse:
         return _response(_PEN_PAL_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(WebDeletionError)
+    async def _web_deletion_error(_: Request, error: WebDeletionError) -> JSONResponse:
+        return _response(_WEB_DELETION_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(ExportError)
+    async def _export_error(_: Request, error: ExportError) -> JSONResponse:
+        return _response(_EXPORT_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(ExamError)
     async def _exam_error(_: Request, error: ExamError) -> JSONResponse:

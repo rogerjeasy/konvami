@@ -16,6 +16,7 @@ from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
+from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
@@ -86,6 +87,7 @@ from tests.fakes import (
     InMemoryDailyAllowance,
     InMemoryDraftLog,
     InMemoryExamRepository,
+    InMemoryExportRepository,
     InMemoryFeedbackRepository,
     InMemoryFileStore,
     InMemoryFlagRepository,
@@ -629,6 +631,13 @@ class World:
             records=InMemoryAccountRepository(),
             files=self.files,
             directory=self.accounts,
+            clock=self.clock,
+        )
+        self.export_store = InMemoryExportRepository()
+        self.exports = DataExportService(
+            records=self.export_store,
+            accounts=self.accounts,
+            files=self.files,
             clock=self.clock,
         )
         self._calls = 0

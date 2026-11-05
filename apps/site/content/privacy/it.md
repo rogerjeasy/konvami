@@ -27,11 +27,13 @@ Konvami è in fase di test. Alcune funzioni previste nel progetto dell’app non
 
 **Quello che ricordano i tuoi partner.** Dopo una conversazione vengono annotate brevi note su di te («Ha un colloquio di lavoro venerdì»), così che i tuoi partner possano chiederti com’è andata. Puoi leggere, modificare e cancellare ogni nota, escludere degli argomenti o disattivare la memoria, in Profilo › Che cosa sanno i miei partner. Konvami conserva al massimo 300 note.
 
-**I tuoi strumenti di studio.** Le flashcard che salvi, i tuoi ripassi e le domande che fai al Tutor con le sue risposte.
+**I tuoi strumenti di studio.** Le flashcard che salvi, i tuoi ripassi e le domande che fai al Tutor con le sue risposte, e le frasi che tieni nel tuo frasario.
 
 **La tua foto**, se ne aggiungi una. È privata: la vedi solo tu.
 
 **L’utilizzo.** Quanti minuti vocali hai usato ogni settimana e una stima del costo di ogni richiesta a un fornitore di IA, per rispettare il limite settimanale e il budget mensile.
+
+**Le segnalazioni che invii.** Quando segnali una frase di un partner o una correzione come sbagliata o inappropriata, conserviamo la segnalazione: il tuo motivo, la tua nota e il testo segnalato, così che possa essere esaminata. La legge solo la persona che gestisce Konvami, senza il tuo nome.
 
 **I log tecnici.** Per ogni richiesta ai nostri server: l’ora, l’indirizzo richiesto, l’esito e la durata. Non vengono registrati indirizzi IP, password o contenuti.
 
@@ -77,7 +79,7 @@ I dati viaggiano cifrati (TLS) e sono archiviati cifrati, nell’UE. Registrazio
 
 Hai il diritto di:
 
-- **vedere** i dati che conserviamo su di te e riceverne una copia, in un formato comune leggibile da una macchina;
+- **vedere** i dati che conserviamo su di te e riceverne una copia, in un formato comune leggibile da una macchina: nell’app, Profilo › Privacy e IA › Esporta i miei dati;
 - **rettificarli**: la maggior parte si modifica in Profilo;
 - **cancellarli**: nell’app, Profilo › Privacy e IA › Elimina account, oppure scrivendoci;
 - **limitarne** l’uso od **opporti** a esso, e **revocare** il tuo consenso in qualsiasi momento, senza pregiudicare ciò che è stato fatto prima;
