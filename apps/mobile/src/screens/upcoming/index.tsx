@@ -14,8 +14,8 @@ import { ROUTES } from '@/lib/routes';
 import { useTheme } from '@/theme';
 
 /**
- * Stand-in for pages that are not built yet (the legal pages), so every link leads somewhere.
- * Each route is replaced by its real screen when it is built.
+ * Stand-in for a page that is not built yet, so every link leads somewhere. Nothing points here
+ * today: the legal links open 6.18. A route is replaced by its real screen when it is built.
  *
  * A signed-in user also gets "Sign out" here, as on 5.9 Account: someone who lands here before
  * finishing onboarding has no other way to end a session.
