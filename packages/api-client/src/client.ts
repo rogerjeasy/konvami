@@ -171,6 +171,8 @@ export type PhraseDraft = { phrase: string; meaning: string; situation?: string 
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
+/** What the learner has bought and what it includes (spec §6.21.2). */
+export type Plan = Schemas['PlanOut'];
 export type Costs = Schemas['CostsOut'];
 export type CostLevel = Costs['level'];
 /** A turn's recording: a short-lived address to play it from, and how long it lasts. */
@@ -418,6 +420,8 @@ export interface ApiClient {
   configureRecordings(kept: boolean): Promise<Recordings>;
   /** The learner's voice minutes this week (in seconds) and when they come back. */
   getVoiceAllowance(): Promise<VoiceAllowance>;
+  /** The learner's plan: tier, trial, renewal, voice minutes and what it includes. */
+  getPlan(): Promise<Plan>;
   /**
    * A month's estimated spending, for the owner only (fails with `not_owner`). `month` is the
    * first day of the month (`2026-09-01`); this month when left out.
@@ -612,6 +616,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getRecordings: () => request('GET', '/v1/recordings'),
     configureRecordings: (kept) => request('PATCH', '/v1/recordings', { kept }),
     getVoiceAllowance: () => request('GET', '/v1/voice/allowance'),
+    getPlan: () => request('GET', '/v1/plan'),
     getCosts: (month) => request('GET', withQuery('/v1/owner/costs', { month })),
     changeMemory: (id, change) =>
       request('PATCH', `/v1/memories/${encodeURIComponent(id)}`, change),

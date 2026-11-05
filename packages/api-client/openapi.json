@@ -2380,6 +2380,15 @@
         "title": "PartScoreOut",
         "type": "object"
       },
+      "Perk": {
+        "description": "What a tier may do beyond talking. Each is checked on the server.",
+        "enum": [
+          "exam_simulations",
+          "premium_voices"
+        ],
+        "title": "Perk",
+        "type": "string"
+      },
       "PersonaDescription": {
         "additionalProperties": false,
         "properties": {
@@ -3296,6 +3305,83 @@
         ],
         "title": "PlacementStatus",
         "type": "string"
+      },
+      "PlanOut": {
+        "additionalProperties": false,
+        "description": "The learner's plan (spec \u00a76.21.2): what they have and what it includes.",
+        "properties": {
+          "autoRenew": {
+            "title": "Autorenew",
+            "type": "boolean"
+          },
+          "billingIssue": {
+            "title": "Billingissue",
+            "type": "boolean"
+          },
+          "enforced": {
+            "title": "Enforced",
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiresat"
+          },
+          "packSeconds": {
+            "title": "Packseconds",
+            "type": "integer"
+          },
+          "perks": {
+            "items": {
+              "$ref": "#/components/schemas/Perk"
+            },
+            "title": "Perks",
+            "type": "array"
+          },
+          "personas": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Personas"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/Tier"
+          },
+          "trial": {
+            "title": "Trial",
+            "type": "boolean"
+          },
+          "weeklySeconds": {
+            "title": "Weeklyseconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tier",
+          "trial",
+          "autoRenew",
+          "billingIssue",
+          "expiresAt",
+          "enforced",
+          "weeklySeconds",
+          "personas",
+          "perks",
+          "packSeconds"
+        ],
+        "title": "PlanOut",
+        "type": "object"
       },
       "PlanSessionOut": {
         "additionalProperties": false,
@@ -4751,6 +4837,15 @@
         ],
         "title": "TeachingModel",
         "type": "object"
+      },
+      "Tier": {
+        "enum": [
+          "free",
+          "plus",
+          "pro"
+        ],
+        "title": "Tier",
+        "type": "string"
       },
       "TopicMistakeOut": {
         "additionalProperties": false,
@@ -8150,6 +8245,16 @@
             },
             "description": "Unauthorized"
           },
+          "402": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Payment Required"
+          },
           "409": {
             "content": {
               "application/json": {
@@ -8954,6 +9059,35 @@
           }
         },
         "summary": "Skip Placement"
+      }
+    },
+    "/v1/plan": {
+      "get": {
+        "description": "What the learner has bought and what it includes (spec \u00a76.21.2).",
+        "operationId": "getPlan",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Plan"
       }
     },
     "/v1/profile": {
@@ -9806,6 +9940,16 @@
               }
             },
             "description": "Unauthorized"
+          },
+          "402": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Payment Required"
           },
           "403": {
             "content": {
