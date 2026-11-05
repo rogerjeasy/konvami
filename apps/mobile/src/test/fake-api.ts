@@ -2020,6 +2020,38 @@ export function createFakeApi(): FakeApi {
       dueQuestion = null;
       return { question: null };
     },
+    async getThenVsNow() {
+      await record('getThenVsNow');
+      const none = { then: null, now: null, weeksApart: 0 } as const;
+      if (!recordingsKept) return { status: 'off', ...none };
+      // As the server picks: conversations that hold the learner's voice, the earliest paired with
+      // the latest of the same kind that began at least a fortnight later.
+      const voiced = practice
+        .filter(
+          ({ conversation, turns }) =>
+            conversation.learnerTurns > 0 &&
+            turns.some((turn) => turn.speaker === 'learner' && turn.audio),
+        )
+        .map(({ conversation }) => conversation)
+        .sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+      if (voiced.length === 0) return { status: 'none', ...none };
+      for (const then of voiced) {
+        const now = voiced
+          .filter(
+            (other) =>
+              other.scenario === then.scenario &&
+              Date.parse(other.startedAt) - Date.parse(then.startedAt) >= 14 * DAY_MS,
+          )
+          .at(-1);
+        if (now) {
+          const weeksApart = Math.floor(
+            (Date.parse(now.startedAt) - Date.parse(then.startedAt)) / (7 * DAY_MS),
+          );
+          return { status: 'ready', then, now, weeksApart };
+        }
+      }
+      return { status: 'not_yet', ...none };
+    },
     async getRecordings() {
       await record('getRecordings');
       return { kept: recordingsKept };

@@ -40,6 +40,7 @@ from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
+from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voice_review import VoiceReviewService
@@ -553,6 +554,7 @@ def services(
             files=files,
             clock=clock,
         ),
+        then_vs_now=ThenVsNowService(conversations=conversations, recordings=recordings),
         flags=FlagService(
             conversations=conversations,
             reports=reports,

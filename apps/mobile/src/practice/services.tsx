@@ -28,6 +28,7 @@ import type {
   CardSource,
   Progress,
   Transcript,
+  ThenVsNow,
   Phrase,
   PhraseDraft,
   PhraseSuggestion,
@@ -64,6 +65,8 @@ export interface PracticeServices {
   library: LibraryStore;
   /** One conversation with what was said in it. Rejects with an `ApiError` (`not_found`, …). */
   readConversation: (id: string) => Promise<Transcript>;
+  /** The pair of recorded conversations to hear side by side (5.20). */
+  readThenVsNow: () => Promise<ThenVsNow>;
   /** Follows one conversation's report for as long as a screen shows it. */
   followReport: (id: string) => ReportFollower;
   /** What the Progress screen charts. */
@@ -175,6 +178,7 @@ export function createPracticeServices(
     | 'getProgress'
     | 'getConversations'
     | 'getConversation'
+    | 'getThenVsNow'
     | 'getConversationReport'
     | 'requestConversationReport'
     | 'saveCard'
@@ -232,6 +236,7 @@ export function createPracticeServices(
     modelAnswerSound: async (callId, part) => (await api.getModelAnswerAudio(callId, part)).url,
     library: createLibraryStore(api),
     readConversation: (id) => api.getConversation(id),
+    readThenVsNow: () => api.getThenVsNow(),
     followReport: (id) => createReportFollower(api, id),
     deck,
     async saveCard(source) {
@@ -414,6 +419,49 @@ export function useConversation(id: string): ConversationReading & { retry: () =
       current = false;
     };
   }, [readConversation, id, attempt]);
+
+  return {
+    ...reading,
+    retry: () => {
+      setReading({ phase: 'loading' });
+      setAttempt((count) => count + 1);
+    },
+  };
+}
+
+export type ThenVsNowReading =
+  | { phase: 'loading' }
+  | { phase: 'failed'; code: string }
+  // Only a ready pair has its two transcripts; the other states say why there is none.
+  | { phase: 'ready'; pair: Exclude<ThenVsNow['status'], 'ready'> }
+  | { phase: 'ready'; pair: 'ready'; weeksApart: number; then: Transcript; now: Transcript };
+
+/** Reads the pair to compare (5.20) and, when there is one, both conversations. */
+export function useThenVsNow(): ThenVsNowReading & { retry: () => void } {
+  const { readThenVsNow, readConversation } = usePracticeServices();
+  const [reading, setReading] = useState<ThenVsNowReading>({ phase: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let current = true;
+    (async () => {
+      const found = await readThenVsNow();
+      if (found.status !== 'ready' || !found.then || !found.now) {
+        return { phase: 'ready', pair: found.status === 'ready' ? 'none' : found.status } as const;
+      }
+      const [then, now] = await Promise.all([
+        readConversation(found.then.id),
+        readConversation(found.now.id),
+      ]);
+      return { phase: 'ready', pair: 'ready', weeksApart: found.weeksApart, then, now } as const;
+    })().then(
+      (next) => current && setReading(next),
+      (error: unknown) => current && setReading({ phase: 'failed', code: apiErrorCode(error) }),
+    );
+    return () => {
+      current = false;
+    };
+  }, [readThenVsNow, readConversation, attempt]);
 
   return {
     ...reading,

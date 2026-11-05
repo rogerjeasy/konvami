@@ -871,6 +871,40 @@ export const de: Translation = {
       },
     },
   },
+  thenVsNow: {
+    title: 'Damals und heute',
+    intro:
+      'Deine Stimme von früher neben einem aktuellen Gespräch derselben Art. Es gibt keine Note: Hör einfach, was sich verändert hat.',
+    loading: 'Deine Aufnahmen werden gesucht',
+    loadFailed: 'Deine Aufnahmen konnten nicht geladen werden.',
+    weeksApart_one: '{{count}} Woche Abstand',
+    weeksApart_other: '{{count}} Wochen Abstand',
+    then: 'Damals',
+    now: 'Heute',
+    thenWhen: 'damals',
+    nowWhen: 'heute',
+    meta: '{{date}} · mit {{name}}',
+    metaNoPartner: '{{date}}',
+    line: 'Du, {{when}}: {{text}}',
+    play: 'Abspielen, was du {{when}} gesagt hast',
+    stopPlaying: 'Wiedergabe stoppen',
+    whole: 'Das ganze Gespräch anhören',
+    off: {
+      title: 'Aufnahmen sind ausgeschaltet',
+      body: 'Damals und heute braucht deine Aufnahmen. Schalte sie ein, dann geben dir die Gespräche ab jetzt etwas zum Vergleichen.',
+      action: 'Datenschutz und KI',
+    },
+    none: {
+      title: 'Noch nichts aufgenommen',
+      body: 'Sprich mit einem Partner, dann wird deine Stimme gespeichert, und du hörst in ein paar Wochen, wie weit du gekommen bist.',
+      action: 'Gespräch beginnen',
+    },
+    notYet: {
+      title: 'Es ist noch nicht genug Zeit vergangen',
+      body: 'Damals und heute stellt Gespräche mit mindestens zwei Wochen Abstand nebeneinander. Sprich weiter: Deine erste Aufnahme wartet auf eine aktuelle derselben Art.',
+      action: 'Gespräch beginnen',
+    },
+  },
   library: {
     title: 'Bibliothek',
     body: 'Alle Gespräche zum Nachlesen.',
@@ -1492,6 +1526,10 @@ export const de: Translation = {
     back: 'Zurück zu Lernen',
   },
   progress: {
+    thenVsNow: {
+      title: 'Damals und heute',
+      detail: 'Hör dich aus deinen ersten Wochen neben heute',
+    },
     lastWeek: {
       title: 'Letzte Woche',
       writing: 'Dein Partner schreibt ein paar Worte zu deiner Woche …',

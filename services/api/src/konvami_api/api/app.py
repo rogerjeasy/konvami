@@ -80,6 +80,7 @@ from konvami_api.api.schemas import (
     SimulationOut,
     SoundOut,
     SpeakingExamOut,
+    ThenVsNowOut,
     TranscriptOut,
     TutorCorrectionIn,
     TutorQuestionIn,
@@ -118,6 +119,7 @@ from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
+from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
@@ -160,6 +162,7 @@ class Services:
     week_reviews: WeekReviewService
     exams: ExamService
     flags: FlagService
+    then_vs_now: ThenVsNowService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -722,6 +725,11 @@ def _router(services: Services) -> APIRouter:
     def remove_phrase(user: CurrentUser, phrase_id: UUID) -> PhrasebookOut:
         services.phrasebook.remove(user, phrase_id)
         return PhrasebookOut(phrases=[PhraseOut.of(e) for e in services.phrasebook.phrases(user)])
+
+    @router.get("/then-vs-now", operation_id="getThenVsNow")
+    def get_then_vs_now(user: CurrentUser) -> ThenVsNowOut:
+        """Two recorded conversations of the same kind, weeks apart, to hear side by side."""
+        return ThenVsNowOut.of(services.then_vs_now.compare(user))
 
     @router.get("/recordings", operation_id="getRecordings")
     def get_recordings(user: CurrentUser) -> RecordingsOut:

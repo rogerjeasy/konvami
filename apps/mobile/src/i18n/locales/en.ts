@@ -853,6 +853,40 @@ export const en = {
       },
     },
   },
+  thenVsNow: {
+    title: 'Then vs Now',
+    intro:
+      'Your voice from early on, next to a recent conversation of the same kind. There is no score: listen for what changed.',
+    loading: 'Finding your recordings',
+    loadFailed: 'Your recordings couldn’t be loaded.',
+    weeksApart_one: '{{count}} week apart',
+    weeksApart_other: '{{count}} weeks apart',
+    then: 'Then',
+    now: 'Now',
+    thenWhen: 'then',
+    nowWhen: 'now',
+    meta: '{{date}} · with {{name}}',
+    metaNoPartner: '{{date}}',
+    line: 'You, {{when}}: {{text}}',
+    play: 'Play what you said {{when}}',
+    stopPlaying: 'Stop playing',
+    whole: 'Hear the whole conversation',
+    off: {
+      title: 'Recordings are switched off',
+      body: 'Then vs Now needs your recordings. Turn them on, and the conversations from then on will give you something to compare.',
+      action: 'Privacy and AI',
+    },
+    none: {
+      title: 'Nothing recorded yet',
+      body: 'Talk with a partner and your voice is kept, so that in a few weeks you can hear how far you’ve come.',
+      action: 'Start a conversation',
+    },
+    notYet: {
+      title: 'Not enough time has passed',
+      body: 'Then vs Now sets conversations at least two weeks apart side by side. Keep talking: your first recording is waiting for a recent one of the same kind.',
+      action: 'Start a conversation',
+    },
+  },
   library: {
     title: 'Library',
     body: 'Every conversation, ready to read again.',
@@ -1472,6 +1506,10 @@ export const en = {
     back: 'Back to Learn',
   },
   progress: {
+    thenVsNow: {
+      title: 'Then vs Now',
+      detail: 'Hear yourself from your first weeks, next to today',
+    },
     lastWeek: {
       title: 'Last week',
       writing: 'Your partner is writing a few words about your week…',

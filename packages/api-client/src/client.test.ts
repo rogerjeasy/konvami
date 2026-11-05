@@ -630,6 +630,14 @@ describe('api client', () => {
     expect(calls[0]?.url).toBe('https://api.example.test/v1/cards/card%2F1/audio');
   });
 
+  it('reads the pair of conversations to compare', async () => {
+    const body = { status: 'none', then: null, now: null, weeksApart: 0 };
+    const { fetch, calls } = fakeFetch(json(200, body));
+
+    expect(await client(fetch).api.getThenVsNow()).toEqual(body);
+    expect(calls[0]?.url).toBe('https://api.example.test/v1/then-vs-now');
+  });
+
   it('reads and sets whether recordings are kept', async () => {
     const { fetch, calls } = fakeFetch(json(200, { kept: true }), json(200, { kept: false }));
     const { api } = client(fetch);

@@ -154,6 +154,14 @@ describe('5.8 Progress', () => {
     expect(screen.queryByText('Your share of the talking')).toBeNull();
   });
 
+  it('leads to Then vs Now once the learner has practised', async () => {
+    await open(practised());
+
+    await fireEvent.press(screen.getByRole('button', { name: /Then vs Now/ }));
+
+    expect(router.push).toHaveBeenCalledWith('/then-vs-now');
+  });
+
   it('shows how much of the talking was the learner’s in the last month', async () => {
     const api = practised();
     api.reported('rtc_today');

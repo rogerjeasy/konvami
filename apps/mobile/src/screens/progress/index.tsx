@@ -23,6 +23,7 @@ import { LastWeekCard } from './last-week-card';
 import { Milestones } from './milestones';
 import { PolishCard } from './polish-card';
 import { PracticeCard } from './practice-card';
+import { ThenVsNowCard } from './then-vs-now-card';
 
 // Stands between the two counts of the deck ("12 cards · 3 due").
 const SEPARATOR = ' · ';
@@ -107,6 +108,7 @@ function Charts({ progress }: { progress: Progress }) {
     reported ? <PolishCard key="polish" mistakes={progress.mistakes} /> : null,
     progress.cards.total > 0 ? <CardsCard key="cards" cards={progress.cards} /> : null,
     <Milestones key="milestones" milestones={progress.milestones} />,
+    <ThenVsNowCard key="then-vs-now" />,
   ];
   const column = (cards: (React.JSX.Element | null)[], first: number) => (
     <View className={split ? 'flex-1 gap-4' : 'gap-4'}>

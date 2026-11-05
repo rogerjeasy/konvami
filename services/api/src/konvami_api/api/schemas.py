@@ -90,6 +90,7 @@ from konvami_api.domain.reminders import ReminderNotes
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
 from konvami_api.domain.retries import Retried
+from konvami_api.domain.then_vs_now import ThenVsNow
 from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
 from konvami_api.domain.tutor import Source as TutorSource
 from konvami_api.domain.tutor import TutorQuestion
@@ -812,6 +813,26 @@ class TranscriptOut(ApiModel):
                 )
                 for turn in transcript.turns
             ],
+        )
+
+
+class ThenVsNowOut(ApiModel):
+    # off: recordings are not kept; none: none exists yet; not_yet: no pair of the same kind is
+    # far enough apart; ready: `then` and `now` are two conversations to hear side by side.
+    status: Literal["off", "none", "not_yet", "ready"]
+    # Conversations whose transcripts (with their recordings) are read from `getConversation`.
+    then: ConversationOut | None
+    now: ConversationOut | None
+    # Whole weeks between them; 0 unless ready.
+    weeks_apart: int
+
+    @classmethod
+    def of(cls, pair: ThenVsNow) -> "ThenVsNowOut":
+        return cls(
+            status=pair.status.value,
+            then=ConversationOut.of(pair.then) if pair.then else None,
+            now=ConversationOut.of(pair.now) if pair.now else None,
+            weeks_apart=pair.weeks_apart,
         )
 
 

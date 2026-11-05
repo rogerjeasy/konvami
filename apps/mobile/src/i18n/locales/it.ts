@@ -866,6 +866,40 @@ export const it: Translation = {
       },
     },
   },
+  thenVsNow: {
+    title: 'Allora e adesso',
+    intro:
+      'La tua voce di un tempo, accanto a una conversazione recente dello stesso tipo. Non c’è un voto: ascolta cosa è cambiato.',
+    loading: 'Cerco le tue registrazioni',
+    loadFailed: 'Non è stato possibile caricare le tue registrazioni.',
+    weeksApart_one: '{{count}} settimana di distanza',
+    weeksApart_other: '{{count}} settimane di distanza',
+    then: 'Allora',
+    now: 'Adesso',
+    thenWhen: 'allora',
+    nowWhen: 'adesso',
+    meta: '{{date}} · con {{name}}',
+    metaNoPartner: '{{date}}',
+    line: 'Tu, {{when}}: {{text}}',
+    play: 'Riproduci quello che hai detto {{when}}',
+    stopPlaying: 'Interrompi la riproduzione',
+    whole: 'Ascolta tutta la conversazione',
+    off: {
+      title: 'Le registrazioni sono disattivate',
+      body: 'Allora e adesso ha bisogno delle tue registrazioni. Attivale, e le conversazioni da ora in poi ti daranno qualcosa da confrontare.',
+      action: 'Privacy e IA',
+    },
+    none: {
+      title: 'Ancora nulla di registrato',
+      body: 'Parla con un partner e la tua voce viene conservata, così tra qualche settimana potrai sentire quanta strada hai fatto.',
+      action: 'Inizia una conversazione',
+    },
+    notYet: {
+      title: 'Non è ancora passato abbastanza tempo',
+      body: 'Allora e adesso affianca conversazioni distanti almeno due settimane. Continua a parlare: la tua prima registrazione aspetta una recente dello stesso tipo.',
+      action: 'Inizia una conversazione',
+    },
+  },
   library: {
     title: 'Libreria',
     body: 'Tutte le conversazioni, da rileggere.',
@@ -1487,6 +1521,10 @@ export const it: Translation = {
     back: 'Torna a Impara',
   },
   progress: {
+    thenVsNow: {
+      title: 'Allora e adesso',
+      detail: 'Ascoltati nelle prime settimane, accanto a oggi',
+    },
     lastWeek: {
       title: 'La settimana scorsa',
       writing: 'Il tuo partner sta scrivendo qualche parola sulla tua settimana…',

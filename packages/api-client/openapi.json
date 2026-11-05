@@ -4752,6 +4752,53 @@
         "title": "TeachingModel",
         "type": "object"
       },
+      "ThenVsNowOut": {
+        "additionalProperties": false,
+        "properties": {
+          "now": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "off",
+              "none",
+              "not_yet",
+              "ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "then": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weeksApart": {
+            "title": "Weeksapart",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "then",
+          "now",
+          "weeksApart"
+        ],
+        "title": "ThenVsNowOut",
+        "type": "object"
+      },
       "TopicMistakeOut": {
         "additionalProperties": false,
         "properties": {
@@ -9528,6 +9575,35 @@
           }
         },
         "summary": "Configure Recordings"
+      }
+    },
+    "/v1/then-vs-now": {
+      "get": {
+        "description": "Two recorded conversations of the same kind, weeks apart, to hear side by side.",
+        "operationId": "getThenVsNow",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThenVsNowOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Then Vs Now"
       }
     },
     "/v1/tutor/corrections": {

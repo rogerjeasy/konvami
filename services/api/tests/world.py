@@ -49,6 +49,7 @@ from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.text import TextModelError
+from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import (
     CallPurpose,
@@ -334,6 +335,9 @@ class World:
             files=self.files,
             transcriber=self.transcriber,
             model="gpt-transcribe",
+        )
+        self.then_vs_now = ThenVsNowService(
+            conversations=self.conversations, recordings=self.recordings
         )
         self.tutor_store = InMemoryTutorRepository()
         # Question ids in the order they are handed out: ...0001, ...0002, and so on.
