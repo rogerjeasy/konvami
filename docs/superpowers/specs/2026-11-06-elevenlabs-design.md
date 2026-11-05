@@ -8,7 +8,7 @@ ElevenLabs switch on 2.5 and 6.7.
 
 A learner can pick one ElevenLabs voice. It then reads aloud what the app speaks **outside a live
 call**: a word card's sound (5.7, 5.11), the weekly check-in's "Listen" (5.8), an exam's model
-answers (5.18) and the sample on 6.21. Everything else is unchanged: the standard OpenAI voice is
+answers (5.18) and the sample on 6.22. Everything else is unchanged: the standard OpenAI voice is
 always one of the choices and is what every learner hears until they choose.
 
 ## What it is not: live conversations
