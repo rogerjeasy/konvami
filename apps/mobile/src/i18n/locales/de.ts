@@ -1755,6 +1755,7 @@ export const de: Translation = {
     changes: {
       title: 'Änderungen per Sprache',
       body: 'Wenn du einen Partner im Gespräch bittest, eine Einstellung zu ändern, steht es hier. Du kannst es rückgängig machen.',
+      emptyTitle: 'Noch nichts geändert',
       empty:
         'Noch nichts. Bitte in einem Gespräch einen Partner, ab jetzt in einer anderen Sprache zu erklären.',
       loadFailed: 'Deine Änderungen können gerade nicht angezeigt werden.',

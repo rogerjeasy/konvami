@@ -1750,6 +1750,7 @@ export const it: Translation = {
     changes: {
       title: 'Modifiche fatte a voce',
       body: 'Quando chiedi a un partner di cambiare un’impostazione durante una conversazione, la trovi qui. Puoi ripristinarla.',
+      emptyTitle: 'Ancora nessuna modifica',
       empty:
         'Ancora niente. In una conversazione prova a chiedere a un partner di spiegare d’ora in poi in un’altra lingua.',
       loadFailed: 'Le tue modifiche non possono essere mostrate ora.',

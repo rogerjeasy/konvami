@@ -125,7 +125,7 @@ export function ProfileChangesScreen() {
         state.data.changes.length === 0 ? (
           <EmptyState
             icon="message"
-            title={t('profile.changes.title')}
+            title={t('profile.changes.emptyTitle')}
             body={t('profile.changes.empty')}
           />
         ) : (

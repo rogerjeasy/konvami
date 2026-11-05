@@ -1733,6 +1733,7 @@ export const en = {
     changes: {
       title: 'Changes made by voice',
       body: 'When you ask a partner to change a setting in a conversation, it is listed here. You can put it back.',
+      emptyTitle: 'Nothing changed yet',
       empty:
         'Nothing yet. In a conversation, try asking a partner to explain things in another language from now on.',
       loadFailed: 'Your changes can’t be shown right now.',

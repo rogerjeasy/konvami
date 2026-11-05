@@ -1756,6 +1756,7 @@ export const fr: Translation = {
     changes: {
       title: 'Changements faits à la voix',
       body: 'Quand tu demandes à un partenaire de changer un réglage pendant une conversation, il apparaît ici. Tu peux le remettre comme avant.',
+      emptyTitle: 'Rien n’a encore changé',
       empty:
         'Rien pour l’instant. Pendant une conversation, demande à un partenaire d’expliquer désormais dans une autre langue.',
       loadFailed: 'Tes changements ne peuvent pas être affichés pour le moment.',
