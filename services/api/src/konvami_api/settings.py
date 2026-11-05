@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from konvami_api.domain.costs import Budget, Prices
+from konvami_api.domain.plans import PlanSettings, Tier
 from konvami_api.domain.premium_voices import PremiumVoice, PremiumVoices
 from konvami_api.domain.voice import CallPurpose, VoiceSettings
 
@@ -14,6 +15,8 @@ VOICE_VARIABLE = "KONVAMI_VOICE"
 TEXT_MODELS_VARIABLE = "KONVAMI_TEXT_MODELS"
 COSTS_VARIABLE = "KONVAMI_COSTS"
 PREMIUM_VOICES_VARIABLE = "KONVAMI_PREMIUM_VOICES"
+
+PLANS_VARIABLE = "KONVAMI_PLANS"
 
 
 class _Voice(BaseModel):
@@ -203,4 +206,33 @@ def premium_voice_settings(raw: str | None) -> PremiumVoiceSettings:
     voices = tuple(PremiumVoice(voice.id, voice.name) for voice in parsed.voices)
     return PremiumVoiceSettings(
         PremiumVoices(model=parsed.model, voices=voices), parsed.open_to_testers
+    )
+
+
+class _Plans(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enforce: bool = False
+    # Minutes per week of a tier where this environment differs from `plans.TIERS`.
+    weekly_minutes: dict[Tier, int] = {}
+    # Store product ids (as RevenueCat names them) of the subscriptions, and of the minute packs
+    # with the minutes each adds.
+    products: dict[str, Tier] = {}
+    pack_minutes: dict[str, int] = {}
+
+
+def plan_settings(raw: str | None) -> PlanSettings:
+    """The plan settings from the `KONVAMI_PLANS` JSON. Without it plans are not enforced and no
+    store product is known."""
+    if not raw:
+        return PlanSettings()
+    try:
+        plans = _Plans.model_validate(json.loads(raw))
+    except (ValueError, ValidationError) as error:
+        raise RuntimeError(f"{PLANS_VARIABLE} is not valid") from error
+    return PlanSettings(
+        enforce=plans.enforce,
+        weekly_minutes=plans.weekly_minutes,
+        products=plans.products,
+        packs={product: minutes * 60 for product, minutes in plans.pack_minutes.items()},
     )

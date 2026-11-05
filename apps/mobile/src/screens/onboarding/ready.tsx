@@ -25,6 +25,7 @@ import { languageName } from '@/onboarding/names';
 import { useOnboardingStore } from '@/onboarding/services';
 import type { OnboardingData } from '@/onboarding/store';
 import { usePartners } from '@/onboarding/use-partners';
+import { TrialOffer } from '@/screens/plan/trial-offer';
 
 // The drawing on the design's frame (pt): the logo mark with the partners' portraits under it.
 const FRAME = 220;
@@ -146,6 +147,9 @@ function Ready({ data }: { data: OnboardingData }) {
                 />
               ) : null}
             </Card>
+          </Reveal>
+          <Reveal delay={staggerDelay(7)}>
+            <TrialOffer />
           </Reveal>
         </>
       }

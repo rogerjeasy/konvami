@@ -25,6 +25,7 @@ import {
   tidy,
   type DraftProblem,
 } from '@/profile/persona-draft';
+import { usePaywall } from '@/plan/services';
 import { usePartnerList, useProfileServices } from '@/profile/services';
 import { ProfilePage } from '@/screens/profile/page';
 import { IdentitySection } from './sections/identity';
@@ -80,6 +81,7 @@ export function NewStudioScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
   const services = useProfileServices();
+  const paywall = usePaywall();
   // What the screen before handed over (a draft, a template), or an empty page.
   const [draft, setDraft] = useState<PersonaDraft>(
     () => services.studioStart.get() ?? blankDraft(),
@@ -126,6 +128,7 @@ export function NewStudioScreen() {
       router.replace(ROUTES.accountPartners);
     } catch (error) {
       setProblem(failureOf(t(problemKey(error)), apiErrorCode(error)));
+      if (apiErrorCode(error) === 'plan_required') paywall.open('partners');
       setSaving(false);
     }
   }

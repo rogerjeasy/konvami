@@ -71,6 +71,7 @@ export const en = {
     phoneLanguage: 'Phone language ({{language}})',
   },
   errors: {
+    planRequired: 'Your plan doesn’t include this. See the plans to change it.',
     network: 'Can’t reach Konvami. Check your connection and try again.',
     tooManyAttempts: 'Too many tries. Wait a few minutes and try again.',
     notConfigured: 'Sign-up isn’t set up in this build yet.',
@@ -1938,6 +1939,68 @@ export const en = {
       pen_pal_listen: 'Pen-pal voice notes written down',
     },
   },
+  plan: {
+    title: 'Your plan',
+    body: 'What you have, what it includes and how many voice minutes are left.',
+    loadFailed: 'Couldn’t load your plan.',
+    tiers: {
+      free: 'Free',
+      plus: 'Plus',
+      pro: 'Pro',
+    },
+    trial: 'Free trial',
+    trialUntil: 'Your free trial ends on {{date}}.',
+    renews: 'Renews on {{date}}.',
+    endsOn: 'Ends on {{date}}. It won’t renew.',
+    billingIssue:
+      'The store couldn’t take your last payment. Update your payment method there to keep your plan.',
+    testing:
+      'While Konvami is in testing, every feature is open and you have {{count}} voice minutes a week.',
+    includes: 'Included',
+    minutesPerWeek: '{{count}} voice minutes a week',
+    partnersLimit: 'Up to {{count}} partners',
+    partnersAny: 'As many partners as you like',
+    perks: {
+      exam_simulations: 'Scored exam simulations',
+      premium_voices: 'Premium voices',
+    },
+    packLeft: '{{count}} minutes left from packs',
+    see: 'See plans',
+    restore: 'Restore purchases',
+    restored: 'Purchases restored.',
+    restoreFailed: 'Couldn’t restore purchases. Try again.',
+    manage: 'Manage subscription',
+    manageFailed: 'Couldn’t open your subscription settings.',
+    unavailable: 'Plans are bought in the Konvami phone app. This version can’t sell them.',
+    paywall: {
+      title: 'Choose a plan',
+      reasons: {
+        plans: 'More voice minutes and more partners, whenever you want them.',
+        minutes:
+          'You’ve used this week’s voice minutes. A plan gives you more, or a pack adds minutes once.',
+        partners:
+          'Your plan has room for a limited number of partners. Plus and Pro have as many as you like.',
+        exams: 'Scored exam simulations come with Pro.',
+        trial: 'Try Plus free. Cancel any time in your store account.',
+      },
+      month: 'per month',
+      year: 'per year',
+      trialDays: '{{count}} days free',
+      choose: 'Choose',
+      packs: 'Extra minutes',
+      packsBody: 'One-off packs. They’re used after the week’s minutes and never expire.',
+      loadFailed: 'Couldn’t load the plans.',
+      purchaseFailed: 'The purchase didn’t go through. Please try again.',
+      thanks: 'Thank you. Your plan updates in a moment.',
+      renewal: 'Subscriptions renew until you cancel them in your store account.',
+    },
+    ready: {
+      trial: 'Try Plus free for {{count}} days',
+      body: 'More voice minutes and as many partners as you like. Cancel any time.',
+      see: 'See the offer',
+    },
+  },
+
   profile: {
     minutes: {
       left_one: '{{count}} minute left',
@@ -1966,6 +2029,8 @@ export const en = {
       help: 'Help',
     },
     rows: {
+      plan: 'Plan',
+      planHint: 'What you have, minutes and upgrades',
       costs: 'Costs',
       costsHint: 'What Konvami spends, per day, feature and learner',
       flags: 'Reports',

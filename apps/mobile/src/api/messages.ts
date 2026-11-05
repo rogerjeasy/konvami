@@ -26,6 +26,8 @@ function isModerationCode(code: string): code is keyof typeof MODERATION_KEYS {
 /** Translation key of the message for a failed API call. */
 export function apiErrorKey(code: string) {
   if (isModerationCode(code)) return MODERATION_KEYS[code];
+
+  if (code === 'plan_required') return 'errors.planRequired';
   return code === 'network' ? 'errors.network' : 'errors.unknown';
 }
 

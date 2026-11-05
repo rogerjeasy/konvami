@@ -217,6 +217,9 @@ export type ThenVsNow = Schemas['ThenVsNowOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
 export type PremiumVoices = Schemas['PremiumVoicesOut'];
 export type PremiumVoice = Schemas['PremiumVoiceOut'];
+
+/** What the learner has bought and what it includes (spec §6.21.2). */
+export type Plan = Schemas['PlanOut'];
 export type Costs = Schemas['CostsOut'];
 export type CostLevel = Costs['level'];
 /** A turn's recording: a short-lived address to play it from, and how long it lasts. */
@@ -541,6 +544,8 @@ export interface ApiClient {
   configureRecordings(kept: boolean): Promise<Recordings>;
   /** The learner's voice minutes this week (in seconds) and when they come back. */
   getVoiceAllowance(): Promise<VoiceAllowance>;
+  /** The learner's plan: tier, trial, renewal, voice minutes and what it includes. */
+  getPlan(): Promise<Plan>;
   /**
    * The premium voices (ElevenLabs, spec §6.21.2): whether they are on offer at all, whether the
    * learner agreed to ElevenLabs and may use them, and which one reads aloud (null: the standard
@@ -793,6 +798,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
           `/v1/premium-voices/${encodeURIComponent(voiceId)}/sample`,
         )
       ).url,
+
+    getPlan: () => request('GET', '/v1/plan'),
     getCosts: (month) => request('GET', withQuery('/v1/owner/costs', { month })),
     changeMemory: (id, change) =>
       request('PATCH', `/v1/memories/${encodeURIComponent(id)}`, change),

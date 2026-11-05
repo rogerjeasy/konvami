@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from konvami_api.domain import plans
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
 from konvami_api.domain.cards import Card, CardTotals, WordDetails
 from konvami_api.domain.conversations import (
@@ -1572,3 +1573,55 @@ class FakeEmailProof:
         if email not in self.emailed or code != self.CODE:
             raise CodeRejected
         return self.accounts[email]
+
+
+class InMemoryEntitlementRepository:
+    def __init__(self) -> None:
+        self.entitlements: dict[UUID, plans.Entitlement] = {}
+
+    def get(self, user_id: UUID) -> plans.Entitlement | None:
+        return self.entitlements.get(user_id)
+
+    def save(self, entitlement: plans.Entitlement) -> None:
+        # An event older than the stored one changes nothing, as in SQL.
+        kept = self.entitlements.get(entitlement.user_id)
+        if kept is None or kept.event_at <= entitlement.event_at:
+            self.entitlements[entitlement.user_id] = entitlement
+
+
+class InMemoryPackRepository:
+    """`used(learner, week)` is what that week's calls used, as the voice sessions say."""
+
+    def __init__(self, used: Callable[[UUID, date], int] = lambda user_id, week: 0) -> None:
+        self._used = used
+        self.purchases: dict[str, tuple[UUID, int]] = {}
+        self.refunded: set[str] = set()
+        self.quotas: dict[tuple[UUID, date], int] = {}
+
+    def credit(self, transaction_id: str, user_id: UUID, seconds: int, at: datetime) -> bool:
+        if transaction_id in self.purchases:
+            return False
+        self.purchases[transaction_id] = (user_id, seconds)
+        return True
+
+    def refund(self, transaction_id: str) -> bool:
+        if transaction_id not in self.purchases or transaction_id in self.refunded:
+            return False
+        self.refunded.add(transaction_id)
+        return True
+
+    def balance(self, user_id: UUID, week: date) -> plans.PackBalance:
+        bought = sum(
+            seconds
+            for transaction, (user, seconds) in self.purchases.items()
+            if user == user_id and transaction not in self.refunded
+        )
+        other = sum(
+            max(0, self._used(user_id, w) - quota)
+            for (user, w), quota in self.quotas.items()
+            if user == user_id and w != week
+        )
+        return plans.PackBalance(bought, other, self.quotas.get((user_id, week)))
+
+    def record_quota(self, user_id: UUID, week: date, quota_seconds: int) -> None:
+        self.quotas[(user_id, week)] = quota_seconds

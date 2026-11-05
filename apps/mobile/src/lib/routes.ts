@@ -94,6 +94,8 @@ export const ROUTES = {
   accountGoals: '/account/goals',
   /** 6.13 Reminders: practice reminders on this device (spec §6.18). */
   accountReminders: '/account/reminders',
+  /** 6.17 Plan: what the learner has bought, their voice minutes and the plans on offer. */
+  accountPlan: '/account/plan',
   /** 6.4 My partners, 6.5 New partner and 6.6 Persona Studio for a partner still to be added. */
   accountPartners: '/account/partners',
   accountNewPartner: '/account/partners/new',

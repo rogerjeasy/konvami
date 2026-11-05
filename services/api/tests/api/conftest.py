@@ -33,6 +33,7 @@ from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
+from konvami_api.domain.plans import PlanService, PlanSettings
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.premium_voices import (
     PilotAccess,
@@ -73,6 +74,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
+    InMemoryEntitlementRepository,
     InMemoryExamRepository,
     InMemoryExportRepository,
     InMemoryFeedbackRepository,
@@ -82,6 +84,7 @@ from tests.fakes import (
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryPackRepository,
     InMemoryPenPalRepository,
     InMemoryPersonaRepository,
     InMemoryPhraseRepository,
@@ -113,6 +116,8 @@ USER = "11111111-1111-4111-8111-111111111111"
 OTHER_USER = "22222222-2222-4222-8222-222222222222"
 # The account that may see the costs.
 OWNER = "33333333-3333-4333-8333-333333333333"
+# What the store's webhook must send back in `Authorization`.
+STORE_SECRET = "store-secret"  # noqa: S105 - a test value
 BUDGET = Budget(target_usd=150, ceiling_usd=250)
 
 
@@ -132,11 +137,12 @@ def http_api_event(
     body: Any,
     subject: str | None,
     signed_in_seconds_ago: int = 0,
+    headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """An API Gateway HTTP API (payload 2.0) event, as Lambda gets it behind a JWT authorizer.
     `target` is the path, with its query string if it has one. `signed_in_seconds_ago`: how
     long ago the caller typed their password (the token's `auth_time`); a token that was only
-    refreshed since keeps the old time."""
+    refreshed since keeps the old time. `headers` are sent besides the usual ones."""
     path, _, query = target.partition("?")
     context: dict[str, Any] = {
         "accountId": "503002144480",
@@ -182,6 +188,7 @@ def http_api_event(
             "accept": "application/json",
             "content-type": "application/json",
             "host": "abc123.execute-api.eu-central-1.amazonaws.com",
+            **(headers or {}),
         },
         "requestContext": context,
         "body": None if body is None else json.dumps(body),
@@ -342,6 +349,18 @@ def memory_store(calls: InMemoryVoiceSessionRepository) -> InMemoryMemoryReposit
 
 
 @pytest.fixture
+def plan_settings() -> PlanSettings:
+    """The plan settings the services run with; a test overrides the fixture to enforce plans."""
+    return PlanSettings()
+
+
+@pytest.fixture
+def entitlement_store() -> InMemoryEntitlementRepository:
+    """What learners have bought, for tests that need a plan to have been bought."""
+    return InMemoryEntitlementRepository()
+
+
+@pytest.fixture
 def services(
     clock: FixedClock,
     voice_provider: FakeVoiceProvider,
@@ -366,6 +385,8 @@ def services(
     exam_starter: RecordingExamStarter,
     pen_pal_transcriber: ScriptedTranscriber,
     pen_pal_starter: RecordingPenPalStarter,
+    plan_settings: PlanSettings,
+    entitlement_store: InMemoryEntitlementRepository,
 ) -> Services:
     """The real services on in-memory storage, for tests that prepare state behind the API."""
     profiles = ProfileService(InMemoryProfileRepository(), CATALOG, clock)
@@ -387,6 +408,7 @@ def services(
         drafts=InMemoryDraftLog(),
         guard=text_guard(clock),
         clock=clock,
+        capacity=lambda user: plans.persona_limit(user),
     )
     conversations = ConversationService(InMemoryConversationRepository(calls), personas)
     push = PushService(
@@ -481,6 +503,15 @@ def services(
         sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
         clock=clock,
     )
+    plans = PlanService(
+        settings=plan_settings,
+        entitlements=entitlement_store,
+        packs=InMemoryPackRepository(calls.seconds_used),
+        owners=frozenset({UUID(OWNER)}),
+        legacy_weekly_seconds=VOICE.weekly_seconds,
+        used_seconds=calls.seconds_used,
+        clock=clock,
+    )
     voice = VoiceCallService(
         settings=VOICE,
         scripts={
@@ -513,6 +544,7 @@ def services(
         starter=RecordingCallStarter(),
         clock=clock,
         recordings=recordings,
+        weekly_seconds=plans.weekly_seconds,
         guard=SpendGuard(
             budget=BUDGET,
             charges=charges,
@@ -661,6 +693,8 @@ def services(
         exports=DataExportService(
             records=export_records, accounts=directory, files=files, clock=clock
         ),
+        plans=plans,
+        store_secret=lambda: STORE_SECRET,
         flags=FlagService(
             conversations=conversations,
             reports=reports,
@@ -752,8 +786,9 @@ def call(services: Services) -> Call:
         *,
         subject: str | None = USER,
         signed_in_seconds_ago: int = 0,
+        headers: dict[str, str] | None = None,
     ) -> Response:
-        event = http_api_event(method, path, body, subject, signed_in_seconds_ago)
+        event = http_api_event(method, path, body, subject, signed_in_seconds_ago, headers)
         result = handler(event, None)  # type: ignore[arg-type]
         text = result.get("body") or ""
         return Response(result["statusCode"], json.loads(text) if text else None)

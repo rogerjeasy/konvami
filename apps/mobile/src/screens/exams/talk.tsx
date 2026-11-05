@@ -17,6 +17,7 @@ import { Text } from '@/components/text';
 import { stepFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
 import { examPrepRoute, ROUTES, simulationRoute } from '@/lib/routes';
+import { usePaywall } from '@/plan/services';
 import { useMinutesBack } from '@/profile/services';
 import { useTheme } from '@/theme';
 import { withLine } from '@/voice/problems';
@@ -47,6 +48,7 @@ const PROBLEM_KEY = {
   consent_required: 'onboarding.placement.talk.problems.consent_required',
   minutes_used_up: 'onboarding.placement.talk.problems.minutes_used_up',
   voice_paused: 'onboarding.placement.talk.problems.voice_paused',
+  plan_required: 'errors.planRequired',
   voice_unavailable: 'onboarding.placement.talk.problems.voice_unavailable',
   lost: 'onboarding.placement.talk.problems.lost',
   network: 'errors.network',
@@ -117,6 +119,7 @@ function Test({ next, onRetry }: { next: NextSimulation; onRetry: () => void }) 
   const card = cards[index];
   const live = call.status === 'live';
   const minutesBack = useMinutesBack(call.problem === 'minutes_used_up');
+  const paywall = usePaywall();
   const problem = call.problem ? withLine(t(problemKey(call.problem)), minutesBack) : null;
 
   return (
@@ -170,13 +173,17 @@ function Test({ next, onRetry }: { next: NextSimulation; onRetry: () => void }) 
         </View>
       }
       failedActions={
-        <Button
-          label={t('exams.talk.retry')}
-          onPress={() => {
-            stepFeedback();
-            onRetry();
-          }}
-        />
+        call.problem === 'plan_required' ? (
+          <Button label={t('plan.see')} onPress={() => paywall.open('exams')} />
+        ) : (
+          <Button
+            label={t('exams.talk.retry')}
+            onPress={() => {
+              stepFeedback();
+              onRetry();
+            }}
+          />
+        )
       }
     />
   );

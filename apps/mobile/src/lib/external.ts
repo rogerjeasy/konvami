@@ -37,6 +37,11 @@ export function openSupportEmail(email: string, subject: string): void {
 }
 
 /** Whether this platform has a mail app the app can bring to the front. */
+/** Opens a web address outside the app (a store's subscription settings). Fails soft. */
+export function openLink(url: string): void {
+  void Linking.openURL(url).catch(() => {});
+}
+
 /** Opens Konvami's page in the phone's settings (to allow notifications again). */
 export function openAppSettings(): void {
   void Linking.openSettings().catch(() => {});

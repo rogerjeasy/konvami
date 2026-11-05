@@ -21,7 +21,10 @@ import { VoiceProvider } from '@/voice/services';
 import { RecorderProvider } from '@/voice/sentence-recorder';
 import { createFakeRecorder, type FakeRecorder } from '@/test/fake-recorder';
 import { createFakeReminderDevice, type FakeReminderDevice } from '@/test/fake-reminder-device';
+import { PlanProvider } from '@/plan/services';
 import { RemindersProvider } from '@/reminders/services';
+import { PaywallSheet } from '@/screens/plan/paywall-sheet';
+import { createFakePurchaseDevice, type FakePurchaseDevice } from '@/test/fake-purchase-device';
 
 const TEST_ACCOUNT = { email: 'amara.diallo@mail.com', password: 'Sommer2026!' };
 
@@ -58,6 +61,8 @@ export async function renderScreen(
     studioStart,
     reminders,
     photos,
+
+    purchases,
     signedIn = false,
   }: {
     auth?: AuthServices;
@@ -71,6 +76,9 @@ export async function renderScreen(
     reminders?: FakeReminderDevice;
     /** The photo picker of the course companion. */
     photos?: FakeImportPhotos;
+
+    /** The store: unavailable unless a test brings one that can sell. */
+    purchases?: FakePurchaseDevice;
     /** The device's clock: a fixed moment, or a function for a clock that a test moves. */
     now?: Date | (() => number);
     signedIn?: boolean;
@@ -116,25 +124,30 @@ export async function renderScreen(
         <OnboardingProvider store={onboarding}>
           <PracticeProvider services={practice}>
             <ProfileProvider services={profile}>
-              <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
-                <RecorderProvider useRecorder={() => sentences}>
-                  <VoiceProvider
-                    createEngine={(purpose, personaId, scenario, practise) => {
-                      engine.openedFor.push(purpose);
-                      engine.openedWith.push(personaId);
-                      engine.openedScenarios.push(scenario);
-                      engine.openedPractise.push(practise);
-                      return engine;
-                    }}
-                  >
-                    <SignUpDraftProvider initial={draft}>
-                      <AccessDraftProvider initial={access}>
-                        <ExamNotesProvider>{ui}</ExamNotesProvider>
-                      </AccessDraftProvider>
-                    </SignUpDraftProvider>
-                  </VoiceProvider>
-                </RecorderProvider>
-              </RemindersProvider>
+              <PlanProvider device={purchases ?? createFakePurchaseDevice(false)}>
+                <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
+                  <RecorderProvider useRecorder={() => sentences}>
+                    <VoiceProvider
+                      createEngine={(purpose, personaId, scenario, practise) => {
+                        engine.openedFor.push(purpose);
+                        engine.openedWith.push(personaId);
+                        engine.openedScenarios.push(scenario);
+                        engine.openedPractise.push(practise);
+                        return engine;
+                      }}
+                    >
+                      <SignUpDraftProvider initial={draft}>
+                        <AccessDraftProvider initial={access}>
+                          <ExamNotesProvider>
+                            {ui}
+                            <PaywallSheet />
+                          </ExamNotesProvider>
+                        </AccessDraftProvider>
+                      </SignUpDraftProvider>
+                    </VoiceProvider>
+                  </RecorderProvider>
+                </RemindersProvider>
+              </PlanProvider>
             </ProfileProvider>
           </PracticeProvider>
         </OnboardingProvider>

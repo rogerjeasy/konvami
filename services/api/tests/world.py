@@ -32,6 +32,7 @@ from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementResult, PlacementScript, PlacementService
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.planner import SessionPlanner
+from konvami_api.domain.plans import PlanService, PlanSettings
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.premium_voices import (
     PilotAccess,
@@ -86,6 +87,7 @@ from tests.fakes import (
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
+    InMemoryEntitlementRepository,
     InMemoryExamRepository,
     InMemoryExportRepository,
     InMemoryFeedbackRepository,
@@ -95,6 +97,7 @@ from tests.fakes import (
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryPackRepository,
     InMemoryPenPalRepository,
     InMemoryPersonaRepository,
     InMemoryPhraseRepository,
@@ -196,6 +199,20 @@ class World:
         self.clock = FixedClock(now)
         self.charges = InMemoryChargeRepository()
         self.notifier = RecordingNotifier()
+        self.entitlement_store = InMemoryEntitlementRepository()
+        self.pack_store = InMemoryPackRepository(
+            lambda user, week: self.sessions.seconds_used(user, week)
+        )
+        self.plan_settings = PlanSettings()
+        self.plans = PlanService(
+            settings=self.plan_settings,
+            entitlements=self.entitlement_store,
+            packs=self.pack_store,
+            owners=frozenset({OWNER}),
+            legacy_weekly_seconds=VOICE.weekly_seconds,
+            used_seconds=lambda user, week: self.sessions.seconds_used(user, week),
+            clock=self.clock,
+        )
         self.guard = SpendGuard(
             budget=BUDGET,
             charges=self.charges,
@@ -227,6 +244,7 @@ class World:
             drafts=InMemoryDraftLog(),
             guard=text_guard(self.clock),
             clock=self.clock,
+            capacity=lambda user: self.plans.persona_limit(user),
         )
         self.accounts = FakeAccountDirectory(
             {
@@ -544,6 +562,7 @@ class World:
             guard=self.guard,
             meter=self.meter,
             checker=self.spotter,
+            weekly_seconds=self.plans.weekly_seconds,
         )
         self.costs = CostService(
             owners=frozenset({OWNER}),

@@ -15,6 +15,8 @@ import { track } from '@/analytics';
 import { AuthServicesProvider, authServices } from '@/auth';
 import { initMonitoring, monitored } from '@/monitoring';
 import { OnboardingProvider, onboardingStore } from '@/onboarding';
+import { appPurchaseDevice } from '@/plan/app-device';
+import { PlanProvider } from '@/plan/services';
 import { PracticeProvider, practiceServices } from '@/practice';
 import { followPhoneLanguage, loadPreferences } from '@/preferences';
 import { ProfileProvider, profileServices } from '@/profile';
@@ -23,6 +25,7 @@ import { RemindersProvider } from '@/reminders/services';
 import { ReminderKeeper } from '@/reminders/use-reminders';
 import { SignUpDraftProvider } from '@/screens/create-account/draft';
 import { ScreenBoundary } from '@/screens/error';
+import { PaywallSheet } from '@/screens/plan/paywall-sheet';
 import { ExamNotesProvider } from '@/screens/exams/notes';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
 import { ThemeProvider, useTheme } from '@/theme';
@@ -75,21 +78,24 @@ function RootLayout() {
         <OnboardingProvider store={onboardingStore}>
           <PracticeProvider services={practiceServices}>
             <ProfileProvider services={profileServices}>
-              <RemindersProvider device={appReminderDevice}>
-                <RecorderProvider useRecorder={useAppSentenceRecorder}>
-                  <VoiceProvider createEngine={createAppVoiceEngine}>
-                    <SignUpDraftProvider>
-                      <AccessDraftProvider>
-                        <ExamNotesProvider>
-                          <StatusBar style="auto" />
-                          <ReminderKeeper />
-                          <RootStack />
-                        </ExamNotesProvider>
-                      </AccessDraftProvider>
-                    </SignUpDraftProvider>
-                  </VoiceProvider>
-                </RecorderProvider>
-              </RemindersProvider>
+              <PlanProvider device={appPurchaseDevice}>
+                <RemindersProvider device={appReminderDevice}>
+                  <RecorderProvider useRecorder={useAppSentenceRecorder}>
+                    <VoiceProvider createEngine={createAppVoiceEngine}>
+                      <SignUpDraftProvider>
+                        <AccessDraftProvider>
+                          <ExamNotesProvider>
+                            <StatusBar style="auto" />
+                            <ReminderKeeper />
+                            <RootStack />
+                            <PaywallSheet />
+                          </ExamNotesProvider>
+                        </AccessDraftProvider>
+                      </SignUpDraftProvider>
+                    </VoiceProvider>
+                  </RecorderProvider>
+                </RemindersProvider>
+              </PlanProvider>
             </ProfileProvider>
           </PracticeProvider>
         </OnboardingProvider>

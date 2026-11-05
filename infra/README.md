@@ -73,6 +73,11 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
   the value and raise `openai_api_key_version` by one. Voice models and limits are the `voice`
   variable. After a placement test's call the same worker has the transcript assessed, so a call
   may last 780 seconds at most.
+- **Subscriptions (spec §6.21.2):** off by default. `plans` (tiers' minutes, store product ids,
+  `enforce`) is the `KONVAMI_PLANS` setting; with `revenuecat_enabled` Terraform also creates the
+  secret `kv-dev-revenuecat-webhook` (value `revenuecat_webhook_secret`, never in state) and the
+  one route without a token, `POST /webhooks/revenuecat`, which the API answers only with that
+  secret in `Authorization`. Setup in `docs/superpowers/specs/2026-11-06-subscriptions-design.md`.
 - **Push (spec §6.18):** the rule `kv-dev-nudges` starts `kv-dev-call-worker` once an hour to
   nudge learners who have been quiet for a week. Push goes out through Expo's push service, which
   needs no credentials here: Android's Firebase key and iOS's APNs key are kept by EAS (design note

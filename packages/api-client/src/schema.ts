@@ -1179,6 +1179,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan
+         * @description What the learner has bought and what it includes (spec §6.21.2).
+         */
+        get: operations["getPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/premium-voices": {
         parameters: {
             query?: never;
@@ -2925,6 +2945,12 @@ export interface components {
             /** Unread */
             unread: number;
         };
+        /**
+         * Perk
+         * @description What a tier may do beyond talking. Each is checked on the server.
+         * @enum {string}
+         */
+        Perk: "exam_simulations" | "premium_voices";
         /** PersonaDescription */
         PersonaDescription: {
             /** Description */
@@ -3234,6 +3260,38 @@ export interface components {
          * @enum {string}
          */
         PlacementStatus: "not_started" | "in_progress" | "assessing" | "measured" | "inconclusive" | "decided" | "skipped";
+        /**
+         * PlanOut
+         * @description The learner's plan (spec §6.21.2): what they have and what it includes.
+         */
+        PlanOut: {
+            /** Autorenew */
+            autoRenew: boolean;
+            /** Billingissue */
+            billingIssue: boolean;
+            /** Enforced */
+            enforced: boolean;
+            /** Expiresat */
+            expiresAt: string | null;
+            /** Packseconds */
+            packSeconds: number;
+            /** Perks */
+            perks: components["schemas"]["Perk"][];
+            /** Personas */
+            personas: number | null;
+            tier: components["schemas"]["Tier"];
+            /** Tiers */
+            tiers: components["schemas"]["TierOut"][];
+            /** Trial */
+            trial: boolean;
+            /**
+             * Userid
+             * Format: uuid
+             */
+            userId: string;
+            /** Weeklyseconds */
+            weeklySeconds: number;
+        };
         /**
          * PlanSessionOut
          * @description One conversation of today's plan.
@@ -3865,6 +3923,24 @@ export interface components {
             then: components["schemas"]["ConversationOut"] | null;
             /** Weeksapart */
             weeksApart: number;
+        };
+        /**
+         * Tier
+         * @enum {string}
+         */
+        Tier: "free" | "plus" | "pro";
+        /**
+         * TierOut
+         * @description What a tier includes (spec §6.21.2).
+         */
+        TierOut: {
+            /** Perks */
+            perks: components["schemas"]["Perk"][];
+            /** Personas */
+            personas: number | null;
+            tier: components["schemas"]["Tier"];
+            /** Weeklyseconds */
+            weeklySeconds: number;
         };
         /** TopicMistakeOut */
         TopicMistakeOut: {
@@ -7130,6 +7206,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description Payment Required */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description Conflict */
             409: {
                 headers: {
@@ -7410,6 +7495,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Payment Required */
+            402: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7829,6 +7923,35 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9055,6 +9178,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Payment Required */
+            402: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -314,9 +314,13 @@ class VoiceCallService:
         guard: SpendGuard | None = None,
         meter: Meter | None = None,
         checker: TurnChecker | None = None,
+        weekly_seconds: Callable[[UUID, dt.date], int] | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
-        `meter` they are not metered; without a `checker` no turn is checked live."""
+        `meter` they are not metered; without a `checker` no turn is checked live. Without
+        `weekly_seconds` (the learner and the week: the seconds the week allows them) every
+        learner has the settings' minutes."""
+        self._weekly = weekly_seconds
         self._settings = settings
         self._checker = checker
         self._guard = guard
@@ -384,7 +388,7 @@ class VoiceCallService:
         }
 
         week = week_start(now).date()
-        weekly = self._settings.weekly_seconds
+        weekly = self._weekly_seconds(user_id, week)
         granted = (
             self._sessions.reserve_seconds(user_id, week, weekly, MIN_CALL_SECONDS, max_seconds)
             if weekly >= MIN_CALL_SECONDS
@@ -430,10 +434,16 @@ class VoiceCallService:
         """The learner's voice minutes this week."""
         start = week_start(self._clock())
         return Allowance(
-            weekly_seconds=self._settings.weekly_seconds,
+            weekly_seconds=self._weekly_seconds(user_id, start.date()),
             used_seconds=self._sessions.seconds_used(user_id, start.date()),
             resets_at=start + WEEK,
         )
+
+    def _weekly_seconds(self, user_id: UUID, week: dt.date) -> int:
+        """The seconds `week` allows this learner altogether (their plan, spec §6.21.2)."""
+        if self._weekly is None:
+            return self._settings.weekly_seconds
+        return self._weekly(user_id, week)
 
     def live_call(self, call_id: str) -> LiveCall | None:
         """The server's side of a recorded call, with the tools of the learner it belongs to."""

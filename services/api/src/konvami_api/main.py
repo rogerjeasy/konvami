@@ -41,6 +41,7 @@ from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.phrasebook import PhrasebookService
 from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
+from konvami_api.domain.plans import PlanService
 from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.premium_voices import PilotAccess, PremiumVoices, PremiumVoiceService
 from konvami_api.domain.profile import ProfileService
@@ -75,6 +76,7 @@ from konvami_api.persistence.repositories import (
     SqlChargeRepository,
     SqlConversationRepository,
     SqlDraftLog,
+    SqlEntitlementRepository,
     SqlExamRepository,
     SqlFeedbackRepository,
     SqlFlagRepository,
@@ -82,6 +84,7 @@ from konvami_api.persistence.repositories import (
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
+    SqlPackRepository,
     SqlPenPalRepository,
     SqlPersonaRepository,
     SqlPhraseRepository,
@@ -124,10 +127,12 @@ from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
 from konvami_api.providers.web_page import WebPageFetcher
 from konvami_api.settings import (
     COSTS_VARIABLE,
+    PLANS_VARIABLE,
     PREMIUM_VOICES_VARIABLE,
     TEXT_MODELS_VARIABLE,
     VOICE_VARIABLE,
     cost_settings,
+    plan_settings,
     premium_voice_settings,
     text_models,
     voice_settings,
@@ -146,6 +151,8 @@ _OPENAI_SECRET = "KONVAMI_OPENAI_SECRET_ARN"  # noqa: S105 - the name of a setti
 # Empty until ElevenLabs is turned on (infra/envs/dev `elevenlabs_enabled`).
 _ELEVENLABS_SECRET = "KONVAMI_ELEVENLABS_SECRET_ARN"  # noqa: S105 - the name of a setting
 _CALL_WORKER = "KONVAMI_CALL_WORKER"
+# The secret RevenueCat's webhook sends in its Authorization header (infra/envs/dev `plans`).
+_STORE_SECRET = "KONVAMI_REVENUECAT_SECRET_ARN"  # noqa: S105 - the name of a setting
 # The private bucket for photos and voice samples (infra/modules/media).
 _MEDIA_BUCKET = "KONVAMI_MEDIA_BUCKET"
 # The SNS topic the owner's budget alerts are emailed through (infra/modules/budget).
@@ -236,6 +243,8 @@ def build_backend(
         drafts=SqlDraftLog(sql),
         guard=text_guard,
         clock=_now,
+        # The plan is built below, with the voice settings; the limit is asked per request.
+        capacity=lambda user_id: plans.persona_limit(user_id),
     )
     conversations = ConversationService(SqlConversationRepository(sql), personas)
     push = PushService(
@@ -328,6 +337,15 @@ def build_backend(
         profiles=profiles, sessions=sessions, conversations=conversations, cards=cards
     )
     voice_config = voice_settings(environment.get(VOICE_VARIABLE))
+    plans = PlanService(
+        settings=plan_settings(environment.get(PLANS_VARIABLE)),
+        entitlements=SqlEntitlementRepository(sql),
+        packs=SqlPackRepository(sql),
+        owners=costs.owners,
+        legacy_weekly_seconds=voice_config.weekly_seconds,
+        used_seconds=sessions.seconds_used,
+        clock=_now,
+    )
     speech = OpenAiSpeech(openai_key, meter=meter)
     premium_config = premium_voice_settings(environment.get(PREMIUM_VOICES_VARIABLE))
     premium_voices = PremiumVoiceService(
@@ -407,6 +425,7 @@ def build_backend(
         recordings=recordings,
         guard=guard,
         meter=meter,
+        weekly_seconds=plans.weekly_seconds,
         # The same verbatim pass as after the call, so a turn written down live is not again.
         checker=LiveSpotter(
             profiles=profiles,
@@ -531,6 +550,8 @@ def build_backend(
         exports=DataExportService(
             records=SqlExportRepository(sql), accounts=directory, files=files, clock=_now
         ),
+        plans=plans,
+        store_secret=cached_secret(clients.secrets, environment.get(_STORE_SECRET, "")),
         flags=FlagService(
             conversations=conversations,
             reports=reports,

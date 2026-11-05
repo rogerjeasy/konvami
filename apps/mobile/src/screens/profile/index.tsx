@@ -31,6 +31,7 @@ import {
   useAllowance,
   useMinutesBack,
   usePremiumVoices,
+  usePlan,
   useProfileServices,
 } from '@/profile/services';
 import { usePreferences } from '@/preferences';
@@ -185,6 +186,8 @@ function VoiceMinutes() {
 export function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const { reminders } = usePreferences();
+  const planState = usePlan();
+  const plan = planState.phase === 'ready' ? planState.data : null;
   const { color } = useTheme();
   const { session } = useAuthServices();
   const { status } = useSession();
@@ -248,6 +251,13 @@ export function ProfileScreen() {
               title={t('profile.rows.changes')}
               detail={t('profile.rows.changesHint')}
               onPress={go(ROUTES.accountChanges)}
+            />
+            <ListRow
+              icon="award"
+              title={t('profile.rows.plan')}
+              detail={t('profile.rows.planHint')}
+              value={plan?.enforced ? t(`plan.tiers.${plan.tier}`) : undefined}
+              onPress={go(ROUTES.accountPlan)}
             />
             <ListRow
               icon="clock"

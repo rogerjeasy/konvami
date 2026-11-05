@@ -42,6 +42,8 @@ locals {
     KONVAMI_VOICE                 = jsonencode(var.voice)
     KONVAMI_TEXT_MODELS           = jsonencode(var.text_models)
     KONVAMI_COSTS                 = jsonencode(var.costs)
+    KONVAMI_PLANS                 = jsonencode(var.plans)
+    KONVAMI_REVENUECAT_SECRET_ARN = var.store_secret_arn
     KONVAMI_ALERT_TOPIC_ARN       = var.alert_topic_arn
   }
 
@@ -114,6 +116,17 @@ data "aws_iam_policy_document" "api" {
     for_each = var.elevenlabs_secret_arn == "" ? [] : [var.elevenlabs_secret_arn]
     content {
       sid       = "ReadElevenLabsKey"
+      actions   = ["secretsmanager:GetSecretValue"]
+      resources = [statement.value]
+    }
+  }
+
+  # RevenueCat's webhook sends a secret the API compares with its own (spec §6.21.2).
+  dynamic "statement" {
+    for_each = var.store_secret_arn == "" ? [] : [var.store_secret_arn]
+
+    content {
+      sid       = "ReadStoreWebhookSecret"
       actions   = ["secretsmanager:GetSecretValue"]
       resources = [statement.value]
     }
@@ -350,6 +363,19 @@ resource "aws_apigatewayv2_route" "public" {
 
   api_id             = aws_apigatewayv2_api.http.id
   route_key          = "${each.key} /public/{proxy+}"
+  target             = "integrations/${aws_apigatewayv2_integration.api.id}"
+  authorization_type = "NONE"
+}
+
+# The one route without a token: RevenueCat's webhook (spec §6.21.2). The function refuses
+# every call that does not send the shared secret, and the route exists only once that secret
+# does, so a Konvami without subscriptions has no open door. A more specific route wins over
+# the catch-all `POST /{proxy+}`.
+resource "aws_apigatewayv2_route" "store_webhook" {
+  count = var.store_secret_arn == "" ? 0 : 1
+
+  api_id             = aws_apigatewayv2_api.http.id
+  route_key          = "POST /webhooks/revenuecat"
   target             = "integrations/${aws_apigatewayv2_integration.api.id}"
   authorization_type = "NONE"
 }

@@ -68,6 +68,7 @@ export const it: Translation = {
     phoneLanguage: 'Lingua del telefono ({{language}})',
   },
   errors: {
+    planRequired: 'Il tuo piano non lo include. Guarda i piani per cambiarlo.',
     network: 'Impossibile raggiungere Konvami. Controlla la connessione e riprova.',
     tooManyAttempts: 'Troppi tentativi. Aspetta qualche minuto e riprova.',
     notConfigured: 'La registrazione non è ancora configurata in questa versione.',
@@ -1957,6 +1958,69 @@ export const it: Translation = {
       pen_pal_listen: 'Messaggi vocali trascritti',
     },
   },
+  plan: {
+    title: 'Il tuo piano',
+    body: 'Cosa hai, cosa include e quanti minuti di voce ti restano.',
+    loadFailed: 'Impossibile caricare il tuo piano.',
+    tiers: {
+      free: 'Free',
+      plus: 'Plus',
+      pro: 'Pro',
+    },
+    trial: 'Prova gratuita',
+    trialUntil: 'La tua prova gratuita termina il {{date}}.',
+    renews: 'Si rinnova il {{date}}.',
+    endsOn: 'Termina il {{date}}. Non si rinnoverà.',
+    billingIssue:
+      'Lo store non è riuscito ad addebitare l’ultimo pagamento. Aggiorna lì il metodo di pagamento per tenere il tuo piano.',
+    testing:
+      'Finché Konvami è in prova, tutte le funzioni sono aperte e hai {{count}} minuti di voce a settimana.',
+    includes: 'Incluso',
+    minutesPerWeek: '{{count}} minuti di voce a settimana',
+    partnersLimit: 'Fino a {{count}} partner',
+    partnersAny: 'Tutti i partner che vuoi',
+    perks: {
+      exam_simulations: 'Simulazioni d’esame con punteggio',
+      premium_voices: 'Voci premium',
+    },
+    packLeft: '{{count}} minuti rimasti dai pacchetti',
+    see: 'Vedi i piani',
+    restore: 'Ripristina gli acquisti',
+    restored: 'Acquisti ripristinati.',
+    restoreFailed: 'Impossibile ripristinare gli acquisti. Riprova.',
+    manage: 'Gestisci l’abbonamento',
+    manageFailed: 'Impossibile aprire le impostazioni dell’abbonamento.',
+    unavailable:
+      'I piani si acquistano nell’app Konvami sul telefono. Questa versione non può venderli.',
+    paywall: {
+      title: 'Scegli un piano',
+      reasons: {
+        plans: 'Più minuti di voce e più partner, quando vuoi.',
+        minutes:
+          'Hai usato i minuti di voce di questa settimana. Un piano ne dà di più, un pacchetto aggiunge minuti una volta.',
+        partners:
+          'Il tuo piano ha posto per un numero limitato di partner. Plus e Pro ne hanno quanti vuoi.',
+        exams: 'Le simulazioni d’esame con punteggio sono incluse in Pro.',
+        trial: 'Prova Plus gratis. Puoi disdire in qualsiasi momento dal tuo account dello store.',
+      },
+      month: 'al mese',
+      year: 'all’anno',
+      trialDays: '{{count}} giorni gratis',
+      choose: 'Scegli',
+      packs: 'Minuti extra',
+      packsBody: 'Pacchetti una tantum. Si usano dopo i minuti della settimana e non scadono mai.',
+      loadFailed: 'Impossibile caricare i piani.',
+      purchaseFailed: 'L’acquisto non è andato a buon fine. Riprova.',
+      thanks: 'Grazie. Il tuo piano si aggiorna tra un momento.',
+      renewal: 'Gli abbonamenti si rinnovano finché non li disdici dal tuo account dello store.',
+    },
+    ready: {
+      trial: 'Prova Plus gratis per {{count}} giorni',
+      body: 'Più minuti di voce e tutti i partner che vuoi. Puoi disdire in qualsiasi momento.',
+      see: 'Vedi l’offerta',
+    },
+  },
+
   profile: {
     minutes: {
       left_one: '{{count}} minuto rimasto',
@@ -1984,6 +2048,8 @@ export const it: Translation = {
       help: 'Aiuto',
     },
     rows: {
+      plan: 'Piano',
+      planHint: 'Cosa hai, minuti e upgrade',
       costs: 'Costi',
       costsHint: 'Quanto spende Konvami, per giorno, funzione e studente',
       flags: 'Segnalazioni',

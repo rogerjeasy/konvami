@@ -9,7 +9,7 @@ from collections.abc import Callable, Sequence
 from typing import Any, cast
 from uuid import UUID
 
-from konvami_api.domain import memories, penpal, push
+from konvami_api.domain import memories, penpal, plans, push
 from konvami_api.domain.accounts import DELETION_MEMORY
 from konvami_api.domain.cards import Card, CardTotals, Kind, WordDetails
 from konvami_api.domain.conversations import (
@@ -2967,3 +2967,162 @@ class SqlFeedbackRepository:
             _RESOLVE_FEEDBACK, {"id": str(feedback_id), "status": status, "at": at.isoformat()}
         )
         return _feedback(rows[0]) if rows else None
+
+
+_ENTITLEMENT_COLUMNS = f"""
+    CAST(user_id AS text) AS user_id, tier, trial, auto_renew, billing_issue,
+    {epoch_micros("expires_at")} AS expires_at, product_id, store,
+    {epoch_micros("event_at")} AS event_at
+"""
+
+_LOAD_ENTITLEMENT = f"""
+    SELECT {_ENTITLEMENT_COLUMNS} FROM entitlement WHERE user_id = CAST(:user_id AS uuid)
+"""
+
+# An event older than the one stored changes nothing (the WHERE).
+_SAVE_ENTITLEMENT = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO entitlement
+        (user_id, tier, trial, auto_renew, billing_issue, expires_at, product_id, store, event_at)
+    VALUES (CAST(:user_id AS uuid), :tier, :trial, :auto_renew, :billing_issue,
+            CAST(:expires_at AS timestamptz), :product_id, :store, CAST(:event_at AS timestamptz))
+    ON CONFLICT (user_id) DO UPDATE
+    SET tier = EXCLUDED.tier, trial = EXCLUDED.trial, auto_renew = EXCLUDED.auto_renew,
+        billing_issue = EXCLUDED.billing_issue, expires_at = EXCLUDED.expires_at,
+        product_id = EXCLUDED.product_id, store = EXCLUDED.store, event_at = EXCLUDED.event_at
+    WHERE entitlement.event_at <= EXCLUDED.event_at
+"""
+
+
+class SqlEntitlementRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def get(self, user_id: UUID) -> plans.Entitlement | None:
+        rows = self._client.execute(_LOAD_ENTITLEMENT, {"user_id": str(user_id)})
+        if not rows:
+            return None
+        row = rows[0]
+        expires = row["expires_at"]
+        return plans.Entitlement(
+            user_id=UUID(row["user_id"]),
+            tier=plans.Tier(row["tier"]),
+            trial=bool(row["trial"]),
+            auto_renew=bool(row["auto_renew"]),
+            billing_issue=bool(row["billing_issue"]),
+            expires_at=from_epoch_micros(int(expires)) if expires is not None else None,
+            product_id=row["product_id"],
+            store=row["store"],
+            event_at=from_epoch_micros(int(row["event_at"])),
+        )
+
+    def save(self, entitlement: plans.Entitlement) -> None:
+        expires = entitlement.expires_at
+        self._client.execute(
+            _SAVE_ENTITLEMENT,
+            {
+                "user_id": str(entitlement.user_id),
+                "tier": entitlement.tier.value,
+                "trial": entitlement.trial,
+                "auto_renew": entitlement.auto_renew,
+                "billing_issue": entitlement.billing_issue,
+                "expires_at": expires.isoformat() if expires else None,
+                "product_id": entitlement.product_id,
+                "store": entitlement.store,
+                "event_at": entitlement.event_at.isoformat(),
+            },
+        )
+
+
+# Counts a purchase once (the transaction is the key) and adds it to the learner's total.
+_CREDIT_PACK = f"""
+    WITH {_ENSURE_USER},
+    added AS (
+        INSERT INTO minute_pack_purchase (transaction_id, user_id, seconds, purchased_at)
+        VALUES (:transaction_id, CAST(:user_id AS uuid), :seconds,
+                CAST(:purchased_at AS timestamptz))
+        ON CONFLICT (transaction_id) DO NOTHING
+        RETURNING seconds
+    ),
+    total AS (
+        INSERT INTO minute_pack (user_id, purchased_seconds)
+        SELECT CAST(:user_id AS uuid), seconds FROM added
+        ON CONFLICT (user_id) DO UPDATE
+        SET purchased_seconds = minute_pack.purchased_seconds + EXCLUDED.purchased_seconds
+    )
+    SELECT count(*) AS credited FROM added
+"""
+
+# What was bought, what earlier weeks used from it (the seconds each used beyond the quota it had,
+# worked out from voice_week so that time given back by a call that ended early is given back
+# here too), and the quota of the week asked about.
+_PACK_BALANCE = """
+    SELECT
+        CAST(coalesce((SELECT purchased_seconds FROM minute_pack
+                       WHERE user_id = CAST(:user_id AS uuid)), 0) AS bigint) AS purchased,
+        CAST(coalesce((SELECT sum(GREATEST(0, vw.seconds - mw.quota_seconds))
+                       FROM minute_pack_week mw
+                       JOIN voice_week vw ON vw.user_id = mw.user_id AND vw.week = mw.week
+                       WHERE mw.user_id = CAST(:user_id AS uuid)
+                         AND mw.week <> CAST(:week AS date)), 0) AS bigint) AS other,
+        (SELECT quota_seconds FROM minute_pack_week
+         WHERE user_id = CAST(:user_id AS uuid) AND week = CAST(:week AS date)) AS quota
+"""
+
+_RECORD_QUOTA = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO minute_pack_week (user_id, week, quota_seconds)
+    VALUES (CAST(:user_id AS uuid), CAST(:week AS date), :quota)
+    ON CONFLICT (user_id, week) DO UPDATE SET quota_seconds = EXCLUDED.quota_seconds
+"""
+
+# Marks a purchase refunded once, and takes its seconds off the total.
+_REFUND_PACK = """
+    WITH refunded AS (
+        UPDATE minute_pack_purchase SET refunded_at = now()
+        WHERE transaction_id = :transaction_id AND refunded_at IS NULL
+        RETURNING user_id, seconds
+    ),
+    taken AS (
+        UPDATE minute_pack SET purchased_seconds = GREATEST(0, purchased_seconds - refunded.seconds)
+        FROM refunded WHERE minute_pack.user_id = refunded.user_id
+    )
+    SELECT count(*) AS refunded FROM refunded
+"""
+
+
+class SqlPackRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def credit(self, transaction_id: str, user_id: UUID, seconds: int, at: dt.datetime) -> bool:
+        rows = self._client.execute(
+            _CREDIT_PACK,
+            {
+                "transaction_id": transaction_id,
+                "user_id": str(user_id),
+                "seconds": seconds,
+                "purchased_at": at.isoformat(),
+            },
+        )
+        return bool(rows and int(rows[0]["credited"]))
+
+    def refund(self, transaction_id: str) -> bool:
+        rows = self._client.execute(_REFUND_PACK, {"transaction_id": transaction_id})
+        return bool(rows and int(rows[0]["refunded"]))
+
+    def balance(self, user_id: UUID, week: dt.date) -> plans.PackBalance:
+        rows = self._client.execute(
+            _PACK_BALANCE, {"user_id": str(user_id), "week": week.isoformat()}
+        )
+        row = rows[0]
+        quota = row["quota"]
+        return plans.PackBalance(
+            int(row["purchased"]), int(row["other"]), int(quota) if quota is not None else None
+        )
+
+    def record_quota(self, user_id: UUID, week: dt.date, quota_seconds: int) -> None:
+        self._client.execute(
+            _RECORD_QUOTA,
+            {"user_id": str(user_id), "week": week.isoformat(), "quota": quota_seconds},
+        )

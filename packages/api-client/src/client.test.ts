@@ -918,6 +918,35 @@ describe('api client', () => {
     expect(calls[2]?.body).toEqual({ status: 'done' });
   });
 
+  it('reads the plan, and a refusal because of the plan carries its code', async () => {
+    const plan = {
+      userId: '11111111-1111-4111-8111-111111111111',
+      tier: 'plus',
+      trial: true,
+      autoRenew: true,
+      billingIssue: false,
+      expiresAt: '2026-11-12T00:00:00Z',
+      enforced: true,
+      weeklySeconds: 3600,
+      personas: null,
+      perks: [],
+      packSeconds: 0,
+      tiers: [],
+    };
+    const { fetch, calls } = fakeFetch(
+      json(200, plan),
+      json(402, { error: { code: 'plan_required', field: null } }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getPlan()).toEqual(plan);
+    await expect(api.getPlan()).rejects.toMatchObject({ code: 'plan_required', status: 402 });
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/plan',
+      'GET https://api.example.test/v1/plan',
+    ]);
+  });
+
   it('reports an item, lists the reports and, for the owner, works the review queue', async () => {
     const flag = {
       id: 'f1',

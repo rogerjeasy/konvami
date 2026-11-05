@@ -20,6 +20,7 @@ import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { callRoute, ROUTES, studioRoute } from '@/lib/routes';
 import { MAX_PARTNERS } from '@/profile/persona-draft';
+import { usePaywall } from '@/plan/services';
 import { usePartnerList, useProfileServices } from '@/profile/services';
 import { ProfilePage } from '@/screens/profile/page';
 import { useTheme } from '@/theme';
@@ -63,6 +64,8 @@ function Partners({ partners }: { partners: Persona[] }) {
   const [note, setNote] = useState<{ ok: boolean; message: string } | null>(null);
 
   /** Runs a change on the server and says how it went. */
+  const paywall = usePaywall();
+
   async function run(action: () => Promise<string | null>) {
     setNote(null);
     setBusy(true);
@@ -71,6 +74,7 @@ function Partners({ partners }: { partners: Persona[] }) {
       if (message) setNote({ ok: true, message });
       successFeedback();
     } catch (error) {
+      if (apiErrorCode(error) === 'plan_required') paywall.open('partners');
       setNote({ ok: false, message: t(apiErrorKey(apiErrorCode(error))) });
     } finally {
       setBusy(false);

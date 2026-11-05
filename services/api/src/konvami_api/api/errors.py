@@ -29,6 +29,7 @@ from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.penpal import PenPalError
 from konvami_api.domain.personas import PersonaError
 from konvami_api.domain.phrasebook import PhrasebookError
+from konvami_api.domain.plans import PlanError
 from konvami_api.domain.premium_voices import PremiumError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.profile_questions import QuestionError
@@ -166,6 +167,9 @@ _PEN_PAL_STATUS = {
     "limit": 429,
     "retry_limit": 429,
 }
+
+# The plan does not include what was asked: HTTP 402, "payment required".
+_PLAN_STATUS = {"plan_required": 402}
 _UNAVAILABLE = 503
 
 
@@ -228,6 +232,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(FeedbackError)
     async def _feedback_error(_: Request, error: FeedbackError) -> JSONResponse:
         return _response(_FEEDBACK_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(PlanError)
+    async def _plan_error(_: Request, error: PlanError) -> JSONResponse:
+        return _response(_PLAN_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(FlagError)
     async def _flag_error(_: Request, error: FlagError) -> JSONResponse:

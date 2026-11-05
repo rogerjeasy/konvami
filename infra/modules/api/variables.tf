@@ -127,6 +127,35 @@ variable "sentry_dsn" {
   default     = ""
 }
 
+variable "plans" {
+  description = <<-EOT
+    Plans and subscriptions (spec §6.21.2). enforce: false keeps the testers' time (every learner
+    has voice.weekly_minutes and every feature); true limits each learner to their tier (Free,
+    Plus, Pro). weekly_minutes: minutes per week of a tier where this environment differs from
+    the code's (Free 15, Plus 60, Pro 140). products: the store product id of each subscription
+    (as RevenueCat names it) and its tier. pack_minutes: the store product id of each minute pack
+    and the minutes it adds.
+  EOT
+  type = object({
+    enforce        = bool
+    weekly_minutes = map(number)
+    products       = map(string)
+    pack_minutes   = map(number)
+  })
+  default = {
+    enforce        = false
+    weekly_minutes = {}
+    products       = {}
+    pack_minutes   = {}
+  }
+}
+
+variable "store_secret_arn" {
+  description = "The Secrets Manager secret RevenueCat's webhook sends in its Authorization header (modules/secret). Empty leaves the webhook route out: nothing can reach it."
+  type        = string
+  default     = ""
+}
+
 variable "alert_topic_arn" {
   description = "The SNS topic the spending alerts are emailed through (modules/budget); empty sends none."
   type        = string

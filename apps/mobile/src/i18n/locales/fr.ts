@@ -68,6 +68,7 @@ export const fr: Translation = {
     phoneLanguage: 'Langue du téléphone ({{language}})',
   },
   errors: {
+    planRequired: 'Ton offre n’inclut pas cela. Consulte les offres pour la changer.',
     network: 'Impossible de joindre Konvami. Vérifie ta connexion et réessaie.',
     tooManyAttempts: 'Trop de tentatives. Attends quelques minutes et réessaie.',
     notConfigured: 'L’inscription n’est pas encore configurée dans cette version.',
@@ -1967,6 +1968,71 @@ export const fr: Translation = {
       pen_pal_listen: 'Messages vocaux transcrits',
     },
   },
+  plan: {
+    title: 'Ton offre',
+    body: 'Ce que tu as, ce qu’elle inclut et combien de minutes de voix il te reste.',
+    loadFailed: 'Impossible de charger ton offre.',
+    tiers: {
+      free: 'Free',
+      plus: 'Plus',
+      pro: 'Pro',
+    },
+    trial: 'Essai gratuit',
+    trialUntil: 'Ton essai gratuit se termine le {{date}}.',
+    renews: 'Se renouvelle le {{date}}.',
+    endsOn: 'Se termine le {{date}}. Elle ne se renouvellera pas.',
+    billingIssue:
+      'Le store n’a pas pu prélever ton dernier paiement. Mets à jour ton moyen de paiement là-bas pour garder ton offre.',
+    testing:
+      'Tant que Konvami est en test, toutes les fonctions sont ouvertes et tu as {{count}} minutes de voix par semaine.',
+    includes: 'Inclus',
+    minutesPerWeek: '{{count}} minutes de voix par semaine',
+    partnersLimit: 'Jusqu’à {{count}} partenaires',
+    partnersAny: 'Autant de partenaires que tu veux',
+    perks: {
+      exam_simulations: 'Simulations d’examen notées',
+      premium_voices: 'Voix premium',
+    },
+    packLeft: '{{count}} minutes restantes des packs',
+    see: 'Voir les offres',
+    restore: 'Restaurer les achats',
+    restored: 'Achats restaurés.',
+    restoreFailed: 'Impossible de restaurer les achats. Réessaie.',
+    manage: 'Gérer l’abonnement',
+    manageFailed: 'Impossible d’ouvrir les réglages de ton abonnement.',
+    unavailable:
+      'Les offres s’achètent dans l’application Konvami sur téléphone. Cette version ne peut pas les vendre.',
+    paywall: {
+      title: 'Choisir une offre',
+      reasons: {
+        plans: 'Plus de minutes de voix et plus de partenaires, quand tu veux.',
+        minutes:
+          'Tu as utilisé les minutes de voix de cette semaine. Une offre t’en donne plus, un pack ajoute des minutes une fois.',
+        partners:
+          'Ton offre a de la place pour un nombre limité de partenaires. Plus et Pro en ont autant que tu veux.',
+        exams: 'Les simulations d’examen notées sont incluses avec Pro.',
+        trial: 'Essaie Plus gratuitement. Résiliable à tout moment dans ton compte du store.',
+      },
+      month: 'par mois',
+      year: 'par an',
+      trialDays: '{{count}} jours gratuits',
+      choose: 'Choisir',
+      packs: 'Minutes en plus',
+      packsBody:
+        'Des packs ponctuels. Ils servent après les minutes de la semaine et n’expirent jamais.',
+      loadFailed: 'Impossible de charger les offres.',
+      purchaseFailed: 'L’achat n’a pas abouti. Réessaie.',
+      thanks: 'Merci. Ton offre se met à jour dans un instant.',
+      renewal:
+        'Les abonnements se renouvellent jusqu’à ce que tu les résilies dans ton compte du store.',
+    },
+    ready: {
+      trial: 'Essaie Plus gratuitement pendant {{count}} jours',
+      body: 'Plus de minutes de voix et autant de partenaires que tu veux. Résiliable à tout moment.',
+      see: 'Voir l’offre',
+    },
+  },
+
   profile: {
     minutes: {
       left_one: '{{count}} minute restante',
@@ -1994,6 +2060,8 @@ export const fr: Translation = {
       help: 'Aide',
     },
     rows: {
+      plan: 'Offre',
+      planHint: 'Ce que tu as, les minutes et les mises à niveau',
       costs: 'Coûts',
       costsHint: 'Ce que Konvami dépense, par jour, fonction et apprenant',
       flags: 'Signalements',
