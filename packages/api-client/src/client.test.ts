@@ -522,6 +522,34 @@ describe('api client', () => {
     expect(calls[1]?.body).toEqual({ conversationId: 'rtc/1', index: 2 });
   });
 
+  it('suggests, keeps, lists, removes and cards phrases', async () => {
+    const phrase = { id: 'p/1', phrase: 'Guten Tag.', meaning: 'Hello.', inDeck: false };
+    const { fetch, calls } = fakeFetch(
+      json(200, { suggestions: [{ phrase: 'Guten Tag.', meaning: 'Hello.', saved: false }] }),
+      json(200, phrase),
+      json(200, { phrases: [phrase] }),
+      json(200, { id: 'card1' }),
+      json(200, { phrases: [] }),
+    );
+    const { api } = client(fetch);
+
+    expect((await api.suggestPhrases('greeting')).suggestions).toHaveLength(1);
+    expect(await api.savePhrase({ phrase: 'Guten Tag.', meaning: 'Hello.' })).toEqual(phrase);
+    expect((await api.getPhrasebook()).phrases).toEqual([phrase]);
+    expect((await api.makePhraseCard('p/1')).id).toBe('card1');
+    expect((await api.removePhrase('p/1')).phrases).toEqual([]);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/phrasebook/suggestions',
+      'POST https://api.example.test/v1/phrasebook',
+      'GET https://api.example.test/v1/phrasebook',
+      'POST https://api.example.test/v1/phrasebook/p%2F1/card',
+      'DELETE https://api.example.test/v1/phrasebook/p%2F1',
+    ]);
+    expect(calls[0]?.body).toEqual({ situation: 'greeting' });
+    expect(calls[1]?.body).toEqual({ phrase: 'Guten Tag.', meaning: 'Hello.' });
+  });
+
   it('reads the grammar map and one of its topics', async () => {
     const map = { language: 'de', level: 'A2', topics: [] };
     const page = { topic: { id: 'dative' }, examples: [], typicalMistakes: [], mistakes: [] };
