@@ -52,6 +52,7 @@ from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.export_repository import SqlExportRepository
@@ -95,7 +96,8 @@ from konvami_api.providers.aws import (
     SnsNotifier,
     cached_secret,
 )
-from konvami_api.providers.cognito_accounts import CognitoAccounts, CognitoIdp
+from konvami_api.providers.cognito_accounts import CognitoAccounts
+from konvami_api.providers.cognito_email_proof import CognitoClient, CognitoEmailProof
 from konvami_api.providers.expo_push import ExpoPush
 from konvami_api.providers.openai_realtime import OpenAiRealtime
 from konvami_api.providers.openai_speech import OpenAiSpeech
@@ -119,6 +121,7 @@ _DB_SETTINGS = {
 }
 # Set once the voice infrastructure exists; until then no voice call can start.
 _USER_POOL = "KONVAMI_USER_POOL_ID"
+_APP_CLIENT_ID = "KONVAMI_APP_CLIENT_ID"
 _OPENAI_SECRET = "KONVAMI_OPENAI_SECRET_ARN"  # noqa: S105 - the name of a setting
 _CALL_WORKER = "KONVAMI_CALL_WORKER"
 # The private bucket for photos and voice samples (infra/modules/media).
@@ -135,7 +138,7 @@ class Clients:
     """The AWS clients. boto3's in Lambda; stubs in tests."""
 
     rds_data: RdsData
-    cognito: CognitoIdp
+    cognito: CognitoClient
     functions: LambdaClient
     secrets: SecretsClient
     s3: S3
@@ -446,6 +449,14 @@ def build_backend(
             model=models.week or models.memory,
             sounds=sounds,
             clock=_now,
+        ),
+        web_deletion=WebDeletionService(
+            proof=CognitoEmailProof(
+                clients.cognito,
+                user_pool_id=environment.get(_USER_POOL, ""),
+                client_id=environment.get(_APP_CLIENT_ID, ""),
+            ),
+            accounts=accounts,
         ),
         exports=DataExportService(
             records=SqlExportRepository(sql), accounts=directory, files=files, clock=_now

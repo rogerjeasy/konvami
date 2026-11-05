@@ -45,9 +45,11 @@ from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakeEmailProof,
     FakeSpeechModel,
     FakeTranscriber,
     FakeVoiceProvider,
@@ -255,6 +257,12 @@ def export_records() -> InMemoryExportRepository:
 
 
 @pytest.fixture
+def email_proof() -> FakeEmailProof:
+    """The identity provider's email codes; the signed-in test learner has an account."""
+    return FakeEmailProof({"amara.diallo@mail.com": UUID(USER)})
+
+
+@pytest.fixture
 def speech() -> FakeSpeechModel:
     return FakeSpeechModel()
 
@@ -298,6 +306,7 @@ def services(
     directory: FakeAccountDirectory,
     account_records: InMemoryAccountRepository,
     export_records: InMemoryExportRepository,
+    email_proof: FakeEmailProof,
     speech: FakeSpeechModel,
     report_starter: RecordingReportStarter,
     charges: InMemoryChargeRepository,
@@ -561,6 +570,7 @@ def services(
             files=files,
             clock=clock,
         ),
+        web_deletion=WebDeletionService(proof=email_proof, accounts=accounts),
         exports=DataExportService(
             records=export_records, accounts=directory, files=files, clock=clock
         ),

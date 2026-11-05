@@ -13,6 +13,7 @@ from pydantic import AwareDatetime
 
 from konvami_api.api.auth import CurrentUser, recently_signed_in
 from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
+from konvami_api.api.public import public_router
 from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
@@ -124,6 +125,7 @@ from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.voice import VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
+from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
 
 
@@ -163,6 +165,7 @@ class Services:
     exams: ExamService
     flags: FlagService
     exports: DataExportService
+    web_deletion: WebDeletionService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -821,4 +824,5 @@ def create_app(services: Services) -> FastAPI:
     install_error_handlers(app)
     app.include_router(_router(services))
     app.include_router(_deletion_router(services))
+    app.include_router(public_router(lambda: services.web_deletion))
     return app

@@ -31,6 +31,7 @@ from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.voice import VoiceError
 from konvami_api.domain.voices import SampleError
+from konvami_api.domain.web_deletion import WebDeletionError
 from konvami_api.domain.week_review import WeekReviewError
 
 
@@ -108,6 +109,7 @@ _RETRY_STATUS = {
     "retry_limit": 429,
 }
 _EXPORT_STATUS = {"export_limit": 429}
+_WEB_DELETION_STATUS = {"invalid_email": 422, "invalid_code": 422, "too_many_attempts": 429}
 _FLAG_STATUS = {"not_owner": 403, "not_found": 404, "invalid_value": 422, "flag_limit": 429}
 _UNAVAILABLE = 503
 
@@ -163,6 +165,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(FlagError)
     async def _flag_error(_: Request, error: FlagError) -> JSONResponse:
         return _response(_FLAG_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(WebDeletionError)
+    async def _web_deletion_error(_: Request, error: WebDeletionError) -> JSONResponse:
+        return _response(_WEB_DELETION_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(ExportError)
     async def _export_error(_: Request, error: ExportError) -> JSONResponse:
