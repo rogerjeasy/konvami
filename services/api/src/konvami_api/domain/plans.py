@@ -134,6 +134,16 @@ class Plan:
     pack_seconds: int
 
 
+@dataclass(frozen=True)
+class TierInfo:
+    """What a tier includes in this environment, for the app to describe it."""
+
+    tier: Tier
+    weekly_seconds: int
+    personas: int | None
+    perks: frozenset[Perk]
+
+
 class EntitlementRepository(Protocol):
     def get(self, user_id: UUID) -> Entitlement | None: ...
 
@@ -309,6 +319,13 @@ class PlanService:
         limit = self.plan(user_id).personas
         if limit is not None and have >= limit:
             raise PlanError("plan_required")
+
+    def tiers(self) -> list[TierInfo]:
+        """The three tiers as this environment has them (the paywall describes them)."""
+        return [
+            TierInfo(spec.tier, self._quota(spec.tier), spec.personas, spec.perks)
+            for spec in TIERS.values()
+        ]
 
     def persona_limit(self, user_id: UUID) -> int | None:
         """How many partners the learner may have; None for as many as they like."""

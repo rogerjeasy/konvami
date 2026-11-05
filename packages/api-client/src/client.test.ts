@@ -717,6 +717,7 @@ describe('api client', () => {
 
   it('reads the plan, and a refusal because of the plan carries its code', async () => {
     const plan = {
+      userId: '11111111-1111-4111-8111-111111111111',
       tier: 'plus',
       trial: true,
       autoRenew: true,
@@ -727,6 +728,7 @@ describe('api client', () => {
       personas: null,
       perks: [],
       packSeconds: 0,
+      tiers: [],
     };
     const { fetch, calls } = fakeFetch(
       json(200, plan),

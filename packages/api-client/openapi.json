@@ -3359,9 +3359,21 @@
           "tier": {
             "$ref": "#/components/schemas/Tier"
           },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/TierOut"
+            },
+            "title": "Tiers",
+            "type": "array"
+          },
           "trial": {
             "title": "Trial",
             "type": "boolean"
+          },
+          "userId": {
+            "format": "uuid",
+            "title": "Userid",
+            "type": "string"
           },
           "weeklySeconds": {
             "title": "Weeklyseconds",
@@ -3369,6 +3381,7 @@
           }
         },
         "required": [
+          "userId",
           "tier",
           "trial",
           "autoRenew",
@@ -3378,7 +3391,8 @@
           "weeklySeconds",
           "personas",
           "perks",
-          "packSeconds"
+          "packSeconds",
+          "tiers"
         ],
         "title": "PlanOut",
         "type": "object"
@@ -4846,6 +4860,45 @@
         ],
         "title": "Tier",
         "type": "string"
+      },
+      "TierOut": {
+        "additionalProperties": false,
+        "description": "What a tier includes (spec \u00a76.21.2).",
+        "properties": {
+          "perks": {
+            "items": {
+              "$ref": "#/components/schemas/Perk"
+            },
+            "title": "Perks",
+            "type": "array"
+          },
+          "personas": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Personas"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/Tier"
+          },
+          "weeklySeconds": {
+            "title": "Weeklyseconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tier",
+          "weeklySeconds",
+          "personas",
+          "perks"
+        ],
+        "title": "TierOut",
+        "type": "object"
       },
       "TopicMistakeOut": {
         "additionalProperties": false,

@@ -2395,8 +2395,15 @@ export interface components {
             /** Personas */
             personas: number | null;
             tier: components["schemas"]["Tier"];
+            /** Tiers */
+            tiers: components["schemas"]["TierOut"][];
             /** Trial */
             trial: boolean;
+            /**
+             * Userid
+             * Format: uuid
+             */
+            userId: string;
             /** Weeklyseconds */
             weeklySeconds: number;
         };
@@ -2904,6 +2911,19 @@ export interface components {
          * @enum {string}
          */
         Tier: "free" | "plus" | "pro";
+        /**
+         * TierOut
+         * @description What a tier includes (spec §6.21.2).
+         */
+        TierOut: {
+            /** Perks */
+            perks: components["schemas"]["Perk"][];
+            /** Personas */
+            personas: number | null;
+            tier: components["schemas"]["Tier"];
+            /** Weeklyseconds */
+            weeklySeconds: number;
+        };
         /** TopicMistakeOut */
         TopicMistakeOut: {
             /**

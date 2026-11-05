@@ -75,7 +75,7 @@ from konvami_api.domain.phrasebook import MEANING_MAX as PHRASE_MEANING_MAX
 from konvami_api.domain.phrasebook import PHRASE_MAX, SITUATION_MAX, PhrasebookEntry, Suggestion
 from konvami_api.domain.placement import PlacementView
 from konvami_api.domain.plan import SessionPlan
-from konvami_api.domain.plans import Perk, Plan, Tier
+from konvami_api.domain.plans import Perk, Plan, Tier, TierInfo
 from konvami_api.domain.profile import (
     AVOID_TOPIC_MAX,
     GLOBAL_SCOPE,
@@ -1965,9 +1965,31 @@ class AllowanceOut(ApiModel):
         )
 
 
+class TierOut(ApiModel):
+    """What a tier includes (spec §6.21.2)."""
+
+    tier: Tier
+    weekly_seconds: int
+    # How many partners; none for as many as the learner likes.
+    personas: int | None
+    perks: list[Perk]
+
+    @classmethod
+    def of(cls, info: TierInfo) -> "TierOut":
+        return cls(
+            tier=info.tier,
+            weekly_seconds=info.weekly_seconds,
+            personas=info.personas,
+            perks=sorted(info.perks),
+        )
+
+
 class PlanOut(ApiModel):
     """The learner's plan (spec §6.21.2): what they have and what it includes."""
 
+    # The learner's id, which the app gives the store so a purchase is theirs (RevenueCat's
+    # `app_user_id`, which comes back in the webhook).
+    user_id: UUID
     tier: Tier
     # In a free trial, not yet paying.
     trial: bool
@@ -1984,10 +2006,13 @@ class PlanOut(ApiModel):
     perks: list[Perk]
     # Minutes bought in packs and not yet used, in seconds.
     pack_seconds: int
+    # Every tier, for the paywall to describe.
+    tiers: list[TierOut]
 
     @classmethod
-    def of(cls, plan: Plan) -> "PlanOut":
+    def of(cls, user_id: UUID, plan: Plan, tiers: list[TierInfo]) -> "PlanOut":
         return cls(
+            user_id=user_id,
             tier=plan.tier,
             trial=plan.trial,
             auto_renew=plan.auto_renew,
@@ -1998,6 +2023,7 @@ class PlanOut(ApiModel):
             personas=plan.personas,
             perks=sorted(plan.perks),
             pack_seconds=plan.pack_seconds,
+            tiers=[TierOut.of(info) for info in tiers],
         )
 
 

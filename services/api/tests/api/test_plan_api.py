@@ -52,11 +52,18 @@ def test_a_learner_with_nothing_bought_is_on_the_free_plan(call: Call) -> None:
     plan = call("GET", "/v1/plan")
 
     assert plan.status == 200
+    assert plan.body["userId"] == USER
     assert plan.body["tier"] == "free"
     assert plan.body["enforced"] is True
     assert plan.body["weeklySeconds"] == 15 * 60
     assert plan.body["personas"] == 2
     assert plan.body["perks"] == []
+    assert [(t["tier"], t["weeklySeconds"]) for t in plan.body["tiers"]] == [
+        ("free", 15 * 60),
+        ("plus", 60 * 60),
+        ("pro", 140 * 60),
+    ]
+    assert plan.body["tiers"][2]["perks"] == ["exam_simulations", "premium_voices"]
 
 
 def test_a_purchase_the_store_reports_is_the_learners_plan(call: Call) -> None:

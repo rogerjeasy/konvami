@@ -388,7 +388,7 @@ def _router(services: Services) -> APIRouter:
     @router.get("/plan", operation_id="getPlan")
     def get_plan(user: CurrentUser) -> PlanOut:
         """What the learner has bought and what it includes (spec §6.21.2)."""
-        return PlanOut.of(services.plans.plan(user))
+        return PlanOut.of(user, services.plans.plan(user), services.plans.tiers())
 
     @router.get("/voice/allowance", operation_id="getVoiceAllowance")
     def get_voice_allowance(user: CurrentUser) -> AllowanceOut:
