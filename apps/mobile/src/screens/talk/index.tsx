@@ -18,8 +18,8 @@ import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { relativeDayPhrase } from '@/lib/relative-day';
-import { callRoute, ROUTES } from '@/lib/routes';
-import { useHome, usePracticeServices } from '@/practice/services';
+import { callRoute, penPalRoute, ROUTES } from '@/lib/routes';
+import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
 import { ListGroup, ListRow } from '@/components/list';
 
@@ -61,8 +61,11 @@ function PartnerCard({ partner, now }: { partner: HomePartner; now: Date }) {
 export function TalkScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { home: store, clock } = usePracticeServices();
+  const { home: store, penPal: penPalStore, clock } = usePracticeServices();
   const home = useHome();
+  const penPal = usePenPal();
+  const waiting =
+    penPal.phase === 'ready' && penPal.data.threads.some((thread) => thread.unread > 0);
   const { split } = useScreenLayout();
   const { color } = useTheme();
   const signedIn = status === 'signedIn';
@@ -75,7 +78,8 @@ export function TalkScreen() {
   useFocusEffect(
     useCallback(() => {
       void store.revisit();
-    }, [store]),
+      void penPalStore.revisit();
+    }, [store, penPalStore]),
   );
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;
@@ -95,6 +99,13 @@ export function TalkScreen() {
             title={t('rolePlays.row')}
             detail={t('rolePlays.rowHint')}
             onPress={() => router.push(ROUTES.rolePlays)}
+          />
+          <ListRow
+            icon="mic"
+            title={t('penPal.row')}
+            detail={t('penPal.rowHint')}
+            badge={waiting ? t('penPal.new') : undefined}
+            onPress={() => router.push(penPalRoute())}
           />
           {/* A lesson is on one topic, so it starts from the grammar map (5.14). */}
           <ListRow

@@ -106,6 +106,26 @@ describe('5.1 Today', () => {
     expect(router.navigate).toHaveBeenCalledWith('/talk');
   });
 
+  it('tells of a voice note a partner sent, and opens its thread', async () => {
+    const api = inApp();
+    api.penPalNotes(LENA.id, [{ text: 'Hallo! Wie war dein Tag?' }]);
+    await open(api);
+
+    const row = await screen.findByRole('button', { name: 'Lena sent you a voice note' });
+    await fireEvent.press(row);
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/pen-pal',
+      params: { partner: LENA.id },
+    });
+  });
+
+  it('shows no voice note card when none waits', async () => {
+    await open();
+
+    expect(screen.queryByText(/sent you a voice note/)).toBeNull();
+  });
+
   it('shows a new learner an empty week and what starts a streak', async () => {
     await open();
 
