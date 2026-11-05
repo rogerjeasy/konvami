@@ -33,6 +33,7 @@ from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -68,6 +69,7 @@ from tests.fakes import (
     InMemoryPhraseRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryPronunciationRepository,
     InMemoryPushDeviceRepository,
     InMemoryQuestionRepository,
     InMemoryRecordingRepository,
@@ -214,6 +216,12 @@ def retry_transcriber() -> ScriptedTranscriber:
 
 
 @pytest.fixture
+def pronunciation_transcriber() -> ScriptedTranscriber:
+    """Writes down the drills of the pronunciation lab."""
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
 def answer_transcriber() -> ScriptedTranscriber:
     """Writes down the cards answered out loud."""
     return ScriptedTranscriber()
@@ -296,6 +304,7 @@ def services(
     level_store: InMemoryLevelRepository,
     retry_transcriber: ScriptedTranscriber,
     answer_transcriber: ScriptedTranscriber,
+    pronunciation_transcriber: ScriptedTranscriber,
     week_starter: RecordingWeekStarter,
     exam_starter: RecordingExamStarter,
 ) -> Services:
@@ -569,6 +578,19 @@ def services(
                 transcriber=retry_transcriber,
                 model="gpt-4o-transcribe",
             ),
+            clock=clock,
+        ),
+        pronunciation=PronunciationService(
+            profiles=profiles,
+            personas=personas,
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=pronunciation_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            repository=InMemoryPronunciationRepository(),
+            sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
             clock=clock,
         ),
         conversation_review=conversation_review,

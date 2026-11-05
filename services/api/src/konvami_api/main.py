@@ -39,6 +39,7 @@ from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -54,6 +55,7 @@ from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.week_review import WeekReviewService
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.migrations import migrate_when_awake
+from konvami_api.persistence.pronunciation_repository import SqlPronunciationRepository
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
     SqlAlertLog,
@@ -456,6 +458,14 @@ def build_backend(
             reports=reports,
             repository=SqlRetryRepository(sql),
             listener=listener,
+            clock=_now,
+        ),
+        pronunciation=PronunciationService(
+            profiles=profiles,
+            personas=personas,
+            listener=listener,
+            repository=SqlPronunciationRepository(sql),
+            sounds=sounds,
             clock=_now,
         ),
         conversation_review=conversation_review,

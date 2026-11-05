@@ -47,6 +47,7 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF", "PT", "DT
 "tests/**" = ["S101", "S608", "RUF001"]
 # Queries here are assembled from constants in the same file; every value is a bound parameter.
 "src/konvami_api/persistence/repositories.py" = ["S608"]
+"src/konvami_api/persistence/pronunciation_repository.py" = ["S608"]
 
 [tool.mypy]
 strict = true

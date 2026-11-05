@@ -32,6 +32,7 @@ from konvami_api.domain.practice import PracticeScript
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -83,6 +84,7 @@ from tests.fakes import (
     InMemoryPhraseRepository,
     InMemoryPlacementRepository,
     InMemoryProfileRepository,
+    InMemoryPronunciationRepository,
     InMemoryPushDeviceRepository,
     InMemoryQuestionRepository,
     InMemoryRecordingRepository,
@@ -398,6 +400,21 @@ class World:
         self.exam_store = InMemoryExamRepository()
         self.exam_starter = RecordingExamStarter()
         self.speech = FakeSpeechModel()
+        self.pronunciation_transcriber = ScriptedTranscriber()
+        self.pronunciation_store = InMemoryPronunciationRepository()
+        self.pronunciation = PronunciationService(
+            profiles=self.profiles,
+            personas=self.personas,
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.pronunciation_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            repository=self.pronunciation_store,
+            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
+            clock=self.clock,
+        )
         self.exams = ExamService(
             profiles=self.profiles,
             personas=self.personas,

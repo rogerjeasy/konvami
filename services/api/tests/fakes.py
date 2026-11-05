@@ -35,6 +35,7 @@ from konvami_api.domain.phrasebook import Phrase
 from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile
 from konvami_api.domain.profile_questions import QuestionState, QuestionStatus
+from konvami_api.domain.pronunciation import CLEARED_AFTER, ProblemWord
 from konvami_api.domain.push import PushDevice, PushError, PushMessage
 from konvami_api.domain.reports import (
     Report,
@@ -1214,3 +1215,63 @@ class InMemoryFlagRepository:
                 self.flags[key] = changed
                 return changed
         return None
+
+
+class InMemoryPronunciationRepository:
+    def __init__(self) -> None:
+        self.days: dict[tuple[UUID, date], int] = {}
+        # (user, language, sound or None, drill, target, heard, right)
+        self.drills: list[tuple[UUID, str, str | None, str, str, str, bool]] = []
+        # (user, language, lower word) -> [word, sound, misses, streak]
+        self.words: dict[tuple[UUID, str, str], list[Any]] = {}
+
+    def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
+        used = self.days.get((user_id, day), 0)
+        if used >= limit:
+            return False
+        self.days[(user_id, day)] = used + 1
+        return True
+
+    def record(
+        self,
+        user_id: UUID,
+        language: str,
+        at: datetime,
+        *,
+        drill: str,
+        sound_id: str | None,
+        target: str,
+        heard: str,
+        right: bool,
+        marks: Sequence[tuple[str, bool]],
+    ) -> None:
+        self.drills.append((user_id, language, sound_id, drill, target, heard, right))
+        for word, ok in marks:
+            key = (user_id, language, word.lower())
+            known = self.words.get(key)
+            if known is None and ok:
+                continue
+            if known is None:
+                known = self.words[key] = [word, sound_id, 0, 0]
+            known[1] = known[1] or sound_id
+            if ok:
+                known[3] += 1
+            else:
+                known[2] += 1
+                known[3] = 0
+
+    def progress(self, user_id: UUID, language: str) -> dict[str, tuple[int, int]]:
+        tally: dict[str, tuple[int, int]] = {}
+        for owner, lang, sound_id, _, _, _, right in self.drills:
+            if (owner, lang) == (user_id, language) and sound_id is not None:
+                tries, rights = tally.get(sound_id, (0, 0))
+                tally[sound_id] = (tries + 1, rights + int(right))
+        return tally
+
+    def problems(self, user_id: UUID, language: str, limit: int) -> list[ProblemWord]:
+        mine = [
+            ProblemWord(word, sound, misses)
+            for (owner, lang, _), (word, sound, misses, streak) in self.words.items()
+            if (owner, lang) == (user_id, language) and misses > 0 and streak < CLEARED_AFTER
+        ]
+        return sorted(mine, key=lambda w: (-w.misses, w.word))[:limit]

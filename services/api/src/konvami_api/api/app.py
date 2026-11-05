@@ -59,12 +59,18 @@ from konvami_api.api.schemas import (
     PictureUploadOut,
     PlacementDecision,
     PlacementOut,
+    ProblemWordOut,
+    ProblemWordsOut,
     ProfileAnswerIn,
     ProfileChangesOut,
     ProfileOut,
     ProfilePatch,
     ProfileQuestionOut,
     ProgressOut,
+    PronunciationAttemptIn,
+    PronunciationAttemptOut,
+    PronunciationPickIn,
+    PronunciationPickOut,
     PushDeviceIn,
     PushDeviceOut,
     QueuedFlagOut,
@@ -78,7 +84,10 @@ from konvami_api.api.schemas import (
     RetryOut,
     ReviewIn,
     SimulationOut,
+    SoundDetailOut,
     SoundOut,
+    SoundsOut,
+    SoundSummaryOut,
     SpeakingExamOut,
     TranscriptOut,
     TutorCorrectionIn,
@@ -113,6 +122,7 @@ from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import Change, Origin, ProfileService, Source
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
+from konvami_api.domain.pronunciation import PronunciationError, PronunciationService
 from konvami_api.domain.push import PushService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -160,6 +170,7 @@ class Services:
     week_reviews: WeekReviewService
     exams: ExamService
     flags: FlagService
+    pronunciation: PronunciationService
 
 
 # Documented error responses, so the generated client knows their shape.
@@ -722,6 +733,75 @@ def _router(services: Services) -> APIRouter:
     def remove_phrase(user: CurrentUser, phrase_id: UUID) -> PhrasebookOut:
         services.phrasebook.remove(user, phrase_id)
         return PhrasebookOut(phrases=[PhraseOut.of(e) for e in services.phrasebook.phrases(user)])
+
+    @router.get("/pronunciation/sounds", operation_id="getPronunciationSounds")
+    def get_pronunciation_sounds(user: CurrentUser) -> SoundsOut:
+        """The problem sounds of the language the learner learns, with their practice so far
+        (spec §6.14). Empty for a language that has none yet."""
+        return SoundsOut(
+            sounds=[SoundSummaryOut.of(s) for s in services.pronunciation.sounds(user)]
+        )
+
+    @router.get(
+        "/pronunciation/sounds/{sound_id}",
+        operation_id="getPronunciationSound",
+        responses=NOT_FOUND,
+    )
+    def get_pronunciation_sound(user: CurrentUser, sound_id: str) -> SoundDetailOut:
+        return SoundDetailOut.of(services.pronunciation.sound(user, sound_id))
+
+    @router.get("/pronunciation/words", operation_id="getProblemWords")
+    def get_problem_words(user: CurrentUser) -> ProblemWordsOut:
+        """The words the learner was asked to say and missed, not yet said right twice in a row."""
+        return ProblemWordsOut(
+            words=[
+                ProblemWordOut(word=w.word, sound_id=w.sound_id, misses=w.misses)
+                for w in services.pronunciation.problem_words(user)
+            ]
+        )
+
+    @router.get(
+        "/pronunciation/audio",
+        operation_id="getPronunciationAudio",
+        responses=NOT_FOUND | UNAVAILABLE,
+    )
+    def get_pronunciation_audio(user: CurrentUser, text: str) -> SoundOut:
+        """Where a word or sentence of the lab plays from, in the learner's partner's voice. Only
+        the lab's own texts and the learner's problem words can be asked for."""
+        return SoundOut(url=services.pronunciation.audio(user, text))
+
+    @router.post(
+        "/pronunciation/attempts", operation_id="drillPronunciation", responses=ANSWER_REFUSED
+    )
+    def drill_pronunciation(
+        user: CurrentUser, attempt: PronunciationAttemptIn
+    ) -> PronunciationAttemptOut:
+        """Hears a drill said out loud and says, word by word, what was heard as asked."""
+        audio, seconds = recorded(attempt.recording, PronunciationError)
+        return PronunciationAttemptOut.of(
+            services.pronunciation.attempt(
+                user,
+                attempt.drill,
+                attempt.sound_id,
+                attempt.target,
+                audio,
+                attempt.recording.format,
+                seconds,
+            )
+        )
+
+    @router.post(
+        "/pronunciation/picks",
+        operation_id="pickPronunciationWord",
+        responses=NOT_FOUND | REFUSED,
+    )
+    def pick_pronunciation_word(
+        user: CurrentUser, pick: PronunciationPickIn
+    ) -> PronunciationPickOut:
+        """Remembers which word of a pair the learner heard; right if it was the one played."""
+        return PronunciationPickOut(
+            right=services.pronunciation.pick(user, pick.sound_id, pick.played, pick.chosen)
+        )
 
     @router.get("/recordings", operation_id="getRecordings")
     def get_recordings(user: CurrentUser) -> RecordingsOut:

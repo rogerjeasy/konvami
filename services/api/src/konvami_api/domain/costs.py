@@ -60,6 +60,10 @@ class Feature(StrEnum):
     VOICE_SAMPLE = "voice_sample"
     # Phrases suggested for a situation (the phrasebook, spec §6.7).
     PHRASEBOOK = "phrasebook"
+    # A drill said out loud in the pronunciation lab, and the sound of a word or sentence there
+    # (spec §6.14).
+    PRONUNCIATION = "pronunciation"
+    PRONUNCIATION_AUDIO = "pronunciation_audio"
 
 
 @dataclass(frozen=True)
