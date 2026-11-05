@@ -31,6 +31,9 @@ LOOK = {
     "backdrop": "mist",
     "glasses": False,
     "beard": False,
+    "face": "oval",
+    "eyes": "brown",
+    "aged": False,
 }
 
 

@@ -359,6 +359,9 @@ def test_starter_partners_are_proposed_with_their_looks(
         "backdrop": "mist",
         "glasses": False,
         "beard": False,
+        "face": "oval",
+        "eyes": "brown",
+        "aged": False,
     }
     assert call("GET", "/v1/personas").body == response.body
 

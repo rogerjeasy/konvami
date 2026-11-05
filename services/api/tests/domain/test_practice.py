@@ -236,6 +236,7 @@ def test_the_partner_can_end_the_conversation_when_the_learner_says_goodbye() ->
     assert [tool["name"] for tool in tools.definitions()] == [
         "end_conversation",
         "ask_tutor",
+        "set_expression",
         "update_profile",
     ]
     result = tools.run("end_conversation", {})
@@ -780,7 +781,33 @@ def test_the_partner_knows_when_to_ask_the_tutor() -> None:
     text = instructions(World())
 
     assert "ask_tutor" in text
+
     assert "own words" in text
+
+
+def test_the_partner_is_told_to_show_its_feelings_now_and_then() -> None:
+    text = instructions(World())
+
+    assert "set_expression" in text
+    assert "thumbs_up" in text
+
+
+def test_the_partner_can_show_an_expression_without_being_asked_to_reply() -> None:
+    tools = World().practice.tools(USER)
+
+    shown = tools.run("set_expression", {"expression": "amused", "gesture": "thumbs_up"})
+
+    assert shown.output == {"expression": "amused", "gesture": "thumbs_up"}
+    assert shown.silent
+
+
+def test_an_expression_the_face_cannot_make_shows_nothing_and_does_not_fail() -> None:
+    tools = World().practice.tools(USER)
+
+    shown = tools.run("set_expression", {"expression": "furious", "gesture": "none"})
+
+    assert shown.output == {"shown": False, "reason": "invalid_arguments"}
+    assert shown.silent
 
 
 # --- Help during a conversation (spec §6.4 help buttons) ----------------------------------------

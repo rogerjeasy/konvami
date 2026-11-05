@@ -1915,6 +1915,11 @@
         "additionalProperties": false,
         "description": "A portrait's parts and colors. The app draws exactly these names.",
         "properties": {
+          "aged": {
+            "default": false,
+            "title": "Aged",
+            "type": "boolean"
+          },
           "backdrop": {
             "enum": [
               "stone",
@@ -1928,6 +1933,28 @@
           "beard": {
             "title": "Beard",
             "type": "boolean"
+          },
+          "eyes": {
+            "default": "brown",
+            "enum": [
+              "brown",
+              "hazel",
+              "green",
+              "blue",
+              "grey"
+            ],
+            "title": "Eyes",
+            "type": "string"
+          },
+          "face": {
+            "default": "oval",
+            "enum": [
+              "oval",
+              "round",
+              "narrow"
+            ],
+            "title": "Face",
+            "type": "string"
           },
           "glasses": {
             "title": "Glasses",

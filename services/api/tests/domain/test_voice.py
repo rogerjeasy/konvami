@@ -591,6 +591,7 @@ def test_a_practice_call_has_the_partners_voice_instructions_and_time_limit() ->
     assert [tool["name"] for tool in session["tools"]] == [
         "end_conversation",
         "ask_tutor",
+        "set_expression",
         "update_profile",
     ]
     # Learners pause to think in a language they are learning.

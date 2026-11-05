@@ -12,6 +12,9 @@ class ToolResult:
     output: dict[str, Any]
     # True when this call completed the conversation's purpose: the call can end after the goodbye.
     finished: bool = False
+    # True when the persona has nothing to say about the result (a cosmetic tool such as
+    # `set_expression`): no new reply is asked for, so the call goes on where it was.
+    silent: bool = False
 
 
 class ToolSet(Protocol):

@@ -46,8 +46,12 @@ from konvami_api.domain.memories import Kind as MemoryKind
 from konvami_api.domain.memories import Memory, MemoryBook
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
 from konvami_api.domain.persona_parts import (
+    DEFAULT_EYES,
+    DEFAULT_FACE,
     Backdrop,
     CorrectionTiming,
+    EyeColor,
+    Face,
     FormOfAddress,
     Gender,
     Hair,
@@ -551,6 +555,9 @@ class LookModel(ApiModel):
     backdrop: Backdrop
     glasses: bool
     beard: bool
+    face: Face = DEFAULT_FACE
+    eyes: EyeColor = DEFAULT_EYES
+    aged: bool = False
 
 
 def teaching_of_role(role: Role) -> Teaching:
