@@ -1,4 +1,5 @@
 import { api } from '@/api';
+import { deviceImportPhotos } from '@/imports/device-photos';
 import { createClipPlayer } from '@/lib/clip-player';
 import { deviceTimeZone } from '@/lib/time-zone';
 import { createPracticeServices } from './services';
@@ -15,4 +16,5 @@ export const practiceServices = createPracticeServices(
   api,
   { timeZone: deviceTimeZone, now: Date.now },
   createClipPlayer(),
+  deviceImportPhotos,
 );

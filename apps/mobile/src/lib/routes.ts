@@ -68,6 +68,8 @@ export const ROUTES = {
   tutor: '/tutor',
   /** 5.19 Phrasebook: the phrases the learner needs in their life, to keep and to learn. */
   phrasebook: '/phrasebook',
+  /** 5.23 Import: what the learner brings (a text, a page, a photo) and what was made of it. */
+  import: '/import',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
@@ -143,6 +145,22 @@ export const lessonCallRoute = (personaId: string, topic: string) =>
  */
 export const recheckCallRoute = (personaId: string, group: 'learning' | 'goals') =>
   callRoute(personaId, { practise: `check:${group}` });
+
+/** 5.23 One import worked out: its summary, words, grammar and sentences. */
+export const importRoute = (id: string) =>
+  ({ pathname: '/import/[id]', params: { id } }) as const satisfies Href;
+
+/**
+ * 5.3 A conversation about something the learner imported (spec §6.17). The server reads
+ * `import:<id>` in the call's `practise`, with the id as 32 hex digits (the call's `practise`
+ * is at most 40 characters).
+ */
+export const importCallRoute = (personaId: string, importId: string) =>
+  callRoute(personaId, { practise: `import:${importId.replaceAll('-', '')}` });
+
+/** 5.3 The reply or phone call an imported letter asks for, rehearsed (the letters helper). */
+export const letterCallRoute = (personaId: string, importId: string) =>
+  callRoute(personaId, { practise: `letter:${importId.replaceAll('-', '')}` });
 
 /** 5.7 Learn with one card open, as a word of the day opens it. */
 export const learnCardRoute = (card: string) =>

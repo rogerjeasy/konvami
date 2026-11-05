@@ -8,6 +8,7 @@ import { SignUpDraftProvider, type SignUpDraft } from '@/screens/create-account/
 import { ExamNotesProvider } from '@/screens/exams/notes';
 import { AccessDraftProvider, type AccessDraft } from '@/screens/sign-in/draft';
 import { createFakeAuthProvider, type FakeAuthProvider } from '@/test/fake-auth-provider';
+import { createFakeImportPhotos, type FakeImportPhotos } from '@/test/fake-import-photos';
 import { createFakeProfileDevice, type FakeProfileDevice } from '@/test/fake-profile-device';
 import { OnboardingProvider } from '@/onboarding/services';
 import { createOnboardingStore } from '@/onboarding/store';
@@ -56,6 +57,7 @@ export async function renderScreen(
     now,
     studioStart,
     reminders,
+    photos,
     signedIn = false,
   }: {
     auth?: AuthServices;
@@ -67,6 +69,8 @@ export async function renderScreen(
     device?: FakeProfileDevice;
     studioStart?: PersonaDraft;
     reminders?: FakeReminderDevice;
+    /** The photo picker of the course companion. */
+    photos?: FakeImportPhotos;
     /** The device's clock: a fixed moment, or a function for a clock that a test moves. */
     now?: Date | (() => number);
     signedIn?: boolean;
@@ -82,6 +86,7 @@ export async function renderScreen(
   const onboarding = createOnboardingStore(backend);
   const moment = now ?? new Date(FAKE_NOW);
   const profileDevice = device ?? createFakeProfileDevice();
+  const importPhotos = photos ?? createFakeImportPhotos();
   const practice = createPracticeServices(
     backend,
     {
@@ -90,6 +95,7 @@ export async function renderScreen(
     },
     // As in the app: one audio player for samples and recordings.
     profileDevice.samples,
+    importPhotos,
   );
   const engine = voice ?? createFakeVoiceEngine();
   const sentences = recorder ?? createFakeRecorder();

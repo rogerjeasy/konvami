@@ -11,6 +11,9 @@ import type {
   AnsweredCard,
   ApiClient,
   Card,
+  CourseImport,
+  CourseImportDraft,
+  CourseImports,
   PushDevice,
   Catalog,
   ExamCentre,
@@ -33,8 +36,10 @@ import type {
   PhraseSuggestion,
   TutorQuestion,
 } from '@konvami/api-client';
+import { ApiError } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
+import type { ImportPhotos } from '@/imports/photos';
 import type { ClipPlayer } from '@/lib/clip-player';
 import type { SentenceRecording } from '@/voice/sentence-recorder';
 import { createDeckStore, type DeckState, type DeckStore } from './deck-store';
@@ -107,6 +112,30 @@ export interface PracticeServices {
   makePhraseCard: (id: string) => Promise<Card>;
   /** Removes a kept phrase. Rejects with an `ApiError` (`not_found`, …). */
   removePhrase: (id: string) => Promise<void>;
+  /** What the learner brought (the course companion), newest first (5.23). */
+  imports: ResourceStore<CourseImports>;
+  /** One import with its words, grammar and sentences. Rejects with an `ApiError` (`not_found`). */
+  readImport: (id: string) => Promise<CourseImport>;
+  /**
+   * Works out a text, a web page or an uploaded photo and puts it in the list. Rejects with an
+   * `ApiError` (`import_limit`, `not_in_language`, `blocked`, …).
+   */
+  bringImport: (draft: CourseImportDraft) => Promise<CourseImport>;
+  /**
+   * Lets the learner choose a photo, sends it and works it out. Resolves to null when they close
+   * the picker; rejects with an `ApiError` (`invalid_photo` when the picture cannot be read).
+   */
+  bringPhoto: (book: {
+    textbook?: string | null;
+    chapter?: string | null;
+  }) => Promise<CourseImport | null>;
+  /** Removes an import. Rejects with an `ApiError` (`not_found`, …). */
+  removeImport: (id: string) => Promise<void>;
+  /**
+   * Makes a flashcard of word `index` of an import, then brings the deck and Today's count of
+   * due cards up to date. Rejects with an `ApiError` (`not_found`, `too_many`, …).
+   */
+  makeImportCard: (id: string, index: number) => Promise<Card>;
   /** The questions asked to the Tutor, newest first (5.12). */
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
   /**
@@ -190,6 +219,12 @@ export function createPracticeServices(
     | 'suggestPhrases'
     | 'makePhraseCard'
     | 'removePhrase'
+    | 'getImports'
+    | 'startImportUpload'
+    | 'createImport'
+    | 'getImport'
+    | 'removeImport'
+    | 'makeImportWordCard'
     | 'explainCorrection'
     | 'getGrammarMap'
     | 'getGrammarTopic'
@@ -215,12 +250,14 @@ export function createPracticeServices(
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
+  photos: ImportPhotos,
 ): PracticeServices {
   const home = createHomeStore(api, clock);
   const deck = createDeckStore(api);
   const tutor = createResourceStore(() => api.getTutorQuestions(), clock.now);
   const catalog = createResourceStore(() => api.getCatalog(), clock.now);
   const phrasebook = createResourceStore(() => api.getPhrasebook(), clock.now);
+  const imports = createResourceStore(() => api.getImports(), clock.now);
   return {
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
@@ -265,6 +302,35 @@ export function createPracticeServices(
         () => api.removePhrase(id),
         (_, answer) => answer,
       );
+    },
+    imports,
+    readImport: (id) => api.getImport(id),
+    async bringImport(draft) {
+      const made = await api.createImport(draft);
+      void imports.refresh();
+      return made;
+    },
+    async bringPhoto(book) {
+      const picked = await photos.pick();
+      if (picked.status === 'cancelled') return null;
+      if (picked.status === 'failed') throw new ApiError('invalid_photo');
+      const upload = await api.startImportUpload();
+      await photos.send(upload, picked.picture);
+      const made = await api.createImport({ kind: 'photo', uploadId: upload.uploadId, ...book });
+      void imports.refresh();
+      return made;
+    },
+    async removeImport(id) {
+      await imports.mutate(
+        () => api.removeImport(id),
+        (_, answer) => answer,
+      );
+    },
+    async makeImportCard(id, index) {
+      const card = await api.makeImportWordCard(id, index);
+      void deck.refresh();
+      void home.refresh();
+      return card;
     },
     tutor,
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
@@ -319,6 +385,7 @@ export function PracticeProvider({
     services.exams.reset();
     services.tutor.reset();
     services.phrasebook.reset();
+    services.imports.reset();
     services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
@@ -484,6 +551,12 @@ export function useGrammarTopic(id: string): TopicReading & { retry: () => void 
 export function usePhrasebook(): ResourceState<{ phrases: Phrase[] }> {
   const { phrasebook } = usePracticeServices();
   return useSyncExternalStore(phrasebook.subscribe, phrasebook.getState, phrasebook.getState);
+}
+
+/** What the learner brought; re-renders when it changes. */
+export function useImports(): ResourceState<CourseImports> {
+  const { imports } = usePracticeServices();
+  return useSyncExternalStore(imports.subscribe, imports.getState, imports.getState);
 }
 
 /** The questions asked to the Tutor; re-renders when they change. */

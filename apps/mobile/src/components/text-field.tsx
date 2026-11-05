@@ -45,7 +45,8 @@ export function TextField({
       </Text>
       <FocusRing active={focused && !error}>
         <View
-          className={`min-h-field flex-row items-center gap-2.5 rounded-field border pl-4 ${trailing ? 'pr-1' : 'pr-4'} ${look}`}
+          // A field for a longer text keeps its first line at the top as it grows.
+          className={`min-h-field flex-row ${input.multiline ? 'items-start' : 'items-center'} gap-2.5 rounded-field border pl-4 ${trailing ? 'pr-1' : 'pr-4'} ${look}`}
         >
           {leading}
           <TextInput
