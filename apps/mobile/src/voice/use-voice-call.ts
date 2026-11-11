@@ -23,6 +23,10 @@ export interface VoiceCall {
   conversation: ConversationState;
   muted: boolean;
   toggleMute: () => void;
+  pushToTalk: boolean;
+  setPushToTalk: (enabled: boolean) => void;
+  beginTurn: () => void;
+  endTurn: () => void;
   /** Says a line for the learner without their voice (see `VoiceEngine.say`). */
   say: (text: string) => void;
   /** Asks the partner for help (see `VoiceEngine.help`). */
@@ -58,6 +62,7 @@ export function useVoiceCall(
   const [started, setStarted] = useState<StartedCall | null>(null);
   const [conversation, dispatch] = useReducer(conversationReducer, INITIAL_CONVERSATION);
   const [muted, setMuted] = useState(false);
+  const [pushToTalk, setManual] = useState(false);
   const engine = useRef<VoiceEngine | null>(null);
   const mouth = useSharedValue(0);
   const viseme = useSharedValue(0);
@@ -141,6 +146,20 @@ export function useVoiceCall(
     conversation,
     muted,
     toggleMute,
+    pushToTalk,
+    setPushToTalk: (enabled) => {
+      engine.current?.setPushToTalk(enabled);
+      setManual(enabled);
+      setMuted(enabled);
+    },
+    beginTurn: () => {
+      engine.current?.beginTurn();
+      setMuted(false);
+    },
+    endTurn: () => {
+      engine.current?.endTurn();
+      setMuted(true);
+    },
     say,
     help,
     stop,

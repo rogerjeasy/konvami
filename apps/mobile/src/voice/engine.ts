@@ -1,4 +1,6 @@
 import { ApiError, type CallPlan, type VoiceCall } from '@konvami/api-client';
+import type { ClipPlayer } from '@/lib/clip-player';
+import { premiumPlayback } from './premium-playback';
 import { VoiceError, type VoiceErrorCode } from './errors';
 import type { AudioLevels, RtcSession } from './rtc-session';
 import { helpNote, type HelpKind } from './help';
@@ -21,6 +23,9 @@ export interface VoiceEngine {
   /** Ends the call and frees the microphone. Safe to call at any time, any number of times. */
   stop(): void;
   setMuted(muted: boolean): void;
+  setPushToTalk(enabled: boolean): void;
+  beginTurn(): void;
+  endTurn(): void;
   /**
    * Says a line for the learner without their voice (a tapped "I don't know"): the persona
    * answers it like a spoken one, and listeners get it as `{ type: 'learner.typed', id, text }`.
@@ -59,24 +64,37 @@ const API_CODES: Record<string, VoiceErrorCode> = {
   network: 'network',
 };
 
+// Realtime requires at least 100 ms of input; leave a small capture margin.
+const MIN_MANUAL_TURN_MS = 150;
+
 const SILENCE: AudioLevels = { persona: 0, learner: 0 };
 
 export function createVoiceEngine({
   createSession,
   startCall,
+  clips,
+  now = Date.now,
 }: {
   /** A WebRTC session for this platform, or null when the build has none. */
   createSession: () => RtcSession | null;
+  clips?: ClipPlayer;
+  now?: () => number;
   /** Trades the SDP offer for the server's answer (`api.startVoiceCall`). */
   startCall: (sdpOffer: string) => Promise<VoiceCall>;
 }): VoiceEngine {
   let session: RtcSession | null = null;
   let stopped = false;
   let typedLines = 0;
+  let manual = false;
+  let holding = false;
+  let heldAt = 0;
   const listeners = new Set<(event: unknown) => void>();
   const emit = (event: unknown) => listeners.forEach((listener) => listener(event));
 
+  const premium = clips ? premiumPlayback(clips, emit) : null;
+
   function stop() {
+    premium?.stop();
     stopped = true;
     session?.close();
     session = null;
@@ -88,7 +106,10 @@ export function createVoiceEngine({
       const next = createSession();
       if (!next) throw new VoiceError('unsupported');
       session = next;
-      next.onEvent(emit);
+      next.onEvent((event) => {
+        premium?.handle(event);
+        emit(event);
+      });
       next.onClosed(() => emit({ type: 'connection.lost' }));
       try {
         const offer = await next.offer();
@@ -111,7 +132,48 @@ export function createVoiceEngine({
       session?.setMuted(muted);
     },
 
+    setPushToTalk(enabled) {
+      if (!session) return;
+      const sent = session.send({
+        type: 'session.update',
+        session: {
+          type: 'realtime',
+          audio: {
+            input: { turn_detection: enabled ? null : { type: 'semantic_vad', eagerness: 'auto' } },
+          },
+        },
+      });
+      if (!sent) return;
+      manual = enabled;
+      holding = false;
+      session.setMuted(enabled);
+    },
+
+    beginTurn() {
+      premium?.stop();
+      if (!manual || holding || !session) return;
+      if (!session.send({ type: 'input_audio_buffer.clear' })) return;
+      session.send({ type: 'response.cancel' });
+      session.send({ type: 'output_audio_buffer.clear' });
+      holding = true;
+      heldAt = now();
+      session.setMuted(false);
+    },
+
+    endTurn() {
+      if (!manual || !holding || !session) return;
+      holding = false;
+      session.setMuted(true);
+      if (now() - heldAt < MIN_MANUAL_TURN_MS) {
+        session.send({ type: 'input_audio_buffer.clear' });
+        return;
+      }
+      if (session.send({ type: 'input_audio_buffer.commit' }))
+        session.send({ type: 'response.create' });
+    },
+
     say(text) {
+      premium?.stop();
       const item = { type: 'message', role: 'user', content: [{ type: 'input_text', text }] };
       if (!session?.send({ type: 'conversation.item.create', item })) return;
       session.send({ type: 'response.create' });
@@ -120,6 +182,7 @@ export function createVoiceEngine({
     },
 
     help(kind) {
+      premium?.stop();
       if (!session) return;
       // Fails harmlessly when nothing is playing: the provider answers with an error event.
       session.send({ type: 'response.cancel' });

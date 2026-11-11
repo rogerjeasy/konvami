@@ -98,6 +98,35 @@ describe('starting', () => {
 });
 
 describe('a running call', () => {
+  it('commits only a released push-to-talk turn and restores automatic detection', async () => {
+    let time = 0;
+    const { session } = fakeSession();
+    const engine = createVoiceEngine({
+      createSession: () => session,
+      startCall: async () => answer,
+      now: () => time,
+    });
+    await engine.start();
+    engine.setPushToTalk(true);
+    expect(session.setMuted).toHaveBeenLastCalledWith(true);
+    engine.beginTurn();
+    expect(session.setMuted).toHaveBeenLastCalledWith(false);
+    time = 200;
+    engine.endTurn();
+    expect(session.setMuted).toHaveBeenLastCalledWith(true);
+    expect(session.send).toHaveBeenCalledWith({ type: 'input_audio_buffer.commit' });
+    const count = jest.mocked(session.send).mock.calls.length;
+    engine.endTurn();
+    expect(jest.mocked(session.send).mock.calls).toHaveLength(count);
+    engine.setPushToTalk(false);
+    expect(session.send).toHaveBeenLastCalledWith({
+      type: 'session.update',
+      session: {
+        type: 'realtime',
+        audio: { input: { turn_detection: { type: 'semantic_vad', eagerness: 'auto' } } },
+      },
+    });
+  });
   async function running() {
     const fake = fakeSession();
     const engine = createVoiceEngine({

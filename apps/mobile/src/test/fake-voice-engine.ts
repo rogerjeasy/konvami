@@ -82,6 +82,15 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
     setMuted(muted) {
       state.muted = muted;
     },
+    setPushToTalk(enabled) {
+      state.muted = enabled;
+    },
+    beginTurn() {
+      state.muted = false;
+    },
+    endTurn() {
+      state.muted = true;
+    },
     say(text) {
       said.push(text);
       emit({ type: 'learner.typed', id: `typed_${said.length}`, text });

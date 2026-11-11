@@ -19,6 +19,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { Pill } from '@/components/pill';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
+import { RevealCaption } from '@/components/reveal-caption';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { stepFeedback } from '@/lib/haptics';
 import { heroDrawingSize } from '@/lib/layout';
@@ -220,9 +221,12 @@ export function CallStage({
           {lines.map((line) =>
             line.speaker === 'persona' ? (
               hiddenPersonaText ? (
-                <Text key={line.id} tone="muted" className="text-center">
-                  {hiddenPersonaText}
-                </Text>
+                <View key={line.id} className="gap-1">
+                  <Text tone="muted" className="text-center">
+                    {hiddenPersonaText}
+                  </Text>
+                  <RevealCaption text={line.text} hiddenLabel={t('call.revealCaption')} />
+                </View>
               ) : (
                 <Text key={line.id} variant="emphasis" className="text-center">
                   {line.text}
@@ -256,7 +260,7 @@ export function CallStage({
               <View className="flex-row flex-wrap justify-center gap-x-2">
                 <TextButton
                   tone="primary"
-                  disabled={!live || conversation.finished}
+                  disabled={!live || conversation.finished || call.pushToTalk}
                   label={muteLabel}
                   onPress={toggleMute}
                 />
