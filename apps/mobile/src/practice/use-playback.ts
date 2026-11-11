@@ -11,6 +11,11 @@ import { usePracticeServices } from '@/practice/services';
  */
 export function usePlayback(turns: readonly { audio?: TurnAudio | null; group?: string }[]) {
   const { clips } = usePracticeServices();
+  const [positionMs, setPositionMs] = useState(0);
+  const [rate, updateRate] = useState(1);
+  const [loop, updateLoop] = useState(false);
+  const options = useRef({ rate, loop });
+  options.current = { rate, loop };
   const [playing, setPlaying] = useState<number | null>(null);
   // The turn whose clip may go on to the next; a clip that was stopped or replaced may not.
   const current = useRef<number | null>(null);
@@ -28,11 +33,12 @@ export function usePlayback(turns: readonly { audio?: TurnAudio | null; group?: 
     if (!audio) return;
     current.current = index;
     setPlaying(index);
+    setPositionMs(0);
     clips.play(
       audio.url,
       () => {
         if (current.current !== index) return;
-        const next = nextRecorded(turns, index);
+        const next = options.current.loop ? index : nextRecorded(turns, index);
         if (next === null) {
           current.current = null;
           setPlaying(null);
@@ -41,6 +47,10 @@ export function usePlayback(turns: readonly { audio?: TurnAudio | null; group?: 
         }
       },
       audio.milliseconds,
+      options.current.rate,
+      (value) => {
+        if (current.current === index) setPositionMs(value);
+      },
     );
   }
 
@@ -55,5 +65,15 @@ export function usePlayback(turns: readonly { audio?: TurnAudio | null; group?: 
     }
   }
 
-  return { playing, toggle };
+  function setRate(value: number) {
+    options.current.rate = value;
+    updateRate(value);
+    if (current.current !== null) {
+      const index = current.current;
+      current.current = null;
+      clips.stop();
+      play(index);
+    }
+  }
+  return { playing, positionMs, toggle, rate, setRate, loop, setLoop: updateLoop };
 }

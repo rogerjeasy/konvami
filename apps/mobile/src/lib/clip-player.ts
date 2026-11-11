@@ -11,13 +11,21 @@ export interface ClipPlayer {
    * known; without it the clip counts as a sample. `rate` slows the clip down (0.75) or speeds
    * it up; 1, or none, is as recorded.
    */
-  play(url: string, onDone: () => void, lengthMs?: number, rate?: number): void;
+  play(
+    url: string,
+    onDone: () => void,
+    lengthMs?: number,
+    rate?: number,
+    onProgress?: (milliseconds: number) => void,
+  ): void;
   stop(): void;
 }
 
 // A sample is one sentence. If a clip's end is never reported (it could not be loaded), the
 // player gives up this long after it should have ended (ms) instead of showing "playing"
 // forever.
+// Real player positions drive word highlights; no interpolation from wall-clock time.
+const PROGRESS_INTERVAL_MS = 100;
 const SAMPLE_MS = 15_000;
 const END_MARGIN_MS = 5_000;
 
@@ -40,12 +48,13 @@ export function createClipPlayer(): ClipPlayer {
   }
 
   return {
-    play(url, onDone, lengthMs = SAMPLE_MS, rate = 1) {
+    play(url, onDone, lengthMs = SAMPLE_MS, rate = 1, onProgress) {
       stop();
       // A clip the learner asked for should be heard with the ringer switch off, too.
       void setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
-      const player = createAudioPlayer({ uri: url });
+      const player = createAudioPlayer({ uri: url }, { updateInterval: PROGRESS_INTERVAL_MS });
       const listener = player.addListener('playbackStatusUpdate', (status) => {
+        onProgress?.(status.currentTime * 1000);
         if (status.didJustFinish) stop();
       });
       // A slower clip takes longer to end.
