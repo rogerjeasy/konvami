@@ -1,0 +1,13 @@
+# Implementation checkpoint
+
+This checkpoint preserves the implemented portions of the eleven feature areas. It is not a claim that the complete original scope has shipped. No infrastructure was applied and no store build was published.
+
+Implemented and integrated: English/French/Italian starter language packs; offline review queue and account-scoped cache; pinned recordings and local notes/bookmarks; library search/filter/playback/export controls; grammar reference and exercises; recorded fluency/activity observations; optional Azure phoneme assessment; ÖSD B1 practice and exam phrase banks; PDF/MP3/camera imports and editable letter replies; manual grouped phrases with audio; Anki text export; push-to-talk, concealed/revealable captions and transient WebRTC recovery; explicit walking mode and premium live speech opt-ins; subscription premium entitlement checks.
+
+Provider-dependent features stay unavailable without their configuration. Recording alignment needs the alignment model; encoded exports need a deployed ffmpeg binary; acoustic assessment needs Azure credentials. Native audio, background operation, downloads and sharing require fresh development/store binaries and hardware smoke testing. Unit/provider tests do not replace those checks.
+
+Remaining implementation: contextual caption lookup/save; a full resumable TestDaF simulation, picture prompts and a distinct second-candidate voice; vocabulary evidence runtime/progress wiring; richer adaptive frequency/comprehension/engagement signals; conversation-derived pronunciation practice and waveform comparison. The existing recovery grace handles brief network interruptions, not fresh-session reconnection after permanent transport failure. Bookmarks and notes are local to this device. Language packs are curated starter content, not exhaustive references.
+
+Verification at checkpoint: full mobile suite initially had 1,618 passing tests and two failures; both failures were corrected and their affected subsets passed. Full backend suite found five stale expectations (new language availability, audio metadata, migrations and SQL query parameters); the 95 tests across those affected files subsequently passed. API client: 57 passed. Design tokens: 61 passed. Python mypy passed all 275 then-existing files; mobile typecheck and lint passed. Subsequent feature work needs its own checks. Responsive visual verification is still in progress and real-provider/native-device validation is outstanding.
+
+Commits are grouped by feature and layer with implementation tests retained alongside their changes. Unrelated local `.claude/` files are excluded.
