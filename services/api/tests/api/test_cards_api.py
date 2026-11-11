@@ -92,6 +92,7 @@ def test_a_word_of_a_report_is_saved_as_a_card(
         "lapses": 0,
         # The forms come a moment later, from the worker.
         "details": None,
+        "memory": None,
     }
     # Saving it again answers with the same card.
     assert call("POST", "/v1/cards", WORD).body["id"] == FIRST_ID
@@ -460,3 +461,19 @@ def test_a_card_is_read_by_its_owner_and_is_todays_word_on_home(
     # One word for each of the next seven days: the learner has only this one.
     assert [word["day"] for word in words][:2] == ["2026-10-09", "2026-10-10"]
     assert {word["card"]["id"] for word in words} == {FIRST_ID}
+
+
+def test_anki_export_is_complete_and_account_scoped(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    reported(call, text_model, calls, services)
+    call("POST", "/v1/cards", WORD)
+    call("POST", "/v1/cards", {**WORD, "index": 1})
+    exported = call("GET", "/v1/cards/export")
+    assert exported.status == 200
+    assert "das Wochenende" in exported.body["text"]
+    assert "die Ausstellung" in exported.body["text"]
+    assert "das Wochenende" not in call("GET", "/v1/cards/export", subject=OTHER_USER).body["text"]

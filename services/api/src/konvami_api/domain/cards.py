@@ -37,7 +37,7 @@ BRING_BACK_HORIZON = dt.timedelta(days=fsrs.MAX_INTERVAL_DAYS + 1)
 
 # What a word is: its forms follow from it.
 Part = Literal["noun", "verb", "adjective", "phrase", "other"]
-Article = Literal["der", "die", "das"]
+Article = Literal["der", "die", "das", "the", "le", "la", "l'", "il", "lo"]
 
 
 @dataclass(frozen=True)
@@ -374,6 +374,12 @@ class CardService:
             due=due,
         )
 
+    def export(self, user_id: UUID) -> str:
+        """Every saved card of the current language as an Anki-compatible TSV file."""
+        from konvami_api.domain.deck_export import anki_tsv
+
+        return anki_tsv(self._repository.listed(user_id, self._language(user_id), MAX_CARDS, None))
+
     def due_count(self, user_id: UUID) -> int:
         return self._repository.counts(user_id, self._language(user_id), self._clock())[1]
 
@@ -448,11 +454,32 @@ class CardService:
         cards = self._repository.due(user_id, self._language(user_id), self._clock(), QUEUE_MAX)
         return [card for card in cards if card.kind == "word"][:limit]
 
-    def review(self, user_id: UUID, card_id: UUID, rating: Rating) -> Card:
+    def review(
+        self,
+        user_id: UUID,
+        card_id: UUID,
+        rating: Rating,
+        *,
+        expected_reviews: int | None = None,
+        reviewed_at: dt.datetime | None = None,
+    ) -> Card:
         card = self._repository.get(user_id, card_id)
         if card is None:
             raise CardError("not_found")
-        after = _reviewed(card, rating, self._clock())
+        # An offline replay must not count twice if its first response was lost. The existing
+        # repository compare-and-swap also protects against another device reviewing at once.
+        if expected_reviews is not None and card.reviews != expected_reviews:
+            raise CardError("conflict")
+        now = self._clock()
+        at = reviewed_at or now
+        if reviewed_at is not None and (
+            expected_reviews is None
+            or at.tzinfo is None
+            or at > now
+            or at < (card.reviewed_at or card.created_at)
+        ):
+            raise CardError("invalid_review")
+        after = _reviewed(card, rating, at)
         if not self._repository.reviewed(user_id, after, rating, card.reviews):
             # Another review of the same card was stored first (a rating tapped twice).
             raise CardError("conflict")
