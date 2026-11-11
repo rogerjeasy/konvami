@@ -69,6 +69,13 @@ def test_a_question_is_charged_to_the_learner(world: World) -> None:
     assert world.text.tasks[-1].charge == Charge(USER, Feature.TUTOR)
 
 
+def test_tutor_retrieves_curated_topic_examples_for_the_question(world: World) -> None:
+    asked(world, "mit dem Bus")
+    content = json.loads(world.text.tasks[-1].content)
+    assert content["references"][0]["id"] == "dative"
+    assert "Ich fahre mit dem Bus." in content["references"][0]["examples"]
+
+
 def test_the_tutor_rests_on_the_grammar_notes_and_knows_the_learner(world: World) -> None:
     asked(world)
 

@@ -9,7 +9,7 @@ is not sure. Every question and its answer are kept for the learner to read agai
 import datetime as dt
 import json
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Literal, Protocol
 from uuid import UUID, uuid4
 
@@ -19,6 +19,7 @@ from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
 from konvami_api.domain.catalog import Catalog, LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.grammar_reference import search_references
 from konvami_api.domain.profile import Profile, ProfileService
 from konvami_api.domain.reports import DEFAULT_LEVEL, Mistake, ReportService
 from konvami_api.domain.text import (
@@ -47,6 +48,8 @@ CALL_SECONDS = 12.0
 # The most characters kept of an explanation and of an example.
 EXPLANATION_MAX = 1200
 EXAMPLE_MAX = 300
+# Keep retrieved passages short enough for an in-call answer without dropping the core notes.
+REFERENCE_LIMIT = 5
 
 
 @dataclass(frozen=True)
@@ -285,6 +288,12 @@ class TutorService:
                     "level": profile.level(language) or DEFAULT_LEVEL,
                     **content,
                     "notes": _notes(pack),
+                    "references": [
+                        asdict(reference)
+                        for reference in (
+                            search_references(pack, question, limit=REFERENCE_LIMIT) if pack else ()
+                        )
+                    ],
                 },
                 ensure_ascii=False,
             ),
