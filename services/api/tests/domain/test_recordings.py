@@ -53,7 +53,7 @@ def turns(world: World, call_id: str, user: UUID = USER) -> tuple[Turn, ...]:
 def test_a_turns_audio_is_stored_as_a_wav_file_in_the_learners_folder(world: World) -> None:
     audio = world.recordings.keep(USER, "rtc_1", KeepAudio("item_2", "learner", PCM))
 
-    assert audio == TurnAudio(f"users/{USER}/recordings/rtc_1/item_2.wav", 500)
+    assert audio == TurnAudio(f"users/{USER}/recordings/rtc_1/item_2.wav", 500, 0, 0, 0)
     body, content_type = world.files.files[audio.key]
     assert content_type == "audio/wav"
     with wave.open(io.BytesIO(body)) as stored:
@@ -183,7 +183,7 @@ def test_turning_recordings_on_again_deletes_nothing(world: World) -> None:
 
 
 def test_a_recording_is_read_through_a_short_lived_address(world: World) -> None:
-    audio = TurnAudio(f"users/{USER}/recordings/rtc_1/item_2.wav", 500)
+    audio = TurnAudio(f"users/{USER}/recordings/rtc_1/item_2.wav", 500, 0, 0, 0)
 
     assert world.recordings.address(audio) == (
         f"https://files.test/users/{USER}/recordings/rtc_1/item_2.wav?expires=900"

@@ -79,3 +79,20 @@ def test_only_a_yes_or_no_is_a_choice(call: Call) -> None:
 def test_recordings_are_the_signed_in_learners_own(call: Call) -> None:
     assert call("GET", "/v1/recordings", subject=None).status == 401
     assert call("PATCH", "/v1/recordings", {"kept": False}, subject=None).status == 401
+
+
+def test_unconfigured_exports_and_alignment_report_capability_honestly(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    recorded(call, text_model, calls, services)
+    assert call("GET", "/v1/recordings/formats").body == {"formats": []}
+    assert call("POST", "/v1/conversations/rtc_1/turns/1/timing").body == {
+        "available": False,
+        "words": [],
+    }
+    assert call("POST", "/v1/conversations/rtc_1/export/mp3").status == 503
+    assert call("POST", "/v1/conversations/rtc_1/turns/-1/timing").status == 404
+    assert call("POST", "/v1/conversations/rtc_1/turns/1/timing", subject=None).status == 401
