@@ -44,6 +44,7 @@ from konvami_api.domain.course_import import TEXTBOOK_MAX as IMPORT_TEXTBOOK_MAX
 from konvami_api.domain.course_import import URL_MAX as IMPORT_URL_MAX
 from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind, WeekPlan
 from konvami_api.domain.exam_centre import ExamCentre, Simulation
+from konvami_api.domain.exam_phrases import phrases_for
 from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
 from konvami_api.domain.exports import DataExport
 from konvami_api.domain.feedback import (
@@ -391,6 +392,7 @@ class PushDeviceOut(ApiModel):
 
 
 class VoiceCallIn(ApiModel):
+    premium: bool = False
     purpose: CallPurpose
     # The app's WebRTC offer (SDP).
     sdp: str = Field(min_length=1, max_length=MAX_SDP_LENGTH)
@@ -521,6 +523,7 @@ class GrammarTopicPageOut(ApiModel):
     # Sentences that use it well, and typical learner sentences that break it.
     examples: list[str]
     typical_mistakes: list[str]
+    rules: list[str]
     # The learner's own, newest first.
     mistakes: list[TopicMistakeOut]
 
@@ -530,6 +533,7 @@ class GrammarTopicPageOut(ApiModel):
             topic=GrammarTopicOut.of(page.state),
             examples=list(page.state.topic.examples),
             typical_mistakes=list(page.typical_mistakes),
+            rules=list(page.rules),
             mistakes=[
                 TopicMistakeOut(
                     conversation_id=m.call_id,
@@ -862,6 +866,21 @@ class TurnAudioOut(ApiModel):
         return cls(url=address(audio), milliseconds=audio.milliseconds)
 
 
+class WordTimingOut(ApiModel):
+    word: str
+    start_ms: int
+    end_ms: int
+
+
+class RecordingFormatsOut(ApiModel):
+    formats: list[str]
+
+
+class RecordingTimingOut(ApiModel):
+    available: bool
+    words: list[WordTimingOut]
+
+
 class TurnOut(ApiModel):
     speaker: Speaker
     # As the live speech recognition wrote it down.
@@ -1014,6 +1033,7 @@ class SoundSummaryOut(ApiModel):
 
 class SoundsOut(ApiModel):
     sounds: list[SoundSummaryOut]
+    assessment_provider: str | None = None
 
 
 class PairOut(ApiModel):
@@ -1056,6 +1076,7 @@ class PronunciationAttemptIn(ApiModel):
     sound_id: str | None = Field(default=None, max_length=40)
     target: str = Field(min_length=1, max_length=PRONUNCIATION_TARGET_MAX)
     recording: RecordingIn
+    assessment_consent: bool = False
 
 
 class WordMarkOut(ApiModel):
@@ -1063,12 +1084,32 @@ class WordMarkOut(ApiModel):
     ok: bool
 
 
+class PhonemeScoreOut(ApiModel):
+    phoneme: str
+    accuracy: float
+
+
+class AssessedWordOut(ApiModel):
+    word: str
+    accuracy: float
+    phonemes: list[PhonemeScoreOut]
+
+
+class PronunciationAssessmentOut(ApiModel):
+    provider: str
+    accuracy: float
+    fluency: float | None
+    prosody: float | None
+    words: list[AssessedWordOut]
+
+
 class PronunciationAttemptOut(ApiModel):
-    """What was heard and, word by word, where. An approximation: no phoneme scores."""
+    """Recognized words, plus optional provider acoustic scores after explicit consent."""
 
     heard: str
     right: bool
     words: list[WordMarkOut]
+    assessment: PronunciationAssessmentOut | None = None
 
     @classmethod
     def of(cls, attempt: Attempt) -> "PronunciationAttemptOut":
@@ -1076,6 +1117,25 @@ class PronunciationAttemptOut(ApiModel):
             heard=attempt.heard,
             right=attempt.right,
             words=[WordMarkOut(word=mark.word, ok=mark.ok) for mark in attempt.words],
+            assessment=PronunciationAssessmentOut(
+                provider=attempt.assessment.provider,
+                accuracy=attempt.assessment.accuracy,
+                fluency=attempt.assessment.fluency,
+                prosody=attempt.assessment.prosody,
+                words=[
+                    AssessedWordOut(
+                        word=word.word,
+                        accuracy=word.accuracy,
+                        phonemes=[
+                            PhonemeScoreOut(phoneme=p.phoneme, accuracy=p.accuracy)
+                            for p in word.phonemes
+                        ],
+                    )
+                    for word in attempt.assessment.words
+                ],
+            )
+            if attempt.assessment
+            else None,
         )
 
 
@@ -1201,6 +1261,11 @@ class CardAudioOut(ApiModel):
     url: str
 
 
+class CardMemoryOut(ApiModel):
+    stability: float
+    difficulty: float
+
+
 class CardOut(ApiModel):
     id: UUID
     kind: CardKind
@@ -1221,6 +1286,7 @@ class CardOut(ApiModel):
     lapses: int
     # A word's forms; null until they are written down, and for a correction.
     details: WordDetailsOut | None
+    memory: CardMemoryOut | None = None
 
     @classmethod
     def of(cls, card: Card) -> "CardOut":
@@ -1238,6 +1304,9 @@ class CardOut(ApiModel):
             reviews=card.reviews,
             lapses=card.lapses,
             details=WordDetailsOut.of(card.details) if card.details else None,
+            memory=CardMemoryOut(stability=card.memory.stability, difficulty=card.memory.difficulty)
+            if card.memory
+            else None,
         )
 
 
@@ -1294,6 +1363,8 @@ class QueueOut(ApiModel):
 
 class ReviewIn(ApiModel):
     rating: Rating
+    expected_reviews: int | None = Field(default=None, ge=0)
+    reviewed_at: AwareDatetime | None = None
 
 
 class MemoryOut(ApiModel):
@@ -1564,6 +1635,10 @@ class MistakeTrendsOut(ApiModel):
     kinds: list[MistakeKindOut]
 
 
+class DeckExportOut(ApiModel):
+    text: str
+
+
 class CardProgressOut(ApiModel):
     total: int
     due: int
@@ -1601,11 +1676,17 @@ class ExamCardOut(ApiModel):
         return cls(id=card.id, title=card.title, prompts=list(card.prompts))
 
 
+class ExamPhraseOut(ApiModel):
+    text: str
+    meanings: dict[str, str]
+
+
 class ExamPartOut(ApiModel):
     id: str
     # The app names each kind of part in its own strings.
     kind: PartKind
     seconds: int
+    phrases: list[ExamPhraseOut] = Field(default_factory=list)
 
 
 class SpeakingExamOut(ApiModel):
@@ -1629,7 +1710,18 @@ class SpeakingExamOut(ApiModel):
             levels=list(exam.levels),
             name=exam.name,
             prep_seconds=exam.prep_seconds,
-            parts=[ExamPartOut(id=p.id, kind=p.kind, seconds=p.seconds) for p in exam.parts],
+            parts=[
+                ExamPartOut(
+                    id=p.id,
+                    kind=p.kind,
+                    seconds=p.seconds,
+                    phrases=[
+                        ExamPhraseOut(text=phrase.text, meanings=dict(phrase.meanings))
+                        for phrase in phrases_for(p.kind)
+                    ],
+                )
+                for p in exam.parts
+            ],
             pass_share=exam.pass_share,
         )
 
@@ -1981,6 +2073,17 @@ class SoundOut(ApiModel):
     url: str
 
 
+class RecordingFluencyOut(ApiModel):
+    words: int
+    unique_words: int
+    recorded_seconds: float
+    recorded_turns: int
+    words_per_minute: float
+    active_seconds: float | None = None
+    pause_seconds: float | None = None
+    pauses: int | None = None
+
+
 class ProgressOut(ApiModel):
     """The Progress screen in one answer."""
 
@@ -2000,11 +2103,24 @@ class ProgressOut(ApiModel):
     milestones: list[MilestoneOut]
     # Last week's check-in; null when the learner did not practise last week.
     last_week: WeekReviewOut | None
+    fluency: RecordingFluencyOut | None
 
     @classmethod
     def of(cls, progress: ProgressView, last_week: WeekReview | None) -> "ProgressOut":
         talk, cards = progress.talk, progress.cards
         return cls(
+            fluency=RecordingFluencyOut(
+                words=progress.fluency.words,
+                unique_words=progress.fluency.unique_words,
+                recorded_seconds=progress.fluency.recorded_seconds,
+                recorded_turns=progress.fluency.recorded_turns,
+                words_per_minute=progress.fluency.words_per_minute,
+                active_seconds=progress.fluency.active_seconds,
+                pause_seconds=progress.fluency.pause_seconds,
+                pauses=progress.fluency.pauses,
+            )
+            if progress.fluency
+            else None,
             last_week=WeekReviewOut.of(last_week) if last_week else None,
             language=progress.language,
             level=HomeLevelOut.of(progress.level) if progress.level else None,
@@ -2524,7 +2640,7 @@ class ImportIn(ApiModel):
     """Something to work out: a pasted text, a web page's address, or an uploaded photo. The
     field for the `kind` is required, the others are ignored."""
 
-    kind: Literal["text", "link", "photo"]
+    kind: Literal["text", "link", "photo", "pdf", "audio"]
     # Checked again by the service (too short); the limits here keep a huge body out.
     text: Annotated[str | None, Field(max_length=IMPORT_PASTE_MAX)] = None
     url: Annotated[str | None, Field(max_length=IMPORT_URL_MAX)] = None
@@ -2573,7 +2689,7 @@ class ImportLetterOut(ApiModel):
 
 class ImportOut(ApiModel):
     id: UUID
-    kind: Literal["text", "link", "photo"]
+    kind: Literal["text", "link", "photo", "pdf", "audio"]
     genre: Literal["letter", "menu", "article", "textbook", "other"]
     title: str
     # The address of a page; null for a text or a photo.
@@ -2636,7 +2752,7 @@ class ImportOut(ApiModel):
 
 class ImportSummaryOut(ApiModel):
     id: UUID
-    kind: Literal["text", "link", "photo"]
+    kind: Literal["text", "link", "photo", "pdf", "audio"]
     genre: Literal["letter", "menu", "article", "textbook", "other"]
     title: str
     textbook: str | None

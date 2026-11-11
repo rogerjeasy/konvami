@@ -33,6 +33,7 @@ from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
+from konvami_api.domain.live_speech import LiveSpeech
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.moderation import TextGuard
 from konvami_api.domain.onboarding import OnboardingService
@@ -43,7 +44,7 @@ from konvami_api.domain.placement import PlacementScript, PlacementService
 from konvami_api.domain.planner import SessionPlanner
 from konvami_api.domain.plans import PlanService
 from konvami_api.domain.practice import PracticeScript
-from konvami_api.domain.premium_voices import PilotAccess, PremiumVoices, PremiumVoiceService
+from konvami_api.domain.premium_voices import PremiumVoices, PremiumVoiceService
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
@@ -101,6 +102,7 @@ from konvami_api.persistence.repositories import (
     SqlWeekReviewRepository,
 )
 from konvami_api.persistence.sql import SqlClient
+from konvami_api.providers.audio_encoding import FfmpegEncoder
 from konvami_api.providers.aws import (
     LambdaCallStarter,
     LambdaClient,
@@ -114,6 +116,7 @@ from konvami_api.providers.aws import (
     SnsNotifier,
     cached_secret,
 )
+from konvami_api.providers.azure_assessment import AzurePronunciation
 from konvami_api.providers.cognito_accounts import CognitoAccounts
 from konvami_api.providers.cognito_email_proof import CognitoClient, CognitoEmailProof
 from konvami_api.providers.elevenlabs_speech import ElevenLabsSpeech
@@ -308,6 +311,12 @@ def build_backend(
         files=files,
         transcriber=transcriber,
         model=models.verbatim,
+        aligner=transcriber,
+        alignment_model=environment.get("RECORDING_ALIGNMENT_MODEL", ""),
+        encoder=FfmpegEncoder(environment["RECORDING_ENCODER_PATH"])
+        if environment.get("RECORDING_ENCODER_PATH")
+        else None,
+        accounts=directory,
     )
     tutor_store = SqlTutorRepository(sql)
     tutor = TutorService(
@@ -321,6 +330,7 @@ def build_backend(
         clock=_now,
     )
     course_imports = CourseImportService(
+        listener=listener,
         profiles=profiles,
         accounts=directory,
         cards=cards,
@@ -348,6 +358,9 @@ def build_backend(
     )
     speech = OpenAiSpeech(openai_key, meter=meter)
     premium_config = premium_voice_settings(environment.get(PREMIUM_VOICES_VARIABLE))
+    premium_speech = ElevenLabsSpeech(
+        cached_secret(clients.secrets, environment.get(_ELEVENLABS_SECRET, "")), meter=meter
+    )
     premium_voices = PremiumVoiceService(
         # Without the key's secret nothing is offered, whatever the voices say.
         premium=(
@@ -355,12 +368,10 @@ def build_backend(
             if environment.get(_ELEVENLABS_SECRET)
             else PremiumVoices(model="")
         ),
-        access=PilotAccess(owners=costs.owners, open_to_testers=premium_config.open_to_testers),
+        access=plans,
         accounts=directory,
         choices=SqlPremiumVoiceRepository(sql, _now),
-        speech=ElevenLabsSpeech(
-            cached_secret(clients.secrets, environment.get(_ELEVENLABS_SECRET, "")), meter=meter
-        ),
+        speech=premium_speech,
         profiles=profiles,
         files=files,
     )
@@ -392,6 +403,7 @@ def build_backend(
         clock=_now,
     )
     voice = VoiceCallService(
+        live_speech=LiveSpeech(premium_voices, premium_speech),
         settings=voice_config,
         scripts={
             CallPurpose.ONBOARDING: HostScript(CATALOG, profiles),
@@ -490,6 +502,8 @@ def build_backend(
         tutor=tutor,
         course_imports=course_imports,
         phrasebook=PhrasebookService(
+            sounds=Sounds(speech=speech, model=models.speech, files=files, premium=premium_voices),
+            personas=personas,
             profiles=profiles,
             accounts=directory,
             cards=cards,
@@ -594,6 +608,16 @@ def build_backend(
             repository=SqlPronunciationRepository(sql),
             sounds=sounds,
             clock=_now,
+            assessor=AzurePronunciation(
+                cached_secret(
+                    clients.secrets, environment.get("KONVAMI_AZURE_SPEECH_SECRET_ARN", "")
+                ),
+                environment.get("KONVAMI_AZURE_SPEECH_REGION", ""),
+                meter=meter,
+            )
+            if environment.get("KONVAMI_AZURE_SPEECH_SECRET_ARN")
+            and environment.get("KONVAMI_AZURE_SPEECH_REGION")
+            else None,
         ),
         conversation_review=conversation_review,
         voice_review=VoiceReviewService(

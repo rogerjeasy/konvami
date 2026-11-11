@@ -5,7 +5,7 @@ import binascii
 import datetime as dt
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request
@@ -26,6 +26,7 @@ from konvami_api.api.schemas import (
     ConversationsOut,
     CostsOut,
     DataExportOut,
+    DeckExportOut,
     DeckOut,
     DeckSummaryOut,
     ExamCardOut,
@@ -95,9 +96,11 @@ from konvami_api.api.schemas import (
     PushDeviceOut,
     QueuedFlagOut,
     QueueOut,
+    RecordingFormatsOut,
     RecordingIn,
     RecordingsOut,
     RecordingsPatch,
+    RecordingTimingOut,
     ReportOut,
     RetriedOut,
     RetriesOut,
@@ -119,6 +122,7 @@ from konvami_api.api.schemas import (
     VoiceCallOut,
     VoiceSampleOut,
     WeekReviewOut,
+    WordTimingOut,
 )
 from konvami_api.domain.accounts import AccountService, AccountView
 from konvami_api.domain.card_details import CardDetailsService
@@ -126,7 +130,7 @@ from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService
 from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversation_review import ConversationReview
-from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationService
+from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationQuery, ConversationService
 from konvami_api.domain.costs import CostService
 from konvami_api.domain.course_import import CourseImportError, CourseImportService
 from konvami_api.domain.director import DirectorService
@@ -452,6 +456,7 @@ def _router(services: Services) -> APIRouter:
             offer.local_date,
             offer.scenario,
             offer.practise,
+            premium=offer.premium,
         )
         return VoiceCallOut.of(started)
 
@@ -566,8 +571,20 @@ def _router(services: Services) -> APIRouter:
         limit: int = PAGE_DEFAULT,
         # The `next` of the page before.
         before: AwareDatetime | None = None,
+        q: str = "",
+        partner: UUID | None = None,
+        mode: Literal["free", "role_play", "review"] | None = None,
+        after: AwareDatetime | None = None,
+        through: AwareDatetime | None = None,
     ) -> ConversationsOut:
-        return ConversationsOut.of(services.conversations.listed(user, limit=limit, before=before))
+        return ConversationsOut.of(
+            services.conversations.listed(
+                user,
+                limit=limit,
+                before=before,
+                query=ConversationQuery(q[:500], partner, mode, after, through),
+            )
+        )
 
     @router.get(
         "/conversations/{conversation_id}", operation_id="getConversation", responses=NOT_FOUND
@@ -575,6 +592,37 @@ def _router(services: Services) -> APIRouter:
     def get_conversation(user: CurrentUser, conversation_id: str) -> TranscriptOut:
         transcript = services.conversations.transcript(user, conversation_id)
         return TranscriptOut.of(transcript, services.recordings.address)
+
+    @router.post(
+        "/conversations/{conversation_id}/turns/{index}/timing",
+        operation_id="getRecordingTiming",
+        responses=NOT_FOUND | UNAVAILABLE,
+    )
+    def get_recording_timing(
+        user: CurrentUser, conversation_id: str, index: int
+    ) -> RecordingTimingOut:
+        words = services.recordings.word_timings(user, conversation_id, index)
+        return RecordingTimingOut(
+            available=words is not None,
+            words=[
+                WordTimingOut(word=word.word, start_ms=word.start_ms, end_ms=word.end_ms)
+                for word in words or ()
+            ],
+        )
+
+    @router.get("/recordings/formats", operation_id="getRecordingFormats")
+    def get_recording_formats(user: CurrentUser) -> RecordingFormatsOut:
+        return RecordingFormatsOut(formats=list(services.recordings.export_formats()))
+
+    @router.post(
+        "/conversations/{conversation_id}/export/{format}",
+        operation_id="exportRecording",
+        responses=NOT_FOUND | UNAVAILABLE,
+    )
+    def export_recording(
+        user: CurrentUser, conversation_id: str, format: Literal["mp3", "m4a"]
+    ) -> SoundOut:
+        return SoundOut(url=services.recordings.export_audio(user, conversation_id, format))
 
     def report_of(user: UUID, call_id: str, state: ReportState) -> ReportOut:
         if state.report is None:
@@ -615,6 +663,10 @@ def _router(services: Services) -> APIRouter:
     ) -> DeckOut:
         return DeckOut.of(services.cards.deck(user, limit=limit, before=before))
 
+    @router.get("/cards/export", operation_id="exportCards", responses=REFUSED)
+    def export_cards(user: CurrentUser) -> DeckExportOut:
+        return DeckExportOut(text=services.cards.export(user))
+
     @router.get("/cards/due", operation_id="getDueCards", responses=REFUSED)
     def get_due_cards(user: CurrentUser, limit: int = QUEUE_DEFAULT) -> QueueOut:
         return QueueOut.of(services.cards.queue(user, limit=limit))
@@ -625,7 +677,15 @@ def _router(services: Services) -> APIRouter:
         responses=NOT_FOUND | CONFLICT | REFUSED,
     )
     def review_card(user: CurrentUser, card_id: UUID, review: ReviewIn) -> CardOut:
-        return CardOut.of(services.cards.review(user, card_id, review.rating))
+        return CardOut.of(
+            services.cards.review(
+                user,
+                card_id,
+                review.rating,
+                expected_reviews=review.expected_reviews,
+                reviewed_at=review.reviewed_at,
+            )
+        )
 
     @router.post("/cards/{card_id}/answers", operation_id="answerCard", responses=ANSWER_REFUSED)
     def answer_card(user: CurrentUser, card_id: UUID, answer: RecordingIn) -> AnsweredOut:
@@ -856,6 +916,14 @@ def _router(services: Services) -> APIRouter:
         question = services.tutor.explain_correction(user, asked.conversation_id, asked.index)
         return TutorQuestionOut.of(question)
 
+    @router.get(
+        "/phrasebook/{phrase_id}/audio",
+        operation_id="getPhraseAudio",
+        responses=NOT_FOUND | UNAVAILABLE,
+    )
+    def get_phrase_audio(user: CurrentUser, phrase_id: UUID) -> CardAudioOut:
+        return CardAudioOut(url=services.phrasebook.audio(user, phrase_id))
+
     @router.get("/phrasebook", operation_id="getPhrasebook", responses=REFUSED)
     def get_phrasebook(user: CurrentUser) -> PhrasebookOut:
         """The learner's phrases for the language they are learning, newest first (spec §6.7)."""
@@ -903,7 +971,8 @@ def _router(services: Services) -> APIRouter:
         """The problem sounds of the language the learner learns, with their practice so far
         (spec §6.14). Empty for a language that has none yet."""
         return SoundsOut(
-            sounds=[SoundSummaryOut.of(s) for s in services.pronunciation.sounds(user)]
+            sounds=[SoundSummaryOut.of(s) for s in services.pronunciation.sounds(user)],
+            assessment_provider=services.pronunciation.assessment_provider(user),
         )
 
     @router.get(
@@ -951,6 +1020,7 @@ def _router(services: Services) -> APIRouter:
                 audio,
                 attempt.recording.format,
                 seconds,
+                assessment_consent=attempt.assessment_consent,
             )
         )
 
@@ -973,9 +1043,11 @@ def _router(services: Services) -> APIRouter:
         return ImportsOut.of(services.course_imports.imports(user))
 
     @router.post("/imports/upload", operation_id="startImportUpload")
-    def start_import_upload(user: CurrentUser) -> ImportUploadOut:
+    def start_import_upload(
+        user: CurrentUser, kind: Literal["photo", "pdf", "audio"] = "photo"
+    ) -> ImportUploadOut:
         """A form for one photo (a JPEG) to read: a menu, a letter, an article, a book page."""
-        return ImportUploadOut.of(services.course_imports.start_upload(user))
+        return ImportUploadOut.of(services.course_imports.start_upload(user, kind))
 
     @router.post(
         "/imports",
@@ -996,14 +1068,25 @@ def _router(services: Services) -> APIRouter:
         else:
             if brought.upload_id is None:
                 raise CourseImportError("invalid_value")
-            made = imports.create_from_photo(
-                user, brought.upload_id, brought.textbook, brought.chapter
+            create = (
+                imports.create_from_photo
+                if brought.kind == "photo"
+                else lambda user, upload, book, chapter: imports.create_from_document(
+                    user, upload, brought.kind, book, chapter
+                )
             )
+            made = create(user, brought.upload_id, brought.textbook, brought.chapter)
         return ImportOut.of(imports.entry(user, made.id))
 
     @router.get("/imports/{import_id}", operation_id="getImport", responses=NOT_FOUND)
     def get_import(user: CurrentUser, import_id: UUID) -> ImportOut:
         return ImportOut.of(services.course_imports.entry(user, import_id))
+
+    @router.post(
+        "/imports/{import_id}/reply", operation_id="draftImportReply", responses=NOT_FOUND | REFUSED
+    )
+    def draft_import_reply(user: CurrentUser, import_id: UUID) -> dict[str, str]:
+        return {"reply": services.course_imports.draft_reply(user, import_id)}
 
     @router.delete("/imports/{import_id}", operation_id="removeImport", responses=NOT_FOUND)
     def remove_import(user: CurrentUser, import_id: UUID) -> ImportsOut:

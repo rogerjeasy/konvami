@@ -373,6 +373,7 @@ class World:
             clock=self.clock,
         )
         self.files = InMemoryFileStore()
+        self.speech = FakeSpeechModel()
         self.recording_store = InMemoryRecordingRepository(self.sessions)
         self.transcriber = FakeTranscriber(self.files)
         self.recordings = RecordingService(
@@ -404,6 +405,8 @@ class World:
         # Phrase ids in the order they are handed out: ...0001, ...0002, and so on.
         phrase_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{n:012d}") for n in range(1, 10_000))
         self.phrasebook = PhrasebookService(
+            sounds=Sounds(speech=self.speech, model="gpt-4o-mini-tts", files=self.files),
+            personas=self.personas,
             profiles=self.profiles,
             accounts=self.accounts,
             cards=self.cards,
@@ -417,7 +420,14 @@ class World:
         # Import ids in the order they are handed out: ...0001, ...0002, and so on.
         import_ids = (UUID(f"ffffffff-ffff-4fff-8fff-{n:012d}") for n in range(1, 10_000))
         self.pages = FakePageFetcher()
+        self.import_transcriber = ScriptedTranscriber()
         self.course_imports = CourseImportService(
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.import_transcriber,
+                model="gpt-4o-transcribe",
+            ),
             profiles=self.profiles,
             accounts=self.accounts,
             cards=self.cards,
@@ -465,7 +475,6 @@ class World:
         )
         self.exam_store = InMemoryExamRepository()
         self.exam_starter = RecordingExamStarter()
-        self.speech = FakeSpeechModel()
         # The premium voices (ElevenLabs): two on offer, open to every tester.
         self.premium_speech = FakeSpeechModel()
         self.premium_choices = InMemoryPremiumChoices()

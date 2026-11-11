@@ -12,6 +12,7 @@ from konvami_api.domain.cards import Card, CardTotals, WordDetails
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
+    ConversationQuery,
     DayActivity,
     PartnerHistory,
     zone_of,
@@ -421,8 +422,34 @@ class InMemoryConversationRepository:
     def _counted(self, user_id: UUID) -> list[Conversation]:
         return [c for c in self._practice(user_id) if c.counts]
 
-    def listed(self, user_id: UUID, limit: int, before: datetime | None) -> list[Conversation]:
-        counted = self._counted(user_id)
+    def listed(
+        self,
+        user_id: UUID,
+        limit: int,
+        before: datetime | None,
+        query: ConversationQuery | None = None,
+    ) -> list[Conversation]:
+        query = query or ConversationQuery()
+        counted = [
+            c
+            for c in self._counted(user_id)
+            if (query.partner is None or c.persona_id == query.partner)
+            and (query.after is None or c.started_at >= query.after)
+            and (query.through is None or c.started_at <= query.through)
+            and (
+                query.mode is None
+                or (query.mode == "review" and c.review)
+                or (query.mode == "role_play" and c.scenario is not None)
+                or (query.mode == "free" and c.scenario is None and not c.review)
+            )
+            and (
+                not query.text.strip()
+                or any(
+                    query.text.strip().lower() in (t.verbatim or t.text).lower()
+                    for t in self.turns(c.id)
+                )
+            )
+        ]
         return [c for c in counted if before is None or c.started_at < before][:limit]
 
     def get(self, user_id: UUID, call_id: str) -> Conversation | None:
