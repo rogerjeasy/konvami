@@ -68,6 +68,7 @@ def test_a_drill_says_which_words_were_heard(
     body = drill(call, "vier für")
 
     assert body == {
+        "assessment": None,
         "heard": "vier",
         "right": False,
         "words": [{"word": "vier", "ok": True}, {"word": "für", "ok": False}],

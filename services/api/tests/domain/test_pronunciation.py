@@ -77,6 +77,16 @@ def test_words_found_in_order_are_matched_once_each() -> None:
     assert matched_words(["a", "b"], ["x", "y"]) == (False, False)
 
 
+def test_advanced_assessment_is_unavailable_until_a_provider_is_configured() -> None:
+    world = lab()
+    assert world.pronunciation.assessment_provider(USER) is None
+    with pytest.raises(PronunciationError) as error:
+        world.pronunciation.attempt(
+            USER, "word", "ue", "Brücke", AUDIO, "wav", assessment_consent=True
+        )
+    assert error.value.code == "unavailable"
+
+
 def test_a_word_said_as_asked_is_right() -> None:
     world = lab()
 
@@ -277,3 +287,58 @@ def test_drills_past_the_days_limit_are_refused() -> None:
         say(world, "für", "für")
 
     assert error.value.code == "drill_limit"
+
+
+def test_acoustic_provider_requires_opt_in_and_preserves_actual_scores(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from konvami_api.domain.costs import Charge
+    from konvami_api.domain.pronunciation_assessment import (
+        AssessedWord,
+        PhonemeScore,
+        PronunciationAssessment,
+    )
+
+    class Assessor:
+        provider = "Test acoustic provider"
+
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def supports(self, language: str, audio_format: str) -> bool:
+            return language == "de" and audio_format == "wav"
+
+        def assess(
+            self,
+            language: str,
+            reference: str,
+            audio: bytes,
+            audio_format: str,
+            *,
+            charge: Charge | None = None,
+        ) -> PronunciationAssessment:
+            self.calls.append(reference)
+            assert charge is not None
+            assert charge.feature == Feature.PRONUNCIATION
+            return PronunciationAssessment(
+                self.provider,
+                reference,
+                71,
+                80,
+                None,
+                (AssessedWord(reference, 71, (PhonemeScore("y", 62),)),),
+            )
+
+    world = lab()
+    assessor = Assessor()
+    monkeypatch.setattr(world.pronunciation, "_assessor", assessor)
+    assert world.pronunciation.assessment_provider(USER) == assessor.provider
+    assert say(world, "für", "für").assessment is None
+    assert assessor.calls == []
+    result = world.pronunciation.attempt(
+        USER, "word", "ue", "für", AUDIO, "wav", assessment_consent=True
+    )
+    assert assessor.calls == ["für"]
+    assert result.assessment is not None
+    assert result.assessment.words[0].phonemes[0].accuracy == 62
+    assert len(world.pronunciation_transcriber.tasks) == 1

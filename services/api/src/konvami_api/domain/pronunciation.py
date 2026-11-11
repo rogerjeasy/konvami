@@ -26,6 +26,11 @@ from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import ProfileService
+from konvami_api.domain.pronunciation_assessment import (
+    AssessmentError,
+    PronunciationAssessment,
+    PronunciationAssessor,
+)
 from konvami_api.domain.pronunciation_sounds import ProblemSound
 from konvami_api.domain.reports import words_in
 from konvami_api.domain.sounds import Sounds
@@ -67,6 +72,7 @@ class Attempt:
     heard: str
     right: bool
     words: tuple[WordMark, ...]
+    assessment: PronunciationAssessment | None = None
 
 
 @dataclass(frozen=True)
@@ -142,6 +148,7 @@ class PronunciationService:
         repository: PronunciationRepository,
         sounds: Sounds,
         clock: Callable[[], dt.datetime],
+        assessor: PronunciationAssessor | None = None,
     ) -> None:
         self._profiles = profiles
         self._personas = personas
@@ -149,6 +156,15 @@ class PronunciationService:
         self._repository = repository
         self._sounds = sounds
         self._clock = clock
+        self._assessor = assessor
+
+    def assessment_provider(self, user_id: UUID) -> str | None:
+        language, _ = self._pack(user_id)
+        return (
+            self._assessor.provider
+            if self._assessor and self._assessor.supports(language, "wav")
+            else None
+        )
 
     def _pack(self, user_id: UUID) -> tuple[str, LanguagePack | None]:
         language = self._profiles.get(user_id).target_language or ""
@@ -262,6 +278,8 @@ class PronunciationService:
         audio: bytes,
         audio_format: str,
         seconds: float | None = None,
+        *,
+        assessment_consent: bool = False,
     ) -> Attempt:
         """Hears the learner say `target` (a word, two words of a pair, a sentence of the sound
         `sound_id`; or one of their problem words, with no sound). `seconds` is how long the
@@ -269,14 +287,31 @@ class PronunciationService:
         language, pack = self._pack(user_id)
         target = target.strip()
         self._check_target(user_id, pack, drill, sound_id, target)
+        if assessment_consent and (
+            self._assessor is None or not self._assessor.supports(language, audio_format)
+        ):
+            raise PronunciationError("unavailable")
+        assessed = None
         try:
             self._listener.ready(user_id, audio, audio_format)
             now = self._clock()
             if not self._repository.reserve(user_id, now.date(), MAX_ATTEMPTS_PER_DAY):
                 raise PronunciationError("drill_limit")
-            heard = self._listener.hear(
-                user_id, language, audio, audio_format, seconds, Feature.PRONUNCIATION
-            )
+            if assessment_consent and self._assessor is not None:
+                assessed = self._assessor.assess(
+                    language,
+                    target,
+                    audio,
+                    audio_format,
+                    charge=Charge(user_id, Feature.PRONUNCIATION),
+                )
+                heard = assessed.heard
+            else:
+                heard = self._listener.hear(
+                    user_id, language, audio, audio_format, seconds, Feature.PRONUNCIATION
+                )
+        except AssessmentError as error:
+            raise PronunciationError("unavailable") from error
         except SpokenError as error:
             raise PronunciationError(error.code) from error
         shown = target_words(target)
@@ -294,7 +329,7 @@ class PronunciationService:
             right=right,
             marks=_per_word(marks),
         )
-        return Attempt(heard, right, marks)
+        return Attempt(heard, right, marks, assessed)
 
     def _check_target(
         self,
