@@ -1,9 +1,14 @@
+import { VOCABULARY_TEXT } from '../vocabulary-strings';
+import { offlineLibrary } from '../offline-library';
+import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 /**
  * English UI strings: the source locale. Every other locale must have exactly these keys (checked
  * by i18n.test.ts). Sample learner content in the target language (German) is not here: it lives
  * with the illustrations in src/screens/intro/sample-content.ts.
  */
 export const en = {
+  offlineLibrary: offlineLibrary.en,
+  vocabulary: VOCABULARY_TEXT.en,
   common: {
     appName: 'Konvami',
     tagline: 'Your conversation friend',
@@ -54,7 +59,7 @@ export const en = {
     playRecording: 'Play your recording',
     newWordSaved: 'New word saved',
     wordGloss: 'the concert',
-    yourLanguage: 'Your German',
+    yourLanguage: 'Your language',
     onYourWay: 'On your way to {{level}}',
     streak: '{{count}}-day streak',
     remembers: '{{name}} remembers',
@@ -287,7 +292,7 @@ export const en = {
     },
     language: {
       title: 'Which language do you want to learn?',
-      body: 'German is ready today. More languages are on the way.',
+      body: 'Choose German, English, French or Italian.',
     },
     explanations: {
       title: 'Which language should I explain things in?',
@@ -593,6 +598,19 @@ export const en = {
     },
   },
   call: {
+    walking: 'Walking mode',
+    walkingHint:
+      'Keep this call going with the screen off. Use headphones; your microphone stays on.',
+    walkingFailed:
+      'Walking mode could not start. Keep the app open and allow notifications, then try again.',
+
+    premiumCalls: 'Use this voice in conversations',
+    premiumCallsHint:
+      'On this device, send your partner’s reply text to ElevenLabs to speak in your selected voice. Only text is shared. Applies to new practice calls; requires Pro. Replies may take longer.',
+    revealCaption: 'Tap to reveal caption',
+    pushToTalk: 'Push to talk',
+    holdToTalk: 'Hold to talk',
+    releaseToSend: 'Release to send',
     status: {
       connecting: 'Connecting…',
       thinking: '{{name}} is thinking',
@@ -1074,6 +1092,7 @@ export const en = {
       body: 'Your partners bring these up as you talk.',
     },
     category: {
+      ...TARGET_LANGUAGE_LABELS.en,
       article_gender: 'Article and gender',
       case_accusative: 'Accusative',
       case_dative: 'Dative',
@@ -1098,6 +1117,24 @@ export const en = {
     transcript: 'Read the transcript',
   },
   grammar: {
+    practice: {
+      practiceTitle: 'Quick practice',
+      practiceHint:
+        'Rebuild the examples you have just read. Other sentences may also be valid; this checks the model example only. This does not change your conversation mastery.',
+      startPractice: 'Start practice',
+      cloze: 'Complete the example',
+      order: 'Rebuild the example sentence',
+      answer: 'Your answer',
+      check: 'Check example',
+      next: 'Next example',
+      restart: 'Practise again',
+      reset: 'Clear answer',
+      matched: 'Matches the example',
+      compare: 'Compare with the example',
+      finished: 'Practice complete',
+      rules: 'Reference rules',
+      search: 'Search grammar topics',
+    },
     title: 'Grammar map',
     body: 'Built from your conversations: each topic moves as you use it, right or wrong.',
     summary_one: '{{count}} of {{total}} topics mostly right or mastered',
@@ -1137,6 +1174,7 @@ export const en = {
       notFound: 'This topic isn’t on your map.',
     },
     topics: {
+      ...TARGET_LANGUAGE_LABELS.en,
       present_tense: 'Present tense',
       verb_second: 'Verb in second place',
       questions: 'Questions',
@@ -1229,9 +1267,9 @@ export const en = {
     },
     forms: {
       plural: 'Plural',
-      present: 'er/sie/es',
-      preterite: 'Präteritum',
-      perfect: 'Perfekt',
+      present: 'Present · third person',
+      preterite: 'Simple past',
+      perfect: 'Compound past / perfect',
       case: 'Takes',
       comparative: 'Comparative',
       superlative: 'Superlative',
@@ -1302,6 +1340,11 @@ export const en = {
     },
   },
   phrasebook: {
+    group: 'Group (optional)',
+    manualAdd: 'Add your own phrase',
+    manualPhrase: 'Phrase',
+    manualMeaning: 'Meaning',
+    manualSave: 'Save phrase',
     title: 'Phrasebook',
     body: 'The phrases you need in your life. Say what you need, keep the ones you like and learn them as cards.',
     loading: 'Opening your phrasebook',
@@ -1330,12 +1373,22 @@ export const en = {
     tooMany: 'Your phrasebook is full. Remove a phrase to keep a new one.',
   },
   pronunciation: {
+    assessment: {
+      enable: 'Assess pronunciation',
+      consent:
+        'Send this recording to {{provider}} for pronunciation assessment. Optional; applies only to this drill.',
+      title: 'Pronunciation estimate',
+      provider: 'Assessed by {{provider}}. Scores are estimates, not exam grades.',
+      accuracy: 'Accuracy: {{score}} / 100',
+      fluency: 'Fluency: {{score}} / 100',
+      prosody: 'Stress and rhythm: {{score}} / 100',
+    },
     title: 'Pronunciation lab',
     body: 'Sounds that are hard to hear and to say. Listen, say it, and see which words were heard as asked.',
     loading: 'Opening the pronunciation lab',
     loadFailed: 'The pronunciation lab couldn’t be loaded.',
     emptyTitle: 'No sound drills for this language yet',
-    emptyBody: 'The lab starts with German. Other languages come with their own language pack.',
+    emptyBody: 'Pronunciation drills are not available for this language yet.',
     approx:
       'Konvami writes down what it hears and compares the words. That is an approximation: it can’t score single sounds, and a word can be missed because of the microphone or the room.',
     sounds: 'Sounds',
@@ -1393,6 +1446,15 @@ export const en = {
   },
 
   import: {
+    draftReply: 'Draft a written reply',
+    replyText: 'Reply draft',
+    draftNote:
+      'Review this AI draft, replace placeholders and check every detail before using it. Nothing is sent. Edits stay on this screen.',
+    pdf: 'PDF',
+    audio: 'MP3 audio',
+    chooseFile: 'Choose a file',
+    camera: 'Camera',
+    takePhoto: 'Take a photo',
     title: 'Bring your own material',
     body: 'Paste a text or a link, or choose a photo of a menu, a letter, an article or a page of your textbook. You get the words, the grammar and the hard sentences at your level, and your partner can talk it over with you.',
     modeLabel: 'What are you bringing?',
@@ -1484,6 +1546,7 @@ export const en = {
     notFound: 'This correction can’t be explained any more.',
   },
   exams: {
+    phraseBank: 'Useful phrases',
     title: 'Exam centre',
     body: 'Speaking tests as the exams run them, with an examiner who doesn’t help. Scored afterwards: an estimate, never an official result.',
     loading: 'Loading the exam centre',
@@ -1735,6 +1798,11 @@ export const en = {
     back: 'Back to Learn',
   },
   progress: {
+    fluency: {
+      title: 'Recording pace',
+      pace: '{{pace}} words per minute',
+      body: 'From {{count}} recorded turns in your recent conversations. Pauses within a recording are included; this is not a pronunciation score.',
+    },
     thenVsNow: {
       title: 'Then vs Now',
       detail: 'Hear yourself from your first weeks, next to today',
@@ -2161,7 +2229,7 @@ export const en = {
     },
     readAloud: {
       title: 'Read-aloud voice',
-      body: 'Choose the voice that reads your cards, your weekly check-in and exam model answers aloud. Conversations keep your partners’ own voices.',
+      body: 'Choose the voice that reads your cards, your weekly check-in and exam model answers aloud. You can also enable it for practice conversations below.',
       standard: 'Standard voice',
       standardHint: 'Included in every plan',
       consentTitle: 'Turn on ElevenLabs',

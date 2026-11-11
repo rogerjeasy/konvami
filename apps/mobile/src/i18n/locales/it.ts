@@ -1,6 +1,11 @@
+import { VOCABULARY_TEXT } from '../vocabulary-strings';
+import { offlineLibrary } from '../offline-library';
+import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
 
 export const it: Translation = {
+  offlineLibrary: offlineLibrary.it,
+  vocabulary: VOCABULARY_TEXT.it,
   common: {
     appName: 'Konvami',
     tagline: 'Il tuo amico di conversazione',
@@ -51,7 +56,7 @@ export const it: Translation = {
     playRecording: 'Ascolta la tua registrazione',
     newWordSaved: 'Nuova parola salvata',
     wordGloss: 'il concerto',
-    yourLanguage: 'Il tuo tedesco',
+    yourLanguage: 'La tua lingua',
     onYourWay: 'Verso il {{level}}',
     streak: '{{count}} giorni di fila',
     remembers: '{{name}} si ricorda',
@@ -286,7 +291,7 @@ export const it: Translation = {
     },
     language: {
       title: 'Quale lingua vuoi imparare?',
-      body: 'Il tedesco è già disponibile. Altre lingue sono in arrivo.',
+      body: 'Scegli tedesco, inglese, francese o italiano.',
     },
     explanations: {
       title: 'In quale lingua vuoi le spiegazioni?',
@@ -602,6 +607,18 @@ export const it: Translation = {
     },
   },
   call: {
+    walking: 'Modalità passeggiata',
+    walkingHint: 'Continua la chiamata a schermo spento. Usa le cuffie; il microfono resta attivo.',
+    walkingFailed:
+      'Impossibile avviare la modalità passeggiata. Tieni aperta l’app e consenti le notifiche, poi riprova.',
+
+    premiumCalls: 'Usa questa voce nelle conversazioni',
+    premiumCallsHint:
+      'Su questo dispositivo, ElevenLabs legge le risposte del partner con la voce scelta. Viene condiviso solo il testo. Vale per le nuove conversazioni di pratica con Pro. Le risposte possono richiedere più tempo.',
+    revealCaption: 'Tocca per mostrare il testo',
+    pushToTalk: 'Premi per parlare',
+    holdToTalk: 'Tieni premuto per parlare',
+    releaseToSend: 'Rilascia per inviare',
     status: {
       connecting: 'Connessione…',
       thinking: '{{name}} sta pensando',
@@ -1087,6 +1104,7 @@ export const it: Translation = {
       body: 'I tuoi partner ci tornano sopra mentre parlate.',
     },
     category: {
+      ...TARGET_LANGUAGE_LABELS.it,
       article_gender: 'Articolo e genere',
       case_accusative: 'Accusativo',
       case_dative: 'Dativo',
@@ -1111,6 +1129,24 @@ export const it: Translation = {
     transcript: 'Rileggi la conversazione',
   },
   grammar: {
+    practice: {
+      practiceTitle: 'Breve esercizio',
+      practiceHint:
+        'Ricostruisci gli esempi appena letti. Anche altre frasi possono essere corrette; viene verificato solo il modello. La padronanza nelle conversazioni non cambia.',
+      startPractice: 'Inizia',
+      cloze: 'Completa l’esempio',
+      order: 'Ricostruisci la frase modello',
+      answer: 'La tua risposta',
+      check: 'Verifica il modello',
+      next: 'Prossimo esempio',
+      restart: 'Riprova',
+      reset: 'Cancella la risposta',
+      matched: 'Corrisponde al modello',
+      compare: 'Confronta con il modello',
+      finished: 'Esercizio completato',
+      rules: 'Regole di riferimento',
+      search: 'Cerca argomenti grammaticali',
+    },
     title: 'Mappa grammaticale',
     body: 'Costruita dalle tue conversazioni: ogni argomento si muove quando lo usi, giusto o sbagliato.',
     summary_one: '{{count}} argomento su {{total}} quasi giusto o padroneggiato',
@@ -1149,6 +1185,7 @@ export const it: Translation = {
       notFound: 'Questo argomento non è sulla tua mappa.',
     },
     topics: {
+      ...TARGET_LANGUAGE_LABELS.it,
       present_tense: 'Presente',
       verb_second: 'Verbo in seconda posizione',
       questions: 'Domande',
@@ -1241,9 +1278,9 @@ export const it: Translation = {
     },
     forms: {
       plural: 'Plurale',
-      present: 'er/sie/es',
-      preterite: 'Preterito',
-      perfect: 'Perfekt',
+      present: 'Presente · terza persona',
+      preterite: 'Passato semplice',
+      perfect: 'Passato composto / perfect',
       case: 'Regge',
       comparative: 'Comparativo',
       superlative: 'Superlativo',
@@ -1314,6 +1351,11 @@ export const it: Translation = {
     },
   },
   phrasebook: {
+    group: 'Gruppo (facoltativo)',
+    manualAdd: 'Aggiungi una tua frase',
+    manualPhrase: 'Frase',
+    manualMeaning: 'Significato',
+    manualSave: 'Salva frase',
     title: 'Frasario',
     body: 'Le frasi che ti servono ogni giorno. Di’ che cosa ti serve, tieni quelle che ti piacciono e impararle come schede.',
     loading: 'Apertura del tuo frasario',
@@ -1342,13 +1384,22 @@ export const it: Translation = {
     tooMany: 'Il tuo frasario è pieno. Rimuovi una frase per tenerne una nuova.',
   },
   pronunciation: {
+    assessment: {
+      enable: 'Valuta la pronuncia',
+      consent:
+        'Invia questa registrazione a {{provider}} per valutare la pronuncia. Facoltativo; solo per questo esercizio.',
+      title: 'Stima della pronuncia',
+      provider: 'Valutazione di {{provider}}. I punteggi sono stime, non voti d’esame.',
+      accuracy: 'Precisione: {{score}} / 100',
+      fluency: 'Fluidità: {{score}} / 100',
+      prosody: 'Accento e ritmo: {{score}} / 100',
+    },
     title: 'Laboratorio di pronuncia',
     body: 'Suoni difficili da sentire e da dire. Ascolta, ripeti e guarda quali parole sono state sentite come richiesto.',
     loading: 'Apro il laboratorio di pronuncia',
     loadFailed: 'Non è stato possibile caricare il laboratorio di pronuncia.',
     emptyTitle: 'Per questa lingua non ci sono ancora esercizi sui suoni',
-    emptyBody:
-      'Il laboratorio parte dal tedesco. Le altre lingue arriveranno con il loro pacchetto.',
+    emptyBody: 'Gli esercizi di pronuncia non sono ancora disponibili per questa lingua.',
     approx:
       'Konvami scrive ciò che sente e confronta le parole. È un’approssimazione: non può valutare i singoli suoni, e una parola può mancare per colpa del microfono o della stanza.',
     sounds: 'Suoni',
@@ -1406,6 +1457,15 @@ export const it: Translation = {
   },
 
   import: {
+    draftReply: 'Prepara una risposta scritta',
+    replyText: 'Bozza di risposta',
+    draftNote:
+      'Controlla questa bozza IA, sostituisci i segnaposto e verifica ogni dettaglio. Non viene inviato nulla. Le modifiche restano su questa schermata.',
+    pdf: 'PDF',
+    audio: 'Audio MP3',
+    chooseFile: 'Scegli un file',
+    camera: 'Fotocamera',
+    takePhoto: 'Scatta una foto',
     title: 'Porta il tuo materiale',
     body: 'Incolla un testo o un link, oppure scegli una foto di un menu, di una lettera, di un articolo o di una pagina del tuo libro. Ottieni le parole, la grammatica e le frasi difficili al tuo livello, e il tuo partner può parlarne con te.',
     modeLabel: 'Che cosa porti?',
@@ -1500,6 +1560,7 @@ export const it: Translation = {
     notFound: 'Questa correzione non può più essere spiegata.',
   },
   exams: {
+    phraseBank: 'Espressioni utili',
     title: 'Centro esami',
     body: 'Prove orali come all’esame, con un’esaminatrice che non aiuta. Valutate dopo: una stima, mai un risultato ufficiale.',
     loading: 'Caricamento del centro esami',
@@ -1752,6 +1813,11 @@ export const it: Translation = {
     back: 'Torna a Impara',
   },
   progress: {
+    fluency: {
+      title: 'Ritmo delle registrazioni',
+      pace: '{{pace}} parole al minuto',
+      body: 'Da {{count}} interventi registrati nelle conversazioni recenti. Le pause sono incluse; non è un voto di pronuncia.',
+    },
     thenVsNow: {
       title: 'Allora e adesso',
       detail: 'Ascoltati nelle prime settimane, accanto a oggi',
@@ -2181,7 +2247,7 @@ export const it: Translation = {
     },
     readAloud: {
       title: 'Voce di lettura',
-      body: 'Scegli la voce che legge le tue schede, il riepilogo settimanale e le risposte modello degli esami. Le conversazioni mantengono le voci dei tuoi partner.',
+      body: 'Scegli la voce che legge le tue schede, il riepilogo settimanale e le risposte modello degli esami. Puoi attivarla qui sotto anche per le conversazioni di pratica.',
       standard: 'Voce standard',
       standardHint: 'Inclusa in ogni piano',
       consentTitle: 'Attiva ElevenLabs',

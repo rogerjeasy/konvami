@@ -1,6 +1,11 @@
+import { VOCABULARY_TEXT } from '../vocabulary-strings';
+import { offlineLibrary } from '../offline-library';
+import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
 
 export const de: Translation = {
+  offlineLibrary: offlineLibrary.de,
+  vocabulary: VOCABULARY_TEXT.de,
   common: {
     appName: 'Konvami',
     tagline: 'Dein Gesprächsfreund',
@@ -51,7 +56,7 @@ export const de: Translation = {
     playRecording: 'Deine Aufnahme abspielen',
     newWordSaved: 'Neues Wort gespeichert',
     wordGloss: 'das Konzert',
-    yourLanguage: 'Dein Deutsch',
+    yourLanguage: 'Deine Sprache',
     onYourWay: 'Auf dem Weg zu {{level}}',
     streak: '{{count}} Tage in Folge',
     remembers: '{{name}} erinnert sich',
@@ -287,7 +292,7 @@ export const de: Translation = {
     },
     language: {
       title: 'Welche Sprache möchtest du lernen?',
-      body: 'Deutsch ist schon da. Weitere Sprachen folgen.',
+      body: 'Wähle Deutsch, Englisch, Französisch oder Italienisch.',
     },
     explanations: {
       title: 'In welcher Sprache soll ich dir Dinge erklären?',
@@ -607,6 +612,19 @@ export const de: Translation = {
     },
   },
   call: {
+    walking: 'Unterwegs-Modus',
+    walkingHint:
+      'Führe dieses Gespräch bei ausgeschaltetem Bildschirm fort. Nutze Kopfhörer; dein Mikrofon bleibt an.',
+    walkingFailed:
+      'Der Unterwegs-Modus konnte nicht starten. Halte die App geöffnet und erlaube Mitteilungen. Versuche es dann erneut.',
+
+    premiumCalls: 'Diese Stimme für Gespräche verwenden',
+    premiumCallsHint:
+      'Auf diesem Gerät liest ElevenLabs die Antworten deines Partners mit der gewählten Stimme vor. Nur Text wird geteilt. Gilt für neue Übungsgespräche und erfordert Pro. Antworten können länger dauern.',
+    revealCaption: 'Tippen, um den Text zu zeigen',
+    pushToTalk: 'Zum Sprechen drücken',
+    holdToTalk: 'Zum Sprechen halten',
+    releaseToSend: 'Zum Senden loslassen',
     status: {
       connecting: 'Verbindung wird aufgebaut …',
       thinking: '{{name}} überlegt',
@@ -1093,6 +1111,7 @@ export const de: Translation = {
       body: 'Deine Partner bringen das im Gespräch unter.',
     },
     category: {
+      ...TARGET_LANGUAGE_LABELS.de,
       article_gender: 'Artikel und Genus',
       case_accusative: 'Akkusativ',
       case_dative: 'Dativ',
@@ -1117,6 +1136,24 @@ export const de: Translation = {
     transcript: 'Gespräch nachlesen',
   },
   grammar: {
+    practice: {
+      practiceTitle: 'Kurze Übung',
+      practiceHint:
+        'Bilde die gerade gelesenen Beispiele nach. Andere Sätze können auch richtig sein; geprüft wird nur das Musterbeispiel. Dein Gesprächsfortschritt bleibt unverändert.',
+      startPractice: 'Übung starten',
+      cloze: 'Ergänze das Beispiel',
+      order: 'Bilde den Beispielsatz nach',
+      answer: 'Deine Antwort',
+      check: 'Beispiel prüfen',
+      next: 'Nächstes Beispiel',
+      restart: 'Noch einmal üben',
+      reset: 'Antwort löschen',
+      matched: 'Entspricht dem Beispiel',
+      compare: 'Vergleiche mit dem Beispiel',
+      finished: 'Übung abgeschlossen',
+      rules: 'Grammatikregeln',
+      search: 'Grammatikthemen suchen',
+    },
     title: 'Grammatik-Landkarte',
     body: 'Aus deinen Gesprächen: Jedes Thema bewegt sich, wenn du es verwendest, richtig oder falsch.',
     summary_one: '{{count}} von {{total}} Themen meist richtig oder sicher',
@@ -1155,6 +1192,7 @@ export const de: Translation = {
       notFound: 'Dieses Thema ist nicht auf deiner Landkarte.',
     },
     topics: {
+      ...TARGET_LANGUAGE_LABELS.de,
       present_tense: 'Präsens',
       verb_second: 'Verb an zweiter Stelle',
       questions: 'Fragen',
@@ -1247,9 +1285,9 @@ export const de: Translation = {
     },
     forms: {
       plural: 'Plural',
-      present: 'er/sie/es',
-      preterite: 'Präteritum',
-      perfect: 'Perfekt',
+      present: 'Präsens · dritte Person',
+      preterite: 'Einfache Vergangenheit',
+      perfect: 'Zusammengesetzte Vergangenheit',
       case: 'Mit',
       comparative: 'Komparativ',
       superlative: 'Superlativ',
@@ -1322,6 +1360,11 @@ export const de: Translation = {
     },
   },
   phrasebook: {
+    group: 'Gruppe (optional)',
+    manualAdd: 'Eigenen Satz hinzufügen',
+    manualPhrase: 'Satz',
+    manualMeaning: 'Bedeutung',
+    manualSave: 'Satz speichern',
     title: 'Phrasebuch',
     body: 'Die Sätze, die du im Alltag brauchst. Sag, was du brauchst, behalte die passenden und lerne sie als Karten.',
     loading: 'Dein Phrasebuch wird geöffnet',
@@ -1351,13 +1394,22 @@ export const de: Translation = {
     tooMany: 'Dein Phrasebuch ist voll. Entferne einen Satz, um einen neuen zu behalten.',
   },
   pronunciation: {
+    assessment: {
+      enable: 'Aussprache beurteilen',
+      consent:
+        'Diese Aufnahme zur Aussprachebeurteilung an {{provider}} senden. Optional; gilt nur für diese Übung.',
+      title: 'Ausspracheeinschätzung',
+      provider: 'Beurteilt von {{provider}}. Die Werte sind Schätzungen, keine Prüfungsnoten.',
+      accuracy: 'Genauigkeit: {{score}} / 100',
+      fluency: 'Sprechfluss: {{score}} / 100',
+      prosody: 'Betonung und Rhythmus: {{score}} / 100',
+    },
     title: 'Aussprache-Labor',
     body: 'Laute, die schwer zu hören und zu sprechen sind. Hör zu, sprich nach und sieh, welche Wörter wie verlangt zu hören waren.',
     loading: 'Das Aussprache-Labor wird geöffnet',
     loadFailed: 'Das Aussprache-Labor konnte nicht geladen werden.',
     emptyTitle: 'Für diese Sprache gibt es noch keine Lautübungen',
-    emptyBody:
-      'Das Labor beginnt mit Deutsch. Andere Sprachen kommen mit ihrem eigenen Sprachpaket.',
+    emptyBody: 'Für diese Sprache gibt es noch keine Ausspracheübungen.',
     approx:
       'Konvami schreibt auf, was es hört, und vergleicht die Wörter. Das ist eine Annäherung: Einzelne Laute kann es nicht bewerten, und ein Wort kann wegen des Mikrofons oder des Raums fehlen.',
     sounds: 'Laute',
@@ -1415,6 +1467,15 @@ export const de: Translation = {
   },
 
   import: {
+    draftReply: 'Schriftliche Antwort entwerfen',
+    replyText: 'Antwortentwurf',
+    draftNote:
+      'Prüfe diesen KI-Entwurf, ersetze Platzhalter und kontrolliere alle Angaben. Es wird nichts gesendet. Änderungen bleiben auf diesem Bildschirm.',
+    pdf: 'PDF',
+    audio: 'MP3-Audio',
+    chooseFile: 'Datei auswählen',
+    camera: 'Kamera',
+    takePhoto: 'Foto aufnehmen',
     title: 'Eigenes Material mitbringen',
     body: 'Füge einen Text oder einen Link ein, oder wähle ein Foto von einer Speisekarte, einem Brief, einem Artikel oder einer Seite aus deinem Lehrbuch. Du bekommst die Wörter, die Grammatik und die schwierigen Sätze auf deinem Niveau, und dein Partner kann es mit dir besprechen.',
     modeLabel: 'Was bringst du mit?',
@@ -1509,6 +1570,7 @@ export const de: Translation = {
     notFound: 'Diese Korrektur kann nicht mehr erklärt werden.',
   },
   exams: {
+    phraseBank: 'Nützliche Redemittel',
     title: 'Prüfungszentrum',
     body: 'Mündliche Prüfungen, wie sie ablaufen, mit einer Prüferin, die nicht hilft. Danach bewertet: eine Schätzung, nie ein offizielles Ergebnis.',
     loading: 'Das Prüfungszentrum wird geladen',
@@ -1762,6 +1824,11 @@ export const de: Translation = {
     back: 'Zurück zu Lernen',
   },
   progress: {
+    fluency: {
+      title: 'Tempo der Aufnahmen',
+      pace: '{{pace}} Wörter pro Minute',
+      body: 'Aus {{count}} aufgenommenen Beiträgen deiner letzten Gespräche. Pausen innerhalb einer Aufnahme zählen mit; das ist keine Aussprachebewertung.',
+    },
     thenVsNow: {
       title: 'Damals und heute',
       detail: 'Hör dich aus deinen ersten Wochen neben heute',
@@ -2194,7 +2261,7 @@ export const de: Translation = {
     },
     readAloud: {
       title: 'Vorlesestimme',
-      body: 'Wähle die Stimme, die deine Karten, deinen Wochenrückblick und Mustertexte aus Prüfungen vorliest. Gespräche behalten die Stimmen deiner Partner.',
+      body: 'Wähle die Stimme, die deine Karten, deinen Wochenrückblick und Mustertexte aus Prüfungen vorliest. Unten kannst du sie auch für Übungsgespräche aktivieren.',
       standard: 'Standardstimme',
       standardHint: 'In jedem Tarif enthalten',
       consentTitle: 'ElevenLabs einschalten',
