@@ -173,6 +173,41 @@ describe('5.6 Transcript', () => {
     expect(screen.queryByRole('button', { name: 'Stop playing' })).toBeNull();
   });
 
+  it('uses the selected playback speed and loops the current turn', async () => {
+    const api = inApp();
+    const device = createFakeProfileDevice();
+    const play = jest.spyOn(device.samples, 'play');
+    api.talked(0, { id: 'rtc_1', recorded: true });
+    await open(api, 'rtc_1', device);
+    await fireEvent.press(screen.getByRole('button', { name: 'Recording tools' }));
+    await fireEvent.press(screen.getByRole('radio', { name: '0.75×' }));
+    await fireEvent.press(screen.getByRole('switch', { name: 'Repeat one turn' }));
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Close' })[0]!);
+    await fireEvent.press(screen.getByRole('button', { name: 'Play what Lena said' }));
+    expect(play).toHaveBeenLastCalledWith(
+      recordingOf('rtc_1', 0).url,
+      expect.any(Function),
+      expect.any(Number),
+      0.75,
+      expect.any(Function),
+    );
+    await act(() => device.finishClip());
+    expect(device.playing).toBe(recordingOf('rtc_1', 0).url);
+  });
+
+  it('requests word alignment only when the learner asks to highlight a recording', async () => {
+    const api = inApp();
+    const timing = jest.spyOn(api, 'getRecordingTiming');
+    api.talked(0, { id: 'rtc_1', recorded: true });
+    await open(api, 'rtc_1');
+    expect(timing).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Highlight words' })[0]!);
+    expect(timing).toHaveBeenCalledWith('rtc_1', 0);
+    expect(
+      await screen.findByRole('button', { name: 'Word timing unavailable for this recording' }),
+    ).toBeDisabled();
+  });
+
   it('stops playing when asked', async () => {
     const api = inApp();
     const device = createFakeProfileDevice();

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import type { Transcript } from '@konvami/api-client';
+import type { Transcript, RecordingTiming } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { ChatBubble } from '@/components/chat';
 import { FlagButton } from '@/components/flag-button';
@@ -14,7 +14,14 @@ import { NoticeBox } from '@/components/notice-box';
 import { PlayButton } from '@/components/play-button';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { TextButton } from '@/components/text-button';
+import { TextField } from '@/components/text-field';
+import { ChoiceGroup } from '@/components/choice-group';
+import { ChoiceChip } from '@/components/choice-chip';
+import type { Annotations } from '@/offline/library';
+import { NoteEditor, RecordingTools } from './tools';
 import { Text } from '@/components/text';
+import { timedText } from '@/lib/timed-text';
 import { formatClock, wholeMinutes } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
@@ -29,9 +36,40 @@ const SEPARATOR = ' · ';
 
 function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
   const { t, i18n } = useTranslation();
-  const { conversation, turns } = transcript;
+  const { conversation } = transcript;
+  const { libraryTools, readRecordingTiming } = usePracticeServices();
+  const [timings, setTimings] = useState<Record<number, RecordingTiming>>({});
+  const [timingBusy, setTimingBusy] = useState<number | null>(null);
+  const [timingFailed, setTimingFailed] = useState(false);
+  const [turns, setTurns] = useState(transcript.turns);
+  const [annotations, setAnnotations] = useState<Annotations>({});
+  const [revision, setRevision] = useState(0);
+  const [noteTurn, setNoteTurn] = useState<number | null>(null);
+  const [query, setQuery] = useState('');
+  const [speaker, setSpeaker] = useState<'all' | 'learner' | 'persona'>('all');
+  useEffect(() => {
+    let current = true;
+    if (!libraryTools) return;
+    void libraryTools
+      .local(transcript)
+      .then((local) => {
+        if (current) setTurns(local.turns);
+      })
+      .catch(() => {
+        if (current) setTurns(transcript.turns);
+      });
+    void libraryTools
+      .annotations(conversation.id)
+      .then((found) => {
+        if (current) setAnnotations(found);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [libraryTools, transcript, conversation.id, revision]);
   const partner = conversation.partner?.name ?? t('conversations.formerPartner');
-  const { playing, toggle } = usePlayback(turns);
+  const { playing, positionMs, toggle, rate, setRate, loop, setLoop } = usePlayback(turns);
   const flags = useFlags(conversation.id);
   // The partner's line being reported (its place in the transcript); null while none is.
   const [reporting, setReporting] = useState<number | null>(null);
@@ -60,6 +98,27 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
           </Text>
         </View>
       </Reveal>
+      <RecordingTools
+        transcript={transcript}
+        tools={libraryTools}
+        rate={rate}
+        setRate={setRate}
+        loop={loop}
+        setLoop={setLoop}
+        changed={() => setRevision((value) => value + 1)}
+      />
+      {timingFailed ? <NoticeBox icon="info">{t('offlineLibrary.failed')}</NoticeBox> : null}
+      <TextField label={t('offlineLibrary.textSearch')} value={query} onChangeText={setQuery} />
+      <ChoiceGroup label={t('offlineLibrary.speakers')} chips>
+        {(['all', 'learner', 'persona'] as const).map((value) => (
+          <ChoiceChip
+            key={value}
+            label={t(`offlineLibrary.${value}`)}
+            selected={speaker === value}
+            onPress={() => setSpeaker(value)}
+          />
+        ))}
+      </ChoiceGroup>
       {/* A call counts as practice, and has a report, once the learner said something in it. */}
       {conversation.endedAt && conversation.learnerTurns > 0 ? (
         <Reveal delay={staggerDelay(1)}>
@@ -80,6 +139,12 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
           {turns.map((turn, i) => {
             // What the learner said as the verbatim pass wrote it down, mistakes and all.
             const text = turn.verbatim ?? turn.text;
+            if (
+              (speaker !== 'all' && turn.speaker !== speaker) ||
+              (query.trim() && !text.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+            )
+              return null;
+            const annotation = annotations[String(i)] ?? { bookmarked: false, note: '' };
             return (
               <View
                 key={i}
@@ -96,8 +161,78 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                       text,
                     })}
                   >
-                    {text}
+                    {timings[i]?.words.length
+                      ? timedText(text, timings[i]!.words, playing === i ? positionMs : -1).map(
+                          (part, index) => (
+                            <Text
+                              key={index}
+                              variant="chat"
+                              tone={turn.speaker === 'persona' ? 'fg' : 'onPrimary'}
+                              className={part.active ? 'underline font-body-semibold' : undefined}
+                            >
+                              {part.text}
+                            </Text>
+                          ),
+                        )
+                      : text}
                   </ChatBubble>
+                  {turn.audio ? (
+                    <TextButton
+                      label={t(
+                        timings[i] && !timings[i]!.words.length
+                          ? 'offlineLibrary.noTiming'
+                          : 'offlineLibrary.highlight',
+                      )}
+                      disabled={
+                        timingBusy !== null ||
+                        (timings[i] !== undefined && !timings[i]!.words.length)
+                      }
+                      onPress={() => {
+                        if (timings[i]) {
+                          toggle(i);
+                          return;
+                        }
+                        setTimingBusy(i);
+                        setTimingFailed(false);
+                        void readRecordingTiming(conversation.id, i)
+                          .then((value) => {
+                            setTimings((before) => ({ ...before, [i]: value }));
+                            if (value.words.length) toggle(i);
+                          })
+                          .catch(() => setTimingFailed(true))
+                          .finally(() => setTimingBusy(null));
+                      }}
+                    />
+                  ) : null}
+                  {annotation.note ? (
+                    <Text variant="small" tone="muted">
+                      {annotation.note}
+                    </Text>
+                  ) : null}
+                  {libraryTools ? (
+                    <View className="flex-row flex-wrap gap-1">
+                      <TextButton
+                        label={t(
+                          annotation.bookmarked
+                            ? 'offlineLibrary.bookmarked'
+                            : 'offlineLibrary.bookmark',
+                        )}
+                        onPress={() => {
+                          void libraryTools
+                            .annotate(conversation.id, i, {
+                              ...annotation,
+                              bookmarked: !annotation.bookmarked,
+                            })
+                            .then(() => setRevision((value) => value + 1))
+                            .catch(() => setNoteTurn(i));
+                        }}
+                      />
+                      <TextButton
+                        label={t('offlineLibrary.editNote')}
+                        onPress={() => setNoteTurn(i)}
+                      />
+                    </View>
+                  ) : null}
                 </View>
                 {turn.audio ? (
                   <PlayButton
@@ -121,6 +256,17 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
           })}
         </View>
       )}
+      <NoteEditor
+        key={noteTurn ?? 'closed'}
+        visible={noteTurn !== null}
+        annotation={annotations[String(noteTurn)] ?? { bookmarked: false, note: '' }}
+        onClose={() => setNoteTurn(null)}
+        save={async (value) => {
+          if (noteTurn === null || !libraryTools) return;
+          await libraryTools.annotate(conversation.id, noteTurn, value);
+          setRevision((version) => version + 1);
+        }}
+      />
       <FlagSheet
         kind={reporting === null ? null : 'turn'}
         onSend={(reason, note) =>
@@ -160,7 +306,11 @@ export function TranscriptScreen() {
       }
     >
       {reading.phase === 'ready' ? (
-        <Lines transcript={reading.transcript} now={new Date(clock.now())} />
+        <Lines
+          key={reading.transcript.conversation.id}
+          transcript={reading.transcript}
+          now={new Date(clock.now())}
+        />
       ) : reading.phase === 'failed' && reading.code === 'not_found' ? (
         <NoticeBox icon="info">{t('library.transcript.notFound')}</NoticeBox>
       ) : (
