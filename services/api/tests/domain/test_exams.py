@@ -38,6 +38,7 @@ def test_the_formats_of_the_spec_are_there() -> None:
         "goethe_b2",
         "telc_b1",
         "dtz",
+        "osd_b1",
     }
     b1 = format_for(GERMAN_EXAMS, "goethe", "B1")
     assert b1 is not None
@@ -46,6 +47,16 @@ def test_the_formats_of_the_spec_are_there() -> None:
         "present_topic",
         "feedback_questions",
     ]
+
+
+def test_osd_b1_uses_the_joint_b1_format_without_duplicating_task_content() -> None:
+    goethe = format_for(GERMAN_EXAMS, "goethe", "B1")
+    osd = format_for(GERMAN_EXAMS, "osd", "B1")
+    assert goethe is not None
+    assert osd is not None
+    assert osd.name == "ÖSD Zertifikat B1"
+    assert osd.parts is goethe.parts
+    assert format_for(GERMAN_EXAMS, "osd", "C2") is None
 
 
 @pytest.mark.parametrize(

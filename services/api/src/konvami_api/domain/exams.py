@@ -10,7 +10,7 @@ estimates from a transcript, never an official result.
 
 import datetime as dt
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 # What a part asks of the learner; the app names each kind in its own strings.
@@ -590,6 +590,15 @@ GERMAN_EXAMS: tuple[SpeakingExam, ...] = (
             ),
         ),
     ),
+)
+
+
+# ÖSD, Goethe and Fribourg jointly develop B1; share its curated tasks rather than maintaining
+# two subtly divergent copies. https://osd.at/portfolio-item/osd-zertifikat-b1-zb1/
+GERMAN_EXAMS += tuple(
+    replace(exam, id="osd_b1", exam="osd", name="ÖSD Zertifikat B1")
+    for exam in GERMAN_EXAMS
+    if exam.id == "goethe_b1"
 )
 
 

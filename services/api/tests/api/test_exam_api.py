@@ -99,6 +99,9 @@ def test_the_next_simulation_shows_its_cards(call: Call, text_model: ScriptedTex
     unknown = call("GET", "/v1/exams/toefl/next")
 
     assert upcoming.body["exam"]["id"] == "goethe_b1"
+    phrase = upcoming.body["exam"]["parts"][0]["phrases"][0]
+    assert "schlage" in phrase["text"]
+    assert set(phrase["meanings"]) == {"en", "de", "fr", "it"}
     assert upcoming.body["cards"][0]["title"].startswith("Eine Kollegin")
     assert upcoming.body["cards"][0]["prompts"] == [
         "Wann?",
