@@ -30,8 +30,8 @@ const TEXT_MAX = 20_000;
 const URL_MAX = 500;
 const BOOK_MAX = 80;
 
-type Mode = 'text' | 'link' | 'photo';
-const MODES: readonly Mode[] = ['text', 'link', 'photo'];
+type Mode = 'text' | 'link' | 'photo' | 'camera' | 'pdf' | 'audio';
+const MODES: readonly Mode[] = ['text', 'link', 'photo', 'camera', 'pdf', 'audio'];
 
 /** The second line of an import in the list: what it is, how hard, how many words, where from. */
 function ImportRow({ item }: { item: CourseImportSummary }) {
@@ -66,7 +66,7 @@ function ImportRow({ item }: { item: CourseImportSummary }) {
 export function ImportScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { imports: store, bringImport, bringPhoto } = usePracticeServices();
+  const { imports: store, bringImport, bringPhoto, bringDocument } = usePracticeServices();
   const state = useImports();
   const [mode, setMode] = useState<Mode>('text');
   const [text, setText] = useState('');
@@ -94,7 +94,12 @@ export function ImportScreen() {
         mode === 'text'
           ? { kind: 'text', text: input, ...book }
           : { kind: 'link', url: input, ...book };
-      const made = mode === 'photo' ? await bringPhoto(book) : await bringImport(draft);
+      const made =
+        mode === 'pdf' || mode === 'audio'
+          ? await bringDocument(mode, book)
+          : mode === 'photo' || mode === 'camera'
+            ? await bringPhoto(book, mode === 'camera' ? 'camera' : 'library')
+            : await bringImport(draft);
       if (made) {
         setText('');
         setUrl('');
@@ -123,7 +128,15 @@ export function ImportScreen() {
       actions={
         ready ? (
           <Button
-            label={t(mode === 'photo' ? 'import.choosePhoto' : 'import.workItOut')}
+            label={t(
+              mode === 'pdf' || mode === 'audio'
+                ? 'import.chooseFile'
+                : mode === 'camera'
+                  ? 'import.takePhoto'
+                  : mode === 'photo'
+                    ? 'import.choosePhoto'
+                    : 'import.workItOut',
+            )}
             disabled={!input}
             loading={working}
             onPress={() => void bring()}

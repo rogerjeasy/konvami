@@ -118,6 +118,22 @@ describe('5.23 Import', () => {
     ]);
   });
 
+  it('takes a camera photo through the same private import pipeline', async () => {
+    const { api, photos } = await openImport();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Camera' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Take a photo' }));
+    await waitFor(() => expect(photos.sent).toHaveLength(1));
+    expect(api.calls).toContainEqual([
+      'createImport',
+      {
+        kind: 'photo',
+        uploadId: 'upload_1',
+        textbook: null,
+        chapter: null,
+      },
+    ]);
+  });
+
   it('does nothing when the photo picker is closed', async () => {
     const { api, photos } = await openImport();
     photos.picks({ status: 'cancelled' });
@@ -202,6 +218,15 @@ describe('5.23 One import worked out', () => {
     expect(screen.getByText(FAKE_IMPORT.text)).toBeTruthy();
   });
 
+  it('drafts an editable reply without sending it', async () => {
+    const api = await openResult();
+    await fireEvent.press(screen.getByRole('button', { name: 'Draft a written reply' }));
+    await waitFor(() => expect(api.calls).toContainEqual(['draftImportReply', 'import_1']));
+    const editor = await screen.findByLabelText('Reply draft');
+    await fireEvent.changeText(editor, 'Meine eigene Antwort');
+    expect(screen.getByDisplayValue('Meine eigene Antwort')).toBeTruthy();
+  });
+
   it('says what a letter asks and what to do', async () => {
     await openResult();
 
@@ -272,4 +297,29 @@ describe('5.23 One import worked out', () => {
 
     expect(await screen.findByText('This one is gone.')).toBeTruthy();
   });
+});
+
+describe('document imports', () => {
+  it.each([
+    ['PDF', 'pdf', 'application/pdf'],
+    ['MP3 audio', 'audio', 'audio/mpeg'],
+  ] as const)(
+    'uploads a %s through the private upload form and releases its local copy',
+    async (label, kind, type) => {
+      const api = inApp();
+      const document = { uri: 'file:///cache/material', type };
+      const documents = {
+        pick: jest.fn(async () => document),
+        send: jest.fn(async () => {}),
+        release: jest.fn(async () => {}),
+      };
+      await renderScreen(<ImportScreen />, { api, signedIn: true, documents });
+      await fireEvent.press(await screen.findByRole('radio', { name: label }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Choose a file' }));
+      await waitFor(() => expect(documents.release).toHaveBeenCalledWith(document));
+      expect(documents.pick).toHaveBeenCalledWith(kind);
+      expect(documents.send).toHaveBeenCalledTimes(1);
+      expect(api.calls).toContainEqual(['createImport', expect.objectContaining({ kind })]);
+    },
+  );
 });
