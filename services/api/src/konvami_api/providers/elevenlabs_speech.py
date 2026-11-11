@@ -34,13 +34,22 @@ class ElevenLabsSpeech:
         self._meter = meter
 
     def speak(self, task: SpeechTask) -> bytes:
-        """`task.model` is ElevenLabs' model id and `task.voice` the voice's id."""
+        return self._speak(task, OUTPUT_FORMAT)
+
+    def speak_pcm(self, task: SpeechTask) -> bytes:
+        """Mono 16-bit PCM at the live recording rate, with no lossy duration estimate."""
+        audio = self._speak(task, "pcm_24000")
+        if len(audio) % 2:
+            raise SpeechError("incomplete PCM sample")
+        return audio
+
+    def _speak(self, task: SpeechTask, output_format: str) -> bytes:
         if not _VOICE_ID.fullmatch(task.voice):
             raise SpeechError("not a voice id")
         try:
             response = self._http.post(
                 f"{URL}/{task.voice}",
-                params={"output_format": OUTPUT_FORMAT},
+                params={"output_format": output_format},
                 headers={"xi-api-key": self._api_key()},
                 json={"text": task.text, "model_id": task.model},
                 timeout=TIMEOUT_SECONDS,

@@ -103,3 +103,15 @@ def test_an_answer_without_audio_is_a_failure_and_is_not_metered() -> None:
         model(lambda _: httpx.Response(200, content=b""), meter).speak(TASK)
 
     assert meter.records == []
+
+
+def test_live_speech_requests_pcm_at_the_recording_sample_rate() -> None:
+    seen: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, content=b"\x01\x00" * 24000)
+
+    pcm = model(respond).speak_pcm(TASK)
+    assert len(pcm) == 48000
+    assert seen[0].url.params["output_format"] == "pcm_24000"
