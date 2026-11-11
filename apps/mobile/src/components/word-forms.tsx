@@ -30,7 +30,9 @@ export function ArticleWord({
   const { t } = useTranslation();
   const role = header ? 'header' : undefined;
   const starts = article && text.toLowerCase().startsWith(`${article} `);
-  if (!article || !starts) {
+  const genderArticle = article === 'der' || article === 'die' || article === 'das';
+  // The gender-colour convention is German-only; other languages keep their actual article.
+  if (!genderArticle || !starts) {
     return (
       <Text variant={variant} accessibilityRole={role}>
         {text}

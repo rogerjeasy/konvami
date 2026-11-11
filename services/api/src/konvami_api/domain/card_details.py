@@ -19,7 +19,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from konvami_api.domain.cards import (
-    Article,
     Card,
     CardError,
     CardRepository,
@@ -27,6 +26,7 @@ from konvami_api.domain.cards import (
     WordDetails,
 )
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.language_packs.articles import NOUN_ARTICLES
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.sounds import Sounds
@@ -91,19 +91,43 @@ _SCHEMA = answer_object(
 )
 
 
-def _instructions(target: str) -> str:
-    return f"""You write the forms of {target} words for a learner's flashcards. A wrong form would
-be learnt by heart, so give only forms you are certain of, in standard {target}; null otherwise.
-
-You get words, each with an `id` and often the sentence it came from. For each, answer:
-- `part`: noun, verb, adjective, phrase (several words, an expression) or other.
-- A noun: `article` (der, die or das, its gender in the singular) and `plural` with its article
-  ("die Termine"); null for a noun that has none.
+_FORM_GUIDANCE = {
+    "de": """- A noun: `article` (der, die or das, its gender in the singular) and `plural`
+  with its article ("die Termine"); null for a noun that has none.
 - A verb: `present` (er/sie/es form), `preterite` (er/sie/es form), `perfect` (the Perfekt with its
   auxiliary: "ist gefahren", "hat gemacht"), `separable` (whether its prefix separates), and
   `case` when its object is not in the accusative ("dative", "genitive"), or a preposition it
   goes with ("auf + accusative").
 - An adjective: `comparative` and `superlative` ("größer", "am größten").
+""",
+    "en": """- A noun: article the, and plural without an article; null for uncountable nouns.
+- A verb: present (third-person singular), preterite (simple past), perfect (third-person
+  present perfect with has); separable is null. Case is null, or its required preposition.
+- An adjective: comparative and superlative, including more/most where appropriate.
+""",
+    "fr": """- A noun: article le, la or l', and plural with les; preserve the noun's gender.
+- A verb: present (il/elle form), preterite (passé simple), perfect (passé composé with its
+  auxiliary, masculine singular when agreement is required). Separable is null; case is null
+  or its required preposition. Do not invent German cases.
+- An adjective: comparative and superlative using plus/le plus or the irregular form.
+""",
+    "it": """- A noun: article il, lo, la or l', and plural with i, gli or le.
+- A verb: present (lui/lei form), preterite (passato remoto), perfect (passato prossimo with
+  its auxiliary, masculine singular when agreement is required). Separable is null; case is
+  null or its required preposition. Do not invent German cases.
+- An adjective: comparative and superlative using più/il più or the irregular form.
+""",
+}
+
+
+def _instructions(target: str, language: str = "de") -> str:
+    guidance = _FORM_GUIDANCE.get(language, "Give only forms valid in the target language.")
+    return f"""You write the forms of {target} words for a learner's flashcards. A wrong form would
+be learnt by heart, so give only forms you are certain of, in standard {target}; null otherwise.
+
+You get words, each with an `id` and often the sentence it came from. For each, answer:
+- `part`: noun, verb, adjective, phrase (several words, an expression) or other.
+{guidance}
 Every other field is null. Use the word's sense in its sentence."""
 
 
@@ -112,8 +136,8 @@ def _form(text: str | None) -> str | None:
     return clipped or None
 
 
-def _details(found: _Found) -> WordDetails:
-    article = found.article if found.article in get_args(Article) else None
+def _details(found: _Found, language: str = "de") -> WordDetails:
+    article = found.article if found.article in NOUN_ARTICLES.get(language, frozenset()) else None
     noun, verb, adjective = (found.part == part for part in ("noun", "verb", "adjective"))
     return WordDetails(
         part=found.part,
@@ -170,7 +194,9 @@ class CardDetailsService:
             return
         found = {item.id: item for item in forms.cards}
         for number, card in enumerate(cards):
-            details = _details(found[number]) if number in found else WordDetails(part="other")
+            details = (
+                _details(found[number], language) if number in found else WordDetails(part="other")
+            )
             self._repository.set_details(user_id, card.id, details)
 
     def _forms(self, user_id: UUID, language: str, cards: Sequence[Card]) -> _Forms:
@@ -182,7 +208,7 @@ class CardDetailsService:
         }
         task = TextTask(
             model=self._model,
-            instructions=_instructions(self._profiles.catalog.english_name(language)),
+            instructions=_instructions(self._profiles.catalog.english_name(language), language),
             content=json.dumps(content, ensure_ascii=False),
             answer_name="card_forms",
             answer_schema=_SCHEMA,
