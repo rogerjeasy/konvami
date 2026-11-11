@@ -142,7 +142,7 @@ class PlacementTools:
             _function(
                 "finish_test",
                 "End the test with your impression of the learner's level in each skill "
-                "(A0 means no usable German yet). Call it before saying goodbye.",
+                "(A0 means no usable target language yet). Call it before saying goodbye.",
                 dict.fromkeys(SKILLS, level),
             ),
         ]

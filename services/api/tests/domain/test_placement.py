@@ -391,3 +391,9 @@ def test_postponing_is_still_possible_after_an_inconclusive_test() -> None:
     setup.onboarding.skip_placement(USER)
 
     assert setup.onboarding.status(USER).stage is Stage.PARTNERS
+
+
+def test_the_placement_tool_does_not_assume_german() -> None:
+    definitions = str(PlacementTools().definitions())
+    assert "no usable German" not in definitions
+    assert "target language" in definitions
