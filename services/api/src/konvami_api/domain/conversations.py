@@ -8,7 +8,7 @@ and the learner said something in it: a call that was opened and closed again is
 import datetime as dt
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Protocol
+from typing import Literal, Protocol
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -53,6 +53,15 @@ class Conversation:
     def counts(self) -> bool:
         """Whether this call is practice: it has ended and the learner said something in it."""
         return self.ended_at is not None and self.learner_turns > 0
+
+
+@dataclass(frozen=True)
+class ConversationQuery:
+    text: str = ""
+    partner: UUID | None = None
+    mode: Literal["free", "role_play", "review"] | None = None
+    after: dt.datetime | None = None
+    through: dt.datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -112,7 +121,13 @@ class ConversationError(Exception):
 
 
 class ConversationRepository(Protocol):
-    def listed(self, user_id: UUID, limit: int, before: dt.datetime | None) -> list[Conversation]:
+    def listed(
+        self,
+        user_id: UUID,
+        limit: int,
+        before: dt.datetime | None,
+        query: ConversationQuery | None = None,
+    ) -> list[Conversation]:
         """The learner's conversations that count, newest first, started before `before`."""
 
     def get(self, user_id: UUID, call_id: str) -> Conversation | None:
@@ -183,11 +198,16 @@ class ConversationService:
         )
 
     def listed(
-        self, user_id: UUID, *, limit: int = PAGE_DEFAULT, before: dt.datetime | None = None
+        self,
+        user_id: UUID,
+        *,
+        limit: int = PAGE_DEFAULT,
+        before: dt.datetime | None = None,
+        query: ConversationQuery | None = None,
     ) -> ConversationPage:
         size = min(max(limit, 1), PAGE_MAX)
         # One more than asked for shows whether another page follows.
-        found = self._repository.listed(user_id, size + 1, before)
+        found = self._repository.listed(user_id, size + 1, before, query)
         page = found[:size]
         return ConversationPage(
             conversations=self._with_partners(user_id, page),
