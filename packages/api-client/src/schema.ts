@@ -116,6 +116,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Cards */
+        get: operations["exportCards"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards/{card_id}": {
         parameters: {
             query?: never;
@@ -312,6 +329,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/conversations/{conversation_id}/export/{format}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Export Recording */
+        post: operations["exportRecording"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/conversations/{conversation_id}/report": {
         parameters: {
             query?: never;
@@ -328,6 +362,23 @@ export interface paths {
          *     failed. Answers at once; the report is written in the background.
          */
         post: operations["requestConversationReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{conversation_id}/turns/{index}/timing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get Recording Timing */
+        post: operations["getRecordingTiming"];
         delete?: never;
         options?: never;
         head?: never;
@@ -562,6 +613,23 @@ export interface paths {
         post?: never;
         /** Remove Import */
         delete: operations["removeImport"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/imports/{import_id}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft Import Reply */
+        post: operations["draftImportReply"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1108,6 +1176,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/phrasebook/{phrase_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Phrase Audio */
+        get: operations["getPhraseAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/phrasebook/{phrase_id}/card": {
         parameters: {
             query?: never;
@@ -1568,6 +1653,23 @@ export interface paths {
         patch: operations["configureRecordings"];
         trace?: never;
     };
+    "/v1/recordings/formats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recording Formats */
+        get: operations["getRecordingFormats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/then-vs-now": {
         parameters: {
             query?: never;
@@ -1809,6 +1911,15 @@ export interface components {
              */
             suggested: "again" | "hard" | "good" | "easy";
         };
+        /** AssessedWordOut */
+        AssessedWordOut: {
+            /** Accuracy */
+            accuracy: number;
+            /** Phonemes */
+            phonemes: components["schemas"]["PhonemeScoreOut"][];
+            /** Word */
+            word: string;
+        };
         /**
          * CallPlanOut
          * @description What a practice conversation sets out to practise, as the learner sees it: the kinds of
@@ -1857,6 +1968,13 @@ export interface components {
              */
             kind: "word" | "correction";
         };
+        /** CardMemoryOut */
+        CardMemoryOut: {
+            /** Difficulty */
+            difficulty: number;
+            /** Stability */
+            stability: number;
+        };
         /** CardOut */
         CardOut: {
             /** Back */
@@ -1890,6 +2008,7 @@ export interface components {
             kind: "word" | "correction";
             /** Lapses */
             lapses: number;
+            memory?: components["schemas"]["CardMemoryOut"] | null;
             /** Note */
             note: string | null;
             /** Reviewedat */
@@ -2037,6 +2156,11 @@ export interface components {
             /** Usd */
             usd: number;
         };
+        /** DeckExportOut */
+        DeckExportOut: {
+            /** Text */
+            text: string;
+        };
         /** DeckOut */
         DeckOut: {
             /** Cards */
@@ -2129,8 +2253,19 @@ export interface components {
              * @enum {string}
              */
             kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience";
+            /** Phrases */
+            phrases?: components["schemas"]["ExamPhraseOut"][];
             /** Seconds */
             seconds: number;
+        };
+        /** ExamPhraseOut */
+        ExamPhraseOut: {
+            /** Meanings */
+            meanings: {
+                [key: string]: string;
+            };
+            /** Text */
+            text: string;
         };
         /**
          * ExamWeekOut
@@ -2305,6 +2440,8 @@ export interface components {
             examples: string[];
             /** Mistakes */
             mistakes: components["schemas"]["TopicMistakeOut"][];
+            /** Rules */
+            rules: string[];
             topic: components["schemas"]["GrammarTopicOut"];
             /** Typicalmistakes */
             typicalMistakes: string[];
@@ -2385,7 +2522,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "text" | "link" | "photo";
+            kind: "text" | "link" | "photo" | "pdf" | "audio";
             /** Text */
             text?: string | null;
             /** Textbook */
@@ -2435,7 +2572,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "text" | "link" | "photo";
+            kind: "text" | "link" | "photo" | "pdf" | "audio";
             letter: components["schemas"]["ImportLetterOut"] | null;
             /** Level */
             level: string;
@@ -2489,7 +2626,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "text" | "link" | "photo";
+            kind: "text" | "link" | "photo" | "pdf" | "audio";
             /** Level */
             level: string;
             /** Textbook */
@@ -3133,6 +3270,13 @@ export interface components {
             /** Personas */
             personas: components["schemas"]["PersonaOut"][];
         };
+        /** PhonemeScoreOut */
+        PhonemeScoreOut: {
+            /** Accuracy */
+            accuracy: number;
+            /** Phoneme */
+            phoneme: string;
+        };
         /** PhraseIn */
         PhraseIn: {
             /** Meaning */
@@ -3429,6 +3573,7 @@ export interface components {
         ProgressOut: {
             activity: components["schemas"]["ActivityOut"];
             cards: components["schemas"]["CardProgressOut"];
+            fluency: components["schemas"]["RecordingFluencyOut"] | null;
             /** Language */
             language: string;
             lastWeek: components["schemas"]["WeekReviewOut"] | null;
@@ -3444,11 +3589,29 @@ export interface components {
             /** Weeks */
             weeks: components["schemas"]["WeekOut"][];
         };
+        /** PronunciationAssessmentOut */
+        PronunciationAssessmentOut: {
+            /** Accuracy */
+            accuracy: number;
+            /** Fluency */
+            fluency: number | null;
+            /** Prosody */
+            prosody: number | null;
+            /** Provider */
+            provider: string;
+            /** Words */
+            words: components["schemas"]["AssessedWordOut"][];
+        };
         /**
          * PronunciationAttemptIn
          * @description A drill said out loud: `target` is the text to say, `drill` how it is practised.
          */
         PronunciationAttemptIn: {
+            /**
+             * Assessmentconsent
+             * @default false
+             */
+            assessmentConsent: boolean;
             /**
              * Drill
              * @enum {string}
@@ -3462,9 +3625,10 @@ export interface components {
         };
         /**
          * PronunciationAttemptOut
-         * @description What was heard and, word by word, where. An approximation: no phoneme scores.
+         * @description Recognized words, plus optional provider acoustic scores after explicit consent.
          */
         PronunciationAttemptOut: {
+            assessment?: components["schemas"]["PronunciationAssessmentOut"] | null;
             /** Heard */
             heard: string;
             /** Right */
@@ -3582,6 +3746,30 @@ export interface components {
          * @enum {string}
          */
         Reason: "on_track" | "missed" | "short_of_minutes" | "minutes_used_up" | "today_done" | "week_done";
+        /** RecordingFluencyOut */
+        RecordingFluencyOut: {
+            /** Activeseconds */
+            activeSeconds?: number | null;
+            /** Pauseseconds */
+            pauseSeconds?: number | null;
+            /** Pauses */
+            pauses?: number | null;
+            /** Recordedseconds */
+            recordedSeconds: number;
+            /** Recordedturns */
+            recordedTurns: number;
+            /** Uniquewords */
+            uniqueWords: number;
+            /** Words */
+            words: number;
+            /** Wordsperminute */
+            wordsPerMinute: number;
+        };
+        /** RecordingFormatsOut */
+        RecordingFormatsOut: {
+            /** Formats */
+            formats: string[];
+        };
         /**
          * RecordingIn
          * @description A sentence recorded on the device: a correction said again, or a card's answer.
@@ -3593,6 +3781,13 @@ export interface components {
             durationMs?: number | null;
             /** Format */
             format: string;
+        };
+        /** RecordingTimingOut */
+        RecordingTimingOut: {
+            /** Available */
+            available: boolean;
+            /** Words */
+            words: components["schemas"]["WordTimingOut"][];
         };
         /** RecordingsOut */
         RecordingsOut: {
@@ -3704,11 +3899,15 @@ export interface components {
         };
         /** ReviewIn */
         ReviewIn: {
+            /** Expectedreviews */
+            expectedReviews?: number | null;
             /**
              * Rating
              * @enum {string}
              */
             rating: "again" | "hard" | "good" | "easy";
+            /** Reviewedat */
+            reviewedAt?: string | null;
         };
         /** ScenarioOut */
         ScenarioOut: {
@@ -3846,6 +4045,8 @@ export interface components {
         };
         /** SoundsOut */
         SoundsOut: {
+            /** Assessmentprovider */
+            assessmentProvider?: string | null;
             /** Sounds */
             sounds: components["schemas"]["SoundSummaryOut"][];
         };
@@ -4070,6 +4271,11 @@ export interface components {
             personaId?: string | null;
             /** Practise */
             practise?: string | null;
+            /**
+             * Premium
+             * @default false
+             */
+            premium: boolean;
             purpose: components["schemas"]["CallPurpose"];
             /** Scenario */
             scenario?: string | null;
@@ -4221,7 +4427,7 @@ export interface components {
          */
         WordDetailsOut: {
             /** Article */
-            article: ("der" | "die" | "das") | null;
+            article: ("der" | "die" | "das" | "the" | "le" | "la" | "l'" | "il" | "lo") | null;
             /** Case */
             case: string | null;
             /** Comparative */
@@ -4248,6 +4454,15 @@ export interface components {
         WordMarkOut: {
             /** Ok */
             ok: boolean;
+            /** Word */
+            word: string;
+        };
+        /** WordTimingOut */
+        WordTimingOut: {
+            /** Endms */
+            endMs: number;
+            /** Startms */
+            startMs: number;
             /** Word */
             word: string;
         };
@@ -4615,6 +4830,44 @@ export interface operations {
             };
         };
     };
+    exportCards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeckExportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     getCard: {
         parameters: {
             query?: never;
@@ -4947,6 +5200,11 @@ export interface operations {
             query?: {
                 limit?: number;
                 before?: string | null;
+                q?: string;
+                partner?: string | null;
+                mode?: ("free" | "role_play" | "review") | null;
+                after?: string | null;
+                through?: string | null;
             };
             header?: never;
             path?: never;
@@ -5282,6 +5540,65 @@ export interface operations {
             };
         };
     };
+    exportRecording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                format: "mp3" | "m4a";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SoundOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     getConversationReport: {
         parameters: {
             query?: never;
@@ -5403,6 +5720,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getRecordingTiming: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingTimingOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Service Unavailable */
@@ -5965,7 +6341,9 @@ export interface operations {
     };
     startImportUpload: {
         parameters: {
-            query?: never;
+            query?: {
+                kind?: "photo" | "pdf" | "audio";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5988,6 +6366,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6086,6 +6473,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    draftImportReply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -7756,6 +8194,64 @@ export interface operations {
             };
         };
     };
+    getPhraseAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                phrase_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardAudioOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     makePhraseCard: {
         parameters: {
             query?: never;
@@ -8893,6 +9389,35 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getRecordingFormats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingFormatsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -57,6 +57,13 @@ async function failure(promise: Promise<unknown>): Promise<ApiError> {
 }
 
 describe('api client', () => {
+  it('preserves network failure during token refresh so saved learning can open offline', async () => {
+    const getAccessToken = async () => {
+      throw Object.assign(new Error('offline'), { code: 'network' });
+    };
+    const error = await failure(client(undefined, { getAccessToken }).api.getProfile());
+    expect(error.code).toBe('network');
+  });
   it('reads with the signed-in user’s access token', async () => {
     const { fetch, calls } = fakeFetch(json(200, PROFILE));
 
@@ -633,7 +640,7 @@ describe('api client', () => {
     expect((await api.removeImport('i/1')).imports).toEqual([]);
 
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
-      'POST https://api.example.test/v1/imports/upload',
+      'POST https://api.example.test/v1/imports/upload?kind=photo',
       'POST https://api.example.test/v1/imports',
       'GET https://api.example.test/v1/imports/i%2F1',
       'GET https://api.example.test/v1/imports',

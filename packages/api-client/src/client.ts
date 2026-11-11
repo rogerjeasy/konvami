@@ -2,6 +2,7 @@ import type { components } from './schema.ts';
 
 type Schemas = components['schemas'];
 
+export type RecordingTiming = Schemas['RecordingTimingOut'];
 export type Catalog = Schemas['CatalogOut'];
 export type CatalogLanguage = Schemas['LanguageOut'];
 export type CatalogExam = Schemas['ExamOut'];
@@ -23,6 +24,8 @@ export type VoiceCall = Schemas['VoiceCallOut'];
 export type CallPlan = Schemas['CallPlanOut'];
 /** What a call may say about itself beyond its purpose and offer. */
 export interface VoiceCallDetails {
+  /** Explicit opt-in to the selected premium voice for this practice call. */
+  premium?: boolean;
   /** The partner of a practice call. */
   personaId?: string;
   /** Today on the device's calendar ("2026-10-10"), so a persona names the right weekday. */
@@ -196,7 +199,7 @@ export type ImportUpload = Schemas['ImportUploadOut'];
 export type CourseImportDraft = { textbook?: string | null; chapter?: string | null } & (
   | { kind: 'text'; text: string }
   | { kind: 'link'; url: string }
-  | { kind: 'photo'; uploadId: string }
+  | { kind: 'photo' | 'pdf' | 'audio'; uploadId: string }
 );
 
 /**
@@ -365,9 +368,20 @@ export interface ApiClient {
   /** Where a part's model answer plays from. Fails with `not_found`, `unavailable`. */
   getModelAnswerAudio(callId: string, part: string): Promise<{ url: string }>;
   /** Past conversations, newest first. `before` is the `next` of the page read before. */
-  getConversations(page?: { before?: string; limit?: number }): Promise<ConversationPage>;
+  getConversations(page?: {
+    before?: string;
+    limit?: number;
+    q?: string;
+    partner?: string;
+    mode?: 'free' | 'role_play' | 'review';
+    after?: string;
+    through?: string;
+  }): Promise<ConversationPage>;
   /** One conversation and what was said in it. Fails with `not_found`. */
   getConversation(id: string): Promise<Transcript>;
+  getRecordingTiming(id: string, index: number): Promise<RecordingTiming>;
+  getRecordingFormats(): Promise<{ formats: string[] }>;
+  exportRecording(id: string, format: 'mp3' | 'm4a'): Promise<{ url: string }>;
   /** The report on one conversation, or how far it is. Fails with `not_found`. */
   getConversationReport(id: string): Promise<ConversationReport>;
   /**
@@ -385,10 +399,16 @@ export interface ApiClient {
   saveCard(source: CardSource): Promise<Card>;
   /** The learner's cards, newest first. `before` is the `next` of the page read before. */
   getCards(page?: { before?: string; limit?: number }): Promise<Deck>;
+  /** The complete saved deck as a lossless Anki text import. */
+  exportCards(): Promise<{ text: string }>;
   /** The cards that are due, the one that has waited longest first. */
   getDueCards(limit?: number): Promise<ReviewQueue>;
   /** Stores how well a card was known. Fails with `conflict` when it was reviewed meanwhile. */
-  reviewCard(id: string, rating: Rating): Promise<Card>;
+  reviewCard(
+    id: string,
+    rating: Rating,
+    offline?: { expectedReviews: number; reviewedAt?: string },
+  ): Promise<Card>;
   /** Removes a card; answers with what is left of the deck. */
   removeCard(id: string): Promise<DeckSummary>;
   /** What the learner's partners know about them, newest first, and the memory settings. */
@@ -457,7 +477,10 @@ export interface ApiClient {
   /** Where a card's sound plays from (made the first time). Fails with `not_found`, `unavailable`. */
   getCardAudio(id: string): Promise<{ url: string }>;
   /** The problem sounds of the language learned, with what the learner did on each. */
-  getPronunciationSounds(): Promise<{ sounds: PronunciationSound[] }>;
+  getPronunciationSounds(): Promise<{
+    sounds: PronunciationSound[];
+    assessmentProvider?: string | null;
+  }>;
   /** One sound with its pairs, words and sentences. Fails `not_found`. */
   getPronunciationSound(id: string): Promise<PronunciationSoundDetail>;
   /** The words the learner missed and has not said right twice in a row since. */
@@ -475,6 +498,7 @@ export interface ApiClient {
     drill: PronunciationDrill;
     soundId: string | null;
     target: string;
+    assessmentConsent?: boolean;
     recording: SpokenRecording;
   }): Promise<PronunciationAttempt>;
   /** Which word of a pair the learner said they heard; right when it was the word played. */
@@ -507,6 +531,7 @@ export interface ApiClient {
   explainCorrection(conversationId: string, index: number): Promise<TutorQuestion>;
   /** The learner's phrasebook for the language they are learning, newest first. */
   getPhrasebook(): Promise<{ phrases: Phrase[] }>;
+  getPhraseAudio(id: string): Promise<{ url: string }>;
   /** Keeps a phrase. Keeping one that is kept already answers with it. Fails with `invalid_value`, `too_many` or `no_language`. */
   savePhrase(draft: PhraseDraft): Promise<Phrase>;
   /**
@@ -524,7 +549,7 @@ export interface ApiClient {
   /** What the learner brought for the language they are learning, newest first. */
   getImports(): Promise<CourseImports>;
   /** A form to send one photo (a JPEG) to read with. */
-  startImportUpload(): Promise<ImportUpload>;
+  startImportUpload(kind?: 'photo' | 'pdf' | 'audio'): Promise<ImportUpload>;
   /**
    * Works out a text, a web page or an uploaded photo. Fails with `invalid_value`,
    * `consent_required`, `no_language`, `too_many` (remove an import), `import_limit`,
@@ -532,6 +557,7 @@ export interface ApiClient {
    * page), or `upload_not_found` and `invalid_photo` (a photo).
    */
   createImport(draft: CourseImportDraft): Promise<CourseImport>;
+  draftImportReply(id: string): Promise<{ reply: string }>;
   /** One import. Fails with `not_found`. */
   getImport(id: string): Promise<CourseImport>;
   /** Removes an import and answers with the list. Fails with `not_found`. */
@@ -601,8 +627,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     let token: string;
     try {
       token = await options.getAccessToken();
-    } catch {
-      throw new ApiError('not_authenticated');
+    } catch (error) {
+      // A saved session remains usable offline; an unreachable token service is not a refusal.
+      const network =
+        typeof error === 'object' && error !== null && 'code' in error && error.code === 'network';
+      throw new ApiError(network ? 'network' : 'not_authenticated');
     }
     const headers: Record<string, string> = {
       accept: 'application/json',
@@ -706,9 +735,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       ),
     getWeekReviewAudio: (week) =>
       request('GET', `/v1/weeks/${encodeURIComponent(week)}/review/audio`),
-    getConversations: (page = {}) =>
-      request('GET', withQuery('/v1/conversations', { before: page.before, limit: page.limit })),
+    getConversations: (page = {}) => request('GET', withQuery('/v1/conversations', { ...page })),
     getConversation: (id) => request('GET', `/v1/conversations/${encodeURIComponent(id)}`),
+    getRecordingFormats: () => request('GET', '/v1/recordings/formats'),
+    exportRecording: (id, format) =>
+      request('POST', `/v1/conversations/${encodeURIComponent(id)}/export/${format}`),
+    getRecordingTiming: (id, index) =>
+      request('POST', `/v1/conversations/${encodeURIComponent(id)}/turns/${index}/timing`),
     getConversationReport: (id) =>
       request('GET', `/v1/conversations/${encodeURIComponent(id)}/report`),
     requestConversationReport: (id) =>
@@ -716,9 +749,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     saveCard: (source) => request('POST', '/v1/cards', source),
     getCards: (page = {}) =>
       request('GET', withQuery('/v1/cards', { before: page.before, limit: page.limit })),
+    exportCards: () => request('GET', '/v1/cards/export'),
     getDueCards: (limit) => request('GET', withQuery('/v1/cards/due', { limit })),
-    reviewCard: (id, rating) =>
-      request('POST', `/v1/cards/${encodeURIComponent(id)}/review`, { rating }),
+    reviewCard: (id, rating, offline) =>
+      request('POST', `/v1/cards/${encodeURIComponent(id)}/review`, { rating, ...offline }),
     removeCard: (id) => request('DELETE', `/v1/cards/${encodeURIComponent(id)}`),
     getMemories: () => request('GET', '/v1/memories'),
     configureMemories: (settings) => request('PATCH', '/v1/memories', settings),
@@ -773,6 +807,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     explainCorrection: (conversationId, index) =>
       request('POST', '/v1/tutor/corrections', { conversationId, index }),
     getPhrasebook: () => request('GET', '/v1/phrasebook'),
+    draftImportReply: (id) => request('POST', `/v1/imports/${encodeURIComponent(id)}/reply`),
+    getPhraseAudio: (id) => request('GET', `/v1/phrasebook/${encodeURIComponent(id)}/audio`),
     savePhrase: (draft) => request('POST', '/v1/phrasebook', draft),
     suggestPhrases: (situation) => request('POST', '/v1/phrasebook/suggestions', { situation }),
     makePhraseCard: (id) => request('POST', `/v1/phrasebook/${encodeURIComponent(id)}/card`),
@@ -780,7 +816,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getThenVsNow: () => request('GET', '/v1/then-vs-now'),
 
     getImports: () => request('GET', '/v1/imports'),
-    startImportUpload: () => request('POST', '/v1/imports/upload'),
+    startImportUpload: (kind = 'photo') => request('POST', `/v1/imports/upload?kind=${kind}`),
     createImport: (draft) => request('POST', '/v1/imports', draft),
     getImport: (id) => request('GET', `/v1/imports/${encodeURIComponent(id)}`),
     removeImport: (id) => request('DELETE', `/v1/imports/${encodeURIComponent(id)}`),

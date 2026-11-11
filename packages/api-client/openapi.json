@@ -165,6 +165,33 @@
         "title": "AnsweredOut",
         "type": "object"
       },
+      "AssessedWordOut": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "phonemes": {
+            "items": {
+              "$ref": "#/components/schemas/PhonemeScoreOut"
+            },
+            "title": "Phonemes",
+            "type": "array"
+          },
+          "word": {
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "accuracy",
+          "phonemes"
+        ],
+        "title": "AssessedWordOut",
+        "type": "object"
+      },
       "CallPlanOut": {
         "additionalProperties": false,
         "description": "What a practice conversation sets out to practise, as the learner sees it: the kinds of\nmistake (a language pack's categories) and the words to use. How the partner is told to\nbring them up stays on the server.",
@@ -280,6 +307,25 @@
         "title": "CardIn",
         "type": "object"
       },
+      "CardMemoryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "number"
+          },
+          "stability": {
+            "title": "Stability",
+            "type": "number"
+          }
+        },
+        "required": [
+          "stability",
+          "difficulty"
+        ],
+        "title": "CardMemoryOut",
+        "type": "object"
+      },
       "CardOut": {
         "additionalProperties": false,
         "properties": {
@@ -342,6 +388,16 @@
           "lapses": {
             "title": "Lapses",
             "type": "integer"
+          },
+          "memory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardMemoryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "note": {
             "anyOf": [
@@ -810,6 +866,20 @@
         "title": "DaySpendOut",
         "type": "object"
       },
+      "DeckExportOut": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DeckExportOut",
+        "type": "object"
+      },
       "DeckOut": {
         "additionalProperties": false,
         "properties": {
@@ -1093,6 +1163,13 @@
             "title": "Kind",
             "type": "string"
           },
+          "phrases": {
+            "items": {
+              "$ref": "#/components/schemas/ExamPhraseOut"
+            },
+            "title": "Phrases",
+            "type": "array"
+          },
           "seconds": {
             "title": "Seconds",
             "type": "integer"
@@ -1104,6 +1181,28 @@
           "seconds"
         ],
         "title": "ExamPartOut",
+        "type": "object"
+      },
+      "ExamPhraseOut": {
+        "additionalProperties": false,
+        "properties": {
+          "meanings": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Meanings",
+            "type": "object"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "meanings"
+        ],
+        "title": "ExamPhraseOut",
         "type": "object"
       },
       "ExamWeekOut": {
@@ -1593,6 +1692,13 @@
             "title": "Mistakes",
             "type": "array"
           },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
           "topic": {
             "$ref": "#/components/schemas/GrammarTopicOut"
           },
@@ -1608,6 +1714,7 @@
           "topic",
           "examples",
           "typicalMistakes",
+          "rules",
           "mistakes"
         ],
         "title": "GrammarTopicPageOut",
@@ -1906,7 +2013,9 @@
             "enum": [
               "text",
               "link",
-              "photo"
+              "photo",
+              "pdf",
+              "audio"
             ],
             "title": "Kind",
             "type": "string"
@@ -2055,7 +2164,9 @@
             "enum": [
               "text",
               "link",
-              "photo"
+              "photo",
+              "pdf",
+              "audio"
             ],
             "title": "Kind",
             "type": "string"
@@ -2214,7 +2325,9 @@
             "enum": [
               "text",
               "link",
-              "photo"
+              "photo",
+              "pdf",
+              "audio"
             ],
             "title": "Kind",
             "type": "string"
@@ -3997,6 +4110,25 @@
         "title": "PersonasOut",
         "type": "object"
       },
+      "PhonemeScoreOut": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "phoneme": {
+            "title": "Phoneme",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phoneme",
+          "accuracy"
+        ],
+        "title": "PhonemeScoreOut",
+        "type": "object"
+      },
       "PhraseIn": {
         "additionalProperties": false,
         "properties": {
@@ -4843,6 +4975,16 @@
           "cards": {
             "$ref": "#/components/schemas/CardProgressOut"
           },
+          "fluency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordingFluencyOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "language": {
             "title": "Language",
             "type": "string"
@@ -4917,15 +5059,72 @@
           "mistakes",
           "cards",
           "milestones",
-          "lastWeek"
+          "lastWeek",
+          "fluency"
         ],
         "title": "ProgressOut",
+        "type": "object"
+      },
+      "PronunciationAssessmentOut": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "fluency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fluency"
+          },
+          "prosody": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prosody"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/AssessedWordOut"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "provider",
+          "accuracy",
+          "fluency",
+          "prosody",
+          "words"
+        ],
+        "title": "PronunciationAssessmentOut",
         "type": "object"
       },
       "PronunciationAttemptIn": {
         "additionalProperties": false,
         "description": "A drill said out loud: `target` is the text to say, `drill` how it is practised.",
         "properties": {
+          "assessmentConsent": {
+            "default": false,
+            "title": "Assessmentconsent",
+            "type": "boolean"
+          },
           "drill": {
             "enum": [
               "word",
@@ -4966,8 +5165,18 @@
       },
       "PronunciationAttemptOut": {
         "additionalProperties": false,
-        "description": "What was heard and, word by word, where. An approximation: no phoneme scores.",
+        "description": "Recognized words, plus optional provider acoustic scores after explicit consent.",
         "properties": {
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PronunciationAssessmentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "heard": {
             "title": "Heard",
             "type": "string"
@@ -5299,6 +5508,90 @@
         "title": "Reason",
         "type": "string"
       },
+      "RecordingFluencyOut": {
+        "additionalProperties": false,
+        "properties": {
+          "activeSeconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activeseconds"
+          },
+          "pauseSeconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pauseseconds"
+          },
+          "pauses": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pauses"
+          },
+          "recordedSeconds": {
+            "title": "Recordedseconds",
+            "type": "number"
+          },
+          "recordedTurns": {
+            "title": "Recordedturns",
+            "type": "integer"
+          },
+          "uniqueWords": {
+            "title": "Uniquewords",
+            "type": "integer"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          },
+          "wordsPerMinute": {
+            "title": "Wordsperminute",
+            "type": "number"
+          }
+        },
+        "required": [
+          "words",
+          "uniqueWords",
+          "recordedSeconds",
+          "recordedTurns",
+          "wordsPerMinute"
+        ],
+        "title": "RecordingFluencyOut",
+        "type": "object"
+      },
+      "RecordingFormatsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "formats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Formats",
+            "type": "array"
+          }
+        },
+        "required": [
+          "formats"
+        ],
+        "title": "RecordingFormatsOut",
+        "type": "object"
+      },
       "RecordingIn": {
         "additionalProperties": false,
         "description": "A sentence recorded on the device: a correction said again, or a card's answer.",
@@ -5334,6 +5627,28 @@
           "format"
         ],
         "title": "RecordingIn",
+        "type": "object"
+      },
+      "RecordingTimingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "words": {
+            "items": {
+              "$ref": "#/components/schemas/WordTimingOut"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "words"
+        ],
+        "title": "RecordingTimingOut",
         "type": "object"
       },
       "RecordingsOut": {
@@ -5638,6 +5953,18 @@
       "ReviewIn": {
         "additionalProperties": false,
         "properties": {
+          "expectedReviews": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedreviews"
+          },
           "rating": {
             "enum": [
               "again",
@@ -5647,6 +5974,18 @@
             ],
             "title": "Rating",
             "type": "string"
+          },
+          "reviewedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedat"
           }
         },
         "required": [
@@ -6049,6 +6388,17 @@
       "SoundsOut": {
         "additionalProperties": false,
         "properties": {
+          "assessmentProvider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessmentprovider"
+          },
           "sounds": {
             "items": {
               "$ref": "#/components/schemas/SoundSummaryOut"
@@ -6718,6 +7068,11 @@
             ],
             "title": "Practise"
           },
+          "premium": {
+            "default": false,
+            "title": "Premium",
+            "type": "boolean"
+          },
           "purpose": {
             "$ref": "#/components/schemas/CallPurpose"
           },
@@ -7164,7 +7519,13 @@
                 "enum": [
                   "der",
                   "die",
-                  "das"
+                  "das",
+                  "the",
+                  "le",
+                  "la",
+                  "l'",
+                  "il",
+                  "lo"
                 ],
                 "type": "string"
               },
@@ -7306,6 +7667,30 @@
           "ok"
         ],
         "title": "WordMarkOut",
+        "type": "object"
+      },
+      "WordTimingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "endMs": {
+            "title": "Endms",
+            "type": "integer"
+          },
+          "startMs": {
+            "title": "Startms",
+            "type": "integer"
+          },
+          "word": {
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "startMs",
+          "endMs"
+        ],
+        "title": "WordTimingOut",
         "type": "object"
       }
     }
@@ -7713,6 +8098,44 @@
           }
         },
         "summary": "Get Due Cards"
+      }
+    },
+    "/v1/cards/export": {
+      "get": {
+        "operationId": "exportCards",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeckExportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Export Cards"
       }
     },
     "/v1/cards/{card_id}": {
@@ -8144,6 +8567,88 @@
               ],
               "title": "Before"
             }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "partner",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Partner"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "free",
+                    "role_play",
+                    "review"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "through",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Through"
+            }
           }
         ],
         "responses": {
@@ -8557,6 +9062,88 @@
         "summary": "Get Conversation"
       }
     },
+    "/v1/conversations/{conversation_id}/export/{format}": {
+      "post": {
+        "operationId": "exportRecording",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mp3",
+                "m4a"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Export Recording"
+      }
+    },
     "/v1/conversations/{conversation_id}/report": {
       "get": {
         "operationId": "getConversationReport",
@@ -8712,6 +9299,84 @@
           }
         },
         "summary": "Request Conversation Report"
+      }
+    },
+    "/v1/conversations/{conversation_id}/turns/{index}/timing": {
+      "post": {
+        "operationId": "getRecordingTiming",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingTimingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Recording Timing"
       }
     },
     "/v1/exams": {
@@ -9365,6 +10030,23 @@
       "post": {
         "description": "A form for one photo (a JPEG) to read: a menu, a letter, an article, a book page.",
         "operationId": "startImportUpload",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "photo",
+              "enum": [
+                "photo",
+                "pdf",
+                "audio"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -9385,6 +10067,16 @@
               }
             },
             "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Start Import Upload"
@@ -9506,6 +10198,70 @@
           }
         },
         "summary": "Get Import"
+      }
+    },
+    "/v1/imports/{import_id}/reply": {
+      "post": {
+        "operationId": "draftImportReply",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Draftimportreply",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Draft Import Reply"
       }
     },
     "/v1/imports/{import_id}/words/{index}/card": {
@@ -11487,6 +12243,76 @@
         "summary": "Remove Phrase"
       }
     },
+    "/v1/phrasebook/{phrase_id}/audio": {
+      "get": {
+        "operationId": "getPhraseAudio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "phrase_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Phrase Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardAudioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Phrase Audio"
+      }
+    },
     "/v1/phrasebook/{phrase_id}/card": {
       "post": {
         "description": "Makes a flashcard of a kept phrase. One that is a card already answers with it.",
@@ -12793,6 +13619,34 @@
           }
         },
         "summary": "Configure Recordings"
+      }
+    },
+    "/v1/recordings/formats": {
+      "get": {
+        "operationId": "getRecordingFormats",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordingFormatsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Recording Formats"
       }
     },
     "/v1/then-vs-now": {
