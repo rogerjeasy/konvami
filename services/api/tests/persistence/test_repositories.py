@@ -3135,3 +3135,15 @@ def test_feedback_is_closed_with_the_time_and_opened_again(feedback: FeedbackRep
     assert reopened is not None
     assert reopened.resolved_at is None
     assert feedback.resolve(uuid4(), "done", NOON) is None
+
+
+def test_library_search_filters_real_transcripts_before_pagination(partners: Practice) -> None:
+    from konvami_api.domain.conversations import ConversationQuery
+
+    talked(partners, "search_match", at=NOON - HOUR, learner_says=("Ich habe Brot gekauft",))
+    talked(partners, "search_newer", at=NOON, partner=JONAS, learner_says=("Ich mag Wasser",))
+    found = partners.conversations.listed(
+        USER, 1, None, ConversationQuery(text="BROT", partner=LENA.id)
+    )
+    assert [item.id for item in found] == ["search_match"]
+    assert not partners.conversations.listed(USER, 10, None, ConversationQuery(text="%"))

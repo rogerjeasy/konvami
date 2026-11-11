@@ -150,6 +150,11 @@ def test_the_library_is_read_from_the_database(stub: Stubber) -> None:
                 # One more than the page, to know whether another page follows.
                 {"name": "limit", "value": {"longValue": 21}},
                 {"name": "before", "value": {"isNull": True}},
+                {"name": "partner", "value": {"isNull": True}},
+                {"name": "after", "value": {"isNull": True}},
+                {"name": "through", "value": {"isNull": True}},
+                {"name": "mode", "value": {"isNull": True}},
+                {"name": "query", "value": {"stringValue": ""}},
             ],
             "formatRecordsAs": "JSON",
         },

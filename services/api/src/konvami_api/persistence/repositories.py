@@ -15,6 +15,7 @@ from konvami_api.domain.cards import Card, CardTotals, Kind, WordDetails
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
+    ConversationQuery,
     DayActivity,
     PartnerHistory,
 )
@@ -297,16 +298,17 @@ _LIST_QUESTIONS = f"""
 _START_SESSION = f"""
     WITH {_ENSURE_USER}
     INSERT INTO voice_session
-        (call_id, user_id, purpose, model, started_at, persona_id, scenario, max_seconds, plan)
+        (call_id, user_id, purpose, model, started_at, persona_id, scenario,
+         max_seconds, plan, premium)
     VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
             CAST(:persona_id AS uuid), :scenario, CAST(:max_seconds AS integer),
-            CAST(:plan AS jsonb))
+            CAST(:plan AS jsonb), CAST(:premium AS boolean))
 """
 
 _LOAD_SESSION = f"""
     SELECT call_id, CAST(user_id AS text) AS user_id, purpose, model,
            {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id,
-           scenario, max_seconds, CAST(plan AS text) AS plan
+           scenario, max_seconds, CAST(plan AS text) AS plan, premium
     FROM voice_session
     WHERE call_id = :call_id
 """
@@ -353,10 +355,13 @@ _FINISH_SESSION = """
         RETURNING call_id
     ),
     said AS (
-        INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms, verbatim)
+        INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms,
+                                verbatim, audio_active_ms, audio_pause_ms, audio_pauses)
         SELECT done.call_id, turn.position, turn.item ->> 'speaker', turn.item ->> 'text',
                turn.item ->> 'audio_key', CAST(turn.item ->> 'audio_ms' AS integer),
-               turn.item ->> 'verbatim'
+               turn.item ->> 'verbatim', CAST(turn.item ->> 'audio_active_ms' AS integer),
+               CAST(turn.item ->> 'audio_pause_ms' AS integer),
+               CAST(turn.item ->> 'audio_pauses' AS integer)
         FROM done,
              jsonb_array_elements(CAST(:turns AS jsonb)) WITH ORDINALITY AS turn (item, position)
         ON CONFLICT (call_id, position) DO NOTHING
@@ -411,6 +416,17 @@ _LIST_CONVERSATIONS = f"""
     {_CONVERSATION}
     WHERE {_COUNTED}
       AND (CAST(:before AS timestamptz) IS NULL OR s.started_at < CAST(:before AS timestamptz))
+      AND (CAST(:partner AS uuid) IS NULL OR s.persona_id = CAST(:partner AS uuid))
+      AND (CAST(:after AS timestamptz) IS NULL OR s.started_at >= CAST(:after AS timestamptz))
+      AND (CAST(:through AS timestamptz) IS NULL OR s.started_at <= CAST(:through AS timestamptz))
+      AND (CAST(:mode AS text) IS NULL
+           OR (:mode = 'review' AND COALESCE(CAST(s.plan ->> 'review' AS boolean), false))
+           OR (:mode = 'role_play' AND s.scenario IS NOT NULL)
+           OR (:mode = 'free' AND s.scenario IS NULL
+               AND NOT COALESCE(CAST(s.plan ->> 'review' AS boolean), false)))
+      AND (:query = '' OR EXISTS (
+          SELECT 1 FROM voice_turn t WHERE t.call_id = s.call_id
+          AND strpos(lower(COALESCE(t.verbatim, t.text)), lower(:query)) > 0))
     ORDER BY s.started_at DESC, s.call_id DESC
     LIMIT :limit
 """
@@ -421,7 +437,8 @@ _LOAD_CONVERSATION = f"""
 """
 
 _LIST_TURNS = """
-    SELECT speaker, text, audio_key, audio_ms, verbatim
+    SELECT speaker, text, audio_key, audio_ms, verbatim,
+           audio_active_ms, audio_pause_ms, audio_pauses
     FROM voice_turn WHERE call_id = :call_id ORDER BY position
 """
 
@@ -430,12 +447,14 @@ _SET_VERBATIM = """
 """
 
 _FORGET_RECORDINGS = """
-    UPDATE voice_turn SET audio_key = NULL, audio_ms = NULL
+    UPDATE voice_turn SET audio_key = NULL, audio_ms = NULL,
+        audio_active_ms = NULL, audio_pause_ms = NULL, audio_pauses = NULL
     WHERE call_id = :call_id AND audio_key IS NOT NULL
 """
 
 _FORGET_ALL_RECORDINGS = """
-    UPDATE voice_turn t SET audio_key = NULL, audio_ms = NULL
+    UPDATE voice_turn t SET audio_key = NULL, audio_ms = NULL,
+        audio_active_ms = NULL, audio_pause_ms = NULL, audio_pauses = NULL
     FROM voice_session s
     WHERE t.call_id = s.call_id AND s.user_id = CAST(:user_id AS uuid)
       AND t.audio_key IS NOT NULL
@@ -1065,6 +1084,7 @@ class SqlVoiceSessionRepository:
                 "scenario": session.scenario,
                 "max_seconds": session.max_seconds,
                 "plan": json.dumps(session.plan.document()) if session.plan else None,
+                "premium": session.premium,
             },
         )
 
@@ -1083,6 +1103,7 @@ class SqlVoiceSessionRepository:
             scenario=row["scenario"],
             max_seconds=row["max_seconds"],
             plan=SessionPlan.from_document(json.loads(row["plan"])) if row["plan"] else None,
+            premium=bool(row.get("premium", False)),
         )
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
@@ -1125,6 +1146,9 @@ class SqlVoiceSessionRepository:
                 "text": turn.text,
                 "audio_key": turn.audio.key if turn.audio else None,
                 "audio_ms": turn.audio.milliseconds if turn.audio else None,
+                "audio_active_ms": turn.audio.active_ms if turn.audio else None,
+                "audio_pause_ms": turn.audio.pause_ms if turn.audio else None,
+                "audio_pauses": turn.audio.pauses if turn.audio else None,
                 # Written during the call by the Live Error Spotter; the pass after it skips it.
                 "verbatim": turn.verbatim,
             }
@@ -1428,10 +1452,26 @@ class SqlConversationRepository:
     def __init__(self, client: SqlClient) -> None:
         self._client = client
 
-    def listed(self, user_id: UUID, limit: int, before: dt.datetime | None) -> list[Conversation]:
+    def listed(
+        self,
+        user_id: UUID,
+        limit: int,
+        before: dt.datetime | None,
+        query: ConversationQuery | None = None,
+    ) -> list[Conversation]:
+        query = query or ConversationQuery()
         rows = self._client.execute(
             _LIST_CONVERSATIONS,
-            {"user_id": str(user_id), "limit": limit, "before": _iso(before)},
+            {
+                "user_id": str(user_id),
+                "limit": limit,
+                "before": _iso(before),
+                "partner": str(query.partner) if query.partner else None,
+                "after": _iso(query.after),
+                "through": _iso(query.through),
+                "mode": query.mode,
+                "query": query.text.strip(),
+            },
         )
         return [_conversation(row) for row in rows]
 
@@ -1447,7 +1487,15 @@ class SqlConversationRepository:
             Turn(
                 row["speaker"],
                 row["text"],
-                audio=TurnAudio(row["audio_key"], row["audio_ms"]) if row["audio_key"] else None,
+                audio=TurnAudio(
+                    row["audio_key"],
+                    row["audio_ms"],
+                    row.get("audio_active_ms"),
+                    row.get("audio_pause_ms"),
+                    row.get("audio_pauses"),
+                )
+                if row["audio_key"]
+                else None,
                 verbatim=row["verbatim"],
             )
             for row in rows

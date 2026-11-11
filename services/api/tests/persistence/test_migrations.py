@@ -67,6 +67,9 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0060_pen_pal",
         "0065_pronunciation",
         "0070_course_import",
+        "0100_audio_activity",
+        "0110_vocabulary_evidence",
+        "0120_premium_calls",
     ]
     assert {
         "app_user",
@@ -105,6 +108,8 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "penpal_note",
         "feedback",
         "data_export",
+        "vocabulary_evidence",
+        "vocabulary_scan",
     } <= tables(empty_db)
 
 
