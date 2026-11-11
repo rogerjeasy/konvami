@@ -22,6 +22,8 @@ import { ROUTES } from '@/lib/routes';
 import { usePhrasebook, usePracticeServices } from '@/practice/services';
 import { PhraseCard } from './phrase-card';
 import { SuggestionCard } from './suggestion-card';
+import { ManualPhrase } from './manual-phrase';
+import { groupPhrases } from '@/lib/phrase-groups';
 
 // The longest situation the server takes (characters).
 const SITUATION_MAX = 200;
@@ -156,6 +158,7 @@ export function PhrasebookScreen() {
         />
       ) : (
         <View className="gap-6">
+          <ManualPhrase onFailed={(code) => setFailure(t(failureKey(code)))} />
           {failure ? (
             <View accessibilityLiveRegion="polite">
               <NoticeBox icon="alert" tone="danger">
@@ -198,13 +201,22 @@ export function PhrasebookScreen() {
           ) : (
             <Section title={t('phrasebook.yours')} count={phrases.length}>
               <View className="gap-3">
-                {phrases.map((phrase, i) => (
-                  <Reveal key={phrase.id} delay={staggerDelay(Math.min(i, 3) + 1)}>
-                    <PhraseCard
-                      phrase={phrase}
-                      onFailed={(code) => setFailure(t(failureKey(code)))}
-                    />
-                  </Reveal>
+                {groupPhrases(phrases).map((group) => (
+                  <View key={group.name ?? ''} className="gap-3">
+                    {group.name ? (
+                      <Text variant="heading" accessibilityRole="header">
+                        {group.name}
+                      </Text>
+                    ) : null}
+                    {group.phrases.map((phrase, i) => (
+                      <Reveal key={phrase.id} delay={staggerDelay(Math.min(i, 3) + 1)}>
+                        <PhraseCard
+                          phrase={phrase}
+                          onFailed={(code) => setFailure(t(failureKey(code)))}
+                        />
+                      </Reveal>
+                    ))}
+                  </View>
                 ))}
               </View>
             </Section>

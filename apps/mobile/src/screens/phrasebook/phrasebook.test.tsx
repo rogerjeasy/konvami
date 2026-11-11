@@ -46,6 +46,24 @@ async function suggest(situation: string) {
 }
 
 describe('5.19 Phrasebook', () => {
+  it('keeps a personally entered phrase without asking the AI', async () => {
+    const api = await open();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add your own phrase' }));
+    expect(screen.getByRole('button', { name: 'Save phrase' })).toBeDisabled();
+    await fireEvent.changeText(screen.getByLabelText('Phrase'), '  Guten Abend.  ');
+    await fireEvent.changeText(screen.getByLabelText('Meaning'), ' Good evening. ');
+    await fireEvent.press(screen.getByRole('button', { name: 'Save phrase' }));
+    expect(await screen.findByText('Guten Abend.')).toBeTruthy();
+    expect(api.calls).toContainEqual([
+      'savePhrase',
+      {
+        phrase: 'Guten Abend.',
+        meaning: 'Good evening.',
+        situation: null,
+      },
+    ]);
+    expect(api.calls.some(([method]) => method === 'suggestPhrases')).toBe(false);
+  });
   it('invites a first need, with nothing made up', async () => {
     await open();
 
