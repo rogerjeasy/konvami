@@ -172,6 +172,7 @@ class TopicPage:
     mistakes: tuple[TopicMistake, ...]
     # Typical learner sentences that break the rule, from the grammar notes.
     typical_mistakes: tuple[str, ...]
+    rules: tuple[str, ...] = ()
 
 
 class GrammarMapError(Exception):
@@ -236,6 +237,7 @@ class GrammarMapService:
             state=TopicState(topic, _mastered(topic, history)),
             mistakes=tuple(mistakes[:MAX_TOPIC_MISTAKES]),
             typical_mistakes=tuple(wrong for note in notes if note for wrong in note.wrong),
+            rules=tuple(note.rule for note in notes if note),
         )
 
 

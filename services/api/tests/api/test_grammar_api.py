@@ -106,6 +106,7 @@ def test_a_topic_page_has_the_learners_mistakes_and_examples(
     assert body["topic"]["id"] == "dative"
     assert body["examples"][0] == "Ich fahre mit dem Bus."
     assert "Ich fahre mit der Bus." in body["typicalMistakes"]
+    assert any("dative" in rule.lower() for rule in body["rules"])
     assert body["mistakes"] == [
         {
             "conversationId": "rtc_1",

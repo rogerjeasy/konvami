@@ -26,6 +26,7 @@ import { diffWords } from '@/lib/word-diff';
 import { useGrammarTopic, useSuggestedPartner } from '@/practice/services';
 import { useTheme } from '@/theme';
 import { useTopicLabels } from '@/hooks/use-labels';
+import { GrammarPractice } from './practice';
 
 /** Where the topic stands: its state, the numbers behind it and which way it is going. */
 function Standing({ page }: { page: GrammarTopicPage }) {
@@ -165,9 +166,17 @@ export function GrammarTopicScreen() {
             <Standing page={page} />
           </Reveal>
           <Reveal delay={staggerDelay(2)}>
+            {page.rules?.length ? (
+              <Section title={t('grammar.practice.rules')}>
+                <Sentences items={page.rules} />
+              </Section>
+            ) : null}
             <Section title={t('grammar.topic.examples')}>
               <Sentences items={page.examples} />
             </Section>
+          </Reveal>
+          <Reveal delay={staggerDelay(3)}>
+            <GrammarPractice key={id} examples={page.examples} />
           </Reveal>
           {page.typicalMistakes.length ? (
             <Reveal delay={staggerDelay(3)}>

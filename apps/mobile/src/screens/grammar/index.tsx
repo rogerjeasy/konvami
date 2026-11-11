@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
+import { TextField } from '@/components/text-field';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { grammarTopicRoute, ROUTES } from '@/lib/routes';
@@ -61,6 +62,8 @@ export function GrammarMapScreen() {
   const { status } = useSession();
   const { grammar: store } = usePracticeServices();
   const state = useGrammarMap();
+  const [query, setQuery] = useState('');
+  const { name } = useTopicLabels();
   const signedIn = status === 'signedIn';
 
   useEffect(() => {
@@ -76,7 +79,13 @@ export function GrammarMapScreen() {
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;
   const map = state.phase === 'ready' ? state.data : null;
-  const levels = map ? [...new Set(map.topics.map((topic) => topic.level))] : [];
+  const visible =
+    map?.topics.filter((topic) =>
+      `${name(topic.id)} ${topic.level}`
+        .toLocaleLowerCase()
+        .includes(query.trim().toLocaleLowerCase()),
+    ) ?? [];
+  const levels = [...new Set(visible.map((topic) => topic.level))];
   const solid = map ? map.topics.filter((topic) => SOLID.includes(topic.mastery)).length : 0;
   return (
     <StepLayout
@@ -114,11 +123,12 @@ export function GrammarMapScreen() {
         />
       ) : (
         <View className="gap-6">
+          <TextField label={t('grammar.practice.search')} value={query} onChangeText={setQuery} />
           {levels.map((level, i) => (
             <Reveal key={level} delay={staggerDelay(Math.min(i, 3) + 1)}>
               <Section title={level === map.level ? t('grammar.yourLevel', { level }) : level}>
                 <ListGroup>
-                  {map.topics
+                  {visible
                     .filter((topic) => topic.level === level)
                     .map((topic) => (
                       <TopicRow key={topic.id} topic={topic} />

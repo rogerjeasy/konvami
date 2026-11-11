@@ -71,6 +71,13 @@ describe('5.14 Grammar map', () => {
     });
   });
 
+  it('filters topics by their displayed name', async () => {
+    await open();
+    await fireEvent.changeText(screen.getByLabelText('Search grammar topics'), 'dative');
+    expect(screen.getByRole('button', { name: /^Dative,/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Present tense,/ })).toBeNull();
+  });
+
   it('offers to try again when the map cannot be read', async () => {
     const api = inApp();
     api.failNext('getGrammarMap', 'network');
@@ -88,6 +95,17 @@ describe('5.15 Grammar topic', () => {
     await renderScreen(<GrammarTopicScreen />, { api, signedIn: true });
     return api;
   }
+
+  it('offers model-example practice without changing conversation mastery', async () => {
+    await open();
+    await fireEvent.press(await screen.findByRole('button', { name: 'Start practice' }));
+    expect(screen.getByText('Complete the example')).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText('Your answer'), 'a different word');
+    await fireEvent.press(screen.getByRole('button', { name: 'Check example' }));
+    expect(screen.getByText('Compare with the example')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Next example' }));
+    expect(screen.getByText('Rebuild the example sentence')).toBeTruthy();
+  });
 
   it('says how well the learner uses it and where it is going', async () => {
     await open();
