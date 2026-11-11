@@ -11,6 +11,7 @@ import { DEFAULT_REMINDERS, REMINDER_TIMES, type ReminderSettings } from '@/remi
  * server, not here.
  */
 export interface Preferences {
+  premiumCalls: boolean;
   /**
    * The app language the user picked, or `null` to follow the phone's language (the default).
    * A phone language the app doesn't offer falls back to English.
@@ -39,6 +40,7 @@ export interface Preferences {
 }
 
 const KEY = {
+  premiumCalls: 'konvami.pref.premiumCalls',
   language: 'konvami.pref.language',
   partnerCaptions: 'konvami.pref.partnerCaptions',
   liveCorrections: 'konvami.pref.liveCorrections',
@@ -51,6 +53,7 @@ const HIDDEN = 'hidden';
 const ON = 'on';
 
 let current: Preferences = {
+  premiumCalls: false,
   language: null,
   partnerCaptions: true,
   liveCorrections: true,
@@ -96,12 +99,13 @@ function update(next: Preferences) {
 
 /** Loads saved preferences once at launch. Falls back to the defaults. */
 export async function loadPreferences(): Promise<void> {
-  const [language, captions, corrections, reminders, analytics] = await Promise.all([
+  const [language, captions, corrections, reminders, analytics, premiumCalls] = await Promise.all([
     readItem(KEY.language),
     readItem(KEY.partnerCaptions),
     readItem(KEY.liveCorrections),
     readItem(KEY.reminders),
     readItem(KEY.analytics),
+    readItem(KEY.premiumCalls),
   ]);
   update({
     language: isLanguage(language) ? language : null,
@@ -109,6 +113,7 @@ export async function loadPreferences(): Promise<void> {
     liveCorrections: corrections !== HIDDEN,
     reminders: remindersOf(reminders),
     analytics: analytics === ON,
+    premiumCalls: premiumCalls === ON,
   });
 }
 
@@ -175,4 +180,10 @@ export function usePreferences(): Preferences {
     },
     () => current,
   );
+}
+
+/** Opt-in on this device; consent and entitlement are always checked by the server. */
+export async function setPremiumCalls(enabled: boolean): Promise<void> {
+  update({ ...current, premiumCalls: enabled });
+  await (enabled ? writeItem(KEY.premiumCalls, ON) : removeItem(KEY.premiumCalls));
 }

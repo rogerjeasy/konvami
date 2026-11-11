@@ -10,6 +10,8 @@ import { NoticeBox } from '@/components/notice-box';
 import { OptionCard } from '@/components/option-card';
 import { PlayButton, type PlayState } from '@/components/play-button';
 import { Text } from '@/components/text';
+import { Switch } from '@/components/switch';
+import { setPremiumCalls, usePreferences } from '@/preferences';
 import { TextButton } from '@/components/text-button';
 import { stepFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
@@ -20,12 +22,12 @@ import { ProfilePage } from './page';
 
 /**
  * 6.22 Read-aloud voice (spec §6.21.2): the premium voice (ElevenLabs) that reads cards, the
- * weekly check-in and an exam's model answers aloud. Live conversations keep the partners' own
- * voices. The voices are listed with a sample each, after the learner agreed to ElevenLabs and
+ * weekly check-in and an exam's model answers aloud. Practice calls can opt into the selected voice on this device. The voices are listed with a sample each, after the learner agreed to ElevenLabs and
  * when they may use premium voices; the standard voice is always one of the choices.
  */
 export function ReadAloudScreen() {
   const { t } = useTranslation();
+  const { premiumCalls } = usePreferences();
   const { premium, choosePremiumVoice, premiumVoiceSample, samples } = useProfileServices();
   const state = usePremiumVoices();
   const elevenlabs = useElevenLabsConsent();
@@ -61,6 +63,7 @@ export function ReadAloudScreen() {
     setSaving(true);
     try {
       await choosePremiumVoice(voiceId);
+      if (voiceId === null) await setPremiumCalls(false);
     } catch (failure) {
       setProblem(t(apiErrorKey(apiErrorCode(failure))));
     } finally {
@@ -124,6 +127,16 @@ export function ReadAloudScreen() {
   return page(
     <Reveal delay={staggerDelay(1)}>
       <View className="gap-2.5">
+        {data.chosen ? (
+          <Card className="gap-2 p-4">
+            <Text>{t('call.premiumCallsHint')}</Text>
+            <Switch
+              label={t('call.premiumCalls')}
+              value={premiumCalls}
+              onValueChange={(enabled) => void setPremiumCalls(enabled)}
+            />
+          </Card>
+        ) : null}
         <View accessibilityRole="radiogroup" className="gap-2.5">
           <OptionCard
             role="radio"
