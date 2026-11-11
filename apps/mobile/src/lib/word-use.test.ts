@@ -68,3 +68,14 @@ describe('blankWord', () => {
     expect(blankWord('See you then.', 'on Friday', 'en')).toBeNull();
   });
 });
+
+it.each([
+  ['en', 'to work', 'She works every morning.', 'She ___ every morning.'],
+  ['fr', 'parler', 'Nous parlons français.', 'Nous ___ français.'],
+  ['it', 'parlare', 'Parliamo italiano.', '___ italiano.'],
+  ['it', 'il biglietto', 'Vorrei due biglietti.', 'Vorrei due ___.'],
+])('matches and blanks regular forms in %s', (language, word, said, cloze) => {
+  expect(usesWord(word, said, language)).toBe(true);
+  expect(blankWord(said, word, language)).toBe(cloze);
+  expect(usesWord(word, 'xyz', language)).toBe(false);
+});

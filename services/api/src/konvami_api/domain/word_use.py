@@ -26,6 +26,8 @@ class WordRules:
     separable: tuple[str, ...]
     # What a past participle puts before the verb ("ge-besucht").
     participle: str
+    # A language can admit longer regular endings without loosening every other pack.
+    max_ending: int = MAX_ENDING
 
 
 GERMAN_WORD_RULES = WordRules(
@@ -97,9 +99,9 @@ def _stem(word: str, rules: WordRules) -> str:
     return word[: -len(ending)] if ending else word
 
 
-def _form_of(form: str, stem: str) -> bool:
+def _form_of(form: str, stem: str, max_ending: int = MAX_ENDING) -> bool:
     """Whether `form` is the stem with one of its endings (or none)."""
-    return form.startswith(stem) and len(form) - len(stem) <= MAX_ENDING
+    return form.startswith(stem) and len(form) - len(stem) <= max_ending
 
 
 def _uses_under(entry: str, said: list[str], rules: WordRules) -> bool:
@@ -118,13 +120,17 @@ def _uses_under(entry: str, said: list[str], rules: WordRules) -> bool:
         None,
     )
     if prefix is None:
-        return any(_form_of(form, stem) or _form_of(form, rules.participle + stem) for form in said)
+        return any(
+            _form_of(form, stem, rules.max_ending)
+            or _form_of(form, rules.participle + stem, rules.max_ending)
+            for form in said
+        )
     core = stem[len(prefix) :]
     return any(
-        _form_of(form, stem)
-        or _form_of(form, prefix + rules.participle + core)
+        _form_of(form, stem, rules.max_ending)
+        or _form_of(form, prefix + rules.participle + core, rules.max_ending)
         # The prefix went to the end: "Ich steige in Köln um."
-        or (_form_of(form, core) and prefix in said[index + 1 :])
+        or (_form_of(form, core, rules.max_ending) and prefix in said[index + 1 :])
         for index, form in enumerate(said)
     )
 

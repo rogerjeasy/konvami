@@ -15,6 +15,8 @@ interface WordRules {
   separable: readonly string[];
   /** What a past participle puts before the verb ("ge-besucht"). */
   participle: string;
+  /** Longest regular ending accepted by this language (Italian -iamo has four letters). */
+  maxEnding?: number;
 }
 
 const GERMAN: WordRules = {
@@ -47,7 +49,28 @@ const GERMAN: WordRules = {
   participle: 'ge',
 };
 
-const RULES: Record<string, WordRules> = { de: GERMAN };
+const RULES: Record<string, WordRules> = {
+  de: GERMAN,
+  en: {
+    minor: new Set(['a', 'an', 'the', 'to', 'oneself']),
+    endings: ['ing', 'es', 'ed', 's'],
+    separable: [],
+    participle: '',
+  },
+  fr: {
+    minor: new Set(['le', 'la', 'les', 'l', 'un', 'une', 'des', 'du', 'de', 'se', 's']),
+    endings: ['er', 'ir', 're', 'es', 's', 'e'],
+    separable: [],
+    participle: '',
+  },
+  it: {
+    minor: new Set(['il', 'lo', 'la', 'i', 'gli', 'le', 'l', 'un', 'uno', 'una']),
+    endings: ['are', 'ere', 'ire', 'o', 'a', 'i', 'e'],
+    separable: [],
+    participle: '',
+    maxEnding: 4,
+  },
+};
 
 // How much longer than the shared part a form may be ("Termin" → "Termine", "besuch" → "besuchst").
 const MAX_ENDING = 3;
@@ -69,8 +92,8 @@ function stemOf(word: string, rules: WordRules): string {
 }
 
 /** Whether `form` is the stem with one of its endings (or none). */
-const formOf = (form: string, stem: string) =>
-  form.startsWith(stem) && form.length - stem.length <= MAX_ENDING;
+const formOf = (form: string, stem: string, rules: WordRules) =>
+  form.startsWith(stem) && form.length - stem.length <= (rules.maxEnding ?? MAX_ENDING);
 
 /** The main word of a dictionary entry: its longest one ("sich freuen auf" → "freuen"). */
 function mainWord(entry: string, rules: WordRules): string {
@@ -86,15 +109,17 @@ function usesUnder(entry: string, said: readonly string[], rules: WordRules): bo
     (start) => main.startsWith(start) && main.length - start.length > MIN_STEM,
   );
   if (!prefix) {
-    return said.some((form) => formOf(form, stem) || formOf(form, rules.participle + stem));
+    return said.some(
+      (form) => formOf(form, stem, rules) || formOf(form, rules.participle + stem, rules),
+    );
   }
   const core = stem.slice(prefix.length);
   return said.some(
     (form, index) =>
-      formOf(form, stem) ||
-      formOf(form, prefix + rules.participle + core) ||
+      formOf(form, stem, rules) ||
+      formOf(form, prefix + rules.participle + core, rules) ||
       // The prefix went to the end: "Ich steige in Köln um."
-      (formOf(form, core) && said.slice(index + 1).includes(prefix)),
+      (formOf(form, core, rules) && said.slice(index + 1).includes(prefix)),
   );
 }
 
@@ -128,11 +153,16 @@ export function blankWord(sentence: string, word: string, language: string): str
   }));
   const rules = RULES[language];
   let span: { start: number; end: number } | undefined;
-  if (rules) {
+  // Preserve a complete phrase when it contains multiple content words ("on Friday").
+  const entryWords = wordsOf(word);
+  const wholePhrase = rules && entryWords.filter((part) => !rules.minor.has(part)).length > 1;
+  if (rules && !wholePhrase) {
     const main = mainWord(word, rules);
     const stem = main ? stemOf(main, rules) : '';
     const found = tokens.find(
-      (token) => stem && (formOf(token.text, stem) || formOf(token.text, rules.participle + stem)),
+      (token) =>
+        stem &&
+        (formOf(token.text, stem, rules) || formOf(token.text, rules.participle + stem, rules)),
     );
     span = found;
   } else {
