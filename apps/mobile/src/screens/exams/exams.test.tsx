@@ -105,6 +105,8 @@ describe('5.17 Preparing a simulation', () => {
       screen.getByText('Eine Kollegin hört auf zu arbeiten. Planen Sie eine Abschiedsfeier.'),
     ).toBeTruthy();
     expect(screen.getByText('Abschluss und Dank')).toBeTruthy();
+    expect(screen.getByText('Ich schlage vor, dass wir uns am Samstag treffen.')).toBeTruthy();
+    expect(screen.getByText('I suggest we meet on Saturday.')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Start the test' }));
 
     expect(router.replace).toHaveBeenCalledWith(talkRoute);

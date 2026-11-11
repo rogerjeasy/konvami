@@ -40,7 +40,7 @@ function PrepTime({ seconds }: { seconds: number }) {
 }
 
 function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const labels = useExamLabels();
   const { draft, update } = useExamNotes();
   const { exam, cards } = next;
@@ -84,6 +84,21 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
               heading={`${labels.part(i, part.kind)} · ${labels.minutes(part.seconds)}`}
               card={card}
             />
+            {part.phrases?.length ? (
+              <View className="gap-2 p-4">
+                <Text variant="label" accessibilityRole="header">
+                  {t('exams.phraseBank')}
+                </Text>
+                {part.phrases.map((phrase) => (
+                  <View key={phrase.text} className="gap-1">
+                    <Text>{phrase.text}</Text>
+                    <Text variant="small" tone="muted">
+                      {phrase.meanings[i18n.language] ?? phrase.meanings.en}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </Reveal>
         ) : null;
       })}
