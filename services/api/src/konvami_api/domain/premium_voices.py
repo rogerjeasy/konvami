@@ -1,11 +1,8 @@
 """Premium voices (spec §6.21.2 Pro "premium voices (ElevenLabs)", §9.2).
 
-A learner can pick one ElevenLabs voice to read aloud what the app speaks outside a live call:
-a word card, the weekly check-in, an exam's model answer and the sample on 6.21. Live calls stay
-on OpenAI's realtime voices (spec §9.1): the cascaded path of §9.2 (speech to text, a model, text
-to speech) adds a second and a third round trip to every turn, and the call worker, the recordings
-and the live corrections are built around one realtime session. See the design note
-`2026-11-06-elevenlabs-design.md`.
+A learner can select a voice for read-aloud features and explicitly opt into using it for
+practice calls. LiveSpeech rechecks this service before each live synthesis; the call worker
+keeps the realtime conversation and tools while delivering premium speech separately (§9.2).
 
 Three things must all hold before ElevenLabs hears a word:
 
