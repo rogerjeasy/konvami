@@ -21,9 +21,8 @@ const BUNDLE_ID = IS_DEV_BUILD ? `${STORE_BUNDLE_ID}.dev` : STORE_BUNDLE_ID;
 // Every plugin that touches the microphone gets the same sentence: iOS shows one prompt.
 const MICROPHONE_REASON =
   'Konvami uses the microphone during a practice session so your conversation partner can hear you and reply. It is never on in the background.';
-// Required by plugins that could use the camera; Konvami never requests it (see
-// blockedPermissions below).
-const NO_CAMERA = 'Konvami does not use the camera.';
+// Camera access is requested only when the learner captures material for an import.
+const CAMERA_REASON = 'Konvami uses the camera when you choose to photograph material to practise.';
 
 // iOS privacy manifest (PrivacyInfo.xcprivacy), merged by Expo with those of the libraries.
 // Keep the data types in step with docs/store/privacy-labels.md, which says where each comes from.
@@ -105,9 +104,8 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
     // The WebRTC plugin below declares every permission the library can use. Konvami sends
-    // voice only: it never opens the camera and never draws over other apps.
+    // voice only for calls; course imports can use the camera. No overlays are needed.
     blockedPermissions: [
-      'android.permission.CAMERA',
       'android.permission.SYSTEM_ALERT_WINDOW',
       // The profile photo is chosen with the system photo picker, which needs no storage access;
       // Google Play asks for a justification for every photo or storage permission.
@@ -121,6 +119,23 @@ const config: ExpoConfig = {
     favicon: './assets/brand/favicon.png',
   },
   plugins: [
+    'expo-sharing',
+    // Local assessment decoding and the opt-in screen-off conversation service.
+    [
+      'react-native-audio-api',
+      {
+        iosBackgroundMode: true,
+        androidForegroundService: true,
+        androidFSStopWithTask: true,
+        androidFSTypes: ['microphone', 'mediaPlayback'],
+        androidPermissions: [
+          'android.permission.FOREGROUND_SERVICE',
+          'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+          'android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK',
+          'android.permission.POST_NOTIFICATIONS',
+        ],
+      },
+    ],
     'expo-router',
     // The developer menu and launcher of a development build; left out of store builds by Expo.
     'expo-dev-client',
@@ -168,7 +183,7 @@ const config: ExpoConfig = {
       // Live voice calls (spec §10.2). A native module: voice works in development and store
       // builds, not in Expo Go, where the voice screen offers the form instead.
       '@config-plugins/react-native-webrtc',
-      { microphonePermission: MICROPHONE_REASON, cameraPermission: NO_CAMERA },
+      { microphonePermission: MICROPHONE_REASON, cameraPermission: CAMERA_REASON },
     ],
     [
       // The learner's photo (6.2 Personal), chosen with the system's photo picker. A native
@@ -176,9 +191,9 @@ const config: ExpoConfig = {
       'expo-image-picker',
       {
         photosPermission: 'Konvami opens your photos so you can choose a profile photo.',
-        // The picker could also take photos and videos; Konvami only ever opens the library.
+        // The import screen can capture a page; profile photos still use the library.
         // (Passing `false` for the microphone would block it for voice calls as well.)
-        cameraPermission: NO_CAMERA,
+        cameraPermission: CAMERA_REASON,
         microphonePermission: MICROPHONE_REASON,
       },
     ],
