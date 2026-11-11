@@ -93,6 +93,7 @@ function CardsCard({ cards }: { cards: Progress['cards'] }) {
 /** Everything that is charted, in reading order; side by side on wide windows. */
 function Charts({ progress }: { progress: Progress }) {
   const { split } = useScreenLayout();
+  const { t, i18n } = useTranslation();
   // Mistakes and the share of the talking come from reports: before the first one, neither
   // part has anything to say.
   const reported = progress.talk !== null;
@@ -103,6 +104,23 @@ function Charts({ progress }: { progress: Progress }) {
       <LevelCard key="level" level={progress.level} history={progress.levelHistory} />
     ) : null,
     progress.talk ? <TalkCard key="talk" talk={progress.talk} /> : null,
+    progress.fluency ? (
+      <Card key="fluency" className="gap-2.5 p-4">
+        <Text variant="overline" tone="subtle" accessibilityRole="header">
+          {t('progress.fluency.title')}
+        </Text>
+        <Text variant="heading">
+          {t('progress.fluency.pace', {
+            pace: new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(
+              progress.fluency.wordsPerMinute,
+            ),
+          })}
+        </Text>
+        <Text variant="small" tone="muted">
+          {t('progress.fluency.body', { count: progress.fluency.recordedTurns })}
+        </Text>
+      </Card>
+    ) : null,
   ];
   const learning = [
     reported ? <PolishCard key="polish" mistakes={progress.mistakes} /> : null,

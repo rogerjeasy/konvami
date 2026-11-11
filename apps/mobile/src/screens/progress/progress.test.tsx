@@ -57,6 +57,23 @@ async function open(api: FakeApi, { signedIn = true } = {}) {
 }
 
 describe('5.8 Progress', () => {
+  it('shows measured recording pace without presenting it as pronunciation scoring', async () => {
+    const api = practised();
+    const read = api.getProgress.bind(api);
+    api.getProgress = async (zone) => ({
+      ...(await read(zone)),
+      fluency: {
+        words: 50,
+        uniqueWords: 30,
+        recordedSeconds: 30,
+        recordedTurns: 4,
+        wordsPerMinute: 100,
+      },
+    });
+    await open(api);
+    expect(screen.getByText('100 words per minute')).toBeTruthy();
+    expect(screen.getByText(/this is not a pronunciation score/)).toBeTruthy();
+  });
   it('tells a learner who has not talked yet what will be here, and shows no number', async () => {
     await open(inApp());
 
