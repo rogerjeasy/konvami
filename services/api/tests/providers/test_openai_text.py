@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from konvami_api.domain.costs import Charge, Feature
-from konvami_api.domain.text import TextImage, TextModelError, TextTask
+from konvami_api.domain.text import TextDocument, TextImage, TextModelError, TextTask
 from konvami_api.providers.openai_text import OpenAiText
 
 KEY = "sk-test-key"
@@ -57,6 +57,21 @@ def completed(text: str, status: str = "completed") -> dict[str, Any]:
 
 def model(respond: Any) -> OpenAiText:
     return OpenAiText(lambda: KEY, httpx.Client(transport=httpx.MockTransport(respond)))
+
+
+def test_pdf_is_sent_as_a_file_without_a_public_upload() -> None:
+    seen: list[dict[str, Any]] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content))
+        return httpx.Response(200, json=completed('{"grammar":"A1"}'))
+
+    model(respond).answer(replace(TASK, documents=(TextDocument(b"%PDF-1.7"),)))
+    assert seen[0]["input"][0]["content"][1] == {
+        "type": "input_file",
+        "filename": "material.pdf",
+        "file_data": "data:application/pdf;base64,JVBERi0xLjc=",
+    }
 
 
 def test_a_task_is_answered_as_json_in_the_asked_shape() -> None:

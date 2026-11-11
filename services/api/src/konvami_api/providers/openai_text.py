@@ -20,12 +20,21 @@ TIMEOUT_SECONDS = 90.0
 def _input(task: TextTask) -> str | list[dict[str, Any]]:
     """The task's input: its text, or, with pictures, one message of the text and the pictures
     (the Responses API takes them as data addresses)."""
-    if not task.images:
+    if not task.images and not task.documents:
         return task.content
     parts: list[dict[str, Any]] = [{"type": "input_text", "text": task.content}]
     for image in task.images:
         data = base64.b64encode(image.data).decode("ascii")
         parts.append({"type": "input_image", "image_url": f"data:{image.media_type};base64,{data}"})
+    for document in task.documents:
+        data = base64.b64encode(document.data).decode("ascii")
+        parts.append(
+            {
+                "type": "input_file",
+                "filename": "material.pdf",
+                "file_data": f"data:application/pdf;base64,{data}",
+            }
+        )
     return [{"role": "user", "content": parts}]
 
 

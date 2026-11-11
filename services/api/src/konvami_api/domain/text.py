@@ -17,6 +17,13 @@ class TextImage:
 
 
 @dataclass(frozen=True)
+class TextDocument:
+    """A bounded PDF supplied directly with a task, never uploaded to a public URL."""
+
+    data: bytes
+
+
+@dataclass(frozen=True)
 class TextTask:
     """One question to a text model, answered as JSON in a given shape."""
 
@@ -35,6 +42,7 @@ class TextTask:
     charge: Charge | None = None
     # Pictures the model is to read with `content`; none for a task on text alone.
     images: tuple[TextImage, ...] = ()
+    documents: tuple[TextDocument, ...] = ()
 
 
 class TextModelError(Exception):
