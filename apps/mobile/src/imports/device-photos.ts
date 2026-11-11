@@ -7,12 +7,18 @@ import { IMPORT_PHOTO_QUALITY, shrinkTo, type ImportPhotos } from './photos';
 /**
  * The photo to read on a real device: the system's photo picker, then a JPEG of at most
  * `IMPORT_PHOTO_SIDE` px. The picker runs outside the app and needs no permission to the whole
- * library. The camera is not offered: Konvami never opens it (see app.config.ts).
+ * library. Camera capture asks for permission only after the learner chooses it.
  */
 export const deviceImportPhotos: ImportPhotos = {
-  async pick() {
+  async pick(source = 'library') {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
+      if (source === 'camera') {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) return { status: 'cancelled' };
+      }
+      const launch =
+        source === 'camera' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+      const result = await launch({
         mediaTypes: ['images'],
         allowsEditing: false,
         // The picture is re-encoded below; nothing is lost by taking the original here.

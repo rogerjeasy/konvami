@@ -15,7 +15,7 @@ export const IMPORT_PHOTO_QUALITY = 0.8;
 /** What a device offers for the photo of an import. Replaced in tests. */
 export interface ImportPhotos {
   /** Lets the learner choose a picture from their library and shrinks it. Never throws. */
-  pick(): Promise<PickResult>;
+  pick(source?: 'library' | 'camera'): Promise<PickResult>;
   /** Sends a picked photo with the form the server gave. Rejects with an `ApiError`. */
   send: PictureSender;
 }
