@@ -4,8 +4,8 @@ import { createContext, useContext, type ReactNode } from 'react';
 export interface SentenceRecording {
   /** The audio file, in base64. */
   base64: string;
-  /** "m4a" on a phone, "webm" in a browser. */
-  format: 'm4a' | 'webm';
+  /** Compressed device audio, or locally converted PCM for acoustic assessment. */
+  format: 'm4a' | 'webm' | 'wav';
   durationMs: number;
   /** Where the file is on the device, to play it back. */
   uri: string;
