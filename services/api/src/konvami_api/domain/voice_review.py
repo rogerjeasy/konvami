@@ -18,14 +18,13 @@ from uuid import UUID
 from konvami_api.domain.cards import Card, CardError, CardRepository
 from konvami_api.domain.costs import Feature
 from konvami_api.domain.fsrs import Rating
+from konvami_api.domain.language_packs.articles import NOUN_ARTICLES
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import words_in
 from konvami_api.domain.spoken import Listener, SpokenError, is_right, says
 
 # Each answer is a short request to a paid model: a long review of every card twice stays below.
 MAX_ANSWERS_PER_DAY = 300
-# The articles a noun card can start with ("der Termin").
-ARTICLES = frozenset({"der", "die", "das"})
 
 # Right; the word without its article, or with another one; not the answer.
 Outcome = Literal["right", "article", "wrong"]
@@ -53,13 +52,15 @@ def expected_of(card: Card) -> str:
     return card.front if card.kind == "word" else card.back
 
 
-def outcome_of(card: Card, heard: str) -> Outcome:
+def outcome_of(card: Card, heard: str, language: str = "de") -> Outcome:
     if card.kind == "correction":
         return "right" if is_right(heard, card.front, card.back) else "wrong"
     expected = words_in(card.front)
     if says(heard, expected):
         return "right"
-    if len(expected) > 1 and expected[0] in ARTICLES and says(heard, expected[1:]):
+    # Elided l' is tokenized as l, just as it is in the learner's transcript.
+    articles = {words_in(article)[0] for article in NOUN_ARTICLES.get(language, frozenset())}
+    if len(expected) > 1 and expected[0] in articles and says(heard, expected[1:]):
         return "article"
     return "wrong"
 
@@ -104,5 +105,5 @@ class VoiceReviewService:
             )
         except SpokenError as error:
             raise CardError(error.code) from error
-        outcome = outcome_of(card, heard)
+        outcome = outcome_of(card, heard, language)
         return Answered(heard, outcome, expected_of(card), _SUGGESTED[outcome])
