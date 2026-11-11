@@ -1,3 +1,4 @@
+import type { ImportDocuments } from '@/imports/documents';
 import type { ReactElement } from 'react';
 import { render } from '@testing-library/react-native';
 import type { PersonaDraft } from '@konvami/api-client';
@@ -61,6 +62,7 @@ export async function renderScreen(
     studioStart,
     reminders,
     photos,
+    documents,
 
     purchases,
     signedIn = false,
@@ -76,6 +78,7 @@ export async function renderScreen(
     reminders?: FakeReminderDevice;
     /** The photo picker of the course companion. */
     photos?: FakeImportPhotos;
+    documents?: ImportDocuments;
 
     /** The store: unavailable unless a test brings one that can sell. */
     purchases?: FakePurchaseDevice;
@@ -104,6 +107,7 @@ export async function renderScreen(
     // As in the app: one audio player for samples and recordings.
     profileDevice.samples,
     importPhotos,
+    { documents },
   );
   const engine = voice ?? createFakeVoiceEngine();
   const sentences = recorder ?? createFakeRecorder();

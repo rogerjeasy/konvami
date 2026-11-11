@@ -254,7 +254,22 @@ export const FAKE_SPEAKING_EXAMS: SpeakingExam[] = [
     prepSeconds: 900,
     passShare: 0.6,
     parts: [
-      { id: 'teil_1', kind: 'plan_together', seconds: 180 },
+      {
+        id: 'teil_1',
+        kind: 'plan_together',
+        seconds: 180,
+        phrases: [
+          {
+            text: 'Ich schlage vor, dass wir uns am Samstag treffen.',
+            meanings: {
+              en: 'I suggest we meet on Saturday.',
+              de: 'Ich schlage vor, dass wir uns am Samstag treffen.',
+              fr: 'Je propose de nous retrouver samedi.',
+              it: 'Propongo di incontrarci sabato.',
+            },
+          },
+        ],
+      },
       { id: 'teil_2', kind: 'present_topic', seconds: 180 },
       { id: 'teil_3', kind: 'feedback_questions', seconds: 120 },
     ],
@@ -757,6 +772,7 @@ export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
       ? ['Ich fahre mit dem Bus.', 'Ich helfe meiner Nachbarin.']
       : ['Ich wohne in Zürich.'],
     typicalMistakes: dative ? ['Ich fahre mit der Bus.', 'Ich helfe meine Mutter.'] : [],
+    rules: dative ? ['After mit, use the dative case.'] : [],
     mistakes: dative
       ? [
           {
@@ -1401,6 +1417,7 @@ export function createFakeApi(): FakeApi {
       }),
       longestStreakDays: longest,
       talk: learnerWords + partnerWords > 0 ? { learnerWords, partnerWords } : null,
+      fluency: null,
       mistakes: {
         weeks: mistakeWeeks,
         kinds: [...kinds]
@@ -1873,6 +1890,17 @@ export function createFakeApi(): FakeApi {
         next: older.length > limit ? (page.at(-1)?.startedAt ?? null) : null,
       };
     },
+    async getRecordingFormats() {
+      return { formats: [] };
+    },
+    async exportRecording(id, format) {
+      await record('exportRecording', { id, format });
+      throw new ApiError('unavailable', 503);
+    },
+    async getRecordingTiming(id, index) {
+      await record('getRecordingTiming', { id, index });
+      return { available: false, words: [] };
+    },
     async getConversation(id) {
       await record('getConversation', id);
       const entry = practice.find(({ conversation }) => conversation.id === id);
@@ -1936,6 +1964,10 @@ export function createFakeApi(): FakeApi {
       };
       cards.push(card);
       return card;
+    },
+    async exportCards() {
+      await record('exportCards');
+      return { text: '#separator:Tab\n#html:false\n#columns:Front\tBack\tNotes\n' };
     },
     async getCards({ before, limit = CARDS_PAGE_DEFAULT } = {}) {
       await record('getCards', { before, limit });
@@ -2422,6 +2454,15 @@ export function createFakeApi(): FakeApi {
     async getPhrasebook() {
       await record('getPhrasebook');
       return { phrases };
+    },
+    async draftImportReply(id) {
+      await record('draftImportReply', id);
+      return { reply: 'Sehr geehrte Damen und Herren,\n[Name]' };
+    },
+    async getPhraseAudio(id) {
+      await record('getPhraseAudio', id);
+      if (!phrases.some((phrase) => phrase.id === id)) throw new ApiError('not_found', 404);
+      return { url: `https://files.test/phrases/${id}.mp3` };
     },
     async savePhrase(draft) {
       await record('savePhrase', draft);

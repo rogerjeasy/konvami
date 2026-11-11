@@ -1,3 +1,5 @@
+import type { DocumentKind, ImportDocuments } from '@/imports/documents';
+import type { LibraryTools } from '@/offline/library';
 import {
   createContext,
   useContext,
@@ -76,6 +78,7 @@ export interface DeviceClock {
 
 /** The pronunciation lab (5.22): the problem sounds with the practice so far, and the words missed. */
 export interface PronunciationLab {
+  assessmentProvider: string | null;
   sounds: PronunciationSound[];
   words: ProblemWord[];
 }
@@ -86,10 +89,13 @@ export interface PronunciationLab {
  * the report on it.
  */
 export interface PracticeServices {
+  libraryTools?: LibraryTools;
+  offline?: { pendingReviews(): Promise<number>; syncReviews(): Promise<void> };
   home: HomeStore;
   library: LibraryStore;
   /** One conversation with what was said in it. Rejects with an `ApiError` (`not_found`, …). */
   readConversation: (id: string) => Promise<Transcript>;
+  readRecordingTiming: ApiClient['getRecordingTiming'];
   /** The pair of recorded conversations to hear side by side (5.20). */
   readThenVsNow: () => Promise<ThenVsNow>;
   /** Follows one conversation's report for as long as a screen shows it. */
@@ -133,6 +139,7 @@ export interface PracticeServices {
    * date. Rejects with an `ApiError` (`not_found`, `too_many`, …).
    */
   makePhraseCard: (id: string) => Promise<Card>;
+  phraseSound: (id: string) => Promise<string>;
   /** Removes a kept phrase. Rejects with an `ApiError` (`not_found`, …). */
   removePhrase: (id: string) => Promise<void>;
   /** The pronunciation lab (5.22). */
@@ -150,7 +157,12 @@ export interface PracticeServices {
    * (`drill_limit`, `consent_required`, `unavailable`, …).
    */
   drillPronunciation: (
-    drill: { drill: PronunciationDrill; soundId: string | null; target: string },
+    drill: {
+      drill: PronunciationDrill;
+      soundId: string | null;
+      target: string;
+      assessmentConsent?: boolean;
+    },
     recording: SentenceRecording,
   ) => Promise<PronunciationAttempt>;
   /** Which word of a pair was heard; true when right. The lab's tallies are read again. */
@@ -165,14 +177,22 @@ export interface PracticeServices {
    * `ApiError` (`import_limit`, `not_in_language`, `blocked`, …).
    */
   bringImport: (draft: CourseImportDraft) => Promise<CourseImport>;
+  draftImportReply: (id: string) => Promise<string>;
+  bringDocument: (
+    kind: DocumentKind,
+    book: { textbook?: string | null; chapter?: string | null },
+  ) => Promise<CourseImport | null>;
   /**
    * Lets the learner choose a photo, sends it and works it out. Resolves to null when they close
    * the picker; rejects with an `ApiError` (`invalid_photo` when the picture cannot be read).
    */
-  bringPhoto: (book: {
-    textbook?: string | null;
-    chapter?: string | null;
-  }) => Promise<CourseImport | null>;
+  bringPhoto: (
+    book: {
+      textbook?: string | null;
+      chapter?: string | null;
+    },
+    source?: 'library' | 'camera',
+  ) => Promise<CourseImport | null>;
   /** Removes an import. Rejects with an `ApiError` (`not_found`, …). */
   removeImport: (id: string) => Promise<void>;
   /**
@@ -237,6 +257,7 @@ export interface PracticeServices {
   cardSound: (id: string) => Promise<string>;
   /** One of the learner's cards. Rejects with an `ApiError` (`not_found`, …). */
   readCard: (id: string) => Promise<Card>;
+  exportCards: () => Promise<{ text: string }>;
   /** Whether the server may reach this phone by push. Reject with an `ApiError`. */
   push: {
     register: (device: PushDevice) => Promise<unknown>;
@@ -274,7 +295,9 @@ export function createPracticeServices(
   api: Pick<
     ApiClient,
     | 'getHome'
+    | 'draftImportReply'
     | 'getProgress'
+    | 'getRecordingTiming'
     | 'getConversations'
     | 'getConversation'
     | 'getThenVsNow'
@@ -282,6 +305,7 @@ export function createPracticeServices(
     | 'requestConversationReport'
     | 'saveCard'
     | 'getCards'
+    | 'exportCards'
     | 'getDueCards'
     | 'reviewCard'
     | 'removeCard'
@@ -299,6 +323,7 @@ export function createPracticeServices(
     | 'savePhrase'
     | 'suggestPhrases'
     | 'makePhraseCard'
+    | 'getPhraseAudio'
     | 'removePhrase'
     | 'getImports'
     | 'startImportUpload'
@@ -341,6 +366,9 @@ export function createPracticeServices(
   clock: DeviceClock,
   clips: ClipPlayer,
   photos: ImportPhotos,
+  extensions: Pick<PracticeServices, 'libraryTools' | 'offline'> & {
+    documents?: ImportDocuments;
+  } = {},
 ): PracticeServices {
   const home = createHomeStore(api, clock);
   const deck = createDeckStore(api);
@@ -348,17 +376,18 @@ export function createPracticeServices(
   const catalog = createResourceStore(() => api.getCatalog(), clock.now);
   const phrasebook = createResourceStore(() => api.getPhrasebook(), clock.now);
   const pronunciation = createResourceStore(async () => {
-    const [{ sounds }, { words }] = await Promise.all([
+    const [{ sounds, assessmentProvider }, { words }] = await Promise.all([
       api.getPronunciationSounds(),
       api.getProblemWords(),
     ]);
-    return { sounds, words };
+    return { sounds, words, assessmentProvider: assessmentProvider ?? null };
   }, clock.now);
 
   const imports = createResourceStore(() => api.getImports(), clock.now);
 
   const penPal = createResourceStore(() => api.getPenPal(), clock.now);
   return {
+    ...extensions,
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
     followWeekReview: (week) => createWeekReviewFollower(api, week, clock.timeZone()),
@@ -369,6 +398,7 @@ export function createPracticeServices(
     modelAnswerSound: async (callId, part) => (await api.getModelAnswerAudio(callId, part)).url,
     library: createLibraryStore(api),
     readConversation: (id) => api.getConversation(id),
+    readRecordingTiming: (id, index) => api.getRecordingTiming(id, index),
     readThenVsNow: () => api.getThenVsNow(),
     followReport: (id) => createReportFollower(api, id),
     deck,
@@ -425,8 +455,22 @@ export function createPracticeServices(
       void imports.refresh();
       return made;
     },
-    async bringPhoto(book) {
-      const picked = await photos.pick();
+    async bringDocument(kind, book) {
+      if (!extensions.documents) throw new ApiError('unavailable');
+      const document = await extensions.documents.pick(kind);
+      if (!document) return null;
+      try {
+        const upload = await api.startImportUpload(kind);
+        await extensions.documents.send(upload, document);
+        const made = await api.createImport({ kind, uploadId: upload.uploadId, ...book });
+        void imports.refresh();
+        return made;
+      } finally {
+        await extensions.documents.release?.(document);
+      }
+    },
+    async bringPhoto(book, source = 'library') {
+      const picked = await photos.pick(source);
       if (picked.status === 'cancelled') return null;
       if (picked.status === 'failed') throw new ApiError('invalid_photo');
       const upload = await api.startImportUpload();
@@ -467,7 +511,10 @@ export function createPracticeServices(
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
     readGrammarTopic: (id) => api.getGrammarTopic(id),
     cardSound: async (id) => (await api.getCardAudio(id)).url,
+    phraseSound: async (id) => (await api.getPhraseAudio(id)).url,
+    draftImportReply: async (id) => (await api.draftImportReply(id)).reply,
     readCard: (id) => api.getCard(id),
+    exportCards: () => api.exportCards(),
     push: {
       register: (device) => api.registerPushDevice(device),
       remove: (token) => api.removePushDevice(token),
