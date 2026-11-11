@@ -97,6 +97,8 @@ export function createProfileServices(
   api: ApiClient,
   device: {
     pictures: PictureDevice;
+    clearOfflineRecordings?: () => Promise<void>;
+    clearOfflineAccount?: () => Promise<void>;
     samples: ClipPlayer;
     /** Called after partners changed, so Today and Talk read theirs again. */
     onPartnersChanged: () => void;
@@ -121,7 +123,11 @@ export function createProfileServices(
     recordings,
     keepRecordings: (kept) =>
       recordings.mutate(
-        () => api.configureRecordings(kept),
+        async () => {
+          const result = await api.configureRecordings(kept);
+          if (!kept) await device.clearOfflineRecordings?.();
+          return result;
+        },
         (_, answer) => answer,
       ),
     premium,
@@ -150,7 +156,11 @@ export function createProfileServices(
     draftPartner: (description) => api.draftPersona(description),
     partnerTemplates: () => api.getPersonaTemplates(),
     voiceSample: (voice) => api.getVoiceSample(voice),
-    deleteAccount: () => api.deleteAccount(),
+    deleteAccount: async () => {
+      // Purge while credentials still work: a disk failure must not strand a deleted account.
+      await device.clearOfflineAccount?.();
+      await api.deleteAccount();
+    },
     exportData: () => api.exportData(),
   };
 }
