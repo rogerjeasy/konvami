@@ -61,7 +61,21 @@ class Spot:
     partner: str | None
 
 
-Action = Send | HangUp | KeepAudio | Spot
+@dataclass(frozen=True)
+class Speak:
+    item_id: str
+    text: str
+
+
+@dataclass(frozen=True)
+class Spoken:
+    item_id: str
+    text: str
+    audio: "TurnAudio"
+    url: str
+
+
+Action = Send | HangUp | KeepAudio | Spot | Speak
 
 
 @dataclass(frozen=True)
@@ -95,6 +109,9 @@ class TurnAudio:
 
     key: str
     milliseconds: int
+    active_ms: int | None = None
+    pause_ms: int | None = None
+    pauses: int | None = None
 
 
 @dataclass(frozen=True)
@@ -138,8 +155,11 @@ class LiveCall:
         goodbye_grace_seconds: int,
         record: bool = False,
         spot: bool = False,
+        premium: bool = False,
     ) -> None:
         self._tools = tools
+        self._premium = premium
+        self._speaking: set[str] = set()
         self._record = record
         self._spot = spot
         self._max = max_seconds
@@ -197,6 +217,18 @@ class LiveCall:
         if self._ending is not None:
             # Only the audio still on its way matters now.
             return []
+        if kind == "input_audio_buffer.speech_started":
+            self._speaking.clear()
+        if kind == "response.output_text.done" and self._premium:
+            item_id, text = event.get("item_id"), event.get("text")
+            if (
+                isinstance(item_id, str)
+                and item_id not in self._items
+                and self._say("persona", text, item_id)
+            ):
+                self._speaking.add(item_id)
+                return [Speak(item_id, str(text))]
+            return []
         if kind == "response.done":
             return self._response_done(event.get("response") or {}, elapsed)
         if kind == "conversation.item.input_audio_transcription.completed":
@@ -213,6 +245,41 @@ class LiveCall:
         elif kind == "output_audio_buffer.stopped" and self._goodbye_at is not None:
             return self._end("finished", elapsed)
         return []
+
+    def spoken(self, found: Spoken, elapsed: float) -> list[Action]:
+        if self.ended or found.item_id not in self._speaking:
+            return []
+        self._speaking.discard(found.item_id)
+        self.audio_kept(found.item_id, found.audio)
+        # A text-only reply has no provider playback event. Its real audio duration sets the
+        # goodbye drain, so the worker cannot hang up while the final sentence is playing.
+        if self._finishing:
+            self._goodbye_at = elapsed + found.audio.milliseconds / 1000
+        note = "premium_audio: " + json.dumps(
+            {
+                "id": found.item_id,
+                "text": found.text,
+                "url": found.url,
+                "milliseconds": found.audio.milliseconds,
+            }
+        )
+        return [
+            Send(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "message",
+                        "role": "system",
+                        "content": [{"type": "input_text", "text": note}],
+                    },
+                }
+            )
+        ]
+
+    def speech_failed(self) -> list[Action]:
+        # Never leave an inaudible conversation charging minutes after consent, entitlement
+        # or the speech provider becomes unavailable.
+        return self._finish("closed")
 
     def spotted(self, found: Spotted) -> list[Action]:
         """What the check of a turn found. Its verbatim text is kept even after the call; a
@@ -293,6 +360,10 @@ class LiveCall:
         return True
 
     def _retrieve(self, item_id: object) -> list[Action]:
+        if self._premium and isinstance(item_id, str):
+            position = self._items.get(item_id)
+            if position is not None and self.turns[position].speaker == "persona":
+                return []
         if not self._record or not isinstance(item_id, str) or item_id in self._awaited:
             return []
         self._awaited.add(item_id)
@@ -369,7 +440,7 @@ class LiveCall:
             if item.get("type") == "function_call" and item.get("status") == "completed"
         ]
         if not calls:
-            if self._finishing and response.get("status") == "completed":
+            if self._finishing and not self._premium and response.get("status") == "completed":
                 self._goodbye_at = elapsed
             return []
         actions: list[Action] = []

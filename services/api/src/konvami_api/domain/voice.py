@@ -28,11 +28,14 @@ from konvami_api.domain.live_call import (
     KeepAudio,
     LiveCall,
     Outcome,
+    Speak,
+    Spoken,
     Spot,
     Spotted,
     Turn,
     TurnAudio,
 )
+from konvami_api.domain.live_speech import LiveSpeech
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.tools import ToolSet
 
@@ -127,6 +130,7 @@ class VoiceSession:
     # What a practice conversation set out to practise; None for the guide's calls and for
     # calls from before plans.
     plan: SessionPlan | None = None
+    premium: bool = False
 
 
 @dataclass(frozen=True)
@@ -222,6 +226,8 @@ class AudioStore(Protocol):
 
     def keep(self, user_id: UUID, call_id: str, audio: KeepAudio) -> TurnAudio: ...
 
+    def address(self, audio: TurnAudio) -> str: ...
+
 
 class TurnChecker(Protocol):
     """Checks the learner's turns during a call (the Live Error Spotter, `spotter.py`)."""
@@ -315,11 +321,13 @@ class VoiceCallService:
         meter: Meter | None = None,
         checker: TurnChecker | None = None,
         weekly_seconds: Callable[[UUID, dt.date], int] | None = None,
+        live_speech: LiveSpeech | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
         `meter` they are not metered; without a `checker` no turn is checked live. Without
         `weekly_seconds` (the learner and the week: the seconds the week allows them) every
         learner has the settings' minutes."""
+        self._speech = live_speech
         self._weekly = weekly_seconds
         self._settings = settings
         self._checker = checker
@@ -342,6 +350,7 @@ class VoiceCallService:
         local_date: dt.date | None = None,
         scenario: str | None = None,
         practise: str | None = None,
+        premium: bool = False,
     ) -> CallStarted:
         """`local_date` is today on the learner's calendar, as their device has it; `scenario`
         makes a practice call a role-play; `practise` puts a grammar topic first in its plan."""
@@ -357,6 +366,13 @@ class VoiceCallService:
             raise VoiceError("not_authenticated") from error
         if not account.voice_consent:
             raise VoiceError("consent_required")
+        if premium and (
+            purpose != CallPurpose.PRACTICE
+            or self._speech is None
+            or not self._speech.available(user_id)
+            or self._recordings is None
+        ):
+            raise VoiceError("voice_unavailable")
         now = self._clock()
         level = self._guard.level() if self._guard else Level.NORMAL
         if level is Level.PAUSED:
@@ -370,7 +386,7 @@ class VoiceCallService:
         output: dict[str, Any] = {"voice": briefing.voice or self._settings.voice}
         if briefing.speed is not None:
             output["speed"] = briefing.speed
-        session = {
+        session: dict[str, Any] = {
             "type": "realtime",
             "model": model,
             "instructions": briefing.instructions,
@@ -387,6 +403,14 @@ class VoiceCallService:
             },
         }
 
+        if premium:
+            session["output_modalities"] = ["text"]
+            session["audio"].pop("output")
+            session["instructions"] += (
+                "\nYour text replies are spoken aloud by the learner's selected premium voice. "
+                "Write natural spoken sentences without markdown. System notes starting "
+                "premium_audio are delivery receipts; ignore them and never read their URLs."
+            )
         week = week_start(now).date()
         weekly = self._weekly_seconds(user_id, week)
         granted = (
@@ -399,7 +423,16 @@ class VoiceCallService:
         try:
             created = self._create(
                 VoiceSession(
-                    "", user_id, purpose, model, now, persona_id, scenario, granted, briefing.plan
+                    "",
+                    user_id,
+                    purpose,
+                    model,
+                    now,
+                    persona_id,
+                    scenario,
+                    granted,
+                    briefing.plan,
+                    premium,
                 ),
                 sdp_offer,
                 session,
@@ -457,7 +490,23 @@ class VoiceCallService:
             goodbye_grace_seconds=GOODBYE_GRACE_SECONDS,
             record=self._recordings is not None and session.purpose in _RECORDED,
             spot=self._checker is not None and self._checker.for_call(session) is not None,
+            premium=session.premium,
         )
+
+    def speaker(self, call_id: str) -> Callable[[Speak], Spoken] | None:
+        session = self._sessions.get(call_id)
+        speech, recordings = self._speech, self._recordings
+        if session is None or not session.premium or speech is None or recordings is None:
+            return None
+
+        def speak(turn: Speak) -> Spoken:
+            pcm = speech.speak(session.user_id, turn.text)
+            audio = recordings.keep(
+                session.user_id, call_id, KeepAudio(turn.item_id, "persona", pcm)
+            )
+            return Spoken(turn.item_id, turn.text, audio, recordings.address(audio))
+
+        return speak
 
     def spotter(self, call_id: str) -> Callable[[Spot], Spotted] | None:
         """Checks one of the learner's turns of a call; None for a call whose turns are not."""

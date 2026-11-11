@@ -549,3 +549,28 @@ def test_a_practice_calls_audio_is_stored_as_the_call_goes() -> None:
     assert turn.audio.milliseconds == 100
     assert world.files.keys() == [turn.audio.key]
     assert turn.verbatim == "Ich habe nach Berlin gefahren."
+
+
+def test_premium_synthesis_runs_beside_the_event_loop_and_delivers_audio() -> None:
+    from konvami_api.domain.live_call import Speak, Spoken
+
+    call = LiveCall(
+        OneTool(), max_seconds=480, wrap_up_seconds=45, goodbye_grace_seconds=8, premium=True
+    )
+    connection = Pauses(
+        [
+            {"type": "response.output_text.done", "item_id": "reply", "text": "Hallo!"},
+            None,
+            None,
+        ],
+        then_close=True,
+    )
+
+    def speak(turn: Speak) -> Spoken:
+        return Spoken(
+            turn.item_id, turn.text, TurnAudio("reply.wav", 1000), "https://private/audio"
+        )
+
+    asyncio.run(run_call(call, connection, lambda: None, lambda: connection.seconds, speak=speak))
+    assert any("premium_audio: " in json.dumps(event) for event in connection.sent)
+    assert call.turns[0].audio is not None

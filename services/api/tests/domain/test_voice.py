@@ -745,7 +745,9 @@ def test_a_practice_call_is_recorded_turn_by_turn() -> None:
 
     assert isinstance(retrieve, Send)
     assert retrieve.event["item_id"] == "item_2"
-    assert audio == TurnAudio(f"users/{USER}/recordings/{call_id}/item_2.wav", 100)
+    assert audio == TurnAudio(
+        f"users/{USER}/recordings/{call_id}/item_2.wav", 100, active_ms=0, pause_ms=0, pauses=0
+    )
     assert world.files.keys() == [audio.key]
 
 

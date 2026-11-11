@@ -23,6 +23,8 @@ from konvami_api.domain.live_call import (
     HangUp,
     KeepAudio,
     LiveCall,
+    Speak,
+    Spoken,
     Spot,
     Spotted,
     TurnAudio,
@@ -64,10 +66,12 @@ async def run_call(
     monotonic: Callable[[], float],
     keep: Keeper | None = None,
     spot: Checker | None = None,
+    speak: Callable[[Speak], Spoken] | None = None,
 ) -> None:
     """Follows one call until it ends. `call.outcome` says how it ended."""
     started = monotonic()
     checks: set[asyncio.Task[Spotted]] = set()
+    speech: set[asyncio.Task[Spoken]] = set()
     actions = call.start()
     try:
         while True:
@@ -77,6 +81,12 @@ async def run_call(
                         hang_up()
                     elif isinstance(action, KeepAudio):
                         await _keep(call, action, keep)
+                    elif isinstance(action, Speak):
+                        if speak is not None:
+                            speech.add(asyncio.create_task(asyncio.to_thread(speak, action)))
+                        else:
+                            call.speech_failed()
+                            hang_up()
                     elif isinstance(action, Spot):
                         if spot is not None:
                             checks.add(asyncio.create_task(asyncio.to_thread(spot, action)))
@@ -90,9 +100,22 @@ async def run_call(
                 return
             elapsed = monotonic() - started
             actions = call.handle(event, elapsed) if event is not None else []
+            for task in [task for task in speech if task.done()]:
+                speech.discard(task)
+                if task.cancelled() or task.exception() is not None:
+                    actions += call.speech_failed()
+                else:
+                    actions += call.spoken(task.result(), elapsed)
             actions += _checked(call, checks)
             actions += call.tick(elapsed)
     finally:
+        if speech:
+            await asyncio.wait(speech, timeout=CHECK_DRAIN_SECONDS)
+            for task in speech:
+                if not task.done():
+                    task.cancel()
+                elif not task.cancelled():
+                    task.exception()
         if checks:
             await asyncio.wait(checks, timeout=CHECK_DRAIN_SECONDS)
             _checked(call, checks)
@@ -188,6 +211,7 @@ async def follow_call(voice: VoiceCallService, provider: Sideband, call_id: str)
             time.monotonic,
             voice.audio_keeper(call_id),
             voice.spotter(call_id),
+            voice.speaker(call_id),
         )
     finally:
         await connection.close()
