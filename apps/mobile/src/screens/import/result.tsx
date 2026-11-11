@@ -23,6 +23,7 @@ import { importCallRoute, letterCallRoute, ROUTES } from '@/lib/routes';
 import { usePracticeServices, useSuggestedPartner } from '@/practice/services';
 import { importFailureKey } from './failure';
 import { ImportWordCard } from './word-card';
+import { LetterReply } from './letter-reply';
 
 type Reading =
   { phase: 'loading' } | { phase: 'failed'; code: string } | { phase: 'ready'; item: CourseImport };
@@ -170,6 +171,7 @@ export function ImportResultScreen() {
           {item.letter ? (
             <Reveal delay={staggerDelay(2)}>
               <Section title={t('import.result.letter')}>
+                <LetterReply id={item.id} />
                 <Card className="gap-3 p-4">
                   <Text variant="labelMedium">
                     {t('import.result.letterFrom', { sender: item.letter.sender })}
