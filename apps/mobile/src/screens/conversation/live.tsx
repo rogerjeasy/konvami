@@ -32,6 +32,7 @@ import { setLiveCorrections, setPartnerCaptions, usePreferences } from '@/prefer
 import { HELP_KINDS, type HelpKind } from '@/voice/help';
 import { withLine } from '@/voice/problems';
 import type { LiveCorrection } from '@/voice/conversation';
+import { useWalkingCall } from '@/voice/use-walking-call';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
 
 /** Failures with their own explanation; anything else reads as the general message. */
@@ -89,11 +90,17 @@ const HELP_ICONS: Record<HelpKind, IconName> = {
  */
 function HelpSheet({
   visible,
+  manual,
+  onManual,
+  walking,
   name,
   onHelp,
   onClose,
 }: {
   visible: boolean;
+  manual: boolean;
+  onManual: (enabled: boolean) => void;
+  walking: ReturnType<typeof useWalkingCall>;
   name: string;
   onHelp: (kind: HelpKind) => void;
   onClose: () => void;
@@ -103,6 +110,22 @@ function HelpSheet({
   return (
     <Sheet visible={visible} title={t('conversation.help.title')} onClose={onClose}>
       <View className="gap-4 pt-1">
+        {walking.available ? (
+          <View className="gap-2">
+            <Text>{t('call.walkingHint')}</Text>
+            <Switch
+              label={t('call.walking')}
+              value={walking.enabled}
+              locked={walking.busy}
+              onValueChange={(enabled) => void walking.set(enabled)}
+            />
+            {walking.failed ? <NoticeBox icon="info">{t('call.walkingFailed')}</NoticeBox> : null}
+          </View>
+        ) : null}
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="shrink">{t('call.pushToTalk')}</Text>
+          <Switch label={t('call.pushToTalk')} value={manual} onValueChange={onManual} />
+        </View>
         <ListGroup>
           {HELP_KINDS.map((kind) => (
             <ListRow
@@ -181,6 +204,8 @@ function Call({
     else backOr(ROUTES.today);
   }, [stop, callId]);
 
+  const walking = useWalkingCall(call, leave);
+
   // The partner has said goodbye and it has been heard.
   const { over } = conversation;
   useEffect(() => {
@@ -227,6 +252,14 @@ function Call({
       }
       mainAction={
         <>
+          {call.pushToTalk ? (
+            <Button
+              label={t(call.muted ? 'call.holdToTalk' : 'call.releaseToSend')}
+              disabled={!canHelp}
+              onPressIn={call.beginTurn}
+              onPressOut={call.endTurn}
+            />
+          ) : null}
           <Button
             variant="secondary"
             label={t('conversation.end')}
@@ -238,6 +271,12 @@ function Call({
           {/* Modals: where they sit in the tree does not change where they show. */}
           <CorrectionSheet correction={explaining} onClose={() => setExplaining(null)} />
           <HelpSheet
+            walking={walking}
+            manual={call.pushToTalk}
+            onManual={(enabled) => {
+              if (enabled) void walking.set(false);
+              call.setPushToTalk(enabled);
+            }}
             visible={helping && canHelp}
             name={partner.name}
             onClose={() => setHelping(false)}
