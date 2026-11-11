@@ -15,7 +15,7 @@ import datetime as dt
 import json
 import re
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from typing import Any, Literal, Protocol, get_args
 from uuid import UUID
 
@@ -25,6 +25,7 @@ from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
 from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.fluency import recording_fluency
 from konvami_api.domain.levels import FITS, Fit, LevelFit
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.profile import ProfileService
@@ -482,7 +483,17 @@ a learner at that level can do:
 Answer `above` when they handled the level with ease and reached for what the next level needs,
 `below` when they struggled with what the level expects, `at` otherwise, and `unclear` when the
 conversation shows too little of that skill. Most conversations are `at`; one good or bad
-moment does not move a skill."""
+moment does not move a skill.
+
+`recording_fluency`, when present, contains measured recording duration/pace and optional PCM
+energy activity and internal quiet pauses. Missing fields mean unmeasured, never zero.
+Recording pace includes pauses; energy activity is affected by noise and is not phoneme accuracy.
+Use these observations only to support transcript evidence, never as CEFR cutoffs, and do not
+penalize a quiet microphone, an accent or a disability. Do not infer comprehension or emotion
+from silence or speed. Look for explicit requests to repeat/explain and subsequent successful
+answers for comprehension evidence. Only explicit learner statements can indicate frustration
+or boredom; respond by suggesting support or challenge in next_steps, never by changing level
+from one emotional moment. Keep uncertainty when evidence is ambiguous."""
 
 
 def _reviewer_instructions(target: str, explanation: str) -> str:
@@ -800,7 +811,9 @@ class ReportService:
         target, explanation = catalog.english_name(language), catalog.english_name(explained_in)
         pack = catalog.available_pack(language)
 
+        fluency = recording_fluency(turns)
         content = {
+            "recording_fluency": asdict(fluency) if fluency else None,
             "level": profile.level(language) or DEFAULT_LEVEL,
             "partner": partner.name if partner else None,
             "transcript": [_line(number, turn) for number, turn in enumerate(turns)],

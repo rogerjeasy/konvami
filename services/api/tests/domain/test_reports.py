@@ -1001,3 +1001,12 @@ def test_a_conversation_is_measured_by_what_the_learner_said() -> None:
     stats = measure((Turn("learner", "Ich bin gefahren.", verbatim="Ich ich habe gefahren."),))
 
     assert stats.learner_words == 4
+
+
+def test_analyst_receives_nullable_measured_pace_and_conservative_comprehension_guidance() -> None:
+    world = written(ANALYSIS, CONFIRMED)
+    task = world.text.tasks[-2]
+    assert json.loads(task.content)["recording_fluency"] is None
+    assert "never as CEFR cutoffs" in task.instructions
+    assert "explicit requests to repeat/explain" in task.instructions
+    assert "explicit learner statements" in task.instructions
