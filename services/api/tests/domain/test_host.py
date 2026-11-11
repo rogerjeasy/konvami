@@ -61,7 +61,7 @@ def test_tool_choices_come_from_the_catalog(tools: HostTools) -> None:
     exam = definition(tools, "save_exam")["parameters"]["properties"]
     level = definition(tools, "save_level")["parameters"]["properties"]["level"]
 
-    assert language["enum"] == ["de"]
+    assert language["enum"] == ["de", "en", "fr", "it"]
     assert exam["type"]["enum"] == ["goethe", "telc", "dtz", "testdaf", "osd", "other", None]
     assert level["enum"] == ["A0", "A1", "A2", "B1", "B2", "C1", "C2"]
 
@@ -113,7 +113,7 @@ def test_no_exam_and_a_course_are_saved_in_the_profiles_form(
 @pytest.mark.parametrize(
     ("name", "arguments", "reason"),
     [
-        ("save_target_language", {"language": "fr"}, "language_unavailable"),
+        ("save_target_language", {"language": "es"}, "language_unavailable"),
         ("save_level", {"level": "B3"}, "invalid_value"),
         ("save_level", {}, "invalid_value"),
         ("save_goals", {"reasons": "work"}, "invalid_value"),

@@ -67,7 +67,7 @@ def test_a_learning_answer_needs_a_target_language_first(service: ProfileService
 
 def test_only_languages_with_a_pack_can_be_learned(service: ProfileService) -> None:
     with pytest.raises(ProfileError) as error:
-        asked(service, Change("target_language", "fr"))
+        asked(service, Change("target_language", "xx"))
 
     assert error.value.code == "language_unavailable"
 

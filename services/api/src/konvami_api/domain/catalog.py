@@ -10,6 +10,21 @@ from typing import Literal, get_args
 from konvami_api.domain.exams import GERMAN_EXAMS, SpeakingExam
 from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
 from konvami_api.domain.grammar_topics import GERMAN_MAP, GrammarTopic
+from konvami_api.domain.language_packs import (
+    english_grammar,
+    english_personas,
+    english_sounds,
+    english_words,
+    french_grammar,
+    french_personas,
+    french_sounds,
+    french_words,
+    italian_grammar,
+    italian_personas,
+    italian_sounds,
+    italian_words,
+)
+from konvami_api.domain.language_packs.scenarios import scenarios_for
 from konvami_api.domain.persona_parts import PersonaTemplate
 from konvami_api.domain.pronunciation_sounds import GERMAN_SOUNDS, ProblemSound
 from konvami_api.domain.scenarios import GERMAN_SCENARIOS, Scenario
@@ -286,9 +301,45 @@ GERMAN = LanguagePack(
 CATALOG = Catalog(
     packs=(
         GERMAN,
-        LanguagePack(code="en", available=False),
-        LanguagePack(code="fr", available=False),
-        LanguagePack(code="it", available=False),
+        LanguagePack(
+            code="en",
+            available=True,
+            grammar=english_grammar.NOTES,
+            grammar_map=english_grammar.TOPICS,
+            error_categories=tuple(note.topic for note in english_grammar.NOTES),
+            word_rules=english_words.RULES,
+            pronunciation=english_sounds.SOUNDS,
+            scenarios=scenarios_for("en"),
+            starter_personas=english_personas.PARTNERS,
+            persona_templates=english_personas.PARTNERS,
+            voice_sample=english_personas.SAMPLE,
+        ),
+        LanguagePack(
+            code="fr",
+            available=True,
+            grammar=french_grammar.NOTES,
+            grammar_map=french_grammar.TOPICS,
+            error_categories=tuple(note.topic for note in french_grammar.NOTES),
+            word_rules=french_words.RULES,
+            pronunciation=french_sounds.SOUNDS,
+            scenarios=scenarios_for("fr"),
+            starter_personas=french_personas.PARTNERS,
+            persona_templates=french_personas.PARTNERS,
+            voice_sample=french_personas.SAMPLE,
+        ),
+        LanguagePack(
+            code="it",
+            available=True,
+            grammar=italian_grammar.NOTES,
+            grammar_map=italian_grammar.TOPICS,
+            error_categories=tuple(note.topic for note in italian_grammar.NOTES),
+            word_rules=italian_words.RULES,
+            pronunciation=italian_sounds.SOUNDS,
+            scenarios=scenarios_for("it"),
+            starter_personas=italian_personas.PARTNERS,
+            persona_templates=italian_personas.PARTNERS,
+            voice_sample=italian_personas.SAMPLE,
+        ),
     ),
     explanation_languages=tuple(
         NamedLanguage(code, name, english)
