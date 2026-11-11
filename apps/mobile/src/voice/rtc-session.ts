@@ -80,7 +80,9 @@ const MICROPHONE: MicrophoneOptions = {
   noiseSuppression: true,
   autoGainControl: true,
 };
-const LOST_STATES = ['failed', 'closed', 'disconnected'];
+const LOST_STATES = ['failed', 'closed'];
+// ICE can recover a transient network interruption without creating a second paid call.
+const RECOVERY_WINDOW_MS = 8_000;
 const MICROPHONE_ERRORS: Record<string, 'mic_denied' | 'no_microphone'> = {
   NotAllowedError: 'mic_denied',
   SecurityError: 'mic_denied',
@@ -98,11 +100,28 @@ export function createRtcSession(primitives: RtcPrimitives): RtcSession {
   let closed = false;
   let onEvent: (event: unknown) => void = () => {};
   let onClosed: () => void = () => {};
+  let recovery: ReturnType<typeof setTimeout> | null = null;
 
   peer.ontrack = (event) => {
     if (event.streams[0]) primitives.playAudio(event.streams[0]);
   };
   peer.onconnectionstatechange = () => {
+    if (closed) return;
+    if (peer.connectionState === 'disconnected') {
+      if (recovery === null)
+        recovery = setTimeout(() => {
+          recovery = null;
+          if (!closed && peer.connectionState !== 'connected') {
+            closed = true;
+            onClosed();
+          }
+        }, RECOVERY_WINDOW_MS);
+      return;
+    }
+    if (recovery !== null) {
+      clearTimeout(recovery);
+      recovery = null;
+    }
     if (!closed && LOST_STATES.includes(peer.connectionState)) {
       closed = true;
       onClosed();
@@ -117,6 +136,10 @@ export function createRtcSession(primitives: RtcPrimitives): RtcSession {
   });
 
   function close() {
+    if (recovery !== null) {
+      clearTimeout(recovery);
+      recovery = null;
+    }
     if (closed && !microphone) return;
     closed = true;
     microphone?.getTracks().forEach((track) => track.stop());

@@ -157,23 +157,46 @@ describe('during the call', () => {
     expect(await createRtcSession(primitives).levels()).toEqual({ persona: 0, learner: 0 });
   });
 
-  it.each(['failed', 'closed', 'disconnected'])(
-    'tells its owner when the connection is %s',
-    async (state) => {
+  it.each(['failed', 'closed'])('tells its owner when the connection is %s', async (state) => {
+    const { primitives, peer } = fakePlatform();
+    const session = createRtcSession(primitives);
+    const closed = jest.fn();
+    session.onClosed(closed);
+
+    peer.connectionState = 'connected';
+    peer.onconnectionstatechange?.();
+    expect(closed).not.toHaveBeenCalled();
+
+    peer.connectionState = state;
+    peer.onconnectionstatechange?.();
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the same call through a short network drop but releases it after the recovery window', async () => {
+    jest.useFakeTimers();
+    try {
       const { primitives, peer } = fakePlatform();
       const session = createRtcSession(primitives);
       const closed = jest.fn();
       session.onClosed(closed);
-
+      await session.offer();
+      peer.connectionState = 'disconnected';
+      peer.onconnectionstatechange?.();
+      jest.advanceTimersByTime(2000);
+      expect(closed).not.toHaveBeenCalled();
       peer.connectionState = 'connected';
       peer.onconnectionstatechange?.();
+      jest.advanceTimersByTime(10000);
       expect(closed).not.toHaveBeenCalled();
-
-      peer.connectionState = state;
+      peer.connectionState = 'disconnected';
       peer.onconnectionstatechange?.();
+      jest.advanceTimersByTime(10000);
       expect(closed).toHaveBeenCalledTimes(1);
-    },
-  );
+      session.close();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
 
 describe('ending the call', () => {
