@@ -38,6 +38,19 @@ def world() -> World:
     return world
 
 
+def test_phrase_audio_is_owned_cached_and_does_not_create_a_card(world: World) -> None:
+    phrase = world.phrasebook.save(USER, "Guten Abend.", "Good evening.")
+    url = world.phrasebook.audio(USER, phrase.id)
+    assert url.startswith("https://files.test/")
+    assert world.phrasebook.audio(USER, phrase.id) == url
+    assert len(world.speech.tasks) == 1
+    assert world.speech.tasks[0].text == "Guten Abend."
+    assert not world.phrasebook.phrases(USER)[0].in_deck
+    with pytest.raises(PhrasebookError) as refused:
+        world.phrasebook.audio(OTHER_USER, phrase.id)
+    assert refused.value.code == "not_found"
+
+
 def suggested(world: World, situation: str = "chez le médecin", answer: Any = ANSWER) -> Any:
     world.text.answers.append(answer)
     return world.phrasebook.suggest(USER, situation)

@@ -10,6 +10,8 @@ import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { commitFeedback } from '@/lib/haptics';
 import { usePracticeServices } from '@/practice/services';
+import { useSound } from '@/hooks/use-sound';
+import { PlayButton } from '@/components/play-button';
 
 /**
  * A phrase the learner keeps: it, its meaning, what it was kept for, and what can be done with
@@ -24,7 +26,8 @@ export function PhraseCard({
   onFailed: (code: string) => void;
 }) {
   const { t } = useTranslation();
-  const { makePhraseCard, removePhrase } = usePracticeServices();
+  const { makePhraseCard, removePhrase, phraseSound } = usePracticeServices();
+  const sound = useSound(phrase.id, phraseSound);
   const [busy, setBusy] = useState(false);
 
   async function run(action: () => Promise<unknown>) {
@@ -41,6 +44,11 @@ export function PhraseCard({
 
   return (
     <Card className="gap-3 p-4">
+      <PlayButton
+        label={t(sound.state === 'playing' ? 'learn.card.stopListening' : 'learn.card.listen')}
+        state={sound.state}
+        onPress={sound.toggle}
+      />
       <View className="gap-1">
         <Text variant="labelMedium">{phrase.phrase}</Text>
         <Text variant="small" tone="muted">

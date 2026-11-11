@@ -19,10 +19,14 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
+from konvami_api.domain.card_details import DEFAULT_VOICE
 from konvami_api.domain.cards import Card, CardService, card_key
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import Profile, ProfileService
 from konvami_api.domain.reports import DEFAULT_LEVEL
+from konvami_api.domain.sounds import Sounds
+from konvami_api.domain.speech import SpeechError
 from konvami_api.domain.text import (
     TextModel,
     TextModelError,
@@ -167,6 +171,8 @@ class PhrasebookService:
         model: str,
         clock: Callable[[], dt.datetime],
         new_id: Callable[[], UUID] = uuid4,
+        sounds: Sounds | None = None,
+        personas: PersonaService | None = None,
     ) -> None:
         self._profiles = profiles
         self._accounts = accounts
@@ -178,6 +184,29 @@ class PhrasebookService:
         self._model = model
         self._clock = clock
         self._new_id = new_id
+        self._sounds = sounds
+        self._personas = personas
+
+    def audio(self, user_id: UUID, phrase_id: UUID) -> str:
+        """Read a kept phrase without adding it to the review deck."""
+        kept = self._repository.get(user_id, phrase_id)
+        if kept is None:
+            raise PhrasebookError("not_found")
+        if not self._accounts.get(user_id).voice_consent:
+            raise PhrasebookError("consent_required")
+        if self._sounds is None or not self._sounds.available:
+            raise PhrasebookError("unavailable")
+        partners = self._personas.partners(user_id) if self._personas else []
+        voice = partners[0].voice if partners else DEFAULT_VOICE
+        try:
+            return self._sounds.address(
+                f"users/{user_id}/phrases/{phrase_id}-",
+                voice,
+                kept.phrase,
+                Charge(user_id, Feature.CARD_AUDIO),
+            )
+        except SpeechError as error:
+            raise PhrasebookError("unavailable") from error
 
     def _language(self, user_id: UUID) -> str:
         """The language whose phrasebook the learner sees: the one they are learning now."""
