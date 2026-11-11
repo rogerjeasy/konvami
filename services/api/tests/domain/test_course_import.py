@@ -68,6 +68,52 @@ def world() -> World:
     return world
 
 
+def test_pdf_import_is_owned_bounded_and_deleted_after_analysis(world: World) -> None:
+    upload = world.course_imports.start_upload(USER, "pdf")
+    key = world.course_imports._document_key(USER, upload.upload_id, "pdf")
+    world.files.save(key, b"%PDF-1.7 fake fixture", "application/pdf")
+    world.text.answers.append({**ANSWER, "transcript": TEXT})
+    made = world.course_imports.create_from_document(USER, upload.upload_id, "pdf", None, None)
+    assert made.kind == "pdf"
+    assert made.text == TEXT
+    assert world.files.stat(key) is None
+    assert world.text.tasks[-1].documents[0].data.startswith(b"%PDF-")
+
+
+def test_invalid_pdf_is_removed_without_model_request(world: World) -> None:
+    upload = world.course_imports.start_upload(USER, "pdf")
+    key = world.course_imports._document_key(USER, upload.upload_id, "pdf")
+    world.files.save(key, b"not a PDF", "application/pdf")
+    with pytest.raises(CourseImportError):
+        world.course_imports.create_from_document(USER, upload.upload_id, "pdf", None, None)
+    assert world.files.stat(key) is None
+    assert not world.text.tasks
+
+
+def test_audio_import_transcribes_then_analyses_and_deletes_upload(world: World) -> None:
+    upload = world.course_imports.start_upload(USER, "audio")
+    key = world.course_imports._document_key(USER, upload.upload_id, "audio")
+    world.files.save(key, b"ID3 audio", "audio/mpeg")
+    world.import_transcriber.answers.append(TEXT)
+    world.text.answers.append(ANSWER)
+    made = world.course_imports.create_from_document(USER, upload.upload_id, "audio", None, None)
+    assert made.kind == "audio"
+    assert made.text == TEXT
+    assert world.files.stat(key) is None
+
+
+def test_letter_reply_is_a_draft_and_uses_only_the_learners_owned_material(world: World) -> None:
+    world.text.answers.append(LETTER)
+    item = world.course_imports.create_from_text(USER, TEXT, None, None)
+    world.text.answers.append({"reply": "Sehr geehrte Damen und Herren,\n[Name]"})
+    reply = world.course_imports.draft_reply(USER, item.id)
+    assert "[Name]" in reply
+    assert "Never invent" in world.text.tasks[-1].instructions
+    with pytest.raises(CourseImportError) as error:
+        world.course_imports.draft_reply(OTHER_USER, item.id)
+    assert error.value.code == "not_found"
+
+
 def imported(world: World, answer: Any = ANSWER, text: str = TEXT) -> Any:
     world.text.answers.append(answer)
     return world.course_imports.create_from_text(USER, text, None, None)
