@@ -314,6 +314,10 @@ class PlanService:
         if perk not in self.plan(user_id).perks:
             raise PlanError("plan_required")
 
+    def can_use_premium_voices(self, user_id: UUID) -> bool:
+        """Recheck the entitlement on every use, including expiry and pilot exemptions."""
+        return Perk.PREMIUM_VOICES in self.plan(user_id).perks
+
     def require_room_for_persona(self, user_id: UUID, have: int) -> None:
         """Raises `plan_required` when `have` partners are all the plan allows."""
         limit = self.plan(user_id).personas

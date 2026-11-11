@@ -98,6 +98,23 @@ def test_a_learner_with_nothing_bought_has_the_free_plan() -> None:
     assert refused.value.code == "plan_required"
 
 
+def test_premium_voices_follow_paid_entitlement_and_expiry() -> None:
+    clock = Clock()
+    plans = service(clock=clock)
+    assert not plans.can_use_premium_voices(LEARNER)
+    plans.apply(event("INITIAL_PURCHASE"))
+    assert not plans.can_use_premium_voices(LEARNER)
+    plans.apply(event("INITIAL_PURCHASE", product_id="pro_yearly", entitlement_ids=("pro",)))
+    assert plans.can_use_premium_voices(LEARNER)
+    clock.now += MONTH + dt.timedelta(seconds=1)
+    assert not plans.can_use_premium_voices(LEARNER)
+    assert plans.can_use_premium_voices(OWNER)
+
+
+def test_premium_voices_remain_available_during_the_unenforced_pilot() -> None:
+    assert service(PlanSettings()).can_use_premium_voices(LEARNER)
+
+
 def test_the_free_plan_stops_at_its_number_of_partners() -> None:
     plans = service()
 
