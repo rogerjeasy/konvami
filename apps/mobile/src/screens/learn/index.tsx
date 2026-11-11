@@ -20,6 +20,7 @@ import { useDeck, usePracticeServices, useSuggestedPartner } from '@/practice/se
 import { CardRow } from './card-row';
 import { CardSheet } from './card-sheet';
 import { dueLabel } from './due-label';
+import { DeckExport } from './deck-export';
 import { ReviewCard } from './review-card';
 
 /** The card that comes back soonest among those not due yet; null when every card is due. */
@@ -167,6 +168,7 @@ export function LearnScreen() {
             />
           </Reveal>
           <Reveal delay={staggerDelay(2)}>
+            <DeckExport />
             <Section title={t('learn.cards.title')} count={total}>
               <View className="gap-3">
                 <ListGroup>
