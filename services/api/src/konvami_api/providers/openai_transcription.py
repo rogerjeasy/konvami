@@ -1,11 +1,13 @@
 """The transcription model: OpenAI's audio transcription endpoint (the verbatim pass, spec §9.4)."""
 
 import io
+import math
 import wave
 from collections.abc import Callable
 
 import httpx
 
+from konvami_api.domain.alignment import WordTiming
 from konvami_api.domain.costs import UsageMeter
 from konvami_api.domain.speech import TranscriptionError, TranscriptionTask
 
@@ -38,12 +40,46 @@ class OpenAiTranscription:
         self._meter = meter
 
     def transcribe(self, task: TranscriptionTask) -> str:
+        answer = self._request(task)
+        text = answer.get("text") if isinstance(answer, dict) else None
+        if not isinstance(text, str):
+            raise TranscriptionError("answer had no text")
+        return text.strip()
+
+    def align(self, task: TranscriptionTask) -> tuple[WordTiming, ...]:
+        if task.model != "whisper-1":
+            raise TranscriptionError("word timestamps require whisper-1")
+        answer = self._request(task, timed=True)
+        values = answer.get("words") if isinstance(answer, dict) else None
+        if not isinstance(values, list):
+            raise TranscriptionError("answer had no word timestamps")
+        words: list[WordTiming] = []
+        for value in values:
+            if not isinstance(value, dict):
+                raise TranscriptionError("invalid word timestamp")
+            word, start, end = value.get("word"), value.get("start"), value.get("end")
+            if (
+                not isinstance(word, str)
+                or not word.strip()
+                or not isinstance(start, (int, float))
+                or not isinstance(end, (int, float))
+                or not math.isfinite(start)
+                or not math.isfinite(end)
+                or not 0 <= start <= end
+            ):
+                raise TranscriptionError("invalid word timestamp")
+            words.append(WordTiming(word.strip(), round(start * 1000), round(end * 1000)))
+        return tuple(words)
+
+    def _request(self, task: TranscriptionTask, *, timed: bool = False) -> object:
         fields = {
             "model": task.model,
             "language": task.language,
             "prompt": task.prompt,
-            "response_format": "json",
+            "response_format": "verbose_json" if timed else "json",
         }
+        if timed:
+            fields["timestamp_granularities[]"] = "word"
         try:
             response = self._http.post(
                 URL,
@@ -72,7 +108,4 @@ class OpenAiTranscription:
             answer = response.json()
         except ValueError:
             raise TranscriptionError("answer was not JSON") from None
-        text = answer.get("text") if isinstance(answer, dict) else None
-        if not isinstance(text, str):
-            raise TranscriptionError("answer had no text")
-        return text.strip()
+        return answer
