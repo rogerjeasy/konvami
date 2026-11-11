@@ -4,7 +4,7 @@ import pytest
 
 from konvami_api.domain.cards import CardProgress
 from konvami_api.domain.conversations import ActivityDays, DayActivity
-from konvami_api.domain.live_call import Turn
+from konvami_api.domain.live_call import Turn, TurnAudio
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.progress import (
     WEEKS_OF_ACTIVITY,
@@ -25,6 +25,25 @@ from tests.world import LEVELS, NOON, OTHER_USER, USER, World
 FRIDAY = date(2026, 10, 9)
 MONDAY = date(2026, 10, 5)
 WEEK = timedelta(days=7)
+
+
+def test_progress_shows_recording_pace_only_for_learner_audio() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.talk(
+        lena,
+        at=NOON - timedelta(hours=1),
+        turns=(Turn("learner", "Ich fahre mit dem Bus", TurnAudio("a", 5000)),),
+    )
+    found = world.progress.view(USER, None).fluency
+    assert found is not None
+    assert found.words_per_minute == 60
+
+
+def test_progress_without_recorded_turns_has_no_invented_pace() -> None:
+    world = World()
+    world.onboard()
+    assert world.progress.view(USER, None).fluency is None
 
 
 def days(*talked: tuple[date, int]) -> ActivityDays:

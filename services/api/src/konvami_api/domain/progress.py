@@ -17,6 +17,7 @@ from konvami_api.domain.conversations import (
     ConversationService,
     summarise,
 )
+from konvami_api.domain.fluency import RecordingFluency, recording_fluency
 from konvami_api.domain.home import LevelView, level_view
 from konvami_api.domain.levels import LevelPoint, LevelService
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
@@ -31,6 +32,8 @@ WEEKS_OF_MISTAKES = 6
 TOP_MISTAKES = 6
 # "Lately", for the share of the talking and for how many cards were remembered.
 RECENT = dt.timedelta(days=30)
+# Bound audio evidence reads so opening Progress never scans the learner's entire archive.
+FLUENCY_CONVERSATIONS = 8
 
 _WEEK = dt.timedelta(days=7)
 _DAY = dt.timedelta(days=1)
@@ -89,6 +92,7 @@ class ProgressView:
     mistakes: tuple[MistakeTrend, ...]
     cards: CardProgress
     milestones: tuple[Milestone, ...]
+    fluency: RecordingFluency | None = None
 
 
 def _monday(day: dt.date) -> dt.date:
@@ -209,7 +213,15 @@ class ProgressService:
         words = self._reports.totals(user_id, now - RECENT)
         cards = self._cards.progress(user_id, now - RECENT)
         said = words.learner_words + words.partner_words
+        recent_calls = self._conversations.listed(user_id, limit=FLUENCY_CONVERSATIONS)
+        recorded_turns = tuple(
+            turn
+            for call in recent_calls.conversations
+            if call.started_at >= now - RECENT
+            for turn in self._conversations.transcript(user_id, call.id).turns
+        )
         return ProgressView(
+            fluency=recording_fluency(recorded_turns),
             language=language,
             level=level_view(profile, language, result.levels if result else None),
             level_history=self._levels.history(user_id, language),
