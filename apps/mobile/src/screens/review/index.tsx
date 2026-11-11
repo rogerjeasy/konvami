@@ -1,3 +1,4 @@
+import { OfflineReviewStatus } from './offline-status';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Redirect, useLocalSearchParams } from 'expo-router';
@@ -369,6 +370,7 @@ function Sitting({ aloud }: { aloud: boolean }) {
         ) : undefined
       }
     >
+      <OfflineReviewStatus revision={state} />
       {state.phase === 'card' ? (
         <>
           {/* A new card enters; the same card showing its answer stays where it is. */}
