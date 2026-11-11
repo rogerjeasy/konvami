@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
@@ -10,9 +10,12 @@ import { NoticeBox } from '@/components/notice-box';
 import { RecordingNow } from '@/components/recording-now';
 import { Sheet } from '@/components/sheet';
 import { Text } from '@/components/text';
+import { Switch } from '@/components/switch';
 import { successFeedback } from '@/lib/haptics';
-import { usePracticeServices } from '@/practice/services';
+import { usePracticeServices, usePronunciation } from '@/practice/services';
 import { useTheme } from '@/theme';
+import { assessmentAudio, canAssessAudio } from '@/voice/assessment-audio';
+import { AssessmentResult } from './assessment-result';
 import { useSpokenAttempt } from '@/voice/use-spoken-attempt';
 import { HeardWords } from './heard-words';
 import { labFailureKey, type LabDrill } from './lab';
@@ -30,15 +33,26 @@ const SLOW_RATE = 0.75;
 export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose: () => void }) {
   const { t } = useTranslation();
   const { color } = useTheme();
-  const { drillPronunciation, clips } = usePracticeServices();
+  const { drillPronunciation, clips, pronunciation } = usePracticeServices();
   const [slow, setSlow] = useState(false);
+  const [assessmentConsent, setAssessmentConsent] = useState(false);
+  const lab = usePronunciation();
+  const provider = lab.data?.assessmentProvider;
+  useEffect(() => {
+    if (drill) void pronunciation.load();
+  }, [drill, pronunciation]);
   const { step, record, stop, reset } = useSpokenAttempt(
-    (recording) => {
+    async (recording) => {
       // Recording is offered only while the sheet is open on a drill.
       if (!drill) return Promise.reject(new Error('closed'));
       return drillPronunciation(
-        { drill: drill.kind, soundId: drill.soundId, target: drill.target },
-        recording,
+        {
+          drill: drill.kind,
+          soundId: drill.soundId,
+          target: drill.target,
+          ...(assessmentConsent ? { assessmentConsent: true } : {}),
+        },
+        assessmentConsent ? await assessmentAudio(recording) : recording,
       );
     },
     (result) => {
@@ -50,6 +64,7 @@ export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose
   function close() {
     clips.stop();
     reset();
+    setAssessmentConsent(false);
     onClose();
   }
 
@@ -91,6 +106,18 @@ export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose
             </View>
           ) : null}
         </View>
+        {provider && canAssessAudio() && step.kind === 'ready' ? (
+          <View className="flex-row items-center gap-3">
+            <Text variant="small" className="flex-1">
+              {t('pronunciation.assessment.consent', { provider })}
+            </Text>
+            <Switch
+              label={t('pronunciation.assessment.enable')}
+              value={assessmentConsent}
+              onValueChange={setAssessmentConsent}
+            />
+          </View>
+        ) : null}
         {step.kind === 'ready' ? (
           <Button
             label={t('pronunciation.sheet.record')}
@@ -127,6 +154,9 @@ export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose
                 <Text variant="labelMedium">{t('pronunciation.sheet.notYet')}</Text>
               )}
               <HeardWords words={step.result.words} />
+              {step.result.assessment ? (
+                <AssessmentResult assessment={step.result.assessment} />
+              ) : null}
               {step.result.heard ? (
                 <Text variant="small" tone="muted">
                   {t('pronunciation.sheet.heard', { text: step.result.heard })}

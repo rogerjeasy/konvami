@@ -5,8 +5,14 @@ import { createFakeApi, type FakeApi } from '@/test/fake-api';
 import { createFakeProfileDevice } from '@/test/fake-profile-device';
 import { createFakeRecorder } from '@/test/fake-recorder';
 import { renderScreen } from '@/test/render';
+import { assessmentAudio } from '@/voice/assessment-audio';
 import { PronunciationLabScreen } from '.';
 import { PronunciationSoundScreen } from './sound';
+
+jest.mock('@/voice/assessment-audio', () => ({
+  canAssessAudio: () => true,
+  assessmentAudio: jest.fn(async (recording) => ({ ...recording, format: 'wav' })),
+}));
 
 jest.mock('expo-router', () => ({
   router: {
@@ -220,4 +226,27 @@ describe('5.22 One sound', () => {
 
     expect(await screen.findByText('This sound isn’t in the lab.')).toBeTruthy();
   });
+});
+
+it('offers acoustic assessment only when configured and sends it after explicit consent', async () => {
+  const api = inApp();
+  const original = api.getPronunciationSounds.bind(api);
+  jest
+    .spyOn(api, 'getPronunciationSounds')
+    .mockImplementation(async () => ({ ...(await original()), assessmentProvider: 'Test speech' }));
+  await openSound(api);
+  await fireEvent.press(screen.getByRole('button', { name: 'fühlen' }));
+  const consent = await screen.findByRole('switch', { name: 'Assess pronunciation' });
+  expect(consent).not.toBeChecked();
+  await fireEvent.press(consent);
+  await say();
+  await screen.findByText('Heard as asked!');
+  expect(assessmentAudio).toHaveBeenCalled();
+  expect(api.calls).toContainEqual([
+    'drillPronunciation',
+    expect.objectContaining({
+      assessmentConsent: true,
+      recording: expect.objectContaining({ format: 'wav' }),
+    }),
+  ]);
 });
