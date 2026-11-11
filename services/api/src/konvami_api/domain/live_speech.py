@@ -21,10 +21,10 @@ class LiveSpeech:
         self._speech = speech
 
     def available(self, user_id: UUID) -> bool:
-        return self._premium.choice_for(user_id) is not None
+        return self._premium.live_choice_for(user_id) is not None
 
     def speak(self, user_id: UUID, text: str) -> bytes:
-        choice = self._premium.choice_for(user_id)
+        choice = self._premium.live_choice_for(user_id)
         if choice is None or not text.strip() or len(text) > MAX_TURN_CHARACTERS:
             raise SpeechError("premium live speech unavailable")
         return self._speech.speak_pcm(

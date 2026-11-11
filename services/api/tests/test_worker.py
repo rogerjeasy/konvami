@@ -574,3 +574,60 @@ def test_premium_synthesis_runs_beside_the_event_loop_and_delivers_audio() -> No
     asyncio.run(run_call(call, connection, lambda: None, lambda: connection.seconds, speak=speak))
     assert any("premium_audio: " in json.dumps(event) for event in connection.sent)
     assert call.turns[0].audio is not None
+
+
+def test_failed_speech_from_an_interrupted_reply_does_not_end_the_call() -> None:
+    from konvami_api.domain.live_call import Speak, Spoken
+    from konvami_api.domain.speech import SpeechError
+
+    call = LiveCall(
+        OneTool(), max_seconds=480, wrap_up_seconds=45, goodbye_grace_seconds=8, premium=True
+    )
+    connection = Pauses(
+        [
+            {"type": "response.output_text.done", "item_id": "old", "text": "Hallo!"},
+            {"type": "input_audio_buffer.speech_started"},
+            None,
+            None,
+        ],
+        then_close=True,
+    )
+    hung_up: list[bool] = []
+
+    def speak(turn: Speak) -> Spoken:
+        raise SpeechError("unavailable")
+
+    asyncio.run(
+        run_call(
+            call, connection, lambda: hung_up.append(True), lambda: connection.seconds, speak=speak
+        )
+    )
+    assert not hung_up
+
+
+def test_call_cleanup_waits_for_inflight_speech_storage(monkeypatch: pytest.MonkeyPatch) -> None:
+    from konvami_api.domain.live_call import Speak, Spoken
+
+    monkeypatch.setattr("konvami_api.worker.CHECK_DRAIN_SECONDS", 0.001)
+    completed = threading.Event()
+
+    def speak(turn: Speak) -> Spoken:
+        time.sleep(0.08)
+        completed.set()
+        return Spoken(turn.item_id, turn.text, TurnAudio("late.wav", 1000), "https://private/late")
+
+    async def scenario() -> None:
+        call = LiveCall(
+            OneTool(), max_seconds=480, wrap_up_seconds=45, goodbye_grace_seconds=8, premium=True
+        )
+        connection = Pauses(
+            [
+                {"type": "response.output_text.done", "item_id": "last", "text": "Hallo"},
+                None,
+            ],
+            then_close=True,
+        )
+        await run_call(call, connection, lambda: None, lambda: connection.seconds, speak=speak)
+        assert completed.is_set(), "retention cleanup must not run before the last storage write"
+
+    asyncio.run(scenario())

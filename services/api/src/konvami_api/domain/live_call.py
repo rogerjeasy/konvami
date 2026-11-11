@@ -246,6 +246,9 @@ class LiveCall:
             return self._end("finished", elapsed)
         return []
 
+    def awaits_speech(self, item_id: str) -> bool:
+        return not self.ended and item_id in self._speaking
+
     def spoken(self, found: Spoken, elapsed: float) -> list[Action]:
         if self.ended or found.item_id not in self._speaking:
             return []

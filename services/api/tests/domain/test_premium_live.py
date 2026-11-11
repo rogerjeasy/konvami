@@ -67,3 +67,11 @@ def test_premium_speech_rechecks_choice_and_consent_for_every_turn() -> None:
     with pytest.raises(SpeechError):
         speech.speak(USER, "Never sent")
     assert len(pcm.tasks) == 1
+    world.accounts.accounts[USER] = replace(
+        world.accounts.get(USER),
+        premium_voice_consent=True,
+        voice_consent=False,
+    )
+    with pytest.raises(SpeechError):
+        speech.speak(USER, "General consent withdrawn")
+    assert len(pcm.tasks) == 1

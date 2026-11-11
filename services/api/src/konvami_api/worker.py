@@ -71,7 +71,7 @@ async def run_call(
     """Follows one call until it ends. `call.outcome` says how it ended."""
     started = monotonic()
     checks: set[asyncio.Task[Spotted]] = set()
-    speech: set[asyncio.Task[Spoken]] = set()
+    speech: dict[asyncio.Task[Spoken], str] = {}
     actions = call.start()
     try:
         while True:
@@ -83,7 +83,9 @@ async def run_call(
                         await _keep(call, action, keep)
                     elif isinstance(action, Speak):
                         if speak is not None:
-                            speech.add(asyncio.create_task(asyncio.to_thread(speak, action)))
+                            speech[asyncio.create_task(asyncio.to_thread(speak, action))] = (
+                                action.item_id
+                            )
                         else:
                             call.speech_failed()
                             hang_up()
@@ -101,21 +103,20 @@ async def run_call(
             elapsed = monotonic() - started
             actions = call.handle(event, elapsed) if event is not None else []
             for task in [task for task in speech if task.done()]:
-                speech.discard(task)
+                item_id = speech.pop(task)
                 if task.cancelled() or task.exception() is not None:
-                    actions += call.speech_failed()
+                    if call.awaits_speech(item_id):
+                        actions += call.speech_failed()
                 else:
                     actions += call.spoken(task.result(), elapsed)
             actions += _checked(call, checks)
             actions += call.tick(elapsed)
     finally:
         if speech:
-            await asyncio.wait(speech, timeout=CHECK_DRAIN_SECONDS)
-            for task in speech:
-                if not task.done():
-                    task.cancel()
-                elif not task.cancelled():
-                    task.exception()
+            # Cancelling a to_thread task cannot cancel its HTTP request or file write.
+            # Drain the bounded speech requests before final retention/deletion runs, otherwise
+            # late audio could be stored after a learner's recordings had already been purged.
+            await asyncio.gather(*speech, return_exceptions=True)
         if checks:
             await asyncio.wait(checks, timeout=CHECK_DRAIN_SECONDS)
             _checked(call, checks)

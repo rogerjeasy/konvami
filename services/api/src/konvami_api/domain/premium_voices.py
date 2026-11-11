@@ -171,6 +171,15 @@ class PremiumVoiceService:
             return None
         return PremiumChoice(voice, self._premium.model)
 
+    def live_choice_for(self, user_id: UUID) -> PremiumChoice | None:
+        """Both provider consents must still hold when a live reply is sent."""
+        try:
+            if not self._accounts.get(user_id).voice_consent:
+                return None
+        except AccountNotFound:
+            return None
+        return self.choice_for(user_id)
+
     def sample(self, user_id: UUID, voice_id: str) -> str:
         """A short-lived address of the voice saying the learner's language's sample sentence.
         Spoken once, then read from the store (as the partners' voices on 6.6). Raises
