@@ -128,3 +128,27 @@ terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (
 - Every root sets `allowed_account_ids`, so Terraform refuses to run against another account.
 - Never write to NextChronicle's state keys or modify its resources from here.
 - Show the plan before applying; no `-auto-approve` against shared accounts.
+
+## Optional acoustic assessment and recording tools
+
+The API module exposes disabled-by-default settings for three separate capabilities:
+
+- `azure_speech_enabled`, region and a write-only key enable Microsoft Azure Speech acoustic
+  assessment. The key is stored with the existing secret module and read only by the shared API /
+  worker role. The app requires explicit consent for each recording sent to this provider.
+  The adapter accepts at most 30 seconds of 16 kHz mono PCM WAV; the app converts recordings
+  locally. Prosody is requested only for English because the provider does not offer it for the
+  other target languages. Configure the cost model `pronunciation` with its `seconds` unit per
+  million seconds in `costs.prices`; otherwise usage is recorded as unpriced.
+- `recording_alignment_model = "whisper-1"` enables consented word timing for saved recordings;
+  an empty string disables it.
+- `recording_encoder_path` and `recording_encoder_layers` enable MP3/M4A exports only when the
+  deployed arm64 Linux executable exists. The layer must supply ffmpeg with `libmp3lame` and
+  `aac` codecs. No binary or public layer is implicitly downloaded. An empty path disables the
+  advertised compressed export formats. Review layer provenance, license and deployment size
+  before configuring its version ARN.
+
+The example tfvars contains names and placeholders only. Terraform changes require the normal
+plan review before apply. No Azure account or Speech resource is created by this AWS stack.
+
+Provider contract: [Azure short-audio REST API](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/rest-speech-to-text-short).

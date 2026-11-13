@@ -35,16 +35,20 @@ locals {
     KONVAMI_APP_CLIENT_ID     = var.auth.client_id
     KONVAMI_OPENAI_SECRET_ARN = var.openai_secret_arn
     # Empty: ElevenLabs is off and the premium voices are not offered.
-    KONVAMI_ELEVENLABS_SECRET_ARN = var.elevenlabs_secret_arn
-    KONVAMI_PREMIUM_VOICES        = jsonencode(var.premium_voices)
-    KONVAMI_CALL_WORKER           = local.call_worker_name
-    KONVAMI_MEDIA_BUCKET          = var.media_bucket.name
-    KONVAMI_VOICE                 = jsonencode(var.voice)
-    KONVAMI_TEXT_MODELS           = jsonencode(var.text_models)
-    KONVAMI_COSTS                 = jsonencode(var.costs)
-    KONVAMI_PLANS                 = jsonencode(var.plans)
-    KONVAMI_REVENUECAT_SECRET_ARN = var.store_secret_arn
-    KONVAMI_ALERT_TOPIC_ARN       = var.alert_topic_arn
+    KONVAMI_ELEVENLABS_SECRET_ARN   = var.elevenlabs_secret_arn
+    KONVAMI_AZURE_SPEECH_SECRET_ARN = var.azure_speech_secret_arn
+    KONVAMI_AZURE_SPEECH_REGION     = var.azure_speech_region
+    RECORDING_ALIGNMENT_MODEL       = var.recording_alignment_model
+    RECORDING_ENCODER_PATH          = var.recording_encoder_path
+    KONVAMI_PREMIUM_VOICES          = jsonencode(var.premium_voices)
+    KONVAMI_CALL_WORKER             = local.call_worker_name
+    KONVAMI_MEDIA_BUCKET            = var.media_bucket.name
+    KONVAMI_VOICE                   = jsonencode(var.voice)
+    KONVAMI_TEXT_MODELS             = jsonencode(var.text_models)
+    KONVAMI_COSTS                   = jsonencode(var.costs)
+    KONVAMI_PLANS                   = jsonencode(var.plans)
+    KONVAMI_REVENUECAT_SECRET_ARN   = var.store_secret_arn
+    KONVAMI_ALERT_TOPIC_ARN         = var.alert_topic_arn
   }
 
   # Crash reporting (spec §6.21.4) is on only when a Sentry DSN is given; without one the
@@ -116,6 +120,15 @@ data "aws_iam_policy_document" "api" {
     for_each = var.elevenlabs_secret_arn == "" ? [] : [var.elevenlabs_secret_arn]
     content {
       sid       = "ReadElevenLabsKey"
+      actions   = ["secretsmanager:GetSecretValue"]
+      resources = [statement.value]
+    }
+  }
+
+  dynamic "statement" {
+    for_each = var.azure_speech_secret_arn == "" ? [] : [var.azure_speech_secret_arn]
+    content {
+      sid       = "ReadAzureSpeechKey"
       actions   = ["secretsmanager:GetSecretValue"]
       resources = [statement.value]
     }
@@ -193,6 +206,7 @@ resource "aws_cloudwatch_log_group" "migrate" {
 }
 
 resource "aws_lambda_function" "api" {
+  layers        = var.recording_encoder_layers
   function_name = "${var.name}-api"
   description   = "Konvami API (FastAPI)"
   role          = aws_iam_role.api.arn

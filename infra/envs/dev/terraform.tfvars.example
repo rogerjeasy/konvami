@@ -45,3 +45,16 @@ openai_api_key = "sk-..."
 # Publish the website with the privacy policy, once apps/site/site.config.ts is filled in and the
 # site is built (pnpm --filter @konvami/site build).
 # publish_site = true
+
+# Optional, separately consented acoustic pronunciation assessment. Provision the Azure resource
+# and keep the real key only in ignored tfvars / TF_VAR_azure_speech_api_key.
+# azure_speech_enabled = true
+# azure_speech_region = "westeurope"
+# azure_speech_api_key = "..."
+# azure_speech_api_key_version = 1
+
+# Optional word alignment and audio export. The encoder layer must contain an arm64 Linux
+# ffmpeg with libmp3lame and aac codecs; assigning a path does not install the binary.
+# recording_alignment_model = "whisper-1"
+# recording_encoder_path = "/opt/bin/ffmpeg"
+# recording_encoder_layers = ["<deployed-layer-version-arn>"]

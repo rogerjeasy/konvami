@@ -315,3 +315,47 @@ variable "publish_site" {
   type        = bool
   default     = false
 }
+
+variable "azure_speech_enabled" {
+  description = "Enable acoustic pronunciation assessment using a separately consented Azure Speech resource."
+  type        = bool
+  default     = false
+}
+
+variable "azure_speech_api_key" {
+  description = "Azure Speech resource key, stored through the write-only secret module; never state or plans."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = ""
+}
+
+variable "azure_speech_api_key_version" {
+  description = "Increment when rotating the Azure Speech resource key."
+  type        = number
+  default     = 1
+}
+
+variable "azure_speech_region" {
+  description = "Azure region of the Speech resource, for example westeurope."
+  type        = string
+  default     = ""
+}
+
+variable "recording_alignment_model" {
+  description = "Optional whisper-1 word timing model; empty disables alignment."
+  type        = string
+  default     = ""
+}
+
+variable "recording_encoder_path" {
+  description = "Absolute deployed ffmpeg executable path; empty disables compressed audio exports."
+  type        = string
+  default     = ""
+}
+
+variable "recording_encoder_layers" {
+  description = "Optional Lambda layer version ARNs providing the arm64 ffmpeg binary and codecs."
+  type        = list(string)
+  default     = []
+}

@@ -65,6 +65,17 @@ module "elevenlabs_key" {
   value_version = var.elevenlabs_api_key_version
 }
 
+# Acoustic assessment is opt-in per recording and disabled without a configured resource.
+module "azure_speech_key" {
+  source = "../../modules/secret"
+  count  = var.azure_speech_enabled ? 1 : 0
+
+  name          = "${local.name}-azure-speech-key"
+  description   = "Azure Speech key for Konvami pronunciation assessment (${var.environment})"
+  value         = var.azure_speech_api_key
+  value_version = var.azure_speech_api_key_version
+}
+
 # The secret RevenueCat's webhook sends back so the API knows a purchase event is genuine
 # (spec §6.21.2). Off until RevenueCat is set up.
 module "revenuecat_webhook" {
@@ -98,9 +109,14 @@ module "api" {
     user_pool_arn = module.auth.user_pool_arn
     client_id     = module.auth.client_id
   }
-  openai_secret_arn     = module.openai_key.arn
-  elevenlabs_secret_arn = try(module.elevenlabs_key[0].arn, "")
-  premium_voices        = var.premium_voices
+  openai_secret_arn         = module.openai_key.arn
+  elevenlabs_secret_arn     = try(module.elevenlabs_key[0].arn, "")
+  premium_voices            = var.premium_voices
+  azure_speech_secret_arn   = try(module.azure_speech_key[0].arn, "")
+  azure_speech_region       = var.azure_speech_enabled ? var.azure_speech_region : ""
+  recording_alignment_model = var.recording_alignment_model
+  recording_encoder_path    = var.recording_encoder_path
+  recording_encoder_layers  = var.recording_encoder_layers
   plans = {
     enforce        = var.plans.enforce
     weekly_minutes = var.plans.weekly_minutes

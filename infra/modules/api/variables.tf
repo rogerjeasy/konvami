@@ -48,10 +48,10 @@ variable "premium_voices" {
   description = <<-EOT
     The premium voices (spec §6.21.2): ElevenLabs' text-to-speech model and the voices a learner
     can pick to have the app read aloud what it speaks outside a call (cards, the weekly check-in,
-    an exam's model answers, the sample on 6.16). Live calls stay on OpenAI's voices. The voice
+    an exam's model answers, the sample on 6.16), and consented Pro live calls. The voice
     ids are ElevenLabs' own (their voice library); the price of the model is in var.costs under
     the same name. open_to_testers: everyone may use them while the app is in the testers' hands;
-    false restricts them to the cost owners until subscriptions decide who is Pro. Nothing is
+    retained for legacy config compatibility; subscription entitlement governs access. Nothing is
     offered without a model, voices and the key's secret.
   EOT
   type = object({
@@ -235,4 +235,50 @@ variable "log_retention_days" {
   description = "How long function and access logs are kept."
   type        = number
   default     = 14
+}
+
+variable "azure_speech_secret_arn" {
+  description = "Optional Secrets Manager secret for acoustic pronunciation assessment; empty disables it."
+  type        = string
+  default     = ""
+}
+
+variable "azure_speech_region" {
+  description = "Azure Speech resource region. No audio is sent without per-drill consent."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.azure_speech_region == "" || can(regex("^[a-z][a-z0-9]{1,30}$", var.azure_speech_region))
+    error_message = "Use an Azure region name, not a URL."
+  }
+}
+
+variable "recording_alignment_model" {
+  description = "Word timing model; empty disables alignment, whisper-1 enables consented alignment."
+  type        = string
+  default     = ""
+  validation {
+    condition     = contains(["", "whisper-1"], var.recording_alignment_model)
+    error_message = "Alignment supports only whisper-1, or empty to disable."
+  }
+}
+
+variable "recording_encoder_path" {
+  description = "Absolute path to an ffmpeg binary in the deployed package or layer; empty disables MP3/M4A export."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.recording_encoder_path == "" || startswith(var.recording_encoder_path, "/")
+    error_message = "The recording encoder path must be absolute."
+  }
+}
+
+variable "recording_encoder_layers" {
+  description = "Optional arm64 Python3.12-compatible Lambda layers supplying the configured encoder and its libraries."
+  type        = list(string)
+  default     = []
+  validation {
+    condition     = length(var.recording_encoder_layers) <= 5
+    error_message = "Lambda supports at most five layers."
+  }
 }
