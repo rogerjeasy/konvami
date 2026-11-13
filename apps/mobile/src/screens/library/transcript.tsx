@@ -20,6 +20,7 @@ import { ChoiceGroup } from '@/components/choice-group';
 import { ChoiceChip } from '@/components/choice-chip';
 import type { Annotations } from '@/offline/library';
 import { NoteEditor, RecordingTools } from './tools';
+import { ConversationPronunciation } from './conversation-pronunciation';
 import { Text } from '@/components/text';
 import { timedText } from '@/lib/timed-text';
 import { formatClock, wholeMinutes } from '@/lib/format';
@@ -202,6 +203,13 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                           .catch(() => setTimingFailed(true))
                           .finally(() => setTimingBusy(null));
                       }}
+                    />
+                  ) : null}
+                  {turn.speaker === 'learner' && turn.audio ? (
+                    <ConversationPronunciation
+                      callId={conversation.id}
+                      turn={i}
+                      audio={turn.audio}
                     />
                   ) : null}
                   {annotation.note ? (
