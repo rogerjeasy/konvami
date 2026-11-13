@@ -19,6 +19,7 @@ import { formatPercent } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
 import { usePracticeServices, useProgress } from '@/practice/services';
+import { VocabularyCard } from './vocabulary-card';
 import { LastWeekCard } from './last-week-card';
 import { Milestones } from './milestones';
 import { PolishCard } from './polish-card';
@@ -100,6 +101,11 @@ function Charts({ progress }: { progress: Progress }) {
   const practice = [
     progress.lastWeek ? <LastWeekCard key="lastWeek" review={progress.lastWeek} /> : null,
     <PracticeCard key="practice" progress={progress} />,
+    <VocabularyCard
+      key="vocabulary"
+      active={progress.cards.activeWords ?? 0}
+      passive={progress.cards.passiveWords ?? 0}
+    />,
     progress.level ? (
       <LevelCard key="level" level={progress.level} history={progress.levelHistory} />
     ) : null,
