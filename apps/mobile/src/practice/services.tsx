@@ -46,6 +46,7 @@ import type {
   Phrase,
   PhraseDraft,
   PhraseSuggestion,
+  CaptionMeaning,
   ProblemWord,
   PronunciationAttempt,
   PronunciationDrill,
@@ -131,6 +132,8 @@ export interface PracticeServices {
    * Phrases for a situation; nothing is kept. Rejects with an `ApiError` (`suggestion_limit`,
    * `consent_required`, `unavailable`, …).
    */
+  lookupCaption: (language: string, word: string, caption: string) => Promise<CaptionMeaning>;
+  saveCaptionWord: (language: string, word: string, meaning: string) => Promise<Card>;
   suggestPhrases: (situation: string) => Promise<PhraseSuggestion[]>;
   /** Keeps a phrase and puts it first in the phrasebook. Rejects with an `ApiError`. */
   keepPhrase: (draft: PhraseDraft) => Promise<Phrase>;
@@ -156,6 +159,11 @@ export interface PracticeServices {
    * `soundId` is null for one of the learner's problem words. Rejects with an `ApiError`
    * (`drill_limit`, `consent_required`, `unavailable`, …).
    */
+  assessConversationPronunciation: (
+    callId: string,
+    turn: number,
+    recording: SentenceRecording,
+  ) => Promise<PronunciationAttempt>;
   drillPronunciation: (
     drill: {
       drill: PronunciationDrill;
@@ -321,6 +329,8 @@ export function createPracticeServices(
     | 'askTutor'
     | 'getPhrasebook'
     | 'savePhrase'
+    | 'lookupCaption'
+    | 'saveCaptionWord'
     | 'suggestPhrases'
     | 'makePhraseCard'
     | 'getPhraseAudio'
@@ -349,6 +359,7 @@ export function createPracticeServices(
     | 'getProblemWords'
     | 'getPronunciationAudio'
     | 'drillPronunciation'
+    | 'assessConversationPronunciation'
     | 'pickPronunciationWord'
     | 'getCard'
     | 'registerPushDevice'
@@ -411,6 +422,13 @@ export function createPracticeServices(
     reviewCards: () => createReviewSession(api),
     catalog,
     phrasebook,
+    lookupCaption: (language, word, caption) => api.lookupCaption(language, word, caption),
+    async saveCaptionWord(language, word, meaning) {
+      const card = await api.saveCaptionWord(language, word, meaning);
+      void deck.refresh();
+      void home.refresh();
+      return card;
+    },
     async suggestPhrases(situation) {
       return (await api.suggestPhrases(situation)).suggestions;
     },
@@ -437,6 +455,14 @@ export function createPracticeServices(
     pronunciation,
     readPronunciationSound: (id) => api.getPronunciationSound(id),
     pronunciationSound: async (text) => (await api.getPronunciationAudio(text)).url,
+    async assessConversationPronunciation(callId, turn, recording) {
+      const result = await api.assessConversationPronunciation(callId, turn, {
+        recording: spoken(recording),
+        assessmentConsent: true,
+      });
+      void pronunciation.refresh();
+      return result;
+    },
     async drillPronunciation(drill, recording) {
       const attempt = await api.drillPronunciation({ ...drill, recording: spoken(recording) });
       void pronunciation.refresh();

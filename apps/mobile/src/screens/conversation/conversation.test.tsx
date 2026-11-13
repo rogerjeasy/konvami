@@ -140,7 +140,9 @@ describe('5.3 Conversation', () => {
 
     await play(voice, SESSION_CREATED, personaSaid('Hallo Amara! Wie war dein Tag?'));
 
-    expect(screen.getByText('Hallo Amara! Wie war dein Tag?')).toBeTruthy();
+    for (const word of ['Hallo', 'Amara', 'Wie', 'war', 'dein', 'Tag']) {
+      expect(screen.getByRole('button', { name: `Look up ${word}` })).toBeTruthy();
+    }
     expect(screen.queryByText('Just talk. You can interrupt Lena at any time.')).toBeNull();
   });
 
@@ -151,7 +153,9 @@ describe('5.3 Conversation', () => {
     expect(screen.getByText('Lena is speaking')).toBeTruthy();
 
     await play(voice, AUDIO_STOPPED, learnerSaid('Mein Tag war gut.'));
-    expect(screen.getByText('Mein Tag war gut.')).toBeTruthy();
+    for (const word of ['Mein', 'Tag', 'war', 'gut']) {
+      expect(screen.getByRole('button', { name: `Look up ${word}` })).toBeTruthy();
+    }
   });
 
   it('shows how much time is left once the call is live', async () => {
@@ -209,13 +213,13 @@ describe('5.3 Conversation', () => {
 
     await fireEvent.press(await screen.findByRole('switch', { name: 'Show what Lena says' }));
 
-    expect(screen.queryByText('Was hast du am Wochenende gemacht?')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Look up Wochenende' })).toBeNull();
     expect(screen.getByText('Lena’s words are hidden. Listen closely.')).toBeTruthy();
     expect(getPreferences().partnerCaptions).toBe(false);
 
     await fireEvent.press(screen.getByRole('switch', { name: 'Show what Lena says' }));
 
-    expect(screen.getByText('Was hast du am Wochenende gemacht?')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Look up Wochenende' })).toBeTruthy();
   });
 
   it('rehearses the role-play that was chosen and ticks off its goals', async () => {

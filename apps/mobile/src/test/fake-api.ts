@@ -1431,6 +1431,8 @@ export function createFakeApi(): FakeApi {
         learned: cards.filter((card) => card.reviews > 0).length,
         reviews: reviewLog.length,
         remembered: reviewLog.filter(({ rating }) => rating !== 'again').length,
+        activeWords: 0,
+        passiveWords: 0,
       },
       milestones: [
         mark('first_conversation', done.conversations, 1),
@@ -2254,6 +2256,21 @@ export function createFakeApi(): FakeApi {
       await record('getPronunciationAudio', text);
       return { url: `https://files.test/pronunciation/${encodeURIComponent(text)}.mp3` };
     },
+    async assessConversationPronunciation(callId, turn, input) {
+      await record('assessConversationPronunciation', callId, turn, input);
+      return {
+        heard: 'Hallo',
+        right: true,
+        words: [{ word: 'Hallo', ok: true }],
+        assessment: {
+          provider: 'Test speech',
+          accuracy: 80,
+          fluency: 85,
+          prosody: null,
+          words: [],
+        },
+      };
+    },
     async drillPronunciation(input) {
       await record('drillPronunciation', input);
       const heard = nextDrillHeard ?? input.target;
@@ -2467,6 +2484,22 @@ export function createFakeApi(): FakeApi {
     async savePhrase(draft) {
       await record('savePhrase', draft);
       return keepPhrase(draft);
+    },
+    async lookupCaption(language, word, caption) {
+      await record('lookupCaption', { language, word, caption });
+      return {
+        word,
+        meaning: 'appointment',
+        article: 'der',
+        plural: 'Termine',
+        unsure: false,
+        saved: false,
+      };
+    },
+    async saveCaptionWord(language, word, meaning) {
+      await record('saveCaptionWord', { language, word, meaning });
+      const phrase = await this.savePhrase({ phrase: word, meaning, situation: null });
+      return this.makePhraseCard(phrase.id);
     },
     async suggestPhrases(situation) {
       await record('suggestPhrases', situation);
