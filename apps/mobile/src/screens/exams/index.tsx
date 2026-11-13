@@ -66,6 +66,16 @@ function Format({ exam }: { exam: SpeakingExam }) {
   const speaking = exam.parts.reduce((sum, part) => sum + part.seconds, 0);
   return (
     <Card className="gap-3 p-4">
+      {exam.stage && exam.stages ? (
+        <View className="gap-2">
+          <Text variant="label">
+            {t('examStages.stage', { stage: exam.stage, total: exam.stages })}
+          </Text>
+          <Text variant="small" tone="muted">
+            {t('examStages.body')}
+          </Text>
+        </View>
+      ) : null}
       <Text variant="small" tone="muted">
         {[
           t('exams.summary', { count: exam.parts.length, minutes: labels.minutes(speaking) }),

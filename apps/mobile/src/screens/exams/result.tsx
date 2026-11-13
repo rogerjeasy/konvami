@@ -165,6 +165,13 @@ export function SimulationScreen() {
     centre.phase === 'ready'
       ? centre.data.formats.find(({ id: format }) => format === examId)
       : undefined;
+  const followingStage =
+    exam?.series && exam.stage && simulation?.status === 'ready' && centre.phase === 'ready'
+      ? centre.data.formats.find(
+          (candidate) =>
+            candidate.series === exam.series && candidate.stage === (exam.stage ?? 0) + 1,
+        )
+      : undefined;
   return (
     <StepLayout
       header={
@@ -180,8 +187,8 @@ export function SimulationScreen() {
         examId ? (
           <View className="gap-1">
             <Button
-              label={t('exams.result.again')}
-              onPress={() => router.replace(examPrepRoute(examId))}
+              label={t(followingStage ? 'examStages.next' : 'exams.result.again')}
+              onPress={() => router.replace(examPrepRoute(followingStage?.id ?? examId))}
             />
             <TextButton
               tone="primary"

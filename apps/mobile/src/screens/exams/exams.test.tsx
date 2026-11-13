@@ -204,6 +204,29 @@ describe('5.18 A simulation’s score', () => {
     expect(api.calls.at(-1)).toEqual(['rescoreSimulation', 'rtc_1']);
   });
 
+  it('continues a scored staged exam with its next task', async () => {
+    const api = preparing();
+    api.simulated('rtc_1');
+    const read = api.getExamCentre.bind(api);
+    api.getExamCentre = async () => {
+      const centre = await read();
+      const original = centre.formats.find((format) => format.id === 'goethe_b1')!;
+      return {
+        ...centre,
+        formats: [
+          { ...original, series: 'practice_series', stage: 1, stages: 2 },
+          { ...original, id: 'next_task', series: 'practice_series', stage: 2, stages: 2 },
+        ],
+      };
+    };
+    await open(api);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Prepare the next stage' }));
+    expect(router.replace).toHaveBeenCalledWith({
+      pathname: '/exams/[exam]',
+      params: { exam: 'next_task' },
+    });
+  });
+
   it('offers another simulation of the same test', async () => {
     const api = preparing();
     api.simulated('rtc_1');

@@ -69,6 +69,11 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
             {exam.name}
           </Text>
           <Text tone="muted">{t('exams.prepBody')}</Text>
+          {exam.stage && exam.stages ? (
+            <Text variant="small" tone="muted">
+              {t('examStages.stage', { stage: exam.stage, total: exam.stages })}
+            </Text>
+          ) : null}
         </View>
       </Reveal>
       {exam.prepSeconds > 0 ? (

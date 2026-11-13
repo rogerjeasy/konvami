@@ -22,6 +22,7 @@ import { useMinutesBack } from '@/profile/services';
 import { useTheme } from '@/theme';
 import { withLine } from '@/voice/problems';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
+import { SpeakingWindow } from './stage-timer';
 import { ExamCard } from './exam-card';
 import { useExamLabels } from '@/hooks/use-exam-labels';
 import { useExamNotes } from './notes';
@@ -159,6 +160,17 @@ function Test({ next, onRetry }: { next: NextSimulation; onRetry: () => void }) 
               };
             })}
           />
+          {exam.series && part ? (
+            <SpeakingWindow
+              key={part.id}
+              ready={
+                live && (conversation.phase === 'listening' || conversation.phase === 'hearing')
+              }
+              seconds={part.seconds}
+              label={t('examStages.speaking')}
+              onEnd={toResult}
+            />
+          ) : null}
           {part && card ? (
             <ExamCard
               heading={`${labels.part(index, part.kind)} · ${labels.minutes(part.seconds)}`}
