@@ -24,6 +24,7 @@ import { conversationDoneRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices, useScenarios } from '@/practice/services';
 import { usePaywall, usePurchaseDevice } from '@/plan/services';
 import { useMinutesBack, usePlan } from '@/profile/services';
+import { CaptionLookupSheet, type CaptionSelection } from './caption-lookup';
 import { Goals } from './goals';
 import { CorrectionSheet, LiveCorrections } from './live-corrections';
 import { CallPlanStrip } from './plan';
@@ -170,11 +171,13 @@ function HelpSheet({
 
 /** One live call with a partner. Mounted anew for every attempt (see `LiveConversationScreen`). */
 function Call({
+  language,
   partner,
   scenario,
   practise,
   onRetry,
 }: {
+  language: string;
   partner: Persona;
   /** The role-play, for one; its goals show once the catalog is read. */
   scenario?: string;
@@ -183,6 +186,8 @@ function Call({
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
+  const { lookupCaption, saveCaptionWord } = usePracticeServices();
+  const [selectedWord, setSelectedWord] = useState<CaptionSelection | null>(null);
   const call = useVoiceCall('practice', partner.id, scenario, practise);
   const { scenarios } = useScenarios();
   const rolePlay = scenario ? scenarios?.find(({ id }) => id === scenario) : undefined;
@@ -225,6 +230,7 @@ function Call({
     <CallStage
       call={call}
       persona={partner}
+      onLookupWord={(word, caption) => setSelectedWord({ language, word, caption })}
       hint={t('conversation.hint', { name: partner.name })}
       finishedLabel={t('conversation.finished')}
       problem={call.problem && !lost ? withLine(t(problemKey(call.problem)), minutesBack) : null}
@@ -269,6 +275,21 @@ function Call({
             }}
           />
           {/* Modals: where they sit in the tree does not change where they show. */}
+          <CaptionLookupSheet
+            selection={selectedWord}
+            onClose={() => setSelectedWord(null)}
+            lookup={lookupCaption}
+            save={saveCaptionWord}
+            labels={{
+              loading: t('captionLookup.loading'),
+              failed: t('captionLookup.failed'),
+              save: t('captionLookup.save'),
+              saved: t('captionLookup.saved'),
+              uncertain: t('captionLookup.uncertain'),
+              saveFailed: t('captionLookup.saveFailed'),
+              plural: t('captionLookup.plural'),
+            }}
+          />
           <CorrectionSheet correction={explaining} onClose={() => setExplaining(null)} />
           <HelpSheet
             walking={walking}
@@ -378,6 +399,7 @@ export function LiveConversationScreen() {
   return (
     <Call
       key={attempt}
+      language={home.data.language}
       partner={partner}
       scenario={scenario}
       practise={practise}
