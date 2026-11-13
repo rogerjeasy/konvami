@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
@@ -194,6 +195,40 @@ describe('5.18 A simulation’s score', () => {
     );
   });
 
+  it('keeps acoustic estimates separate and reports skipped audio without fabricated prosody', async () => {
+    const api = preparing();
+    api.simulated('rtc_1');
+    const read = api.getSimulation;
+    api.getSimulation = async (id) => {
+      const simulation = await read(id);
+      return {
+        ...simulation,
+        result: simulation.result
+          ? {
+              ...simulation.result,
+              pronunciation: {
+                provider: 'Azure Speech',
+                accuracy: 72.5,
+                fluency: 80,
+                prosody: null,
+                assessedTurns: 2,
+                skippedTurns: 1,
+                assessedSeconds: 12.5,
+              },
+            }
+          : null,
+      };
+    };
+    await open(api);
+    expect(await screen.findByText('Pronunciation estimate')).toBeTruthy();
+    expect(screen.getByText('72.5 / 100')).toBeTruthy();
+    expect(screen.queryByText('Stress and rhythm')).toBeNull();
+    expect(
+      screen.getByText('2 answers assessed · 12.5 seconds · 1 answers partly or entirely skipped'),
+    ).toBeTruthy();
+    expect(screen.getByText('Above the pass mark of 60%')).toBeTruthy();
+  });
+
   it('says why a test has no score, and asks again for one that failed', async () => {
     const api = preparing();
     api.simulated('rtc_1', { status: 'failed' });
@@ -235,5 +270,56 @@ describe('5.18 A simulation’s score', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Another simulation' }));
 
     expect(router.replace).toHaveBeenCalledWith(prepRoute);
+  });
+});
+
+describe('Optional exam pronunciation consent', () => {
+  async function flow(provider: string | null = 'Azure Speech') {
+    const api = preparing();
+    const original = api.getNextSimulation;
+    api.getNextSimulation = async (id) => ({
+      ...(await original(id)),
+      assessmentProvider: provider,
+    });
+    const voice = createFakeVoiceEngine();
+    jest.mocked(useLocalSearchParams).mockReturnValue({ exam: 'goethe_b1' });
+    function Flow() {
+      const [talking, setTalking] = useState(false);
+      jest.mocked(router.replace).mockImplementation(() => setTalking(true));
+      return talking ? <ExamTalkScreen /> : <ExamPrepScreen />;
+    }
+    await renderScreen(<Flow />, { api, voice, signedIn: true });
+    await screen.findByRole('button', { name: 'Start the test' });
+    return voice;
+  }
+
+  it('defaults off and offers no unavailable acoustic service', async () => {
+    const voice = await flow(null);
+    expect(screen.queryByRole('switch', { name: 'Include pronunciation feedback' })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: 'Start the test' }));
+    await waitFor(() => expect(voice.openedAssessments).toEqual([false]));
+  });
+
+  it('passes consent only after the learner opts in on preparation', async () => {
+    const voice = await flow();
+    const choice = screen.getByRole('switch', { name: 'Include pronunciation feedback' });
+    expect(choice.props.accessibilityState.checked).toBe(false);
+    expect(screen.getByText(/I agree to send my recorded answers to Azure Speech/)).toBeTruthy();
+    await fireEvent.press(choice);
+    await fireEvent.press(screen.getByRole('button', { name: 'Start the test' }));
+    await waitFor(() => expect(voice.openedAssessments).toEqual([true]));
+  });
+
+  it('a direct talk link does not grant acoustic consent', async () => {
+    const api = preparing();
+    const original = api.getNextSimulation;
+    api.getNextSimulation = async (id) => ({
+      ...(await original(id)),
+      assessmentProvider: 'Azure Speech',
+    });
+    const voice = createFakeVoiceEngine();
+    jest.mocked(useLocalSearchParams).mockReturnValue({ exam: 'goethe_b1', assessment: '1' });
+    await renderScreen(<ExamTalkScreen />, { api, voice, signedIn: true });
+    await waitFor(() => expect(voice.openedAssessments).toEqual([false]));
   });
 });

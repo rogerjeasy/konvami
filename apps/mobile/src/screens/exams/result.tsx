@@ -100,8 +100,9 @@ function PartCard({
 }
 
 function Scored({ simulation, exam }: { simulation: Simulation; exam: SpeakingExam | undefined }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const labels = useExamLabels();
+  const number = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 });
   const result = simulation.result;
   if (!result) return null;
   const pass = labels.percent(result.passShare);
@@ -126,6 +127,39 @@ function Scored({ simulation, exam }: { simulation: Simulation; exam: SpeakingEx
           <Text variant="callout">{result.summary}</Text>
         </Card>
       </Reveal>
+      {result.pronunciation ? (
+        <Reveal delay={staggerDelay(2)}>
+          <Card className="gap-3 p-4">
+            <Text variant="heading" accessibilityRole="header">
+              {t('examAcoustics.title')}
+            </Text>
+            <Text variant="small" tone="muted">
+              {t('examAcoustics.separate', { provider: result.pronunciation.provider })}
+            </Text>
+            {(['accuracy', 'fluency', 'prosody'] as const).map((metric) => {
+              const value = result.pronunciation?.[metric];
+              return value != null ? (
+                <View key={metric} className="flex-row justify-between gap-3">
+                  <Text className="flex-1">{t(`examAcoustics.${metric}`)}</Text>
+                  <Text variant="label">
+                    {t('examAcoustics.metric', { value: number.format(value) })}
+                  </Text>
+                </View>
+              ) : null;
+            })}
+            {result.pronunciation.assessedTurns === 0 ? (
+              <Text tone="muted">{t('examAcoustics.missing')}</Text>
+            ) : null}
+            <Text variant="small" tone="muted">
+              {t('examAcoustics.coverage', {
+                turns: number.format(result.pronunciation.assessedTurns),
+                seconds: number.format(result.pronunciation.assessedSeconds),
+                skipped: number.format(result.pronunciation.skippedTurns),
+              })}
+            </Text>
+          </Card>
+        </Reveal>
+      ) : null}
       {result.parts.map((score, i) => (
         <Reveal key={score.part} delay={staggerDelay(Math.min(i, 3) + 2)}>
           <PartCard simulation={simulation} exam={exam} index={i} score={score} />

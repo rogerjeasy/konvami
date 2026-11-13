@@ -95,9 +95,17 @@ function Notes() {
 function Test({ next, onRetry }: { next: NextSimulation; onRetry: () => void }) {
   const { t } = useTranslation();
   const labels = useExamLabels();
-  const { reset } = useExamNotes();
+  const { draft, update, reset } = useExamNotes();
   const { exam, cards } = next;
-  const call = useVoiceCall('exam', undefined, exam.id);
+  const [consented] = useState(
+    draft.assessmentExam === exam.id && Boolean(next.assessmentProvider),
+  );
+  useEffect(() => {
+    update({ assessmentExam: null });
+  }, [update]);
+  const call = useVoiceCall('exam', undefined, exam.id, undefined, {
+    assessmentConsent: consented,
+  });
   const { conversation } = call;
 
   /** Ends the call and opens the score, which waits there to be written. */

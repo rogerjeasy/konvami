@@ -1,3 +1,4 @@
+import { EXAM_ACOUSTICS } from '../exam-acoustics';
 import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
@@ -10,6 +11,7 @@ import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
  * with the illustrations in src/screens/intro/sample-content.ts.
  */
 export const en = {
+  examAcoustics: EXAM_ACOUSTICS.en,
   captionLookup: CAPTION_LOOKUP.en,
   examStages: EXAM_STAGES.en,
   offlineLibrary: offlineLibrary.en,

@@ -6,8 +6,13 @@ import { createDraft } from '@/lib/draft';
  */
 export interface ExamNotes {
   notes: string;
+  /** One preparation screen authorizes one exam, in memory only. */
+  assessmentExam: string | null;
 }
 
-const { Provider, useDraft } = createDraft<ExamNotes>('Exam notes', { notes: '' });
+const { Provider, useDraft } = createDraft<ExamNotes>('Exam notes', {
+  notes: '',
+  assessmentExam: null,
+});
 
 export { Provider as ExamNotesProvider, useDraft as useExamNotes };

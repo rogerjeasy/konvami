@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import type { NextSimulation } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
+import { Card } from '@/components/card';
+import { Switch } from '@/components/switch';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
@@ -44,6 +46,7 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
   const labels = useExamLabels();
   const { draft, update } = useExamNotes();
   const { exam, cards } = next;
+  const [assessment, setAssessment] = useState(false);
   const speaking = exam.parts.reduce((sum, part) => sum + part.seconds, 0);
   return (
     <StepLayout
@@ -57,6 +60,7 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
             label={t('exams.start')}
             onPress={() => {
               commitFeedback();
+              update({ assessmentExam: assessment && next.assessmentProvider ? exam.id : null });
               router.replace(examTalkRoute(exam.id));
             }}
           />
@@ -107,6 +111,25 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
           </Reveal>
         ) : null;
       })}
+      {next.assessmentProvider ? (
+        <Reveal delay={staggerDelay(4)}>
+          <Card className="gap-3 p-4">
+            <View className="flex-row items-center gap-3">
+              <Text variant="label" className="flex-1">
+                {t('examAcoustics.optIn')}
+              </Text>
+              <Switch
+                label={t('examAcoustics.optIn')}
+                value={assessment}
+                onValueChange={setAssessment}
+              />
+            </View>
+            <Text variant="small" tone="muted">
+              {t('examAcoustics.consent', { provider: next.assessmentProvider })}
+            </Text>
+          </Card>
+        </Reveal>
+      ) : null}
       <Reveal delay={staggerDelay(5)}>
         <View className="gap-1">
           <TextField
@@ -146,7 +169,8 @@ export function ExamPrepScreen() {
       />
     </View>
   );
-  if (next.phase === 'ready') return <Prep next={next.data} header={header} />;
+  if (next.phase === 'ready')
+    return <Prep key={next.data.exam.id} next={next.data} header={header} />;
   return (
     <StepLayout header={header}>
       <LoadState

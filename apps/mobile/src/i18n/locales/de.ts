@@ -1,3 +1,4 @@
+import { EXAM_ACOUSTICS } from '../exam-acoustics';
 import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
@@ -7,6 +8,7 @@ import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
 
 export const de: Translation = {
+  examAcoustics: EXAM_ACOUSTICS.de,
   captionLookup: CAPTION_LOOKUP.de,
   examStages: EXAM_STAGES.de,
   offlineLibrary: offlineLibrary.de,
