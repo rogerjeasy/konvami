@@ -160,9 +160,15 @@ export function createRtcSession(primitives: RtcPrimitives): RtcSession {
           MICROPHONE_ERRORS[(error as { name?: string })?.name ?? ''] ?? 'unknown',
         );
       }
+      if (closed) {
+        microphone.getTracks().forEach((track) => track.stop());
+        microphone = null;
+        throw new VoiceError('stopped');
+      }
       const stream = microphone;
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       const offer = await peer.createOffer();
+      if (closed) throw new VoiceError('stopped');
       await peer.setLocalDescription(offer);
       return offer.sdp ?? '';
     },

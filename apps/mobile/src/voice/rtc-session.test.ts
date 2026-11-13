@@ -39,6 +39,21 @@ function fakePlatform({ microphone = 'granted' as 'granted' | 'denied' | 'missin
 }
 
 describe('setting up the call', () => {
+  it('releases permission-delayed microphone tracks when the call was cancelled', async () => {
+    const { primitives, track, stream, peer } = fakePlatform();
+    let release!: () => void;
+    primitives.getMicrophone = () =>
+      new Promise((resolve) => {
+        release = () => resolve(stream);
+      });
+    const session = createRtcSession(primitives);
+    const offering = session.offer();
+    session.close();
+    release();
+    await expect(offering).rejects.toMatchObject({ code: 'stopped' });
+    expect(track.stop).toHaveBeenCalledTimes(1);
+    expect(peer.addTrack).not.toHaveBeenCalled();
+  });
   it('offers the microphone and an events channel', async () => {
     const { primitives, peer, track, stream } = fakePlatform();
     const session = createRtcSession(primitives);
