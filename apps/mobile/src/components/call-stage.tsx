@@ -11,6 +11,7 @@ import { Avatar } from '@/components/avatar/avatar';
 import type { AvatarLook, AvatarMood } from '@/components/avatar/look';
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
+import { CaptionWords } from '@/components/caption-words';
 import { ChatBubble } from '@/components/chat';
 import { HeroLayout } from '@/components/hero-layout';
 import { Icon } from '@/components/icon';
@@ -100,6 +101,7 @@ export function CallStage({
   problem,
   failedActions,
   compact = false,
+  onLookupWord,
 }: {
   call: VoiceCall;
   /** Who the learner is talking to. */
@@ -137,6 +139,7 @@ export function CallStage({
   failedActions: ReactNode;
   /** Keeps the portrait small, so that `progress` has the room (an exam's task card). */
   compact?: boolean;
+  onLookupWord?: (word: string, caption: string) => void;
 }) {
   const heroShare = compact ? COMPACT_HERO_SHARE : HERO_SHARE;
   const { t } = useTranslation();
@@ -146,6 +149,20 @@ export function CallStage({
   const { height: windowHeight } = useWindowDimensions();
   const { conversation } = call;
   const { name } = persona;
+
+  const captionContent = (text: string, learner = false) =>
+    onLookupWord ? (
+      <CaptionWords
+        tone={learner ? 'onPrimary' : 'primary'}
+        caption={text}
+        lookupLabel={(word) => t('captionLookup.lookup', { word })}
+        onSelect={onLookupWord}
+      />
+    ) : (
+      <Text variant="emphasis" className="text-center">
+        {text}
+      </Text>
+    );
 
   const live = call.status === 'live';
   const failed = call.status === 'failed';
@@ -225,16 +242,23 @@ export function CallStage({
                   <Text tone="muted" className="text-center">
                     {hiddenPersonaText}
                   </Text>
-                  <RevealCaption text={line.text} hiddenLabel={t('call.revealCaption')} />
+                  <RevealCaption
+                    text={line.text}
+                    hiddenLabel={t('call.revealCaption')}
+                    content={captionContent(line.text)}
+                  />
                 </View>
               ) : (
-                <Text key={line.id} variant="emphasis" className="text-center">
-                  {line.text}
-                </Text>
+                <View key={line.id}>{captionContent(line.text)}</View>
               )
             ) : (
               <View key={line.id} className="gap-2">
-                <ChatBubble from="learner">{line.text}</ChatBubble>
+                <ChatBubble
+                  from="learner"
+                  content={onLookupWord ? captionContent(line.text, true) : undefined}
+                >
+                  {line.text}
+                </ChatBubble>
                 {belowLearner}
               </View>
             ),

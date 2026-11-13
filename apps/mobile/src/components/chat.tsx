@@ -11,12 +11,14 @@ import { ILLUSTRATION_MAX_FONT_SCALE } from '@/lib/layout';
 export function ChatBubble({
   from,
   children,
+  content,
   gloss,
   decorative = false,
   accessibilityLabel,
 }: {
   from: 'persona' | 'learner';
   children: ReactNode;
+  content?: ReactNode;
   /** A translation shown under the line. */
   gloss?: string;
   /** Inside an illustration: caps text growth so the drawing keeps its shape. */
@@ -36,9 +38,11 @@ export function ChatBubble({
           : 'self-end rounded-br-sm bg-primary'
       }`}
     >
-      <Text variant="chat" tone={persona ? 'fg' : 'onPrimary'} maxFontSizeMultiplier={scale}>
-        {children}
-      </Text>
+      {content ?? (
+        <Text variant="chat" tone={persona ? 'fg' : 'onPrimary'} maxFontSizeMultiplier={scale}>
+          {children}
+        </Text>
+      )}
       {gloss ? (
         <Text variant="caption" tone="subtle" className="mt-0.5" maxFontSizeMultiplier={scale}>
           {gloss}

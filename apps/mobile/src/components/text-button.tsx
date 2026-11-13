@@ -10,7 +10,10 @@ export function TextButton({
   label,
   tone = 'muted',
   ...rest
-}: Omit<PressableProps, 'children' | 'style'> & { label: string; tone?: 'muted' | 'primary' }) {
+}: Omit<PressableProps, 'children' | 'style'> & {
+  label: string;
+  tone?: 'muted' | 'primary' | 'onPrimary';
+}) {
   return (
     <PressScale accessibilityRole="button" accessibilityLabel={label} {...rest}>
       <View className="min-h-tap min-w-tap items-center justify-center px-3.5">
