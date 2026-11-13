@@ -604,6 +604,7 @@ export const en = {
     },
   },
   call: {
+    reconnecting: 'Reconnecting… continuing from the saved conversation',
     walking: 'Walking mode',
     walkingHint:
       'Keep this call going with the screen off. Use headphones; your microphone stays on.',

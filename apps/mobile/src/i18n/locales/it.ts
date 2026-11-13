@@ -613,6 +613,7 @@ export const it: Translation = {
     },
   },
   call: {
+    reconnecting: 'Riconnessione… ripresa della conversazione salvata',
     walking: 'Modalità passeggiata',
     walkingHint: 'Continua la chiamata a schermo spento. Usa le cuffie; il microfono resta attivo.',
     walkingFailed:

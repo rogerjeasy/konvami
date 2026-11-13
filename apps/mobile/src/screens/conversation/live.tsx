@@ -195,7 +195,7 @@ function Call({
   const { partnerCaptions, liveCorrections } = usePreferences();
   const [helping, setHelping] = useState(false);
   const [explaining, setExplaining] = useState<LiveCorrection | null>(null);
-  const canHelp = call.status === 'live' && !conversation.finished;
+  const canHelp = call.status === 'live' && !call.reconnecting && !conversation.finished;
   const minutesBack = useMinutesBack(call.problem === 'minutes_used_up');
   const paywall = usePaywall();
   const device = usePurchaseDevice();

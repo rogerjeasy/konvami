@@ -166,7 +166,7 @@ export function CallStage({
 
   const live = call.status === 'live';
   const failed = call.status === 'failed';
-  const phase: ConversationPhase = live ? conversation.phase : 'connecting';
+  const phase: ConversationPhase = live && !call.reconnecting ? conversation.phase : 'connecting';
   // The latest line of each speaker, in the order they were spoken.
   const lines = conversation.captions.filter(
     (caption, index, all) => all.findLastIndex((c) => c.speaker === caption.speaker) === index,
@@ -215,7 +215,11 @@ export function CallStage({
                 accessibilityLiveRegion="polite"
                 className="text-center"
               >
-                {conversation.finished ? finishedLabel : t(`call.status.${phase}`, { name })}
+                {call.reconnecting
+                  ? t('call.reconnecting')
+                  : conversation.finished
+                    ? finishedLabel
+                    : t(`call.status.${phase}`, { name })}
               </Text>
             )}
             {live && call.muted ? (

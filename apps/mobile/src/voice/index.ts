@@ -14,14 +14,28 @@ export * from './sentence-recorder';
 export { useAppSentenceRecorder } from './app-recorder';
 
 /** The app's voice engine: WebRTC on this platform, calls created through the Konvami API. */
-export const createAppVoiceEngine: VoiceEngineFactory = (purpose, personaId, scenario, practise) =>
+export const createAppVoiceEngine: VoiceEngineFactory = (
+  purpose,
+  personaId,
+  scenario,
+  practise,
+  options,
+) =>
   createVoiceEngine({
     createSession: createPlatformRtcSession,
     clips: createClipPlayer(),
+    ...(purpose === 'practice'
+      ? {
+          continueCall: (rootId: string, attemptId: string, sdpOffer: string) =>
+            api.continueVoiceCall(rootId, attemptId, sdpOffer),
+          endCall: (rootId: string) => api.endVoiceCall(rootId),
+        }
+      : {}),
     startCall: (sdpOffer) =>
       api.startVoiceCall(purpose, sdpOffer, {
         personaId,
         ...(purpose === 'practice' && getPreferences().premiumCalls ? { premium: true } : {}),
+        ...(purpose === 'exam' && options?.assessmentConsent ? { assessmentConsent: true } : {}),
         localDate: toIsoDate(calendarDateOf(new Date())),
         scenario,
         practise,

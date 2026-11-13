@@ -618,6 +618,7 @@ export const de: Translation = {
     },
   },
   call: {
+    reconnecting: 'Verbindung wird wiederhergestellt… das gespeicherte Gespräch wird fortgesetzt',
     walking: 'Unterwegs-Modus',
     walkingHint:
       'Führe dieses Gespräch bei ausgeschaltetem Bildschirm fort. Nutze Kopfhörer; dein Mikrofon bleibt an.',

@@ -985,6 +985,8 @@ export const FAKE_PEN_PAL_NOTE: PenPalNote = {
 export const FAKE_PEN_PAL_HEARD = 'Ich habe gestern ein Film gesehen';
 
 export function createFakeApi(): FakeApi {
+  let activeCall: Awaited<ReturnType<ApiClient['startVoiceCall']>> | null = null;
+  let callEndsAt = 0;
   const fields = new Map<string, unknown>();
   // Where a value came from, for the fields the learner did not give themselves.
   const sources = new Map<string, ProfileSource>();
@@ -1768,7 +1770,19 @@ export function createFakeApi(): FakeApi {
               rehearse: aboutImport?.[1] === 'letter',
             }
           : null;
-      return { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds, plan };
+      activeCall = { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds, plan };
+      callEndsAt = Date.now() + maxSeconds * 1000;
+      return activeCall;
+    },
+    async continueVoiceCall(callId, attemptId, sdpOffer) {
+      await record('continueVoiceCall', callId, attemptId, sdpOffer);
+      if (!activeCall || activeCall.callId !== callId || Date.now() >= callEndsAt)
+        throw new ApiError('continuation_unavailable', 409);
+      return { ...activeCall, maxSeconds: Math.ceil((callEndsAt - Date.now()) / 1000) };
+    },
+    async endVoiceCall(callId) {
+      await record('endVoiceCall', callId);
+      if (activeCall?.callId === callId) activeCall = null;
     },
     async getHome(timeZone) {
       await record('getHome', timeZone);

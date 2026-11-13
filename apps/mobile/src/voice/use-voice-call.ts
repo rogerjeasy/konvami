@@ -15,6 +15,8 @@ export type CallProblem = VoiceErrorCode | 'lost';
 export interface VoiceCall {
   status: 'starting' | 'live' | 'failed';
   problem: CallProblem | null;
+  /** The same logical practice call is acquiring a replacement transport. */
+  reconnecting?: boolean;
   /** The call's id on the server and its time limit (seconds); null until it is live. */
   callId: string | null;
   maxSeconds: number | null;
@@ -55,10 +57,13 @@ export function useVoiceCall(
   personaId?: string,
   scenario?: string,
   practise?: string,
+  options?: { assessmentConsent?: boolean },
 ): VoiceCall {
+  const assessmentConsent = options?.assessmentConsent ?? false;
   const createEngine = useVoiceEngineFactory();
   const [status, setStatus] = useState<VoiceCall['status']>('starting');
   const [problem, setProblem] = useState<CallProblem | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
   const [started, setStarted] = useState<StartedCall | null>(null);
   const [conversation, dispatch] = useReducer(conversationReducer, INITIAL_CONVERSATION);
   const [muted, setMuted] = useState(false);
@@ -69,17 +74,25 @@ export function useVoiceCall(
   const voice = useSharedValue(0);
 
   useEffect(() => {
-    const call = createEngine(purpose, personaId, scenario, practise);
+    const call = createEngine(purpose, personaId, scenario, practise, { assessmentConsent });
     engine.current = call;
     let current = true;
     const fail = (reason: CallProblem) => {
       if (!current) return;
       setProblem(reason);
+      setReconnecting(false);
       setStatus('failed');
     };
     const unsubscribe = call.subscribe((event) => {
       if (!current) return;
-      if ((event as { type?: unknown } | null)?.type === 'connection.lost') {
+      const connection = event as { type?: unknown; muted?: boolean } | null;
+      if (
+        connection?.type === 'connection.reconnecting' ||
+        connection?.type === 'connection.restored'
+      ) {
+        setReconnecting(connection.type === 'connection.reconnecting');
+        if (typeof connection.muted === 'boolean') setMuted(connection.muted);
+      } else if (connection?.type === 'connection.lost') {
         call.stop();
         fail('lost');
       } else {
@@ -101,37 +114,53 @@ export function useVoiceCall(
       unsubscribe();
       call.stop();
     };
-  }, [createEngine, purpose, personaId, scenario, practise]);
+  }, [createEngine, purpose, personaId, scenario, practise, assessmentConsent]);
 
   // The lips and the listening ring follow the voice levels while the call is live.
   const speaking = conversation.phase === 'speaking';
   useEffect(() => {
-    if (status !== 'live') return;
+    if (status !== 'live' || reconnecting) return;
+    let current = true;
+    let pending = false;
     const follow = (target: SharedValue<number>, level: number) =>
       target.set(withTiming(level, { duration: motion.lipSync }));
     let tick = 0;
     const timer = setInterval(() => {
-      void engine.current?.levels().then((levels) => {
-        follow(mouth, speaking ? mouthOpenness(levels.persona) : 0);
-        // A shape, not a blend: it changes at once and the open mouth fades it in and out.
-        viseme.set(speaking ? visemeIndex(visemeAt(levels.persona, tick++)) : 0);
-        follow(voice, muted ? 0 : mouthOpenness(levels.learner));
-      });
+      const call = engine.current;
+      if (pending || !call) return;
+      pending = true;
+      void call
+        .levels()
+        .then((levels) => {
+          if (!current || engine.current !== call) return;
+          follow(mouth, speaking ? mouthOpenness(levels.persona) : 0);
+          // A shape, not a blend: it changes at once and the open mouth fades it in and out.
+          viseme.set(speaking ? visemeIndex(visemeAt(levels.persona, tick++)) : 0);
+          follow(voice, muted ? 0 : mouthOpenness(levels.learner));
+        })
+        .catch(() => {
+          // Closing a transport can reject an in-flight stats request; it is not a call failure.
+        })
+        .finally(() => {
+          pending = false;
+        });
     }, LEVEL_INTERVAL_MS);
     return () => {
+      current = false;
       clearInterval(timer);
       follow(mouth, 0);
       follow(voice, 0);
       viseme.set(0);
     };
-  }, [status, speaking, muted, mouth, viseme, voice]);
+  }, [status, reconnecting, speaking, muted, mouth, viseme, voice]);
 
   const toggleMute = useCallback(() => {
+    if (pushToTalk) return;
     setMuted((current) => {
       engine.current?.setMuted(!current);
       return !current;
     });
-  }, []);
+  }, [pushToTalk]);
 
   const say = useCallback((text: string) => engine.current?.say(text), []);
   const help = useCallback((kind: HelpKind) => engine.current?.help(kind), []);
@@ -140,6 +169,7 @@ export function useVoiceCall(
   return {
     status,
     problem,
+    reconnecting,
     callId: started?.callId ?? null,
     maxSeconds: started?.maxSeconds ?? null,
     plan: started?.plan ?? null,
@@ -153,8 +183,7 @@ export function useVoiceCall(
       setMuted(enabled);
     },
     beginTurn: () => {
-      engine.current?.beginTurn();
-      setMuted(false);
+      if (engine.current?.beginTurn()) setMuted(false);
     },
     endTurn: () => {
       engine.current?.endTurn();

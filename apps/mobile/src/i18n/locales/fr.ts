@@ -616,6 +616,7 @@ export const fr: Translation = {
     },
   },
   call: {
+    reconnecting: 'Reconnexion… reprise de la conversation enregistrée',
     walking: 'Mode marche',
     walkingHint:
       'Continue cet appel avec l’écran éteint. Utilise des écouteurs ; ton microphone reste actif.',

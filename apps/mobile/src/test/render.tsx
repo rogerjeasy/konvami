@@ -132,11 +132,12 @@ export async function renderScreen(
                 <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
                   <RecorderProvider useRecorder={() => sentences}>
                     <VoiceProvider
-                      createEngine={(purpose, personaId, scenario, practise) => {
+                      createEngine={(purpose, personaId, scenario, practise, options) => {
                         engine.openedFor.push(purpose);
                         engine.openedWith.push(personaId);
                         engine.openedScenarios.push(scenario);
                         engine.openedPractise.push(practise);
+                        engine.openedAssessments.push(options?.assessmentConsent ?? false);
                         return engine;
                       }}
                     >

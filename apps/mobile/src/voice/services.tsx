@@ -12,6 +12,7 @@ export type VoiceEngineFactory = (
   personaId?: string,
   scenario?: string,
   practise?: string,
+  options?: { assessmentConsent?: boolean },
 ) => VoiceEngine;
 
 const VoiceContext = createContext<VoiceEngineFactory | null>(null);

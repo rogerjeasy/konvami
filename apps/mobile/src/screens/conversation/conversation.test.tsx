@@ -181,6 +181,24 @@ describe('5.3 Conversation', () => {
     expect(voice.muted).toBe(false);
   });
 
+  it('keeps captions, the original countdown and End available during continuation', async () => {
+    jest.useFakeTimers();
+    const { voice } = await live();
+    await play(voice, SESSION_CREATED, personaSaid('Hallo Amara!'));
+    await act(async () => jest.advanceTimersByTime(2000));
+    expect(screen.getByText('9:58 left')).toBeTruthy();
+    await play(voice, { type: 'connection.reconnecting', muted: true });
+    expect(screen.getByText('Reconnecting… continuing from the saved conversation')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Look up Hallo' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'End conversation' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Help' })).toBeDisabled();
+    await act(async () => jest.advanceTimersByTime(1000));
+    await play(voice, { type: 'connection.restored', muted: true });
+    expect(screen.getByText('9:57 left')).toBeTruthy();
+    expect(screen.getByText('Your microphone is off')).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
   it('asks the partner for help from the help sheet', async () => {
     const { voice } = await live();
     await play(voice, SESSION_CREATED, personaSaid('Was hast du am Wochenende gemacht?'));
