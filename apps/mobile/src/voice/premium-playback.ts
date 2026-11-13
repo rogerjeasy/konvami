@@ -6,7 +6,7 @@ interface Reply {
   url: string;
   milliseconds: number;
 }
-const PREFIX = 'premium_audio: ';
+export const PREMIUM_AUDIO_NOTE = 'premium_audio: ';
 // A live turn is bounded by the call limit; reject malformed receipts before playing them.
 const MAX_TURN_MS = 10 * 60 * 1000;
 
@@ -16,10 +16,10 @@ function replyOf(event: unknown): Reply | null {
     item?: { role?: string; content?: { text?: string }[] };
   } | null;
   if (e?.type !== 'conversation.item.done' || e.item?.role !== 'system') return null;
-  const note = e.item.content?.find((part) => part.text?.startsWith(PREFIX))?.text;
+  const note = e.item.content?.find((part) => part.text?.startsWith(PREMIUM_AUDIO_NOTE))?.text;
   if (!note) return null;
   try {
-    const reply = JSON.parse(note.slice(PREFIX.length)) as Partial<Reply>;
+    const reply = JSON.parse(note.slice(PREMIUM_AUDIO_NOTE.length)) as Partial<Reply>;
     return typeof reply.id === 'string' &&
       typeof reply.text === 'string' &&
       typeof reply.url === 'string' &&

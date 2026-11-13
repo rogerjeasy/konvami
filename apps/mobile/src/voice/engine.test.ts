@@ -19,6 +19,14 @@ function fakeSession(overrides: Partial<RtcSession> = {}) {
   return { session, emit: (event: unknown) => listener(event), drop: () => closedListener() };
 }
 
+function readySession() {
+  const fake = fakeSession();
+  jest.mocked(fake.session.accept).mockImplementation(async () => {
+    fake.emit({ type: 'session.created' });
+  });
+  return fake;
+}
+
 const PLAN = {
   language: 'de',
   focus: ['case_dative'],
@@ -29,6 +37,217 @@ const PLAN = {
   rehearse: false,
 };
 const answer = { callId: 'rtc_1', sdp: 'v=0 answer', maxSeconds: 480, plan: PLAN };
+
+describe('linked practice continuation', () => {
+  it('waits for the replacement data channel and rejects push-to-talk until it is ready', async () => {
+    const first = fakeSession();
+    const second = fakeSession();
+    const sessions = [first.session, second.session];
+    const engine = createVoiceEngine({
+      createSession: () => sessions.shift() ?? null,
+      startCall: async () => answer,
+      continueCall: async () => answer,
+    });
+    const events: unknown[] = [];
+    engine.subscribe((event) => events.push(event));
+    await engine.start();
+    engine.setPushToTalk(true);
+    first.drop();
+    // SDP acceptance alone does not mean commands can reach the partner.
+    for (let step = 0; step < 20; step += 1) await Promise.resolve();
+    expect(second.session.accept).toHaveBeenCalled();
+    expect(events).not.toContainEqual({ type: 'connection.restored', muted: true });
+    expect(engine.beginTurn()).toBe(false);
+    second.emit({ type: 'session.created' });
+    for (let step = 0; step < 20; step += 1) await Promise.resolve();
+    expect(events).toContainEqual({ type: 'connection.restored', muted: true });
+    expect(engine.beginTurn()).toBe(true);
+    engine.stop();
+  });
+
+  it('keeps the root and mute setting, then ignores events from the replaced transport', async () => {
+    const first = fakeSession();
+    const second = readySession();
+    const sessions = [first.session, second.session];
+    const continueCall = jest.fn(async () => ({ ...answer, maxSeconds: 300 }));
+    const endCall = jest.fn(async () => {});
+    const engine = createVoiceEngine({
+      createSession: () => sessions.shift() ?? null,
+      startCall: async () => answer,
+      continueCall,
+      endCall,
+    });
+    const events: unknown[] = [];
+    const restored = new Promise<void>((resolve) =>
+      engine.subscribe((event) => {
+        events.push(event);
+        if ((event as { type: string }).type === 'connection.restored') resolve();
+      }),
+    );
+    await engine.start();
+    engine.setMuted(true);
+    first.drop();
+    await restored;
+    expect(continueCall).toHaveBeenCalledWith('rtc_1', expect.any(String), 'v=0 offer');
+    expect(second.session.accept).toHaveBeenCalledWith('v=0 answer');
+    expect(second.session.setMuted).toHaveBeenLastCalledWith(true);
+    expect(jest.mocked(second.session.setMuted).mock.invocationCallOrder[0]).toBeLessThan(
+      jest.mocked(second.session.accept).mock.invocationCallOrder[0]!,
+    );
+    expect(endCall).not.toHaveBeenCalled();
+    first.emit({ type: 'old.event' });
+    first.drop();
+    expect(events).not.toContainEqual({ type: 'old.event' });
+    expect(continueCall).toHaveBeenCalledTimes(1);
+    engine.stop();
+    engine.stop();
+    expect(endCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores push-to-talk before sending any learner audio after reconnecting', async () => {
+    const first = fakeSession();
+    const second = readySession();
+    const sessions = [first.session, second.session];
+    const engine = createVoiceEngine({
+      createSession: () => sessions.shift() ?? null,
+      startCall: async () => answer,
+      continueCall: async () => answer,
+    });
+    const restored = new Promise<void>((resolve) =>
+      engine.subscribe((event) => {
+        if ((event as { type: string }).type === 'connection.restored') resolve();
+      }),
+    );
+    await engine.start();
+    engine.setPushToTalk(true);
+    engine.beginTurn();
+    first.drop();
+    await restored;
+    expect(second.session.setMuted).toHaveBeenLastCalledWith(true);
+    second.emit({ type: 'session.created' });
+    expect(second.session.send).toHaveBeenCalledWith({
+      type: 'session.update',
+      session: {
+        type: 'realtime',
+        audio: { input: { turn_detection: null } },
+      },
+    });
+    engine.stop();
+  });
+
+  it('does not accept a late answer after End and finalizes the logical call once', async () => {
+    const first = fakeSession();
+    const second = readySession();
+    const sessions = [first.session, second.session];
+    let release!: (value: typeof answer) => void;
+    const pending = new Promise<typeof answer>((resolve) => {
+      release = resolve;
+    });
+    let requested!: () => void;
+    const asking = new Promise<void>((resolve) => {
+      requested = resolve;
+    });
+    const endCall = jest.fn(async () => {});
+    const engine = createVoiceEngine({
+      createSession: () => sessions.shift() ?? null,
+      startCall: async () => answer,
+      continueCall: () => {
+        requested();
+        return pending;
+      },
+      endCall,
+    });
+    await engine.start();
+    first.drop();
+    await asking;
+    engine.stop();
+    release(answer);
+    await pending;
+    expect(second.session.accept).not.toHaveBeenCalled();
+    expect(second.session.close).toHaveBeenCalled();
+    expect(endCall).toHaveBeenCalledWith('rtc_1');
+    expect(endCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('never continues a call after its goodbye', async () => {
+    const first = fakeSession();
+    const continueCall = jest.fn();
+    const engine = createVoiceEngine({
+      createSession: () => first.session,
+      startCall: async () => answer,
+      continueCall,
+    });
+    await engine.start();
+    first.emit({
+      type: 'conversation.item.done',
+      item: {
+        type: 'function_call_output',
+        output: JSON.stringify({ done: true }),
+      },
+    });
+    first.drop();
+    expect(continueCall).not.toHaveBeenCalled();
+    engine.stop();
+  });
+
+  it('limits a logical call to two replacement transports', async () => {
+    const peers = [fakeSession(), readySession(), readySession()];
+    const queue = peers.map(({ session }) => session);
+    const continueCall = jest.fn(async () => answer);
+    const endCall = jest.fn(async () => {});
+    const engine = createVoiceEngine({
+      createSession: () => queue.shift() ?? null,
+      startCall: async () => answer,
+      continueCall,
+      endCall,
+    });
+    const events: unknown[] = [];
+    engine.subscribe((event) => events.push(event));
+    await engine.start();
+    for (const peer of peers.slice(0, 2)) {
+      const restored = new Promise<void>((resolve) => {
+        const unsubscribe = engine.subscribe((event) => {
+          if ((event as { type: string }).type === 'connection.restored') {
+            unsubscribe();
+            resolve();
+          }
+        });
+      });
+      peer.drop();
+      await restored;
+    }
+    peers[2]!.drop();
+    expect(continueCall).toHaveBeenCalledTimes(2);
+    expect(events.at(-1)).toEqual({ type: 'connection.lost' });
+    expect(endCall).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends a stuck handoff within its bounded recovery window', async () => {
+    jest.useFakeTimers();
+    try {
+      const first = fakeSession();
+      const second = readySession();
+      const peers = [first.session, second.session];
+      const endCall = jest.fn(async () => {});
+      const engine = createVoiceEngine({
+        createSession: () => peers.shift() ?? null,
+        startCall: async () => answer,
+        continueCall: () => new Promise(() => {}),
+        endCall,
+      });
+      const events: unknown[] = [];
+      engine.subscribe((event) => events.push(event));
+      await engine.start();
+      first.drop();
+      await jest.advanceTimersByTimeAsync(30000);
+      expect(events.at(-1)).toEqual({ type: 'connection.lost' });
+      expect(second.session.close).toHaveBeenCalled();
+      expect(endCall).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
 
 describe('starting', () => {
   it('trades the offer for the server’s answer and reports the call, its time limit and plan', async () => {

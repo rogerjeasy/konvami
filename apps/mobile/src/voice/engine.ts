@@ -4,6 +4,13 @@ import { premiumPlayback } from './premium-playback';
 import { VoiceError, type VoiceErrorCode } from './errors';
 import type { AudioLevels, RtcSession } from './rtc-session';
 import { helpNote, type HelpKind } from './help';
+import { transportEvent } from './transport-event';
+import {
+  abortable,
+  CONTINUATION_TIMEOUT_MS,
+  MAX_CONTINUATIONS,
+  retryContinuation,
+} from './continuation';
 
 export { VoiceError, type VoiceErrorCode } from './errors';
 export type { AudioLevels } from './rtc-session';
@@ -24,7 +31,8 @@ export interface VoiceEngine {
   stop(): void;
   setMuted(muted: boolean): void;
   setPushToTalk(enabled: boolean): void;
-  beginTurn(): void;
+  /** True only after a manual turn actually starts on the open transport. */
+  beginTurn(): boolean;
   endTurn(): void;
   /**
    * Says a line for the learner without their voice (a tapped "I don't know"): the persona
@@ -72,6 +80,8 @@ const SILENCE: AudioLevels = { persona: 0, learner: 0 };
 export function createVoiceEngine({
   createSession,
   startCall,
+  continueCall,
+  endCall,
   clips,
   now = Date.now,
 }: {
@@ -81,6 +91,9 @@ export function createVoiceEngine({
   now?: () => number;
   /** Trades the SDP offer for the server's answer (`api.startVoiceCall`). */
   startCall: (sdpOffer: string) => Promise<VoiceCall>;
+  /** Only practice supplies these; other call purposes retain their existing lifecycle. */
+  continueCall?: (rootId: string, attemptId: string, sdpOffer: string) => Promise<VoiceCall>;
+  endCall?: (rootId: string) => Promise<void>;
 }): VoiceEngine {
   let session: RtcSession | null = null;
   let stopped = false;
@@ -88,16 +101,135 @@ export function createVoiceEngine({
   let manual = false;
   let holding = false;
   let heldAt = 0;
+  let muted = false;
+  let rootId: string | null = null;
+  let endsAt = 0;
+  let continuations = 0;
+  let recovering = false;
+  let finished = false;
+  let ending = false;
+  let recovery: AbortController | null = null;
   const listeners = new Set<(event: unknown) => void>();
   const emit = (event: unknown) => listeners.forEach((listener) => listener(event));
 
   const premium = clips ? premiumPlayback(clips, emit) : null;
 
+  function finalize() {
+    if (!rootId || !endCall || ending) return;
+    ending = true;
+    // If the device is offline, the server's bounded handoff window still finalizes the call.
+    void endCall(rootId).catch(() => {});
+  }
+
   function stop() {
     premium?.stop();
     stopped = true;
+    recovery?.abort();
     session?.close();
     session = null;
+    finalize();
+  }
+
+  function bind(next: RtcSession, ready?: () => void) {
+    const generation = continuations;
+    next.onEvent((event) => {
+      if (stopped || session !== next) return;
+      const e = event as { type?: string; item?: { type?: string; output?: string } };
+      if (e?.type === 'session.created' && ready) {
+        const configured =
+          !manual ||
+          next.send({
+            type: 'session.update',
+            session: {
+              type: 'realtime',
+              audio: { input: { turn_detection: null } },
+            },
+          });
+        next.setMuted(muted);
+        if (configured) ready();
+      }
+      if (e?.type === 'conversation.item.done' && e.item?.type === 'function_call_output') {
+        try {
+          if (JSON.parse(e.item.output ?? '{}').done === true) finished = true;
+        } catch {
+          /* Incomplete tool output is not a goodbye. */
+        }
+      }
+      const scoped = transportEvent(event, generation);
+      premium?.handle(scoped);
+      emit(scoped);
+    });
+    next.onClosed(() => {
+      if (stopped || session !== next) return;
+      if (recovering) {
+        recovery?.abort();
+        return;
+      }
+      if (
+        continueCall &&
+        rootId &&
+        !finished &&
+        continuations < MAX_CONTINUATIONS &&
+        now() < endsAt
+      ) {
+        void reconnect();
+      } else {
+        stop();
+        emit({ type: 'connection.lost' });
+      }
+    });
+  }
+
+  async function reconnect() {
+    if (!continueCall || !rootId || recovering) return;
+    const id = rootId;
+    recovering = true;
+    continuations += 1;
+    holding = false;
+    if (manual) muted = true;
+    premium?.stop();
+    const former = session;
+    session = null;
+    former?.close();
+    const cancel = new AbortController();
+    recovery = cancel;
+    const timer = setTimeout(
+      () => cancel.abort(),
+      Math.max(0, Math.min(CONTINUATION_TIMEOUT_MS, endsAt - now())),
+    );
+    // An idempotency nonce, not a credential; retain it and the same offer across every retry.
+    const attemptId = `${now().toString(36)}_${continuations}_${Math.random().toString(36).slice(2, 14)}`;
+    emit({ type: 'connection.reconnecting', muted });
+    let next: RtcSession | null = null;
+    try {
+      if (cancel.signal.aborted) throw new VoiceError('stopped');
+      next = createSession();
+      if (!next) throw new VoiceError('unsupported');
+      session = next;
+      const ready = new Promise<void>((resolve) => bind(next!, resolve));
+      const offer = await abortable(next.offer(), cancel.signal);
+      next.setMuted(muted);
+      const call = await retryContinuation(() => continueCall(id, attemptId, offer), cancel.signal);
+      if (stopped || cancel.signal.aborted) throw new VoiceError('stopped');
+      if (call.callId !== id || call.maxSeconds <= 0) throw new VoiceError('voice_unavailable');
+      await abortable(next.accept(call.sdp), cancel.signal);
+      // SDP acceptance precedes data-channel readiness. Keep controls suspended until the
+      // provider greets this transport and the manual microphone setting has been restored.
+      await abortable(ready, cancel.signal);
+      if (stopped || cancel.signal.aborted) throw new VoiceError('stopped');
+      next.setMuted(muted);
+      emit({ type: 'connection.restored', muted });
+    } catch {
+      next?.close();
+      if (!stopped) {
+        stop();
+        emit({ type: 'connection.lost' });
+      }
+    } finally {
+      clearTimeout(timer);
+      recovering = false;
+      if (recovery === cancel) recovery = null;
+    }
   }
 
   return {
@@ -106,20 +238,24 @@ export function createVoiceEngine({
       const next = createSession();
       if (!next) throw new VoiceError('unsupported');
       session = next;
-      next.onEvent((event) => {
-        premium?.handle(event);
-        emit(event);
-      });
-      next.onClosed(() => emit({ type: 'connection.lost' }));
+      bind(next);
       try {
         const offer = await next.offer();
-        const call = await startCall(offer);
         if (stopped) throw new VoiceError('stopped');
+        const call = await startCall(offer);
+        rootId = call.callId;
+        endsAt = now() + call.maxSeconds * 1000;
+        if (stopped) {
+          finalize();
+          throw new VoiceError('stopped');
+        }
         await next.accept(call.sdp);
+        if (stopped) throw new VoiceError('stopped');
         return { callId: call.callId, maxSeconds: call.maxSeconds, plan: call.plan };
       } catch (error) {
         next.close();
         if (session === next) session = null;
+        finalize();
         if (error instanceof VoiceError) throw error;
         if (error instanceof ApiError) throw new VoiceError(API_CODES[error.code] ?? 'unknown');
         throw new VoiceError('unknown');
@@ -128,13 +264,16 @@ export function createVoiceEngine({
 
     stop,
 
-    setMuted(muted) {
+    setMuted(value) {
+      muted = manual && !holding ? true : value;
       session?.setMuted(muted);
     },
 
     setPushToTalk(enabled) {
-      if (!session) return;
-      const sent = session.send({
+      manual = enabled;
+      holding = false;
+      muted = enabled;
+      session?.send({
         type: 'session.update',
         session: {
           type: 'realtime',
@@ -143,26 +282,26 @@ export function createVoiceEngine({
           },
         },
       });
-      if (!sent) return;
-      manual = enabled;
-      holding = false;
-      session.setMuted(enabled);
+      session?.setMuted(enabled);
     },
 
     beginTurn() {
       premium?.stop();
-      if (!manual || holding || !session) return;
-      if (!session.send({ type: 'input_audio_buffer.clear' })) return;
+      if (stopped || recovering || !manual || holding || !session) return false;
+      if (!session.send({ type: 'input_audio_buffer.clear' })) return false;
       session.send({ type: 'response.cancel' });
       session.send({ type: 'output_audio_buffer.clear' });
       holding = true;
+      muted = false;
       heldAt = now();
       session.setMuted(false);
+      return true;
     },
 
     endTurn() {
       if (!manual || !holding || !session) return;
       holding = false;
+      muted = true;
       session.setMuted(true);
       if (now() - heldAt < MIN_MANUAL_TURN_MS) {
         session.send({ type: 'input_audio_buffer.clear' });
