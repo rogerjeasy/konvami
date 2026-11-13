@@ -1,9 +1,14 @@
+import { EXAM_STAGES } from '../exam-stages';
+import { pronunciationComparison } from '../pronunciation-comparison';
+import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
 
 export const fr: Translation = {
+  captionLookup: CAPTION_LOOKUP.fr,
+  examStages: EXAM_STAGES.fr,
   offlineLibrary: offlineLibrary.fr,
   vocabulary: VOCABULARY_TEXT.fr,
   common: {
@@ -178,7 +183,8 @@ export const fr: Translation = {
   microphone: {
     title: 'Laisse Konvami t’entendre',
     body: 'C’est en parlant qu’on devient à l’aise. Ton partenaire a besoin du micro pour écouter et répondre.',
-    pointSession: 'Actif uniquement pendant une session, jamais en arrière-plan',
+    pointSession:
+      'Uniquement pendant une session ; continue écran verrouillé si tu actives le mode marche',
     pointIndicator: 'Un indicateur s’affiche dès qu’il écoute',
     pointText: 'Tu préfères écrire ? Les cartes et les questions au tuteur marchent sans micro',
     allow: 'Autoriser le micro',
@@ -1395,6 +1401,7 @@ export const fr: Translation = {
     tooMany: 'Ton carnet de phrases est plein. Retire une phrase pour en garder une nouvelle.',
   },
   pronunciation: {
+    comparison: pronunciationComparison.fr,
     assessment: {
       enable: 'Évaluer la prononciation',
       consent:

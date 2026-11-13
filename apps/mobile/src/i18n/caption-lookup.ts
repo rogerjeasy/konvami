@@ -1,0 +1,43 @@
+/** Live-caption word lookup (spec §6.4), kept together for language-key parity. */
+export const CAPTION_LOOKUP = {
+  en: {
+    lookup: 'Look up {{word}}',
+    loading: 'Looking up this word',
+    failed: 'This word could not be explained. Close and tap it to try again.',
+    save: 'Save word',
+    saved: 'Saved to your cards',
+    uncertain: 'This meaning is uncertain.',
+    saveFailed: 'The word could not be saved. Try again.',
+    plural: 'Plural',
+  },
+  de: {
+    lookup: '{{word}} nachschlagen',
+    loading: 'Das Wort wird nachgeschlagen',
+    failed: 'Das Wort konnte nicht erklärt werden. Schließe das Fenster und tippe erneut darauf.',
+    save: 'Wort speichern',
+    saved: 'In deinen Karten gespeichert',
+    uncertain: 'Diese Bedeutung ist unsicher.',
+    saveFailed: 'Das Wort konnte nicht gespeichert werden. Versuche es erneut.',
+    plural: 'Plural',
+  },
+  fr: {
+    lookup: 'Expliquer {{word}}',
+    loading: 'Recherche du sens du mot',
+    failed: 'Ce mot n’a pas pu être expliqué. Ferme la fenêtre et touche-le à nouveau.',
+    save: 'Enregistrer le mot',
+    saved: 'Enregistré dans tes cartes',
+    uncertain: 'Ce sens est incertain.',
+    saveFailed: 'Le mot n’a pas pu être enregistré. Réessaie.',
+    plural: 'Pluriel',
+  },
+  it: {
+    lookup: 'Cerca {{word}}',
+    loading: 'Ricerca del significato',
+    failed: 'Non è stato possibile spiegare la parola. Chiudi e toccala di nuovo.',
+    save: 'Salva parola',
+    saved: 'Salvata nelle tue schede',
+    uncertain: 'Questo significato è incerto.',
+    saveFailed: 'Non è stato possibile salvare la parola. Riprova.',
+    plural: 'Plurale',
+  },
+} as const;

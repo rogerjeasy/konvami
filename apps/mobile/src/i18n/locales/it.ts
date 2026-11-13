@@ -1,9 +1,14 @@
+import { EXAM_STAGES } from '../exam-stages';
+import { pronunciationComparison } from '../pronunciation-comparison';
+import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
 
 export const it: Translation = {
+  captionLookup: CAPTION_LOOKUP.it,
+  examStages: EXAM_STAGES.it,
   offlineLibrary: offlineLibrary.it,
   vocabulary: VOCABULARY_TEXT.it,
   common: {
@@ -177,7 +182,8 @@ export const it: Translation = {
   microphone: {
     title: 'Lascia che Konvami ti ascolti',
     body: 'È parlando che si diventa fluenti. Il tuo partner ha bisogno del microfono per ascoltare e rispondere.',
-    pointSession: 'Attivo solo durante una sessione, mai in background',
+    pointSession:
+      'Solo durante una sessione; continua a schermo bloccato se attivi la modalità camminata',
     pointIndicator: 'Un indicatore mostra quando sta ascoltando',
     pointText: 'Preferisci scrivere? Schede e domande al tutor funzionano senza microfono',
     allow: 'Consenti il microfono',
@@ -1384,6 +1390,7 @@ export const it: Translation = {
     tooMany: 'Il tuo frasario è pieno. Rimuovi una frase per tenerne una nuova.',
   },
   pronunciation: {
+    comparison: pronunciationComparison.it,
     assessment: {
       enable: 'Valuta la pronuncia',
       consent:

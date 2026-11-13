@@ -1,3 +1,6 @@
+import { EXAM_STAGES } from '../exam-stages';
+import { pronunciationComparison } from '../pronunciation-comparison';
+import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
@@ -7,6 +10,8 @@ import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
  * with the illustrations in src/screens/intro/sample-content.ts.
  */
 export const en = {
+  captionLookup: CAPTION_LOOKUP.en,
+  examStages: EXAM_STAGES.en,
   offlineLibrary: offlineLibrary.en,
   vocabulary: VOCABULARY_TEXT.en,
   common: {
@@ -180,7 +185,8 @@ export const en = {
   microphone: {
     title: 'Let Konvami hear you',
     body: 'Speaking is how you get fluent. Your partner needs the mic to listen and respond.',
-    pointSession: 'Only on during a session, never in the background',
+    pointSession:
+      'Only during a session; continues with the screen locked if you enable walking mode',
     pointIndicator: 'A live indicator shows whenever it’s listening',
     pointText: 'Prefer typing? Cards and Tutor questions work without the mic',
     allow: 'Allow microphone',
@@ -1373,6 +1379,7 @@ export const en = {
     tooMany: 'Your phrasebook is full. Remove a phrase to keep a new one.',
   },
   pronunciation: {
+    comparison: pronunciationComparison.en,
     assessment: {
       enable: 'Assess pronunciation',
       consent:

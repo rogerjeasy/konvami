@@ -1,9 +1,14 @@
+import { EXAM_STAGES } from '../exam-stages';
+import { pronunciationComparison } from '../pronunciation-comparison';
+import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
 
 export const de: Translation = {
+  captionLookup: CAPTION_LOOKUP.de,
+  examStages: EXAM_STAGES.de,
   offlineLibrary: offlineLibrary.de,
   vocabulary: VOCABULARY_TEXT.de,
   common: {
@@ -178,7 +183,8 @@ export const de: Translation = {
   microphone: {
     title: 'Lass Konvami dich hören',
     body: 'Durch Sprechen wirst du fließend. Dein Partner braucht das Mikrofon, um zuzuhören und zu antworten.',
-    pointSession: 'Nur während einer Sitzung an, nie im Hintergrund',
+    pointSession:
+      'Nur während einer Sitzung; bei aktiviertem Gehmodus auch mit gesperrtem Bildschirm',
     pointIndicator: 'Eine Live-Anzeige zeigt, wann es zuhört',
     pointText: 'Lieber tippen? Karten und Tutor-Fragen gehen auch ohne Mikrofon',
     allow: 'Mikrofon erlauben',
@@ -1394,6 +1400,7 @@ export const de: Translation = {
     tooMany: 'Dein Phrasebuch ist voll. Entferne einen Satz, um einen neuen zu behalten.',
   },
   pronunciation: {
+    comparison: pronunciationComparison.de,
     assessment: {
       enable: 'Aussprache beurteilen',
       consent:
