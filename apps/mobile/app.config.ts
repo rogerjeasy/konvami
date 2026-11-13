@@ -20,7 +20,7 @@ const BUNDLE_ID = IS_DEV_BUILD ? `${STORE_BUNDLE_ID}.dev` : STORE_BUNDLE_ID;
 // Shown by iOS in the microphone prompt (after screen 2.6 explains it in the app language).
 // Every plugin that touches the microphone gets the same sentence: iOS shows one prompt.
 const MICROPHONE_REASON =
-  'Konvami uses the microphone during a practice session so your conversation partner can hear you and reply. It is never on in the background.';
+  'Konvami uses the microphone during calls so your conversation partner can hear you and reply. If you enable walking mode, your call continues with the screen locked until you end it.';
 // Camera access is requested only when the learner captures material for an import.
 const CAMERA_REASON = 'Konvami uses the camera when you choose to photograph material to practise.';
 
@@ -172,10 +172,8 @@ const config: ExpoConfig = {
       'expo-audio',
       {
         microphonePermission: MICROPHONE_REASON,
-        // Konvami plays and records only while it is open (background audio belongs to the
-        // hands-free mode, spec §6.3, which is not built). The default would add iOS's "audio"
-        // background mode and Android's media foreground-service permissions, which the stores
-        // review and which nothing here uses.
+        // Walking calls use WebRTC and the audio-api foreground service below. Clip playback
+        // must not create a second background service with a separate lifecycle.
         enableBackgroundPlayback: false,
       },
     ],
