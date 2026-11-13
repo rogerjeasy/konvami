@@ -18,9 +18,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from konvami_api.domain.accounts import Account
+from konvami_api.domain.accounts import Account, AccountDirectory, AccountNotFound
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.exam_acoustics import ExamAcoustics, ExamPronunciation
 from konvami_api.domain.exams import (
     CRITERIA,
     MAX_MARK,
@@ -48,7 +49,14 @@ from konvami_api.domain.text import (
     familiar_address,
 )
 from konvami_api.domain.tools import CANDIDATE_TEXT_MAX, ToolResult, ToolSet
-from konvami_api.domain.voice import Briefing, FinishedCall, Hearing, VoiceSessionRepository
+from konvami_api.domain.voice import (
+    AudioStore,
+    Briefing,
+    FinishedCall,
+    Hearing,
+    VoiceSession,
+    VoiceSessionRepository,
+)
 
 # A simulation whose scoring keeps failing can be asked for this many times in all.
 MAX_REQUESTS = 3
@@ -81,6 +89,7 @@ class SimulationResult:
     # The main thing to work on, in the learner's explanation language.
     summary: str
     pass_share: float
+    pronunciation: ExamPronunciation | None = None
 
     @property
     def total(self) -> float:
@@ -164,6 +173,7 @@ class NextSimulation:
     exam: SpeakingExam
     # One per part, in order.
     cards: tuple[ExamCard, ...]
+    assessment_provider: str | None = None
 
 
 @dataclass(frozen=True)
@@ -420,9 +430,15 @@ class ExamService:
         sounds: Sounds,
         clock: Callable[[], dt.datetime],
         announce: Callable[[UUID, str, str], None] = lambda *_: None,
+        acoustics: ExamAcoustics | None = None,
+        recordings: AudioStore | None = None,
+        accounts: AccountDirectory | None = None,
     ) -> None:
         """`announce` tells the learner, by push, that a simulation is scored: their id, the
         call's and the speaking test's name."""
+        self._acoustics = acoustics
+        self._recordings = recordings
+        self._accounts = accounts
         self._announce = announce
         self._profiles = profiles
         self._personas = personas
@@ -507,7 +523,17 @@ class ExamService:
     def next(self, user_id: UUID, exam_id: str) -> NextSimulation:
         """The cards of the learner's next simulation of a speaking test: they take turns."""
         exam = self.speaking_exam(user_id, exam_id)
-        return NextSimulation(exam, cards_for(exam, self._repository.count(user_id, exam.id)))
+        return NextSimulation(
+            exam,
+            cards_for(exam, self._repository.count(user_id, exam.id)),
+            self.assessment_provider(user_id),
+        )
+
+    def assessment_provider(self, user_id: UUID) -> str | None:
+        language = self._profiles.get(user_id).target_language or ""
+        if self._acoustics is None or self._recordings is None or self._accounts is None:
+            return None
+        return self._acoustics.provider(language)
 
     def _voice(self, user_id: UUID) -> str:
         """The exam coach's voice among the learner's partners, or the examiner's own."""
@@ -578,11 +604,20 @@ class ExamService:
         return simulation
 
     def score(self, call_id: str) -> None:
-        """Scores a simulation waiting for it (the worker's job). Whose it is comes from the
-        stored call, so a forged invocation cannot point at someone else's data."""
+        """Temporary opted-in exam clips are deleted after every scoring outcome."""
         session = self._sessions.get(call_id)
         if session is None:
             return
+        try:
+            self._score(session)
+        finally:
+            if session and session.assessment_consent and self._recordings:
+                self._recordings.release(session.user_id, call_id)
+
+    def _score(self, session: VoiceSession) -> None:
+        """Scores a simulation waiting for it (the worker's job). Whose it is comes from the
+        stored call, so a forged invocation cannot point at someone else's data."""
+        call_id = session.call_id
         user_id = session.user_id
         simulation = self._repository.load(user_id, call_id)
         if simulation is None or simulation.status != "pending":
@@ -647,6 +682,21 @@ class ExamService:
         if set(by_part) != {part.id for part in exam.parts}:
             self._repository.written(call_id, "failed", None)
             return
+        pronunciation = None
+        if (
+            session.assessment_consent
+            and session.assessment_language
+            and self._acoustics
+            and self._accounts
+        ):
+            try:
+                account = self._accounts.get(user_id)
+            except AccountNotFound:
+                account = None
+            if account and account.voice_consent:
+                pronunciation = self._acoustics.assess(
+                    user_id, call_id, session.assessment_language, turns
+                )
         result = SimulationResult(
             parts=tuple(
                 PartScore(
@@ -659,6 +709,7 @@ class ExamService:
             ),
             summary=scored.summary,
             pass_share=exam.pass_share,
+            pronunciation=pronunciation,
         )
         self._repository.written(call_id, "ready", result)
         self._announce(user_id, call_id, exam.name)

@@ -28,6 +28,7 @@ from konvami_api.domain.costs import (
     Spending,
 )
 from konvami_api.domain.course_import import CourseImport
+from konvami_api.domain.exam_acoustics import ExamPronunciation
 from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
 from konvami_api.domain.exams import PartScore
@@ -299,16 +300,18 @@ _START_SESSION = f"""
     WITH {_ENSURE_USER}
     INSERT INTO voice_session
         (call_id, user_id, purpose, model, started_at, persona_id, scenario,
-         max_seconds, plan, premium)
+         max_seconds, plan, premium, assessment_consent, assessment_language)
     VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
             CAST(:persona_id AS uuid), :scenario, CAST(:max_seconds AS integer),
-            CAST(:plan AS jsonb), CAST(:premium AS boolean))
+            CAST(:plan AS jsonb), CAST(:premium AS boolean),
+            CAST(:assessment_consent AS boolean), :assessment_language)
 """
 
 _LOAD_SESSION = f"""
     SELECT call_id, CAST(user_id AS text) AS user_id, purpose, model,
            {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id,
-           scenario, max_seconds, CAST(plan AS text) AS plan, premium
+           scenario, max_seconds, CAST(plan AS text) AS plan, premium,
+           assessment_consent, assessment_language
     FROM voice_session
     WHERE call_id = :call_id
 """
@@ -1088,6 +1091,8 @@ class SqlVoiceSessionRepository:
                 "max_seconds": session.max_seconds,
                 "plan": json.dumps(session.plan.document()) if session.plan else None,
                 "premium": session.premium,
+                "assessment_consent": session.assessment_consent,
+                "assessment_language": session.assessment_language,
             },
         )
 
@@ -1107,6 +1112,8 @@ class SqlVoiceSessionRepository:
             max_seconds=row["max_seconds"],
             plan=SessionPlan.from_document(json.loads(row["plan"])) if row["plan"] else None,
             premium=bool(row.get("premium", False)),
+            assessment_consent=bool(row.get("assessment_consent", False)),
+            assessment_language=row.get("assessment_language"),
         )
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
@@ -1719,6 +1726,9 @@ def _simulation(row: dict[str, Any]) -> Simulation:
             parts=tuple(PartScore(**part) for part in result["parts"]),
             summary=result["summary"],
             pass_share=result["pass_share"],
+            pronunciation=ExamPronunciation(**result["pronunciation"])
+            if result.get("pronunciation")
+            else None,
         )
         if result
         else None,

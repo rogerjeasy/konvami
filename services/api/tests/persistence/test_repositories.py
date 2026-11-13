@@ -3156,3 +3156,32 @@ def test_library_search_filters_real_transcripts_before_pagination(partners: Pra
     )
     assert [item.id for item in found] == ["search_match"]
     assert not partners.conversations.listed(USER, 10, None, ConversationQuery(text="%"))
+
+
+def test_exam_acoustic_observations_round_trip_without_changing_rubric(exams: Exams) -> None:
+    from dataclasses import replace
+
+    from konvami_api.domain.exam_acoustics import ExamPronunciation
+
+    result = replace(
+        SCORED, pronunciation=ExamPronunciation("Azure Speech", 72.5, 80, None, 2, 1, 12.5)
+    )
+    exams.simulations.started(USER, "de", simulation("rtc_1"))
+    exams.simulations.written("rtc_1", "ready", result)
+    stored = exams.simulations.load(USER, "rtc_1")
+    assert stored is not None
+    assert stored.result == result
+    assert stored.result.total == SCORED.total
+
+
+def test_exam_consent_and_original_language_are_kept_on_session(sessions: Sessions) -> None:
+    from dataclasses import replace
+
+    started = replace(
+        session("rtc_1"),
+        purpose=CallPurpose.EXAM,
+        assessment_consent=True,
+        assessment_language="de",
+    )
+    sessions.repository.started(started)
+    assert sessions.repository.get(started.call_id) == started

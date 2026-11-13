@@ -139,6 +139,9 @@ class VoiceSession:
     # calls from before plans.
     plan: SessionPlan | None = None
     premium: bool = False
+    # Explicit permission for this exam only; its original audio language is kept with it.
+    assessment_consent: bool = False
+    assessment_language: str | None = None
 
 
 @dataclass(frozen=True)
@@ -335,11 +338,13 @@ class VoiceCallService:
         candidate_speech: CandidateSpeech | None = None,
         continuations: Continuations | None = None,
         current_language: Callable[[UUID], str | None] | None = None,
+        assessment_provider: Callable[[UUID], str | None] | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
         `meter` they are not metered; without a `checker` no turn is checked live. Without
         `weekly_seconds` (the learner and the week: the seconds the week allows them) every
         learner has the settings' minutes."""
+        self._assessment_provider = assessment_provider
         self._continuations = continuations
         self._language = current_language
         self._speech = live_speech
@@ -367,6 +372,7 @@ class VoiceCallService:
         scenario: str | None = None,
         practise: str | None = None,
         premium: bool = False,
+        assessment_consent: bool = False,
     ) -> CallStarted:
         """`local_date` is today on the learner's calendar, as their device has it; `scenario`
         makes a practice call a role-play; `practise` puts a grammar topic first in its plan."""
@@ -387,6 +393,13 @@ class VoiceCallService:
             or self._speech is None
             or not self._speech.available(user_id)
             or self._recordings is None
+        ):
+            raise VoiceError("voice_unavailable")
+        if assessment_consent and (
+            purpose is not CallPurpose.EXAM
+            or self._recordings is None
+            or self._assessment_provider is None
+            or not self._assessment_provider(user_id)
         ):
             raise VoiceError("voice_unavailable")
         now = self._clock()
@@ -449,6 +462,8 @@ class VoiceCallService:
                     granted,
                     briefing.plan,
                     premium,
+                    assessment_consent,
+                    briefing.hearing.language if assessment_consent and briefing.hearing else None,
                 ),
                 sdp_offer,
                 session,
@@ -522,7 +537,11 @@ class VoiceCallService:
             max_seconds=maximum,
             wrap_up_seconds=WRAP_UP_SECONDS,
             goodbye_grace_seconds=GOODBYE_GRACE_SECONDS,
-            record=self._recordings is not None and session.purpose in _RECORDED,
+            record=self._recordings is not None
+            and (
+                session.purpose in _RECORDED
+                or (session.purpose is CallPurpose.EXAM and session.assessment_consent)
+            ),
             spot=self._checker is not None and self._checker.for_call(session) is not None,
             premium=session.premium,
         )
@@ -561,7 +580,14 @@ class VoiceCallService:
         """Stores the audio of one turn of a recorded call; None for a call that is not."""
         session = self._session(call_id)
         recordings = self._recordings
-        if session is None or recordings is None or session.purpose not in _RECORDED:
+        if (
+            session is None
+            or recordings is None
+            or not (
+                session.purpose in _RECORDED
+                or (session.purpose is CallPurpose.EXAM and session.assessment_consent)
+            )
+        ):
             return None
         user_id = session.user_id
         return lambda audio: recordings.keep(
@@ -609,12 +635,14 @@ class VoiceCallService:
                 session.model,
                 voice_units(result.usage, seconds),
             )
+        queued = False
         try:
             self._scripts[session.purpose].concluded(session.user_id, call_id, tools, result)
+            queued = True
         finally:
             if (
                 session.purpose is CallPurpose.EXAM
-                and session.purpose not in _RECORDED
+                and (not session.assessment_consent or not queued)
                 and self._recordings
             ):
                 self._recordings.release(session.user_id, call_id)
