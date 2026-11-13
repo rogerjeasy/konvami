@@ -1,29 +1,18 @@
-import { TurboModuleRegistry } from 'react-native';
-import { ASSESSMENT_SAMPLE_RATE, encodeAssessmentWav, wavBase64 } from '@/lib/pcm-wav';
+import { encodeAssessmentWav, wavBase64 } from '@/lib/pcm-wav';
+import { canDecodeAudio, decodeAudio } from './decoded-audio';
 import type { SentenceRecording } from './sentence-recorder';
 
-// Check before loading the JSI library so Expo Go can still open the pronunciation lab.
-export const canAssessAudio = () => TurboModuleRegistry.get('AudioAPIModule') !== null;
+export const canAssessAudio = canDecodeAudio;
 
-/** Decode locally; the original M4A is never mislabeled as PCM or sent to another service. */
-export async function assessmentAudio(recording: SentenceRecording): Promise<SentenceRecording> {
-  if (!canAssessAudio()) throw new Error('unavailable');
-  const { AudioContext } =
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('react-native-audio-api') as typeof import('react-native-audio-api');
-  const context = new AudioContext({ sampleRate: ASSESSMENT_SAMPLE_RATE });
-  try {
-    const decoded = await context.decodeAudioData(recording.uri);
-    const channels = Array.from({ length: decoded.numberOfChannels }, (_, index) =>
-      decoded.getChannelData(index),
-    );
-    return {
-      ...recording,
-      base64: wavBase64(encodeAssessmentWav(channels, decoded.sampleRate)),
-      format: 'wav',
-      durationMs: Math.round(decoded.duration * 1000),
-    };
-  } finally {
-    await context.close();
-  }
+/** Decode and resample locally before encoding PCM; compressed audio is never mislabeled. */
+export async function assessmentAudio(
+  recording: SentenceRecording | string,
+): Promise<SentenceRecording> {
+  const decoded = await decodeAudio(recording);
+  return {
+    ...(typeof recording === 'string' ? { uri: recording } : recording),
+    base64: wavBase64(encodeAssessmentWav(decoded.channels, decoded.sampleRate)),
+    format: 'wav',
+    durationMs: decoded.durationMs,
+  };
 }

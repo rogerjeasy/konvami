@@ -1,6 +1,6 @@
 // Azure short-audio assessment accepts mono PCM16 at 16 kHz, at most thirty seconds.
 export const ASSESSMENT_SAMPLE_RATE = 16_000;
-const MAX_SECONDS = 30;
+export const ASSESSMENT_MAX_SECONDS = 30;
 const HEADER_BYTES = 44;
 const SAMPLE_BYTES = 2;
 const PCM_MIN = -32768;
@@ -15,7 +15,7 @@ export function encodeAssessmentWav(
   if (
     sampleRate !== ASSESSMENT_SAMPLE_RATE ||
     !frames ||
-    frames > MAX_SECONDS * sampleRate ||
+    frames > ASSESSMENT_MAX_SECONDS * sampleRate ||
     channels.some((channel) => channel.length !== frames)
   ) {
     throw new Error('unsupported_audio');
