@@ -54,3 +54,72 @@ def test_candidate_words_are_deduplicated_and_empty_words_are_ignored() -> None:
         ["", "der Termin", "DER TERMIN"], [Turn("persona", "der Termin")], GERMAN_WORD_RULES
     )
     assert len(found) == 1
+
+
+def test_conversation_evidence_promotes_words_without_counting_saved_cards() -> None:
+    from konvami_api.domain.reports import Word
+    from tests.world import NOON, USER, World
+
+    world = World()
+    world.onboard()
+    call_id = world.talk(
+        None,
+        at=NOON,
+        turns=(
+            Turn("persona", "Der Zug kommt heute. Hast du einen Termin?"),
+            Turn("learner", "Ich habe einen Termin."),
+        ),
+    )
+    world.reported(
+        call_id, words=(Word("der Zug", "train", None), Word("der Termin", "appointment", None))
+    )
+    world.text.answers.append(
+        {"uses": [{"word": 1, "turn": 1, "quote": "Ich habe einen Termin.", "correct": True}]}
+    )
+    world.vocabulary.after_report(call_id)
+    counts = world.cards.progress(USER, NOON)
+    assert counts.active_words == 1
+    assert counts.passive_words == 1
+    assert counts.total == 0
+    requests = len(world.text.tasks)
+    world.vocabulary.after_report(call_id)
+    assert len(world.text.tasks) == requests
+
+
+def test_consent_withdrawal_prevents_a_vocabulary_provider_request() -> None:
+    from konvami_api.domain.accounts import Account
+    from konvami_api.domain.reports import Word
+    from tests.world import NOON, USER, World
+
+    world = World()
+    world.onboard()
+    call_id = world.talk(None, at=NOON, learner_says=("Ich habe einen Termin.",))
+    world.reported(call_id, words=(Word("der Termin", "appointment", None),))
+    world.accounts.accounts[USER] = Account("Amara", "fr", voice_consent=False)
+    requests = len(world.text.tasks)
+    world.vocabulary.after_report(call_id)
+    assert len(world.text.tasks) == requests
+    assert world.vocabulary_store.scans == {}
+    assert world.cards.progress(USER, NOON).active_words == 0
+
+
+def test_provider_failure_preserves_exposure_without_inventing_active_knowledge() -> None:
+    from konvami_api.domain.reports import Word
+    from konvami_api.domain.text import TextModelError
+    from tests.world import NOON, USER, World
+
+    world = World()
+    world.onboard()
+    call_id = world.talk(
+        None,
+        at=NOON,
+        turns=(
+            Turn("persona", "Hast du einen Termin?"),
+            Turn("learner", "Ich habe einen Termin."),
+        ),
+    )
+    world.reported(call_id, words=(Word("der Termin", "appointment", None),))
+    world.text.answers.append(TextModelError("unavailable"))
+    world.vocabulary.after_report(call_id)
+    counts = world.cards.progress(USER, NOON)
+    assert (counts.active_words, counts.passive_words) == (0, 1)

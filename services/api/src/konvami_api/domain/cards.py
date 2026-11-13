@@ -11,13 +11,16 @@ import contextlib
 import datetime as dt
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 from uuid import UUID, uuid4
 
 from konvami_api.domain import fsrs
 from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import Report, ReportService, wording
+
+if TYPE_CHECKING:
+    from konvami_api.domain.vocabulary import VocabularyCounter
 
 # A word or phrase to remember, or a sentence the learner said and how it is right.
 Kind = Literal["word", "correction"]
@@ -143,6 +146,8 @@ class CardProgress:
     reviews: int
     remembered: int
     reviews_ever: int
+    active_words: int = 0
+    passive_words: int = 0
 
 
 @dataclass(frozen=True)
@@ -249,6 +254,7 @@ class CardService:
         clock: Callable[[], dt.datetime],
         new_id: Callable[[], UUID] = uuid4,
         details: DetailsStarter | None = None,
+        vocabulary: "VocabularyCounter | None" = None,
     ) -> None:
         """Without `details`, word cards keep only their word, meaning and sentence."""
         self._profiles = profiles
@@ -257,6 +263,7 @@ class CardService:
         self._clock = clock
         self._new_id = new_id
         self._details = details
+        self._vocabulary = vocabulary
 
     def _language(self, user_id: UUID) -> str:
         """The language whose deck the learner sees: the one they are learning now."""
@@ -402,6 +409,7 @@ class CardService:
         language = self._language(user_id)
         total, due = self._repository.counts(user_id, language, self._clock())
         totals = self._repository.totals(user_id, language, since)
+        vocabulary = self._vocabulary.counts(user_id, language) if self._vocabulary else None
         return CardProgress(
             total=total,
             due=due,
@@ -409,6 +417,8 @@ class CardService:
             reviews=totals.reviews,
             remembered=totals.remembered,
             reviews_ever=totals.reviews_ever,
+            active_words=vocabulary.active if vocabulary else 0,
+            passive_words=vocabulary.passive if vocabulary else 0,
         )
 
     def queue(self, user_id: UUID, *, limit: int = QUEUE_DEFAULT) -> Queue:

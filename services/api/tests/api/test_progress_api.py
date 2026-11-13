@@ -64,6 +64,8 @@ def test_a_new_learner_has_an_empty_chart_and_every_milestone_ahead(
         "learned": 0,
         "reviews": 0,
         "remembered": 0,
+        "activeWords": 0,
+        "passiveWords": 0,
     }
     assert progress["milestones"][0] == {
         "id": "first_conversation",
@@ -114,6 +116,8 @@ def test_progress_charts_what_the_learner_did(
         "learned": 1,
         "reviews": 1,
         "remembered": 1,
+        "activeWords": 0,
+        "passiveWords": 0,
     }
     reached = [m["id"] for m in progress["milestones"] if m["reached"]]
     assert reached == ["first_conversation", "hundred_words", "first_card"]
