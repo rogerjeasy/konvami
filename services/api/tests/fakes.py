@@ -1000,6 +1000,8 @@ class InMemoryChargeRepository:
     def add(self, record: ChargeRecord) -> None:
         if self.broken:
             raise RuntimeError("the database did not answer")
+        if record.key is not None and any(item.key == record.key for item in self.records):
+            return
         user_id = None if record.user_id in self.deleted else record.user_id
         self.records.append(replace(record, user_id=user_id, at=record.at.astimezone(UTC)))
 

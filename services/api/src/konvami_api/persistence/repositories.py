@@ -2173,10 +2173,12 @@ class SqlMemoryRepository:
 # The learner is named only while their account exists (`app_user`); a deleted one's request
 # still counts, without them.
 _ADD_CHARGE = """
-    INSERT INTO usage_charge (user_id, feature, provider, model, units, usd, priced, charged_at)
+    INSERT INTO usage_charge
+        (user_id, feature, provider, model, units, usd, priced, charged_at, request_key)
     VALUES ((SELECT id FROM app_user WHERE id = CAST(:user_id AS uuid)), :feature, :provider,
             :model, CAST(:units AS jsonb), CAST(:usd AS numeric), :priced,
-            CAST(:at AS timestamptz))
+            CAST(:at AS timestamptz), :request_key)
+    ON CONFLICT (request_key) DO NOTHING
 """
 
 _RANGE = """
@@ -2254,6 +2256,7 @@ class SqlChargeRepository:
                 "usd": repr(record.usd),
                 "priced": record.priced,
                 "at": record.at.isoformat(),
+                "request_key": record.key,
             },
         )
 

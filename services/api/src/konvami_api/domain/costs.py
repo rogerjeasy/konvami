@@ -111,6 +111,8 @@ class ChargeRecord:
     # False: the model had no price, so `usd` is 0 and the total too low.
     priced: bool
     at: dt.datetime
+    # A server-owned logical operation key; absent for independent provider requests.
+    key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -270,7 +272,7 @@ class SpendGuard:
 
 
 class Meter:
-    """Where providers report what a request used. Metering never fails the request."""
+    """Provider metering is best effort; durable logical-call finalizers can retry by key."""
 
     def __init__(
         self,
@@ -292,23 +294,46 @@ class Meter:
         if charge is None:
             return
         try:
-            usd = price(self._prices, model, units)
-            self._charges.add(
-                ChargeRecord(
-                    user_id=charge.user_id,
-                    feature=charge.feature,
-                    provider=provider,
-                    model=model,
-                    units=dict(units),
-                    usd=usd or 0.0,
-                    priced=usd is not None,
-                    at=self._clock(),
-                )
-            )
-            # Sends the month's alert as soon as a request passes a step.
-            self._guard.level()
+            self._record(charge, provider, model, units)
         except Exception:
             _log.exception("usage not metered")
+
+    def record_once(
+        self, charge: Charge, provider: str, model: str, units: Mapping[str, float], key: str
+    ) -> None:
+        """Persist a logical operation once. Failures propagate so a finalizer can retry.
+
+        A lost database response can mean the insert committed: uniqueness lives in the
+        repository, so retrying cannot inflate spend or request counts.
+        """
+        if not key.strip():
+            raise ValueError("metering key must not be empty")
+        self._record(charge, provider, model, units, key)
+
+    def _record(
+        self,
+        charge: Charge,
+        provider: str,
+        model: str,
+        units: Mapping[str, float],
+        key: str | None = None,
+    ) -> None:
+        usd = price(self._prices, model, units)
+        self._charges.add(
+            ChargeRecord(
+                user_id=charge.user_id,
+                feature=charge.feature,
+                provider=provider,
+                model=model,
+                units=dict(units),
+                usd=usd or 0.0,
+                priced=usd is not None,
+                at=self._clock(),
+                key=key,
+            )
+        )
+        # The same month alert remains idempotent when a finalizer retries this phase.
+        self._guard.level()
 
 
 def week_start(now: dt.datetime) -> dt.datetime:

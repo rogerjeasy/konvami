@@ -287,3 +287,57 @@ def test_the_owner_can_look_at_an_earlier_month() -> None:
 
     assert report.spending.total_usd == pytest.approx(5)
     assert report.level is Level.NORMAL
+
+
+def test_retryable_meter_writes_one_charge_for_a_logical_call() -> None:
+    setup = Setup()
+    for _ in range(2):
+        setup.meter.record_once(
+            Charge(USER, Feature.VOICE_PRACTICE),
+            "openai",
+            "gpt-6.1-sol",
+            {"input_tokens": 1_000_000},
+            "practice:rtc_1",
+        )
+    assert len(setup.charges.records) == 1
+    assert setup.charges.records[0].usd == 2.0
+
+
+def test_retryable_meter_propagates_storage_failure_and_can_retry() -> None:
+    setup = Setup()
+    setup.charges.broken = True
+    with pytest.raises(RuntimeError):
+        setup.meter.record_once(
+            Charge(USER, Feature.VOICE_PRACTICE),
+            "openai",
+            "gpt-6.1-sol",
+            {"input_tokens": 1},
+            "practice:rtc_1",
+        )
+    setup.charges.broken = False
+    setup.meter.record_once(
+        Charge(USER, Feature.VOICE_PRACTICE),
+        "openai",
+        "gpt-6.1-sol",
+        {"input_tokens": 1},
+        "practice:rtc_1",
+    )
+    assert len(setup.charges.records) == 1
+
+
+def test_retry_after_lost_write_response_does_not_double_count() -> None:
+    class LostReply(InMemoryChargeRepository):
+        def add(self, record: ChargeRecord) -> None:
+            super().add(record)
+            if len(self.records) == 1 and not hasattr(self, "raised"):
+                self.raised = True
+                raise RuntimeError("reply lost after commit")
+
+    setup = Setup()
+    repository = LostReply()
+    setup.meter._charges = repository
+    charge = Charge(USER, Feature.VOICE_PRACTICE)
+    with pytest.raises(RuntimeError):
+        setup.meter.record_once(charge, "openai", "gpt-6.1-sol", {"input_tokens": 100}, "call")
+    setup.meter.record_once(charge, "openai", "gpt-6.1-sol", {"input_tokens": 100}, "call")
+    assert len(repository.records) == 1

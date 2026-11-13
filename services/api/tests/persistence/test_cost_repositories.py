@@ -165,3 +165,23 @@ def test_a_forgotten_alert_is_first_again(alerts: AlertLog) -> None:
     alerts.forget(october, Level.ECONOMY)
 
     assert alerts.first(october, Level.ECONOMY)
+
+
+def test_retried_charge_key_counts_once_even_after_account_deletion(charges: Charges) -> None:
+    from dataclasses import replace
+
+    charges.sign_up(USER)
+    first = replace(charge(1.5), key="practice:rtc_1")
+    charges.repository.add(first)
+    charges.delete(USER)
+    charges.repository.add(replace(first, usd=9, at=NOON + timedelta(seconds=1)))
+    assert charges.repository.total(OCTOBER, NOVEMBER) == pytest.approx(1.5)
+    spending = charges.repository.spending(OCTOBER, NOVEMBER, 10)
+    assert spending.features[0].requests == 1
+
+
+def test_unkeyed_requests_remain_independent(charges: Charges) -> None:
+    charges.sign_up(USER)
+    charges.repository.add(charge(1.5))
+    charges.repository.add(charge(1.5))
+    assert charges.repository.total(OCTOBER, NOVEMBER) == pytest.approx(3)
