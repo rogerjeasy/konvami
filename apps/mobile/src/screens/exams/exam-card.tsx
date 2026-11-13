@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import type { ExamCard as Card } from '@konvami/api-client';
+import { ExamVisual } from './exam-visual';
 import { Text } from '@/components/text';
 
 /**
@@ -13,6 +14,7 @@ export function ExamCard({ heading, card }: { heading: string; card: Card }) {
         {heading}
       </Text>
       <Text variant="heading">{card.title}</Text>
+      <ExamVisual picture={card.picture} figure={card.figure} />
       <View className="gap-1">
         {card.prompts.map((prompt) => (
           <View key={prompt} className="flex-row items-start gap-2">
