@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
 from konvami_api.domain.accounts import AccountError
+from konvami_api.domain.caption_lookup import CaptionLookupError
 from konvami_api.domain.cards import CardError
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import CostError
@@ -280,6 +281,17 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(TutorError)
     async def _tutor_error(_: Request, error: TutorError) -> JSONResponse:
         return _response(_TUTOR_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(CaptionLookupError)
+    async def _caption_error(_: Request, error: CaptionLookupError) -> JSONResponse:
+        statuses = {
+            "invalid_value": 422,
+            "consent_required": 403,
+            "no_language": 409,
+            "language_changed": 409,
+            "question_limit": 429,
+        }
+        return _response(statuses.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(PhrasebookError)
     async def _phrasebook_error(_: Request, error: PhrasebookError) -> JSONResponse:

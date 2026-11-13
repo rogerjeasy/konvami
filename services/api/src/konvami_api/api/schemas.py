@@ -1079,6 +1079,11 @@ class PronunciationAttemptIn(ApiModel):
     assessment_consent: bool = False
 
 
+class ConversationAssessmentIn(ApiModel):
+    recording: RecordingIn
+    assessment_consent: bool = False
+
+
 class WordMarkOut(ApiModel):
     word: str
     ok: bool
@@ -1640,6 +1645,8 @@ class DeckExportOut(ApiModel):
 
 
 class CardProgressOut(ApiModel):
+    active_words: int = 0
+    passive_words: int = 0
     total: int
     due: int
     # Cards reviewed at least once.
@@ -1665,15 +1672,36 @@ class LevelPointOut(ApiModel):
     source: Source
 
 
+class ExamFigureOut(ApiModel):
+    title: str
+    labels: list[str]
+    values: list[int]
+
+
 class ExamCardOut(ApiModel):
     id: str
     # In the language of the exam, as printed on the card.
     title: str
     prompts: list[str]
 
+    picture: Literal["waiting_room", "bus_stop"] | None = None
+    figure: ExamFigureOut | None = None
+
     @classmethod
     def of(cls, card: ExamCard) -> "ExamCardOut":
-        return cls(id=card.id, title=card.title, prompts=list(card.prompts))
+        return cls(
+            id=card.id,
+            title=card.title,
+            prompts=list(card.prompts),
+            picture=card.picture,
+            figure=ExamFigureOut(
+                title=card.figure.title,
+                labels=list(card.figure.labels),
+                values=list(card.figure.values),
+            )
+            if card.figure
+            else None,
+        )
 
 
 class ExamPhraseOut(ApiModel):
@@ -1702,10 +1730,17 @@ class SpeakingExamOut(ApiModel):
     # The share of the points it takes to pass.
     pass_share: float
 
+    series: str | None = None
+    stage: int | None = None
+    stages: int | None = None
+
     @classmethod
     def of(cls, exam: SpeakingExam) -> "SpeakingExamOut":
         return cls(
             id=exam.id,
+            series=exam.series,
+            stage=exam.stage,
+            stages=exam.stages,
             exam=exam.exam,
             levels=list(exam.levels),
             name=exam.name,
@@ -2149,6 +2184,8 @@ class ProgressOut(ApiModel):
             cards=CardProgressOut(
                 total=cards.total,
                 due=cards.due,
+                active_words=cards.active_words,
+                passive_words=cards.passive_words,
                 learned=cards.learned,
                 reviews=cards.reviews,
                 remembered=cards.remembered,
@@ -2848,3 +2885,24 @@ class FeedbackInboxOut(ApiModel):
 
 class FeedbackResolution(ApiModel):
     status: FeedbackStatus
+
+
+class CaptionLookupIn(ApiModel):
+    language: str = Field(min_length=2, max_length=8)
+    word: str = Field(min_length=1, max_length=80)
+    caption: str = Field(min_length=1, max_length=1200)
+
+
+class CaptionSaveIn(ApiModel):
+    language: str = Field(min_length=2, max_length=8)
+    word: str = Field(min_length=1, max_length=80)
+    meaning: str = Field(min_length=1, max_length=500)
+
+
+class CaptionMeaningOut(ApiModel):
+    word: str
+    meaning: str
+    article: str | None
+    plural: str | None
+    unsure: bool
+    saved: bool

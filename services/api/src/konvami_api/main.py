@@ -17,6 +17,8 @@ from mangum import Mangum
 from konvami_api import observability
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import AccountService
+from konvami_api.domain.candidate_speech import CandidateSpeech
+from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
@@ -59,6 +61,7 @@ from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
@@ -102,6 +105,7 @@ from konvami_api.persistence.repositories import (
     SqlWeekReviewRepository,
 )
 from konvami_api.persistence.sql import SqlClient
+from konvami_api.persistence.vocabulary_repository import SqlVocabularyRepository
 from konvami_api.providers.audio_encoding import FfmpegEncoder
 from konvami_api.providers.aws import (
     LambdaCallStarter,
@@ -272,11 +276,24 @@ def build_backend(
         clock=_now,
         announce=push.report_ready,
     )
+    vocabulary_store = SqlVocabularyRepository(sql)
+    vocabulary = VocabularyService(
+        profiles=profiles,
+        accounts=directory,
+        sessions=sessions,
+        conversations=conversations,
+        reports=reports,
+        repository=vocabulary_store,
+        text_model=text,
+        model=models.report,
+        clock=_now,
+    )
     card_store = SqlCardRepository(sql)
     cards = CardService(
         profiles=profiles,
         reports=reports,
         repository=card_store,
+        vocabulary=vocabulary_store,
         clock=_now,
         details=LambdaDetailsStarter(clients.functions, worker),
     )
@@ -404,11 +421,12 @@ def build_backend(
     )
     voice = VoiceCallService(
         live_speech=LiveSpeech(premium_voices, premium_speech),
+        candidate_speech=CandidateSpeech(directory, speech, models.speech, exams.candidate_voice),
         settings=voice_config,
         scripts={
             CallPurpose.ONBOARDING: HostScript(CATALOG, profiles),
             CallPurpose.PLACEMENT: PlacementScript(placement),
-            CallPurpose.EXAM: ExamScript(exams),
+            CallPurpose.EXAM: ExamScript(exams, candidate=bool(models.speech)),
             CallPurpose.PRACTICE: PracticeScript(
                 profiles=profiles,
                 onboarding=onboarding,
@@ -501,6 +519,16 @@ def build_backend(
         recordings=recordings,
         tutor=tutor,
         course_imports=course_imports,
+        vocabulary=vocabulary,
+        caption_lookup=CaptionLookupService(
+            profiles=profiles,
+            accounts=directory,
+            cards=cards,
+            limit=tutor_store,
+            text_model=text,
+            model=models.tutor,
+            clock=_now,
+        ),
         phrasebook=PhrasebookService(
             sounds=Sounds(speech=speech, model=models.speech, files=files, premium=premium_voices),
             personas=personas,
@@ -602,6 +630,8 @@ def build_backend(
             clock=_now,
         ),
         pronunciation=PronunciationService(
+            conversations=conversations,
+            sessions=sessions,
             profiles=profiles,
             personas=personas,
             listener=listener,
@@ -726,7 +756,10 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
                     try:
                         services.levels.after_report(call_id)
                     finally:
-                        services.memories.write(call_id)
+                        try:
+                            services.vocabulary.after_report(call_id)
+                        finally:
+                            services.memories.write(call_id)
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
 

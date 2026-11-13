@@ -2,6 +2,7 @@
 
 import base64
 import binascii
+import dataclasses
 import datetime as dt
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -19,10 +20,14 @@ from konvami_api.api.schemas import (
     AccountOut,
     AllowanceOut,
     AnsweredOut,
+    CaptionLookupIn,
+    CaptionMeaningOut,
+    CaptionSaveIn,
     CardAudioOut,
     CardIn,
     CardOut,
     CatalogOut,
+    ConversationAssessmentIn,
     ConversationsOut,
     CostsOut,
     DataExportOut,
@@ -125,6 +130,7 @@ from konvami_api.api.schemas import (
     WordTimingOut,
 )
 from konvami_api.domain.accounts import AccountService, AccountView
+from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService
@@ -161,6 +167,7 @@ from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
@@ -191,6 +198,8 @@ class Services:
     accounts: AccountService
     recordings: RecordingService
     tutor: TutorService
+    vocabulary: VocabularyService
+    caption_lookup: CaptionLookupService
     phrasebook: PhrasebookService
     course_imports: CourseImportService
     voices: VoiceSampleService
@@ -924,6 +933,17 @@ def _router(services: Services) -> APIRouter:
     def get_phrase_audio(user: CurrentUser, phrase_id: UUID) -> CardAudioOut:
         return CardAudioOut(url=services.phrasebook.audio(user, phrase_id))
 
+    @router.post("/captions/lookup", operation_id="lookupCaption", responses=REFUSED)
+    def lookup_caption(user: CurrentUser, asked: CaptionLookupIn) -> CaptionMeaningOut:
+        found = services.caption_lookup.lookup(user, asked.language, asked.word, asked.caption)
+        return CaptionMeaningOut(**dataclasses.asdict(found))
+
+    @router.post("/captions/card", operation_id="saveCaptionWord", responses=REFUSED | CONFLICT)
+    def save_caption_word(user: CurrentUser, asked: CaptionSaveIn) -> CardOut:
+        return CardOut.of(
+            services.caption_lookup.save(user, asked.language, asked.word, asked.meaning)
+        )
+
     @router.get("/phrasebook", operation_id="getPhrasebook", responses=REFUSED)
     def get_phrasebook(user: CurrentUser) -> PhrasebookOut:
         """The learner's phrases for the language they are learning, newest first (spec §6.7)."""
@@ -1017,6 +1037,30 @@ def _router(services: Services) -> APIRouter:
                 attempt.drill,
                 attempt.sound_id,
                 attempt.target,
+                audio,
+                attempt.recording.format,
+                seconds,
+                assessment_consent=attempt.assessment_consent,
+            )
+        )
+
+    @router.post(
+        "/pronunciation/conversations/{call_id}/turns/{turn_index}",
+        operation_id="assessConversationPronunciation",
+        responses=ANSWER_REFUSED,
+    )
+    def assess_conversation_pronunciation(
+        user: CurrentUser,
+        call_id: str,
+        turn_index: int,
+        attempt: ConversationAssessmentIn,
+    ) -> PronunciationAttemptOut:
+        audio, seconds = recorded(attempt.recording, PronunciationError)
+        return PronunciationAttemptOut.of(
+            services.pronunciation.conversation_attempt(
+                user,
+                call_id,
+                turn_index,
                 audio,
                 attempt.recording.format,
                 seconds,

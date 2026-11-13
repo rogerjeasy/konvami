@@ -10,6 +10,7 @@ from mangum import Mangum
 
 from konvami_api.api.app import Services, create_app
 from konvami_api.domain.accounts import Account, AccountService
+from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
@@ -54,6 +55,7 @@ from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
@@ -111,6 +113,7 @@ from tests.fakes import (
     ScriptedTranscriber,
     text_guard,
 )
+from tests.vocabulary_fake import MemoryVocabularyRepository
 
 USER = "11111111-1111-4111-8111-111111111111"
 OTHER_USER = "22222222-2222-4222-8222-222222222222"
@@ -434,11 +437,13 @@ def services(
     )
     # Card ids in the order they are handed out: ...0001, ...0002, and so on.
     card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
+    vocabulary_store = MemoryVocabularyRepository()
     card_store = InMemoryCardRepository()
     cards = CardService(
         profiles=profiles,
         reports=reports,
         repository=card_store,
+        vocabulary=vocabulary_store,
         clock=clock,
         new_id=lambda: next(card_ids),
     )
@@ -598,6 +603,17 @@ def services(
         new_id=lambda: next(upload_ids),
     )
     return Services(
+        vocabulary=VocabularyService(
+            profiles=profiles,
+            accounts=directory,
+            sessions=calls,
+            conversations=conversations,
+            reports=reports,
+            repository=vocabulary_store,
+            text_model=text_model,
+            model="gpt-6.1-sol",
+            clock=clock,
+        ),
         catalog=CATALOG,
         profiles=profiles,
         questions=ProfileQuestionService(
@@ -625,6 +641,15 @@ def services(
         recordings=recordings,
         tutor=tutor,
         course_imports=course_imports,
+        caption_lookup=CaptionLookupService(
+            profiles=profiles,
+            accounts=directory,
+            cards=cards,
+            limit=tutor_store,
+            text_model=text_model,
+            model="gpt-6.1-sol",
+            clock=clock,
+        ),
         phrasebook=PhrasebookService(
             profiles=profiles,
             accounts=directory,
@@ -739,6 +764,8 @@ def services(
             clock=clock,
         ),
         pronunciation=PronunciationService(
+            conversations=conversations,
+            sessions=calls,
             profiles=profiles,
             personas=personas,
             listener=Listener(

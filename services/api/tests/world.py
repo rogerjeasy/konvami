@@ -63,6 +63,7 @@ from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import (
     CallPurpose,
     FinishedCall,
@@ -125,6 +126,7 @@ from tests.fakes import (
     ScriptedTranscriber,
     text_guard,
 )
+from tests.vocabulary_fake import MemoryVocabularyRepository
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
 OTHER_USER = UUID("22222222-2222-4222-8222-222222222222")
@@ -281,6 +283,18 @@ class World:
             repository=self.level_store,
             clock=self.clock,
         )
+        self.vocabulary_store = MemoryVocabularyRepository()
+        self.vocabulary = VocabularyService(
+            profiles=self.profiles,
+            accounts=self.accounts,
+            sessions=self.sessions,
+            conversations=self.conversations,
+            reports=self.reports,
+            repository=self.vocabulary_store,
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            clock=self.clock,
+        )
         self.card_store = InMemoryCardRepository()
         # Card ids in the order they are handed out: ...0001, ...0002, and so on.
         card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
@@ -289,6 +303,7 @@ class World:
             profiles=self.profiles,
             reports=self.reports,
             repository=self.card_store,
+            vocabulary=self.vocabulary_store,
             clock=self.clock,
             new_id=lambda: next(card_ids),
             details=self.card_details_starter,
@@ -493,6 +508,8 @@ class World:
         self.pronunciation_transcriber = ScriptedTranscriber()
         self.pronunciation_store = InMemoryPronunciationRepository()
         self.pronunciation = PronunciationService(
+            conversations=self.conversations,
+            sessions=self.sessions,
             profiles=self.profiles,
             personas=self.personas,
             listener=Listener(
