@@ -20,6 +20,7 @@ import { useSpokenAttempt } from '@/voice/use-spoken-attempt';
 import { HeardWords } from './heard-words';
 import { labFailureKey, type LabDrill } from './lab';
 import { ListenButton } from './listen-button';
+import { WaveformComparison } from './waveform-comparison';
 
 // How fast a sentence plays when the learner asks for it slowly.
 const SLOW_RATE = 0.75;
@@ -161,6 +162,9 @@ export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose
                 <Text variant="small" tone="muted">
                   {t('pronunciation.sheet.heard', { text: step.result.heard })}
                 </Text>
+              ) : null}
+              {drill?.listen.length === 1 && drill.listen[0] === drill.target ? (
+                <WaveformComparison recording={step.recording} reference={drill.target} />
               ) : null}
               <Text variant="caption" tone="subtle">
                 {t('pronunciation.approx')}
