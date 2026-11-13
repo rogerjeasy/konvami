@@ -36,6 +36,18 @@ def test_a_text_is_spoken_in_the_voice_and_comes_back_as_mp3() -> None:
     }
 
 
+def test_live_candidate_audio_uses_raw_pcm_in_the_same_voice() -> None:
+    pcm = b"\x01\x00" * 24000
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        assert body["response_format"] == "pcm"
+        assert body["voice"] == TASK.voice
+        return httpx.Response(200, content=pcm)
+
+    assert model(respond).speak_pcm(TASK) == pcm
+
+
 @pytest.mark.parametrize("status", [400, 401, 429, 500])
 def test_a_refusal_is_reported_without_the_providers_words(status: int) -> None:
     def respond(_: httpx.Request) -> httpx.Response:

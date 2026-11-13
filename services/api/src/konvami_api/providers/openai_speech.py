@@ -1,6 +1,7 @@
 """The speech model: OpenAI's audio speech endpoint, answering with MP3."""
 
 from collections.abc import Callable
+from typing import Literal
 
 import httpx
 
@@ -25,11 +26,18 @@ class OpenAiSpeech:
         self._meter = meter
 
     def speak(self, task: SpeechTask) -> bytes:
+        return self._speak(task, "mp3")
+
+    def speak_pcm(self, task: SpeechTask) -> bytes:
+        """24 kHz signed 16-bit little-endian mono, matching the live call recorder."""
+        return self._speak(task, "pcm")
+
+    def _speak(self, task: SpeechTask, format: Literal["mp3", "pcm"]) -> bytes:
         body = {
             "model": task.model,
             "voice": task.voice,
             "input": task.text,
-            "response_format": "mp3",
+            "response_format": format,
         }
         try:
             response = self._http.post(
