@@ -39,6 +39,7 @@ def test_the_formats_of_the_spec_are_there() -> None:
         "telc_b1",
         "dtz",
         "osd_b1",
+        *(f"testdaf_paper_{index}" for index in range(1, 8)),
     }
     b1 = format_for(GERMAN_EXAMS, "goethe", "B1")
     assert b1 is not None
@@ -68,7 +69,7 @@ def test_osd_b1_uses_the_joint_b1_format_without_duplicating_task_content() -> N
         ("dtz", "A2", "dtz"),
         ("dtz", None, "dtz"),
         ("telc", "C1", None),
-        ("testdaf", "B2", None),
+        ("testdaf", "B2", "testdaf_paper_1"),
     ],
 )
 def test_a_learners_exam_finds_its_format(exam: str, level: str | None, expected: str) -> None:

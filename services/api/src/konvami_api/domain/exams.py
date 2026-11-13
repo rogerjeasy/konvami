@@ -1,17 +1,17 @@
 """Exam simulations (spec §6.13): the speaking parts of the exams a learner prepares for, as
 configuration of the language pack, and the arithmetic of their scores.
 
-The formats are simplified from the exam bodies' handbooks so that one candidate does a whole
-speaking test in one call of at most ten minutes. Parts a real exam gives to two candidates
-("plan something together") are played with the examiner, who also takes the second
-candidate's role: a call has one voice. Pictures are described in words on the card. Scores are
-estimates from a transcript, never an official result.
+Most existing formats are compact practice simulations. TestDaF retains each task's speaking
+and preparation allowance across seven separately resumable stages. Picture and chart prompts
+are rendered from local visual data. Scores are estimates, never an official result.
 """
 
 import datetime as dt
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Literal
+
+from konvami_api.domain.testdaf_content import TASKS as TESTDAF_TASKS
 
 # What a part asks of the learner; the app names each kind in its own strings.
 PartKind = Literal[
@@ -44,6 +44,13 @@ MAX_PROJECTION = dt.timedelta(days=365)
 
 
 @dataclass(frozen=True)
+class ExamFigure:
+    title: str
+    labels: tuple[str, ...]
+    values: tuple[int, ...]
+
+
+@dataclass(frozen=True)
 class ExamCard:
     id: str
     # What the card says, in the language of the exam, as the learner sees it.
@@ -51,6 +58,8 @@ class ExamCard:
     prompts: tuple[str, ...]
     # What only the examiner knows (the second candidate's calendar), in English; empty for none.
     examiner: str = ""
+    picture: Literal["waiting_room", "bus_stop"] | None = None
+    figure: ExamFigure | None = None
 
 
 @dataclass(frozen=True)
@@ -78,6 +87,11 @@ class SpeakingExam:
     prep_seconds: int
     parts: tuple[ExamPart, ...]
     pass_share: float = PASS_SHARE
+    series: str | None = None
+    stage: int | None = None
+    stages: int | None = None
+    # A single timed monologue is enough evidence to score one TestDaF task.
+    min_learner_turns: int = 3
 
     def part(self, part_id: str) -> ExamPart | None:
         return next((part for part in self.parts if part.id == part_id), None)
@@ -600,6 +614,72 @@ GERMAN_EXAMS += tuple(
     for exam in GERMAN_EXAMS
     if exam.id == "goethe_b1"
 )
+
+
+GERMAN_EXAMS = tuple(
+    replace(
+        exam,
+        parts=tuple(
+            replace(
+                part,
+                cards=tuple(
+                    replace(card, picture="waiting_room" if index == 0 else "bus_stop")
+                    for index, card in enumerate(part.cards)
+                ),
+            )
+            if part.kind == "picture_experience"
+            else part
+            for part in exam.parts
+        ),
+    )
+    if exam.id == "dtz"
+    else exam
+    for exam in GERMAN_EXAMS
+)
+
+GERMAN_EXAMS += tuple(
+    SpeakingExam(
+        id=f"testdaf_paper_{index}",
+        exam="testdaf",
+        levels=("B2", "C1"),
+        name=f"TestDaF · {index}/7 · {task.title}",
+        prep_seconds=task.prep,
+        parts=(
+            ExamPart(
+                id=f"aufgabe_{index}",
+                kind=task.kind,
+                title=task.title,
+                task=task.instruction,
+                seconds=task.speaking,
+                cards=(
+                    ExamCard(
+                        id=f"testdaf_{index}a",
+                        title=task.title,
+                        prompts=task.prompts,
+                        figure=ExamFigure(task.figure_title, task.figure_labels, task.figure_values)
+                        if task.figure_title
+                        else None,
+                    ),
+                ),
+            ),
+        ),
+        series="testdaf_paper",
+        stage=index,
+        stages=len(TESTDAF_TASKS),
+        min_learner_turns=1,
+    )
+    for index, task in enumerate(TESTDAF_TASKS, start=1)
+)
+
+
+def next_stage(
+    exam: SpeakingExam, formats: Sequence[SpeakingExam], completed: Mapping[str, int]
+) -> SpeakingExam:
+    """Resume the least-completed task, including after a full series, using saved results."""
+    if exam.series is None:
+        return exam
+    stages = [candidate for candidate in formats if candidate.series == exam.series]
+    return min(stages, key=lambda item: (completed.get(item.id, 0), item.stage or 0))
 
 
 def format_for(exams: Sequence[SpeakingExam], exam: str, level: str | None) -> SpeakingExam | None:
