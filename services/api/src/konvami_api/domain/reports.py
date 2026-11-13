@@ -26,6 +26,7 @@ from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.conversations import ConversationError, ConversationService
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.fluency import recording_fluency
+from konvami_api.domain.learning_signals import learning_signals
 from konvami_api.domain.levels import FITS, Fit, LevelFit
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.profile import ProfileService
@@ -493,7 +494,11 @@ penalize a quiet microphone, an accent or a disability. Do not infer comprehensi
 from silence or speed. Look for explicit requests to repeat/explain and subsequent successful
 answers for comprehension evidence. Only explicit learner statements can indicate frustration
 or boredom; respond by suggesting support or challenge in next_steps, never by changing level
-from one emotional moment. Keep uncertainty when evidence is ambiguous."""
+from one emotional moment. Keep uncertainty when evidence is ambiguous.
+`learning_signals` are phrase-matched candidate cues with original turn numbers and quotes.
+Validate each in context: ignore quotations, sarcasm, negation and statements about other people.
+A request for repetition is a support preference, not proof of low comprehension. Prefer an
+explicitly requested explanation or challenge in next_steps; never label the learner's mood."""
 
 
 def _reviewer_instructions(target: str, explanation: str) -> str:
@@ -814,6 +819,7 @@ class ReportService:
         fluency = recording_fluency(turns)
         content = {
             "recording_fluency": asdict(fluency) if fluency else None,
+            "learning_signals": [asdict(signal) for signal in learning_signals(turns, language)],
             "level": profile.level(language) or DEFAULT_LEVEL,
             "partner": partner.name if partner else None,
             "transcript": [_line(number, turn) for number, turn in enumerate(turns)],
