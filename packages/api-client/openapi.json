@@ -260,6 +260,119 @@
         "title": "CallPurpose",
         "type": "string"
       },
+      "CaptionLookupIn": {
+        "additionalProperties": false,
+        "properties": {
+          "caption": {
+            "maxLength": 1200,
+            "minLength": 1,
+            "title": "Caption",
+            "type": "string"
+          },
+          "language": {
+            "maxLength": 8,
+            "minLength": 2,
+            "title": "Language",
+            "type": "string"
+          },
+          "word": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language",
+          "word",
+          "caption"
+        ],
+        "title": "CaptionLookupIn",
+        "type": "object"
+      },
+      "CaptionMeaningOut": {
+        "additionalProperties": false,
+        "properties": {
+          "article": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "plural": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plural"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "unsure": {
+            "title": "Unsure",
+            "type": "boolean"
+          },
+          "word": {
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "word",
+          "meaning",
+          "article",
+          "plural",
+          "unsure",
+          "saved"
+        ],
+        "title": "CaptionMeaningOut",
+        "type": "object"
+      },
+      "CaptionSaveIn": {
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "maxLength": 8,
+            "minLength": 2,
+            "title": "Language",
+            "type": "string"
+          },
+          "meaning": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Meaning",
+            "type": "string"
+          },
+          "word": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Word",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language",
+          "word",
+          "meaning"
+        ],
+        "title": "CaptionSaveIn",
+        "type": "object"
+      },
       "CardAudioOut": {
         "additionalProperties": false,
         "properties": {
@@ -448,12 +561,22 @@
       "CardProgressOut": {
         "additionalProperties": false,
         "properties": {
+          "activeWords": {
+            "default": 0,
+            "title": "Activewords",
+            "type": "integer"
+          },
           "due": {
             "title": "Due",
             "type": "integer"
           },
           "learned": {
             "title": "Learned",
+            "type": "integer"
+          },
+          "passiveWords": {
+            "default": 0,
+            "title": "Passivewords",
             "type": "integer"
           },
           "remembered": {
@@ -598,6 +721,24 @@
           "field"
         ],
         "title": "ChangeIn",
+        "type": "object"
+      },
+      "ConversationAssessmentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "assessmentConsent": {
+            "default": false,
+            "title": "Assessmentconsent",
+            "type": "boolean"
+          },
+          "recording": {
+            "$ref": "#/components/schemas/RecordingIn"
+          }
+        },
+        "required": [
+          "recording"
+        ],
+        "title": "ConversationAssessmentIn",
         "type": "object"
       },
       "ConversationOut": {
@@ -1006,9 +1147,34 @@
       "ExamCardOut": {
         "additionalProperties": false,
         "properties": {
+          "figure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExamFigureOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "picture": {
+            "anyOf": [
+              {
+                "enum": [
+                  "waiting_room",
+                  "bus_stop"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picture"
           },
           "prompts": {
             "items": {
@@ -1090,6 +1256,36 @@
           "readiness"
         ],
         "title": "ExamCentreOut",
+        "type": "object"
+      },
+      "ExamFigureOut": {
+        "additionalProperties": false,
+        "properties": {
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "title",
+          "labels",
+          "values"
+        ],
+        "title": "ExamFigureOut",
         "type": "object"
       },
       "ExamOut": {
@@ -6460,6 +6656,39 @@
           "prepSeconds": {
             "title": "Prepseconds",
             "type": "integer"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "stages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stages"
           }
         },
         "required": [
@@ -7914,6 +8143,112 @@
           }
         },
         "summary": "Start Picture Upload"
+      }
+    },
+    "/v1/captions/card": {
+      "post": {
+        "operationId": "saveCaptionWord",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptionSaveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Save Caption Word"
+      }
+    },
+    "/v1/captions/lookup": {
+      "post": {
+        "operationId": "lookupCaption",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptionLookupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptionMeaningOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Lookup Caption"
       }
     },
     "/v1/cards": {
@@ -13268,6 +13603,114 @@
           }
         },
         "summary": "Get Pronunciation Audio"
+      }
+    },
+    "/v1/pronunciation/conversations/{call_id}/turns/{turn_index}": {
+      "post": {
+        "operationId": "assessConversationPronunciation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "turn_index",
+            "required": true,
+            "schema": {
+              "title": "Turn Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationAssessmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PronunciationAttemptOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Assess Conversation Pronunciation"
       }
     },
     "/v1/pronunciation/picks": {

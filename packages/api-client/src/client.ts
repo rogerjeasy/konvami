@@ -256,6 +256,15 @@ export class ApiError extends Error {
   }
 }
 
+export interface CaptionMeaning {
+  word: string;
+  meaning: string;
+  article: string | null;
+  plural: string | null;
+  unsure: boolean;
+  saved: boolean;
+}
+
 export interface ApiClientOptions {
   /** The API's address (EXPO_PUBLIC_API_URL). */
   baseUrl: string;
@@ -494,6 +503,11 @@ export interface ApiClient {
    * A drill said out loud. `soundId` is null for one of the learner's problem words. Fails with
    * `not_found`, `invalid_value`, `drill_limit`, `consent_required` or `unavailable`.
    */
+  assessConversationPronunciation(
+    callId: string,
+    turn: number,
+    input: { recording: SpokenRecording; assessmentConsent: boolean },
+  ): Promise<PronunciationAttempt>;
   drillPronunciation(input: {
     drill: PronunciationDrill;
     soundId: string | null;
@@ -538,6 +552,8 @@ export interface ApiClient {
    * Phrases for a situation the learner describes; nothing is kept. Fails with `invalid_value`,
    * `suggestion_limit`, `consent_required` or `unavailable`.
    */
+  lookupCaption(language: string, word: string, caption: string): Promise<CaptionMeaning>;
+  saveCaptionWord(language: string, word: string, meaning: string): Promise<Card>;
   suggestPhrases(situation: string): Promise<{ suggestions: PhraseSuggestion[] }>;
   /** Makes a flashcard of a kept phrase. Fails with `not_found` or `too_many`. */
   makePhraseCard(id: string): Promise<Card>;
@@ -794,6 +810,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('GET', `/v1/pronunciation/sounds/${encodeURIComponent(id)}`),
     getProblemWords: () => request('GET', '/v1/pronunciation/words'),
     getPronunciationAudio: (text) => request('GET', withQuery('/v1/pronunciation/audio', { text })),
+    assessConversationPronunciation: (callId, turn, input) =>
+      request(
+        'POST',
+        `/v1/pronunciation/conversations/${encodeURIComponent(callId)}/turns/${turn}`,
+        input,
+      ),
     drillPronunciation: (input) => request('POST', '/v1/pronunciation/attempts', input),
     pickPronunciationWord: (input) => request('POST', '/v1/pronunciation/picks', input),
     getCard: (id) => request('GET', `/v1/cards/${encodeURIComponent(id)}`),
@@ -806,6 +828,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     askTutor: (question) => request('POST', '/v1/tutor/questions', { question }),
     explainCorrection: (conversationId, index) =>
       request('POST', '/v1/tutor/corrections', { conversationId, index }),
+    lookupCaption: (language, word, caption) =>
+      request('POST', '/v1/captions/lookup', { language, word, caption }),
+    saveCaptionWord: (language, word, meaning) =>
+      request('POST', '/v1/captions/card', { language, word, meaning }),
     getPhrasebook: () => request('GET', '/v1/phrasebook'),
     draftImportReply: (id) => request('POST', `/v1/imports/${encodeURIComponent(id)}/reply`),
     getPhraseAudio: (id) => request('GET', `/v1/phrasebook/${encodeURIComponent(id)}/audio`),
