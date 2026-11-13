@@ -23,6 +23,7 @@ from uuid import UUID
 
 from konvami_api.domain.card_details import DEFAULT_VOICE
 from konvami_api.domain.catalog import LanguagePack
+from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import ProfileService
@@ -36,6 +37,7 @@ from konvami_api.domain.reports import words_in
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.speech import SpeechError
 from konvami_api.domain.spoken import Listener, SpokenError, matched_words
+from konvami_api.domain.voice import VoiceSessionRepository
 
 # Each drill is a short request to a paid model: a long session of drills stays far below this.
 MAX_ATTEMPTS_PER_DAY = 200
@@ -45,6 +47,8 @@ MAX_PROBLEM_WORDS = 30
 TARGET_MAX = 200
 # A problem word leaves the list once it was said right this many times in a row.
 CLEARED_AFTER = 2
+# A pedagogical review suggestion on a 0-100 provider scale, never a CEFR or exam cutoff.
+ACOUSTIC_REVIEW_BELOW = 70
 
 # `word`: one or two words said (a word, a pair, a problem word). `shadow`: a sentence said right
 # after hearing it. (Picking which word was heard is `pick`, not an attempt with a recording.)
@@ -149,6 +153,8 @@ class PronunciationService:
         sounds: Sounds,
         clock: Callable[[], dt.datetime],
         assessor: PronunciationAssessor | None = None,
+        conversations: ConversationService | None = None,
+        sessions: VoiceSessionRepository | None = None,
     ) -> None:
         self._profiles = profiles
         self._personas = personas
@@ -157,6 +163,8 @@ class PronunciationService:
         self._sounds = sounds
         self._clock = clock
         self._assessor = assessor
+        self._conversations = conversations
+        self._sessions = sessions
 
     def assessment_provider(self, user_id: UUID) -> str | None:
         language, _ = self._pack(user_id)
@@ -287,6 +295,74 @@ class PronunciationService:
         language, pack = self._pack(user_id)
         target = target.strip()
         self._check_target(user_id, pack, drill, sound_id, target)
+        return self._attempt(
+            user_id,
+            language,
+            drill,
+            sound_id,
+            target,
+            audio,
+            audio_format,
+            seconds,
+            assessment_consent=assessment_consent,
+        )
+
+    def conversation_attempt(
+        self,
+        user_id: UUID,
+        call_id: str,
+        turn_index: int,
+        audio: bytes,
+        audio_format: str,
+        seconds: float | None = None,
+        *,
+        assessment_consent: bool = False,
+    ) -> Attempt:
+        """Assess a saved learner turn after per-recording consent; reuse the lab's word review."""
+        if not self._sessions or not self._conversations:
+            raise PronunciationError("unavailable")
+        session = self._sessions.get(call_id)
+        if session is None or session.user_id != user_id:
+            raise PronunciationError("not_found")
+        transcript = self._conversations.transcript(user_id, call_id)
+        if turn_index < 0 or turn_index >= len(transcript.turns):
+            raise PronunciationError("not_found")
+        turn = transcript.turns[turn_index]
+        if turn.speaker != "learner" or turn.audio is None or not turn.said.strip():
+            raise PronunciationError("not_found")
+        if not assessment_consent:
+            raise PronunciationError("consent_required")
+        # Never assess a historic German recording as the account's newly selected French.
+        language = session.plan.language if session.plan else ""
+        if not language:
+            raise PronunciationError("unavailable")
+        return self._attempt(
+            user_id,
+            language,
+            "conversation",
+            None,
+            turn.said,
+            audio,
+            audio_format,
+            seconds,
+            assessment_consent=True,
+            acoustic_words=True,
+        )
+
+    def _attempt(
+        self,
+        user_id: UUID,
+        language: str,
+        drill: str,
+        sound_id: str | None,
+        target: str,
+        audio: bytes,
+        audio_format: str,
+        seconds: float | None,
+        *,
+        assessment_consent: bool,
+        acoustic_words: bool = False,
+    ) -> Attempt:
         if assessment_consent and (
             self._assessor is None or not self._assessor.supports(language, audio_format)
         ):
@@ -327,7 +403,18 @@ class PronunciationService:
             target=target,
             heard=heard,
             right=right,
-            marks=_per_word(marks),
+            marks=(
+                _per_word(
+                    [
+                        WordMark(word.word, word.accuracy >= ACOUSTIC_REVIEW_BELOW)
+                        for word in assessed.words
+                        if len(target_words(word.word)) == 1
+                        and word.word.casefold() in {token.casefold() for token in shown}
+                    ]
+                )
+                if acoustic_words and assessed is not None
+                else _per_word(marks)
+            ),
         )
         return Attempt(heard, right, marks, assessed)
 
@@ -356,7 +443,9 @@ class PronunciationService:
 
 def _per_word(marks: Sequence[WordMark]) -> list[tuple[str, bool]]:
     """A word said twice in a text counts once, and as right only if every time was."""
-    merged: dict[str, bool] = {}
+    merged: dict[str, tuple[str, bool]] = {}
     for mark in marks:
-        merged[mark.word] = merged.get(mark.word, True) and mark.ok
-    return list(merged.items())
+        key = mark.word.casefold()
+        shown, previous = merged.get(key, (mark.word, True))
+        merged[key] = (shown, previous and mark.ok)
+    return list(merged.values())
