@@ -125,6 +125,7 @@ from konvami_api.api.schemas import (
     TutorQuestionsOut,
     VoiceCallIn,
     VoiceCallOut,
+    VoiceContinuationIn,
     VoiceSampleOut,
     WeekReviewOut,
     WordTimingOut,
@@ -466,8 +467,35 @@ def _router(services: Services) -> APIRouter:
             offer.scenario,
             offer.practise,
             premium=offer.premium,
+            assessment_consent=offer.assessment_consent,
         )
         return VoiceCallOut.of(started)
+
+    @router.post(
+        "/voice/calls/{call_id}/continue",
+        operation_id="continueVoiceCall",
+        responses=CALL_REFUSED | CONFLICT,
+    )
+    def continue_voice_call(
+        user: CurrentUser, call_id: str, offer: VoiceContinuationIn
+    ) -> VoiceCallOut:
+        return VoiceCallOut.of(
+            services.voice.continue_call(
+                user,
+                call_id,
+                offer.attempt_id,
+                offer.sdp_offer,
+            )
+        )
+
+    @router.post(
+        "/voice/calls/{call_id}/end",
+        operation_id="endVoiceCall",
+        status_code=204,
+        responses=CONFLICT,
+    )
+    def end_voice_call(user: CurrentUser, call_id: str) -> None:
+        services.voice.end_call(user, call_id)
 
     @router.get("/plan", operation_id="getPlan")
     def get_plan(user: CurrentUser) -> PlanOut:
@@ -527,6 +555,7 @@ def _router(services: Services) -> APIRouter:
         """The cards of the learner's next simulation of a speaking test, to prepare with."""
         upcoming = services.exams.next(user, exam_id)
         return NextSimulationOut(
+            assessment_provider=upcoming.assessment_provider,
             exam=SpeakingExamOut.of(upcoming.exam),
             cards=[ExamCardOut.of(card) for card in upcoming.cards],
         )

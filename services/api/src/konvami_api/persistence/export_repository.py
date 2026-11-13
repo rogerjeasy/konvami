@@ -34,6 +34,12 @@ class ExportedTable:
 
 EXPORTED: tuple[ExportedTable, ...] = (
     ExportedTable("app_user", f"WHERE t.id = {USER}"),
+    # SDP caches are temporary connection material. The saved conversation remains exportable.
+    ExportedTable(
+        "practice_continuation",
+        f"WHERE t.user_id = {USER}",
+        "to_jsonb(t) - 'data' || jsonb_build_object('conversation', t.data - 'attempts')",
+    ),
     *(
         ExportedTable(name, f"WHERE t.user_id = {USER}")
         for name in (

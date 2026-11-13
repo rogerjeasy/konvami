@@ -1401,6 +1401,71 @@
         "title": "ExamPhraseOut",
         "type": "object"
       },
+      "ExamPronunciationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy"
+          },
+          "assessedSeconds": {
+            "title": "Assessedseconds",
+            "type": "number"
+          },
+          "assessedTurns": {
+            "title": "Assessedturns",
+            "type": "integer"
+          },
+          "fluency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fluency"
+          },
+          "prosody": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prosody"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "skippedTurns": {
+            "title": "Skippedturns",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider",
+          "accuracy",
+          "fluency",
+          "prosody",
+          "assessedTurns",
+          "skippedTurns",
+          "assessedSeconds"
+        ],
+        "title": "ExamPronunciationOut",
+        "type": "object"
+      },
       "ExamWeekOut": {
         "additionalProperties": false,
         "description": "The week's simulations of the learner's speaking test.",
@@ -3321,6 +3386,17 @@
       "NextSimulationOut": {
         "additionalProperties": false,
         "properties": {
+          "assessmentProvider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessmentprovider"
+          },
           "cards": {
             "items": {
               "$ref": "#/components/schemas/ExamCardOut"
@@ -6406,6 +6482,16 @@
             "title": "Passed",
             "type": "boolean"
           },
+          "pronunciation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExamPronunciationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "summary": {
             "title": "Summary",
             "type": "string"
@@ -7261,6 +7347,11 @@
       "VoiceCallIn": {
         "additionalProperties": false,
         "properties": {
+          "assessmentConsent": {
+            "default": false,
+            "title": "Assessmentconsent",
+            "type": "boolean"
+          },
           "localDate": {
             "anyOf": [
               {
@@ -7364,6 +7455,30 @@
           "plan"
         ],
         "title": "VoiceCallOut",
+        "type": "object"
+      },
+      "VoiceContinuationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "attemptId": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "title": "Attemptid",
+            "type": "string"
+          },
+          "sdpOffer": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Sdpoffer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attemptId",
+          "sdpOffer"
+        ],
+        "title": "VoiceContinuationIn",
         "type": "object"
       },
       "VoiceSampleOut": {
@@ -14470,6 +14585,167 @@
           }
         },
         "summary": "Start Voice Call"
+      }
+    },
+    "/v1/voice/calls/{call_id}/continue": {
+      "post": {
+        "operationId": "continueVoiceCall",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceContinuationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceCallOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Continue Voice Call"
+      }
+    },
+    "/v1/voice/calls/{call_id}/end": {
+      "post": {
+        "operationId": "endVoiceCall",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "End Voice Call"
       }
     },
     "/v1/voices/{voice}/sample": {

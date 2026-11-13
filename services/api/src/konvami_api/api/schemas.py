@@ -392,6 +392,7 @@ class PushDeviceOut(ApiModel):
 
 
 class VoiceCallIn(ApiModel):
+    assessment_consent: bool = False
     premium: bool = False
     purpose: CallPurpose
     # The app's WebRTC offer (SDP).
@@ -444,6 +445,12 @@ class CallPlanOut(ApiModel):
             material=plan.material.title if plan.material else None,
             rehearse=plan.material.rehearse if plan.material else False,
         )
+
+
+class VoiceContinuationIn(ApiModel):
+    # Idempotency key scoped to the learner's logical call, not a credential.
+    attempt_id: str = Field(min_length=1, max_length=80, pattern=r"^[a-zA-Z0-9_-]+$")
+    sdp_offer: str = Field(min_length=1, max_length=MAX_SDP_LENGTH)
 
 
 class VoiceCallOut(ApiModel):
@@ -1837,6 +1844,7 @@ class ExamCentreOut(ApiModel):
 
 
 class NextSimulationOut(ApiModel):
+    assessment_provider: str | None = None
     exam: SpeakingExamOut
     # One per part, in order.
     cards: list[ExamCardOut]
@@ -1859,7 +1867,18 @@ class PartScoreOut(ApiModel):
     model_answer: str
 
 
+class ExamPronunciationOut(ApiModel):
+    provider: str
+    accuracy: float | None
+    fluency: float | None
+    prosody: float | None
+    assessed_turns: int
+    skipped_turns: int
+    assessed_seconds: float
+
+
 class SimulationResultOut(ApiModel):
+    pronunciation: ExamPronunciationOut | None = None
     # An estimate from the transcript, never an official score.
     total: float
     passed: bool
@@ -1887,6 +1906,9 @@ class SimulationOut(ApiModel):
             started_at=simulation.started_at,
             status=simulation.status,
             result=SimulationResultOut(
+                pronunciation=ExamPronunciationOut(**dataclasses.asdict(result.pronunciation))
+                if result.pronunciation
+                else None,
                 total=result.total,
                 passed=result.passed,
                 pass_share=result.pass_share,

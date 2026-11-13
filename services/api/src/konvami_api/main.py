@@ -22,11 +22,13 @@ from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.continuation import Continuations
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
+from konvami_api.domain.exam_acoustics import ExamAcoustics
 from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService
@@ -67,6 +69,7 @@ from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
+from konvami_api.persistence.continuation_repository import SqlContinuationRepository
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.export_repository import SqlExportRepository
 from konvami_api.persistence.migrations import migrate_when_awake
@@ -320,6 +323,21 @@ def build_backend(
     listener = Listener(
         profiles=profiles, accounts=directory, transcriber=transcriber, model=models.verbatim
     )
+    encoder = (
+        FfmpegEncoder(environment["RECORDING_ENCODER_PATH"])
+        if environment.get("RECORDING_ENCODER_PATH")
+        else None
+    )
+    assessor = (
+        AzurePronunciation(
+            cached_secret(clients.secrets, environment.get("KONVAMI_AZURE_SPEECH_SECRET_ARN", "")),
+            environment.get("KONVAMI_AZURE_SPEECH_REGION", ""),
+            meter=meter,
+        )
+        if environment.get("KONVAMI_AZURE_SPEECH_SECRET_ARN")
+        and environment.get("KONVAMI_AZURE_SPEECH_REGION")
+        else None
+    )
     recordings = RecordingService(
         profiles=profiles,
         conversations=conversations,
@@ -330,9 +348,7 @@ def build_backend(
         model=models.verbatim,
         aligner=transcriber,
         alignment_model=environment.get("RECORDING_ALIGNMENT_MODEL", ""),
-        encoder=FfmpegEncoder(environment["RECORDING_ENCODER_PATH"])
-        if environment.get("RECORDING_ENCODER_PATH")
-        else None,
+        encoder=encoder,
         accounts=directory,
     )
     tutor_store = SqlTutorRepository(sql)
@@ -394,6 +410,17 @@ def build_backend(
     )
     sounds = Sounds(speech=speech, model=models.speech, files=files, premium=premium_voices)
     exams = ExamService(
+        acoustics=ExamAcoustics(
+            assessor,
+            encoder,
+            files,
+            aligner=transcriber,
+            alignment_model=environment.get("RECORDING_ALIGNMENT_MODEL", ""),
+        )
+        if assessor and encoder and encoder.available
+        else None,
+        recordings=recordings,
+        accounts=directory,
         profiles=profiles,
         personas=personas,
         conversations=conversations,
@@ -420,6 +447,9 @@ def build_backend(
         clock=_now,
     )
     voice = VoiceCallService(
+        assessment_provider=exams.assessment_provider,
+        continuations=Continuations(SqlContinuationRepository(sql)),
+        current_language=lambda user: profiles.get(user).target_language,
         live_speech=LiveSpeech(premium_voices, premium_speech),
         candidate_speech=CandidateSpeech(directory, speech, models.speech, exams.candidate_voice),
         settings=voice_config,
@@ -638,16 +668,7 @@ def build_backend(
             repository=SqlPronunciationRepository(sql),
             sounds=sounds,
             clock=_now,
-            assessor=AzurePronunciation(
-                cached_secret(
-                    clients.secrets, environment.get("KONVAMI_AZURE_SPEECH_SECRET_ARN", "")
-                ),
-                environment.get("KONVAMI_AZURE_SPEECH_REGION", ""),
-                meter=meter,
-            )
-            if environment.get("KONVAMI_AZURE_SPEECH_SECRET_ARN")
-            and environment.get("KONVAMI_AZURE_SPEECH_REGION")
-            else None,
+            assessor=assessor,
         ),
         conversation_review=conversation_review,
         voice_review=VoiceReviewService(

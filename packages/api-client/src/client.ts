@@ -24,6 +24,8 @@ export type VoiceCall = Schemas['VoiceCallOut'];
 export type CallPlan = Schemas['CallPlanOut'];
 /** What a call may say about itself beyond its purpose and offer. */
 export interface VoiceCallDetails {
+  /** Explicit permission to assess this exam recording acoustically. */
+  assessmentConsent?: boolean;
   /** Explicit opt-in to the selected premium voice for this practice call. */
   premium?: boolean;
   /** The partner of a practice call. */
@@ -346,6 +348,10 @@ export interface ApiClient {
    * `voice_unavailable` or, for a partner the learner does not have, `not_found`.
    */
   startVoiceCall(purpose: CallPurpose, sdp: string, details?: VoiceCallDetails): Promise<VoiceCall>;
+  /** Same attempt and offer are safe to retry after continuation_pending or a lost HTTP reply. */
+  continueVoiceCall(callId: string, attemptId: string, sdpOffer: string): Promise<VoiceCall>;
+  /** Ends the logical conversation, including any replacement connection still being created. */
+  endVoiceCall(callId: string): Promise<void>;
   /**
    * The Today screen in one answer. `timeZone` is the device's IANA zone ("Europe/Zurich"), so
    * days and the streak follow the learner's calendar.
@@ -669,6 +675,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     if (!baseUrl) throw new ApiError('not_configured');
     for (let attempts = 1; ; attempts += 1) {
       const response = await attempt(method, path, body);
+      if (response.status === 204) return undefined as T;
       if (response.ok) return (await response.json()) as T;
       const error = await errorOf(response);
       if (error.code !== 'waking_up' || attempts >= WAKE_UP_ATTEMPTS) throw error;
@@ -732,6 +739,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     completeOnboarding: () => request('POST', '/v1/onboarding/complete'),
     startVoiceCall: (purpose, sdp, details = {}) =>
       request('POST', '/v1/voice/calls', { purpose, sdp, ...details }),
+    continueVoiceCall: (callId, attemptId, sdpOffer) =>
+      request('POST', `/v1/voice/calls/${encodeURIComponent(callId)}/continue`, { attemptId, sdpOffer }),
+    endVoiceCall: async (callId) =>
+      void (await request('POST', `/v1/voice/calls/${encodeURIComponent(callId)}/end`)),
     getHome: (timeZone) => request('GET', withQuery('/v1/home', { tz: timeZone })),
     getProgress: (timeZone) => request('GET', withQuery('/v1/progress', { tz: timeZone })),
     requestWeekReview: (week, timeZone) =>

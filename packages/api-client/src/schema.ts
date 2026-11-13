@@ -1819,6 +1819,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/voice/calls/{call_id}/continue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Continue Voice Call */
+        post: operations["continueVoiceCall"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/voice/calls/{call_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End Voice Call */
+        post: operations["endVoiceCall"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/voices/{voice}/sample": {
         parameters: {
             query?: never;
@@ -2381,6 +2415,23 @@ export interface components {
             };
             /** Text */
             text: string;
+        };
+        /** ExamPronunciationOut */
+        ExamPronunciationOut: {
+            /** Accuracy */
+            accuracy: number | null;
+            /** Assessedseconds */
+            assessedSeconds: number;
+            /** Assessedturns */
+            assessedTurns: number;
+            /** Fluency */
+            fluency: number | null;
+            /** Prosody */
+            prosody: number | null;
+            /** Provider */
+            provider: string;
+            /** Skippedturns */
+            skippedTurns: number;
         };
         /**
          * ExamWeekOut
@@ -3049,6 +3100,8 @@ export interface components {
         };
         /** NextSimulationOut */
         NextSimulationOut: {
+            /** Assessmentprovider */
+            assessmentProvider?: string | null;
             /** Cards */
             cards: components["schemas"]["ExamCardOut"][];
             exam: components["schemas"]["SpeakingExamOut"];
@@ -4097,6 +4150,7 @@ export interface components {
             passShare: number;
             /** Passed */
             passed: boolean;
+            pronunciation?: components["schemas"]["ExamPronunciationOut"] | null;
             /** Summary */
             summary: string;
             /** Total */
@@ -4386,6 +4440,11 @@ export interface components {
         };
         /** VoiceCallIn */
         VoiceCallIn: {
+            /**
+             * Assessmentconsent
+             * @default false
+             */
+            assessmentConsent: boolean;
             /** Localdate */
             localDate?: string | null;
             /** Personaid */
@@ -4412,6 +4471,13 @@ export interface components {
             plan: components["schemas"]["CallPlanOut"] | null;
             /** Sdp */
             sdp: string;
+        };
+        /** VoiceContinuationIn */
+        VoiceContinuationIn: {
+            /** Attemptid */
+            attemptId: string;
+            /** Sdpoffer */
+            sdpOffer: string;
         };
         /** VoiceSampleOut */
         VoiceSampleOut: {
@@ -10066,6 +10132,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    continueVoiceCall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceContinuationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceCallOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    endVoiceCall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

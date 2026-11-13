@@ -63,7 +63,13 @@ class ApiError(Exception):
 
 _HTTP_CODES = {404: "not_found", 405: "method_not_allowed"}
 # Why a voice call cannot start, as HTTP: not allowed, too many, or not possible right now.
-_VOICE_STATUS = {"not_authenticated": 401, "consent_required": 403, "minutes_used_up": 429}
+_VOICE_STATUS = {
+    "not_authenticated": 401,
+    "consent_required": 403,
+    "minutes_used_up": 429,
+    "continuation_pending": 409,
+    "continuation_unavailable": 409,
+}
 _VOICE_UNAVAILABLE = 503
 _ACCOUNT_STATUS = {"upload_not_found": 404, "invalid_picture": 422}
 _PERSONA_STATUS = {

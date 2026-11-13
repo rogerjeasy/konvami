@@ -328,6 +328,18 @@ describe('api client', () => {
     });
   });
 
+  it('continues a logical call with a stable attempt and explicitly ends it', async () => {
+    const answer = { callId: 'rtc_1', sdp: 'answer', maxSeconds: 120, plan: null };
+    const { fetch, calls } = fakeFetch(json(200, answer), new Response(null, { status: 204 }));
+    const { api } = client(fetch);
+    expect(await api.continueVoiceCall('rtc_1', 'attempt_1', 'offer')).toEqual(answer);
+    await api.endVoiceCall('rtc_1');
+    expect(calls.map(({ url, body }) => [new URL(url).pathname, body])).toEqual([
+      ['/v1/voice/calls/rtc_1/continue', { attemptId: 'attempt_1', sdpOffer: 'offer' }],
+      ['/v1/voice/calls/rtc_1/end', undefined],
+    ]);
+  });
+
   it.each([
     [403, 'consent_required'],
     [429, 'minutes_used_up'],
