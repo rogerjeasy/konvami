@@ -689,7 +689,7 @@ class ReportService:
         self._model = model
         self._clock = clock
 
-    def after_call(self, user_id: UUID, call_id: str) -> None:
+    def after_call(self, user_id: UUID, call_id: str, *, retryable: bool = False) -> None:
         """A practice conversation has ended: has its report written, if it counts as one."""
         if not self._model:
             return
@@ -699,8 +699,13 @@ class ReportService:
             return
         if counts:
             try:
-                self._begin(call_id)
+                started = self._begin(call_id)
+                if retryable and not started and self._state(call_id).status == "failed":
+                    raise ReportError("report_limit")
             except ReportError:
+                # Linked calls have a durable finalizer that retries a failed handoff.
+                if retryable:
+                    raise
                 # Stored as failed: the learner can ask for it again.
                 return
 

@@ -11,6 +11,7 @@ the call as soon as it is there.
 
 import asyncio
 import json
+import logging
 import time
 from collections.abc import Callable, Mapping
 from typing import Any, Protocol
@@ -33,6 +34,10 @@ from konvami_api.domain.voice import VoiceCallService
 
 # How often the call's clock is checked when no event arrives.
 TICK_SECONDS = 1.0
+# Retry durable finalization after transient storage or queue failures, then let Lambda retry.
+FINALIZATION_ATTEMPTS = 3
+FINALIZATION_RETRY_SECONDS = 2.0
+_log = logging.getLogger(__name__)
 OPEN_TIMEOUT_SECONDS = 10.0
 # The largest message accepted. A turn's audio comes in one message, in base64: the library's
 # default (1 MiB) holds about 15 seconds of it, this about eight minutes.
@@ -202,7 +207,7 @@ async def follow_call(voice: VoiceCallService, provider: Sideband, call_id: str)
         # Without its server side the call cannot do its job: end it rather than leave it open.
         provider.hang_up(call_id)
         call.closed()
-        voice.finished(call_id, call)
+        await _finish_call(voice, call_id, call)
         raise
     try:
         await run_call(
@@ -216,4 +221,24 @@ async def follow_call(voice: VoiceCallService, provider: Sideband, call_id: str)
         )
     finally:
         await connection.close()
-        voice.finished(call_id, call)
+        await _finish_call(voice, call_id, call)
+
+
+async def _finish_recovery(voice: VoiceCallService, call_id: str) -> None:
+    # The worker that owns the final closed segment concludes the logical conversation.
+    # A replacement worker takes over as soon as a continuation is connected.
+    while await asyncio.to_thread(voice.finish_pending, call_id):
+        await asyncio.sleep(TICK_SECONDS)
+
+
+async def _finish_call(voice: VoiceCallService, call_id: str, call: LiveCall) -> None:
+    for attempt in range(FINALIZATION_ATTEMPTS):
+        try:
+            await asyncio.to_thread(voice.finished, call_id, call)
+            await _finish_recovery(voice, call_id)
+            return
+        except Exception:
+            if attempt + 1 == FINALIZATION_ATTEMPTS:
+                raise
+            _log.exception("call finalization will retry")
+            await asyncio.sleep(FINALIZATION_RETRY_SECONDS)

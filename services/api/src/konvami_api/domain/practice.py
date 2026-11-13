@@ -125,6 +125,11 @@ class PracticeTools:
         """The goals reached, in the scenario's order."""
         return tuple(goal.id for goal in self._goals if goal.id in self._reached)
 
+    def restore_goals(self, goals: tuple[str, ...]) -> None:
+        """Restore server-recorded progress without rerunning mutating tool calls."""
+        allowed = {goal.id for goal in self._goals}
+        self._reached.update(goal for goal in goals if goal in allowed)
+
     def definitions(self) -> list[dict[str, Any]]:
         return [
             {
@@ -1067,6 +1072,15 @@ class PracticeScript:
         return None
 
     def concluded(self, user_id: UUID, call_id: str, tools: ToolSet, call: FinishedCall) -> None:
+        self._conclude(user_id, call_id, tools, retryable=False)
+
+    def conclude_linked(
+        self, user_id: UUID, call_id: str, tools: ToolSet, call: FinishedCall
+    ) -> None:
+        """The durable continuation finalizer retries transient handoff failures."""
+        self._conclude(user_id, call_id, tools, retryable=True)
+
+    def _conclude(self, user_id: UUID, call_id: str, tools: ToolSet, *, retryable: bool) -> None:
         # Whether the conversation may be read for memories is recorded before a worker is
         # started for it. Should that fail, the conversation stays unread, and the report is
         # started all the same (spec §12.2: one step failing does not block another).
@@ -1078,4 +1092,4 @@ class PracticeScript:
             try:
                 self._recordings.after_call(user_id, call_id)
             finally:
-                self._reports.after_call(user_id, call_id)
+                self._reports.after_call(user_id, call_id, retryable=retryable)

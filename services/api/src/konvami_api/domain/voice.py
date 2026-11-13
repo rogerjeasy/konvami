@@ -16,6 +16,12 @@ from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountDirectory, AccountNotFound
 from konvami_api.domain.candidate_speech import CandidateSpeech
+from konvami_api.domain.continuation import (
+    ContinuationError,
+    Continuations,
+    aggregate,
+    continuation_config,
+)
 from konvami_api.domain.costs import (
     Allowance,
     Charge,
@@ -327,11 +333,15 @@ class VoiceCallService:
         weekly_seconds: Callable[[UUID, dt.date], int] | None = None,
         live_speech: LiveSpeech | None = None,
         candidate_speech: CandidateSpeech | None = None,
+        continuations: Continuations | None = None,
+        current_language: Callable[[UUID], str | None] | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
         `meter` they are not metered; without a `checker` no turn is checked live. Without
         `weekly_seconds` (the learner and the week: the seconds the week allows them) every
         learner has the settings' minutes."""
+        self._continuations = continuations
+        self._language = current_language
         self._speech = live_speech
         self._candidate_speech = candidate_speech
         self._weekly = weekly_seconds
@@ -462,6 +472,15 @@ class VoiceCallService:
 
         self._sessions.started(replace(call, call_id=created.call_id))
         try:
+            if call.purpose is CallPurpose.PRACTICE and self._continuations is not None:
+                self._continuations.register(
+                    created.call_id,
+                    call.user_id,
+                    self._language(call.user_id) or "" if self._language else "",
+                    session,
+                    call.started_at,
+                    call.max_seconds or 0,
+                )
             self._starter.start(created.call_id, call.user_id, call.purpose)
         except Exception as error:
             # Without its server side the persona's tools would do nothing: end the call.
@@ -486,12 +505,21 @@ class VoiceCallService:
 
     def live_call(self, call_id: str) -> LiveCall | None:
         """The server's side of a recorded call, with the tools of the learner it belongs to."""
-        session = self._sessions.get(call_id)
+        session = self._session(call_id)
         if session is None:
             return None
+        tools = self._scripts[session.purpose].tools(session.user_id, session.scenario)
+        maximum = session.max_seconds or self._settings.max_seconds[session.purpose]
+        if self._continuations is not None:
+            linked = self._continuations.get(call_id)
+            if linked is not None:
+                self._restore_goals(tools, aggregate(tuple(linked.segments)).goals)
+                maximum = min(
+                    maximum, max(0, int((linked.deadline - self._clock()).total_seconds()))
+                )
         return LiveCall(
-            self._scripts[session.purpose].tools(session.user_id, session.scenario),
-            max_seconds=session.max_seconds or self._settings.max_seconds[session.purpose],
+            tools,
+            max_seconds=maximum,
             wrap_up_seconds=WRAP_UP_SECONDS,
             goodbye_grace_seconds=GOODBYE_GRACE_SECONDS,
             record=self._recordings is not None and session.purpose in _RECORDED,
@@ -500,7 +528,7 @@ class VoiceCallService:
         )
 
     def speaker(self, call_id: str) -> Callable[[Speak], Spoken] | None:
-        session = self._sessions.get(call_id)
+        session = self._session(call_id)
         if session is None:
             return None
         candidate = session.purpose is CallPurpose.EXAM
@@ -514,7 +542,9 @@ class VoiceCallService:
                 raise SpeechError("unexpected speech role")
             pcm = speech.speak(session.user_id, turn.text)
             audio = recordings.keep(
-                session.user_id, call_id, KeepAudio(turn.item_id, "persona", pcm)
+                session.user_id,
+                self._root(call_id),
+                KeepAudio(self._audio_id(call_id, turn.item_id), "persona", pcm),
             )
             return Spoken(turn.item_id, turn.text, audio, recordings.address(audio))
 
@@ -522,24 +552,28 @@ class VoiceCallService:
 
     def spotter(self, call_id: str) -> Callable[[Spot], Spotted] | None:
         """Checks one of the learner's turns of a call; None for a call whose turns are not."""
-        session = self._sessions.get(call_id)
+        session = self._session(call_id)
         if session is None or self._checker is None:
             return None
         return self._checker.for_call(session)
 
     def audio_keeper(self, call_id: str) -> Callable[[KeepAudio], TurnAudio] | None:
         """Stores the audio of one turn of a recorded call; None for a call that is not."""
-        session = self._sessions.get(call_id)
+        session = self._session(call_id)
         recordings = self._recordings
         if session is None or recordings is None or session.purpose not in _RECORDED:
             return None
         user_id = session.user_id
-        return lambda audio: recordings.keep(user_id, call_id, audio)
+        return lambda audio: recordings.keep(
+            user_id,
+            self._root(call_id),
+            replace(audio, item_id=self._audio_id(call_id, audio.item_id)),
+        )
 
     def finished(self, call_id: str, call: LiveCall) -> None:
         """Stores how a call ended, what was said and what it used, then lets the call's script
         draw its conclusions (a placement test is assessed here)."""
-        session = self._sessions.get(call_id)
+        session = self._session(call_id)
         if session is None:
             return
         result = FinishedCall(
@@ -548,10 +582,23 @@ class VoiceCallService:
             usage=dict(call.usage),
             turns=tuple(call.turns),
         )
+        if self._continuations is not None and self._continuations.get(call_id) is not None:
+            goals = tuple(getattr(call.tools, "reached", ()))
+            self._continuations.close(
+                call_id, result.ended_at, result.outcome, result.usage, result.turns, goals
+            )
+            self.finish_pending(call_id)
+            return
+        seconds = max(0, int((result.ended_at - session.started_at).total_seconds()))
+        self._conclude(session, result, call.tools, seconds)
+
+    def _conclude(
+        self, session: VoiceSession, result: FinishedCall, tools: ToolSet, seconds: int
+    ) -> None:
+        call_id = session.call_id
         # A call is concluded once: its unused time is given back, and it is metered, once.
         if not self._sessions.finish(call_id, result):
             return
-        seconds = max(0, int((result.ended_at - session.started_at).total_seconds()))
         if session.max_seconds is not None and seconds < session.max_seconds:
             week = week_start(session.started_at).date()
             self._sessions.release_seconds(session.user_id, week, session.max_seconds - seconds)
@@ -563,7 +610,7 @@ class VoiceCallService:
                 voice_units(result.usage, seconds),
             )
         try:
-            self._scripts[session.purpose].concluded(session.user_id, call_id, call.tools, result)
+            self._scripts[session.purpose].concluded(session.user_id, call_id, tools, result)
         finally:
             if (
                 session.purpose is CallPurpose.EXAM
@@ -571,3 +618,173 @@ class VoiceCallService:
                 and self._recordings
             ):
                 self._recordings.release(session.user_id, call_id)
+
+    def _session(self, call_id: str) -> VoiceSession | None:
+        session = self._sessions.get(call_id)
+        if session is not None or self._continuations is None:
+            return session
+        linked = self._continuations.get(call_id)
+        if linked is None:
+            return None
+        root = self._sessions.get(linked.root_id)
+        segment = next((item for item in linked.segments if item.call_id == call_id), None)
+        if root is None or segment is None:
+            return None
+        return replace(
+            root, call_id=call_id, started_at=segment.started_at, max_seconds=segment.max_seconds
+        )
+
+    def _root(self, call_id: str) -> str:
+        linked = self._continuations.get(call_id) if self._continuations else None
+        return linked.root_id if linked else call_id
+
+    def _audio_id(self, call_id: str, item_id: str) -> str:
+        # Provider item IDs are unique within one transport, not guaranteed across transports.
+        linked = self._continuations.get(call_id) if self._continuations else None
+        return f"{call_id}_{item_id}" if linked else item_id
+
+    @staticmethod
+    def _restore_goals(tools: ToolSet, goals: tuple[str, ...]) -> None:
+        restore = getattr(tools, "restore_goals", None)
+        if restore is not None:
+            restore(goals)
+
+    def continue_call(
+        self, user_id: UUID, root_id: str, attempt_id: str, sdp_offer: str
+    ) -> CallStarted:
+        ledger = self._continuations
+        linked = ledger.get(root_id) if ledger else None
+        session = self._sessions.get(root_id)
+        if (
+            ledger is None
+            or linked is None
+            or session is None
+            or linked.root_id != root_id
+            or linked.user_id != user_id
+            or session.purpose is not CallPurpose.PRACTICE
+        ):
+            raise VoiceError("continuation_unavailable")
+        try:
+            account = self._accounts.get(user_id)
+        except AccountNotFound as error:
+            raise VoiceError("not_authenticated") from error
+        if not account.voice_consent:
+            raise VoiceError("consent_required")
+        if self._guard and self._guard.level() is Level.PAUSED:
+            raise VoiceError("voice_paused")
+        if self._language and self._language(user_id) != linked.language:
+            raise VoiceError("continuation_unavailable")
+        if session.premium and (self._speech is None or not self._speech.available(user_id)):
+            raise VoiceError("voice_unavailable")
+        try:
+            attempt = ledger.begin(
+                root_id,
+                user_id,
+                attempt_id,
+                hashlib.sha256(sdp_offer.encode()).hexdigest(),
+                self._clock(),
+            )
+            if attempt.status == "ready" and attempt.answer is not None:
+                return CallStarted(
+                    root_id,
+                    attempt.answer,
+                    max(0, int((linked.deadline - self._clock()).total_seconds())),
+                    session.plan,
+                )
+            if linked.current.ended_at is None:
+                self._provider.hang_up(linked.current.call_id)
+            claimed = ledger.creating(root_id, attempt_id, self._clock())
+        except ContinuationError as error:
+            raise VoiceError(error.code) from error
+        created: CreatedCall | None = None
+        try:
+            created = self._provider.create_call(
+                sdp_offer,
+                continuation_config(claimed.config, tuple(claimed.segments)),
+                hashlib.sha256(str(user_id).encode()).hexdigest(),
+            )
+            if not ledger.connected(
+                root_id, attempt_id, created.call_id, created.sdp_answer, self._clock()
+            ):
+                raise VoiceError("continuation_unavailable")
+            self._starter.start(created.call_id, user_id, CallPurpose.PRACTICE)
+        except Exception as error:
+            # A timed-out create is ambiguous: never repeat it automatically as another call.
+            if created is not None:
+                self._provider.hang_up(created.call_id)
+            ledger.failed(root_id, attempt_id)
+            if created is not None:
+                # No worker will persist a segment whose worker could not be launched.
+                current = ledger.get(root_id)
+                if current is not None and current.current.call_id == created.call_id:
+                    ledger.close(created.call_id, self._clock(), "closed", {}, (), ())
+                    self.finish_pending(created.call_id)
+            self.finish_pending(linked.current.call_id)
+            raise VoiceError("voice_unavailable") from error
+        return CallStarted(
+            root_id,
+            created.sdp_answer,
+            max(0, int((claimed.deadline - self._clock()).total_seconds())),
+            session.plan,
+        )
+
+    def end_call(self, user_id: UUID, root_id: str) -> None:
+        if self._continuations is None:
+            raise VoiceError("continuation_unavailable")
+        try:
+            active_id = self._continuations.end(root_id, user_id)
+        except ContinuationError as error:
+            raise VoiceError(error.code) from error
+        self._provider.hang_up(active_id)
+        self.finish_pending(active_id)
+
+    def finish_pending(self, call_id: str) -> bool:
+        """True while this worker owns a closed segment's recovery grace period."""
+        ledger = self._continuations
+        linked = ledger.get(call_id) if ledger else None
+        if (
+            ledger is None
+            or linked is None
+            or linked.current.call_id != call_id
+            or linked.state == "done"
+            or linked.current.ended_at is None
+        ):
+            return False
+        final = ledger.finalize(call_id, self._clock())
+        if final is None:
+            return True
+        session = self._sessions.get(final.root_id)
+        if session is None:
+            return False
+        joined = aggregate(tuple(final.segments))
+        tools = self._scripts[session.purpose].tools(session.user_id, session.scenario)
+        self._restore_goals(tools, joined.goals)
+        result = FinishedCall(
+            final.current.ended_at or self._clock(),
+            final.current.outcome or "closed",
+            joined.usage,
+            joined.turns,
+        )
+        # Each phase is independently idempotent. A stored transcript alone must not mean
+        # that its refund, metering and report handoff succeeded.
+        result = replace(result, usage={**result.usage, "connected_seconds": joined.seconds})
+        self._sessions.finish(final.root_id, result)
+        ledger.repository.refund(
+            final.root_id,
+            session.user_id,
+            week_start(session.started_at).date(),
+            max(0, (session.max_seconds or joined.seconds) - joined.seconds),
+        )
+        if self._meter is not None:
+            self._meter.record_once(
+                Charge(session.user_id, _FEATURES[session.purpose]),
+                self._provider.name,
+                session.model,
+                voice_units(result.usage, joined.seconds),
+                f"voice:{final.root_id}",
+            )
+        script = self._scripts[session.purpose]
+        conclude = getattr(script, "conclude_linked", script.concluded)
+        conclude(session.user_id, final.root_id, tools, result)
+        ledger.done(final.root_id)
+        return False

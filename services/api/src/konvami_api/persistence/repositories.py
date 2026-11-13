@@ -396,7 +396,10 @@ _COUNTED = f"""
     )
 """
 # Whole seconds, rounded down; null while the call has not ended.
-_SECONDS = "floor(extract(epoch FROM s.ended_at - s.started_at))"
+_SECONDS = (
+    "COALESCE(CAST(s.usage ->> 'connected_seconds' AS integer), "
+    "floor(extract(epoch FROM s.ended_at - s.started_at)))"
+)
 
 _CONVERSATION = f"""
     SELECT s.call_id, CAST(s.persona_id AS text) AS persona_id,

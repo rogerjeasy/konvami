@@ -406,7 +406,10 @@ class InMemoryConversationRepository:
                     persona_id=session.persona_id,
                     started_at=session.started_at,
                     ended_at=finished.ended_at if finished else None,
-                    seconds=int((finished.ended_at - session.started_at).total_seconds())
+                    seconds=finished.usage.get(
+                        "connected_seconds",
+                        int((finished.ended_at - session.started_at).total_seconds()),
+                    )
                     if finished
                     else 0,
                     learner_turns=sum(1 for turn in finished.turns if turn.speaker == "learner")
