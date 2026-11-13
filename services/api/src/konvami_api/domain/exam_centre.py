@@ -8,6 +8,7 @@ reasons and a model answer at the exam's level; the result is an estimate, never
 score. The learner's simulations of a format add up to how ready they are.
 """
 
+import dataclasses
 import datetime as dt
 import json
 from collections.abc import Callable, Mapping, Sequence
@@ -29,6 +30,7 @@ from konvami_api.domain.exams import (
     SpeakingExam,
     cards_for,
     format_for,
+    next_stage,
     readiness,
     total_share,
 )
@@ -45,7 +47,7 @@ from konvami_api.domain.text import (
     answer_object,
     familiar_address,
 )
-from konvami_api.domain.tools import ToolResult, ToolSet
+from konvami_api.domain.tools import CANDIDATE_TEXT_MAX, ToolResult, ToolSet
 from konvami_api.domain.voice import Briefing, FinishedCall, Hearing, VoiceSessionRepository
 
 # A simulation whose scoring keeps failing can be asked for this many times in all.
@@ -123,6 +125,9 @@ class ExamRepository(Protocol):
 
     def listed(self, user_id: UUID, language: str, limit: int) -> list[Simulation]:
         """The learner's simulations in a language, newest first."""
+
+    def completed(self, user_id: UUID, language: str) -> dict[str, int]:
+        """All scored simulations per format, independent of the visible history page."""
 
     def count(self, user_id: UUID, exam: str) -> int:
         """How many simulations of a speaking test the learner did."""
@@ -202,14 +207,15 @@ def _function(name: str, description: str, properties: dict[str, Any]) -> dict[s
 class ExamTools:
     """The examiner's tools for one simulation."""
 
-    def __init__(self, exam: SpeakingExam) -> None:
+    def __init__(self, exam: SpeakingExam, *, candidate: bool = False) -> None:
         self._exam = exam
+        self._candidate = candidate
         # The parts begun, in order.
         self.parts: list[str] = []
 
     def definitions(self) -> list[dict[str, Any]]:
         parts = [part.id for part in self._exam.parts]
-        return [
+        definitions = [
             _function(
                 "begin_part",
                 "Call before you introduce each part of the exam, with its id.",
@@ -217,8 +223,23 @@ class ExamTools:
             ),
             _function("end_exam", "Call when the last part is over, before saying goodbye.", {}),
         ]
+        if self._candidate:
+            definitions.append(
+                _function(
+                    "speak_candidate",
+                    "Let the second candidate say a short contribution in their own voice. "
+                    "Then wait for the learner; do not speak these words yourself.",
+                    {"text": {"type": "string", "minLength": 1, "maxLength": CANDIDATE_TEXT_MAX}},
+                )
+            )
+        return definitions
 
     def run(self, name: str, arguments: dict[str, Any]) -> ToolResult:
+        if name == "speak_candidate" and self._candidate:
+            text = arguments.get("text")
+            if not isinstance(text, str) or not 0 < len(text.strip()) <= CANDIDATE_TEXT_MAX:
+                return ToolResult({"done": False, "reason": "invalid_value"})
+            return ToolResult({"spoken": True}, silent=True, candidate=text.strip())
         if name == "begin_part":
             part = self._exam.part(str(arguments.get("part", "")))
             if part is None:
@@ -232,10 +253,28 @@ class ExamTools:
 
 
 def _card_text(card: ExamCard) -> str:
-    return "; ".join((card.title, *card.prompts))
+    text = "; ".join((card.title, *card.prompts))
+    if card.figure:
+        values = "; ".join(
+            f"{label}: {value}%"
+            for label, value in zip(card.figure.labels, card.figure.values, strict=True)
+        )
+        text += f"; {card.figure.title}: {values}"
+    return text
 
 
-def examiner_instructions(exam: SpeakingExam, cards: Sequence[ExamCard], target: str) -> str:
+def examiner_instructions(
+    exam: SpeakingExam, cards: Sequence[ExamCard], target: str, *, candidate: bool = False
+) -> str:
+    other = (
+        "Use speak_candidate for the other candidate's short contributions, with their own "
+        "ideas and objections. Never speak their text in your examiner voice. After the tool, "
+        "wait for the learner to answer. System notes starting premium_audio are delivery "
+        "receipts: ignore them and never speak their URLs."
+        if candidate
+        else "Say once that you play the other candidate, then act as one, with your own ideas "
+        "and objections, briefly."
+    )
     parts = "\n".join(
         f"- {part.id} ({part.title}, about {part.seconds // 60} min {part.seconds % 60} s): "
         f"{part.task} The learner's card: {_card_text(card)}."
@@ -253,8 +292,7 @@ learner then sees its card. Say in one or two sentences what the part asks, then
 Keep to each part's time: when it is up, close the part briefly and go on.
 {parts}
 When a part needs another candidate ("plan something together", a discussion, feedback on a
-presentation), you take that role too: say once that you play the other candidate, then act as
-one, with your own ideas and objections, briefly.
+presentation): {other}
 
 # Rules
 - Do not help: no corrections, no hints, no translations, no teaching, no praise of answers.
@@ -269,8 +307,9 @@ one, with your own ideas and objections, briefly.
 class ExamScript:
     """A simulation as a call (`CallScript` in `voice.py`). Its scenario is the speaking test."""
 
-    def __init__(self, exams: "ExamService") -> None:
+    def __init__(self, exams: "ExamService", *, candidate: bool = False) -> None:
         self._exams = exams
+        self._candidate = candidate
 
     def prepare(
         self,
@@ -281,10 +320,12 @@ class ExamScript:
         scenario: str | None = None,
         practise: str | None = None,
     ) -> Briefing:
-        return self._exams.briefing(user_id, scenario or "")
+        return self._exams.briefing(user_id, scenario or "", candidate=self._candidate)
 
     def tools(self, user_id: UUID, scenario: str | None = None) -> ToolSet:
-        return ExamTools(self._exams.speaking_exam(user_id, scenario or ""))
+        return ExamTools(
+            self._exams.speaking_exam(user_id, scenario or ""), candidate=self._candidate
+        )
 
     def started(self, user_id: UUID) -> None:
         """Nothing is kept until the simulation is over."""
@@ -421,6 +462,10 @@ class ExamService:
             else None
         )
         suggested = format_for(formats, exam.type, exam.target_level) if exam else None
+        if suggested is not None and suggested.series is not None:
+            suggested = next_stage(
+                suggested, formats, self._repository.completed(user_id, language)
+            )
         simulations = tuple(self._repository.listed(user_id, language, LISTED))
         results: dict[str, list[tuple[dt.datetime, dict[str, float]]]] = {}
         for simulation in simulations:
@@ -469,12 +514,16 @@ class ExamService:
         coaches = [p for p in self._personas.partners(user_id) if p.role == "exam_coach"]
         return coaches[0].voice if coaches else EXAMINER_VOICE
 
-    def briefing(self, user_id: UUID, exam_id: str) -> Briefing:
+    def candidate_voice(self, user_id: UUID) -> str:
+        """Keep the other candidate audibly distinct even with a custom exam coach."""
+        return "ash" if self._voice(user_id) != "ash" else "coral"
+
+    def briefing(self, user_id: UUID, exam_id: str, *, candidate: bool = False) -> Briefing:
         upcoming = self.next(user_id, exam_id)
         language = self._profiles.get(user_id).target_language or ""
         target = self._profiles.catalog.english_name(language)
         return Briefing(
-            examiner_instructions(upcoming.exam, upcoming.cards, target),
+            examiner_instructions(upcoming.exam, upcoming.cards, target, candidate=candidate),
             voice=self._voice(user_id),
             hearing=Hearing(language, verbatim_prompt(target)),
         )
@@ -539,13 +588,16 @@ class ExamService:
         if simulation is None or simulation.status != "pending":
             return
         turns = self._conversations.turns(call_id)
-        if sum(1 for turn in turns if turn.speaker == "learner") < MIN_LEARNER_TURNS:
+        exam = self.speaking_exam(user_id, simulation.exam)
+        if (
+            sum(1 for turn in turns if turn.speaker == "learner" and turn.said.strip())
+            < exam.min_learner_turns
+        ):
             self._repository.written(call_id, "too_short", None)
             return
         if not self._model:
             self._repository.written(call_id, "failed", None)
             return
-        exam = self.speaking_exam(user_id, simulation.exam)
         cards = {card.id: card for part in exam.parts for card in part.cards}
         profile = self._profiles.get(user_id)
         language = profile.target_language or ""
@@ -558,7 +610,11 @@ class ExamService:
                     "title": part.title,
                     "task": part.task,
                     "seconds": part.seconds,
-                    "card": {"title": card.title, "prompts": list(card.prompts)}
+                    "card": {
+                        "title": card.title,
+                        "prompts": list(card.prompts),
+                        "figure": dataclasses.asdict(card.figure) if card.figure else None,
+                    }
                     if (card := cards.get(card_id))
                     else None,
                 }

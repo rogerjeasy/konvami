@@ -15,6 +15,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountDirectory, AccountNotFound
+from konvami_api.domain.candidate_speech import CandidateSpeech
 from konvami_api.domain.costs import (
     Allowance,
     Charge,
@@ -37,6 +38,7 @@ from konvami_api.domain.live_call import (
 )
 from konvami_api.domain.live_speech import LiveSpeech
 from konvami_api.domain.plan import SessionPlan
+from konvami_api.domain.speech import SpeechError
 from konvami_api.domain.tools import ToolSet
 
 # Seconds before the limit at which the persona is told to wrap up.
@@ -228,6 +230,8 @@ class AudioStore(Protocol):
 
     def address(self, audio: TurnAudio) -> str: ...
 
+    def release(self, user_id: UUID, call_id: str) -> None: ...
+
 
 class TurnChecker(Protocol):
     """Checks the learner's turns during a call (the Live Error Spotter, `spotter.py`)."""
@@ -322,12 +326,14 @@ class VoiceCallService:
         checker: TurnChecker | None = None,
         weekly_seconds: Callable[[UUID, dt.date], int] | None = None,
         live_speech: LiveSpeech | None = None,
+        candidate_speech: CandidateSpeech | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
         `meter` they are not metered; without a `checker` no turn is checked live. Without
         `weekly_seconds` (the learner and the week: the seconds the week allows them) every
         learner has the settings' minutes."""
         self._speech = live_speech
+        self._candidate_speech = candidate_speech
         self._weekly = weekly_seconds
         self._settings = settings
         self._checker = checker
@@ -495,11 +501,17 @@ class VoiceCallService:
 
     def speaker(self, call_id: str) -> Callable[[Speak], Spoken] | None:
         session = self._sessions.get(call_id)
-        speech, recordings = self._speech, self._recordings
-        if session is None or not session.premium or speech is None or recordings is None:
+        if session is None:
+            return None
+        candidate = session.purpose is CallPurpose.EXAM
+        speech = self._candidate_speech if candidate else self._speech if session.premium else None
+        recordings = self._recordings
+        if speech is None or recordings is None:
             return None
 
         def speak(turn: Speak) -> Spoken:
+            if (turn.role == "candidate") != candidate:
+                raise SpeechError("unexpected speech role")
             pcm = speech.speak(session.user_id, turn.text)
             audio = recordings.keep(
                 session.user_id, call_id, KeepAudio(turn.item_id, "persona", pcm)
@@ -550,4 +562,12 @@ class VoiceCallService:
                 session.model,
                 voice_units(result.usage, seconds),
             )
-        self._scripts[session.purpose].concluded(session.user_id, call_id, call.tools, result)
+        try:
+            self._scripts[session.purpose].concluded(session.user_id, call_id, call.tools, result)
+        finally:
+            if (
+                session.purpose is CallPurpose.EXAM
+                and session.purpose not in _RECORDED
+                and self._recordings
+            ):
+                self._recordings.release(session.user_id, call_id)

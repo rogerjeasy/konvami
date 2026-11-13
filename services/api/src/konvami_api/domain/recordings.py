@@ -114,6 +114,12 @@ class RecordingService:
     def address(self, audio: TurnAudio) -> str:
         return self._files.address(audio.key, ADDRESS_SECONDS)
 
+    def release(self, user_id: UUID, call_id: str) -> None:
+        """Discard transient exam clips after use; never affect another learner's call."""
+        session = self._sessions.get(call_id)
+        if session is not None and session.user_id == user_id:
+            self._forget(user_id, call_id)
+
     def after_call(self, user_id: UUID, call_id: str) -> None:
         """A practice conversation has ended. One that does not count (the learner said
         nothing) is never shown or reported on, so its audio goes at once."""

@@ -65,6 +65,7 @@ class Spot:
 class Speak:
     item_id: str
     text: str
+    role: Literal["partner", "candidate"] = "partner"
 
 
 @dataclass(frozen=True)
@@ -160,6 +161,7 @@ class LiveCall:
         self._tools = tools
         self._premium = premium
         self._speaking: set[str] = set()
+        self._completed_tools: set[str] = set()
         self._record = record
         self._spot = spot
         self._max = max_seconds
@@ -449,6 +451,10 @@ class LiveCall:
         actions: list[Action] = []
         reply_needed = False
         for call in calls:
+            call_id = call.get("call_id")
+            if not isinstance(call_id, str) or call_id in self._completed_tools:
+                continue
+            self._completed_tools.add(call_id)
             result = self._run(call.get("name", ""), call.get("arguments", ""))
             reply_needed = reply_needed or not result.silent
             item = {
@@ -457,6 +463,11 @@ class LiveCall:
                 "output": json.dumps(result.output),
             }
             actions.append(Send({"type": "conversation.item.create", "item": item}))
+            if result.candidate:
+                item_id = f"candidate_{call_id}"
+                self._say("persona", result.candidate, item_id)
+                self._speaking.add(item_id)
+                actions.append(Speak(item_id, result.candidate, role="candidate"))
         if reply_needed:
             actions.append(Send(_CONTINUE))
         return actions

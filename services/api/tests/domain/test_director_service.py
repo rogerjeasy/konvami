@@ -257,12 +257,12 @@ def test_the_weakest_part_of_the_scored_simulations_is_named() -> None:
 
 
 def test_an_exam_without_a_speaking_test_or_already_over_plans_no_simulation() -> None:
-    testdaf = a_world()
-    preparing(testdaf, {"type": "testdaf", "target_level": "B2", "date": "2027-04-15"})
+    unsupported = a_world()
+    preparing(unsupported, {"type": "osd", "target_level": "C2", "date": "2027-04-15"})
     over = a_world()
     preparing(over, {**GOETHE_B1, "date": "2026-10-01"})
 
-    for world in (testdaf, over):
+    for world in (unsupported, over):
         plan = world.director.week(USER, ZURICH)
         assert plan.exam is None
         assert plan.sessions[SessionKind.EXAM] == 0

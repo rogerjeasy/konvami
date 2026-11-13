@@ -1222,6 +1222,13 @@ class InMemoryExamRepository:
         mine = [s for u, lang, s in self.simulations.values() if u == user_id and lang == language]
         return sorted(mine, key=lambda s: s.started_at, reverse=True)[:limit]
 
+    def completed(self, user_id: UUID, language: str) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for user, lang, simulation in self.simulations.values():
+            if user == user_id and lang == language and simulation.status == "ready":
+                counts[simulation.exam] = counts.get(simulation.exam, 0) + 1
+        return counts
+
     def count(self, user_id: UUID, exam: str) -> int:
         return sum(1 for u, _, s in self.simulations.values() if u == user_id and s.exam == exam)
 

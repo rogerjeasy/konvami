@@ -535,19 +535,24 @@ def test_when_a_placement_call_ends_its_result_is_worked_out(setup: Setup) -> No
     live = setup.service.live_call(call_id)
     assert live is not None
 
-    def tool_call(name: str, arguments: str) -> dict[str, object]:
+    def tool_call(name: str, arguments: str, call_id: str = "finish") -> dict[str, object]:
         item = {
             "type": "function_call",
             "status": "completed",
             "name": name,
-            "call_id": "c",
+            "call_id": call_id,
             "arguments": arguments,
         }
         return {"type": "response.done", "response": {"status": "completed", "output": [item]}}
 
-    for _ in range(MIN_TASKS):
+    for index in range(MIN_TASKS):
         live.handle(
-            tool_call("note_task", '{"task": "opinion", "level": "B1", "outcome": "handled"}'), 60
+            tool_call(
+                "note_task",
+                '{"task": "opinion", "level": "B1", "outcome": "handled"}',
+                call_id=f"task_{index}",
+            ),
+            60,
         )
     for text in (
         "Ich wohne in Zürich.",

@@ -58,7 +58,7 @@ def test_a_learner_without_an_exam_can_still_try_every_format() -> None:
 
     assert centre.exam is None
     assert centre.suggested is None
-    assert len(centre.formats) == 7
+    assert len(centre.formats) == 14
     assert any(exam.id == "osd_b1" for exam in centre.formats)
 
 

@@ -211,6 +211,14 @@ describe('progress', () => {
     expect(after(AUDIO_STARTED, AUDIO_STOPPED).over).toBe(false);
   });
 
+  it('keeps the exam open after the second candidate finishes a contribution', () => {
+    expect(after(toolResult({ spoken: true }), AUDIO_STARTED, AUDIO_STOPPED)).toMatchObject({
+      finished: false,
+      over: false,
+      phase: 'listening',
+    });
+  });
+
   it('ignores a tool result it cannot read', () => {
     const broken = {
       type: 'conversation.item.done',

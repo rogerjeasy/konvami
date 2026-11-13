@@ -2645,6 +2645,15 @@ def test_a_simulation_is_kept_and_scored(exams: Exams) -> None:
     assert exams.simulations.load(OTHER_USER, "rtc_1") is None
 
 
+def test_only_scored_stages_count_towards_progress(exams: Exams) -> None:
+    exams.simulations.started(USER, "de", simulation("rtc_1"))
+    exams.simulations.started(USER, "de", simulation("rtc_2", exam="telc_b1"))
+    exams.simulations.written("rtc_1", "ready", SCORED)
+    assert exams.simulations.completed(USER, "de") == {"goethe_b1": 1}
+    assert exams.simulations.completed(OTHER_USER, "de") == {}
+    assert exams.simulations.completed(USER, "fr") == {}
+
+
 def test_simulations_are_listed_newest_first_and_counted_per_test(exams: Exams) -> None:
     exams.simulations.started(USER, "de", simulation("rtc_1", NOON - HOUR))
     exams.simulations.started(USER, "de", simulation("rtc_2", NOON, exam="telc_b1"))

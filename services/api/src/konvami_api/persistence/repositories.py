@@ -1907,6 +1907,14 @@ class SqlExamRepository:
         )
         return [_simulation(row) for row in rows]
 
+    def completed(self, user_id: UUID, language: str) -> dict[str, int]:
+        rows = self._client.execute(
+            "SELECT exam, COUNT(*) AS done FROM exam_simulation "
+            "WHERE user_id=:user_id::uuid AND language=:language AND status='ready' GROUP BY exam",
+            {"user_id": str(user_id), "language": language},
+        )
+        return {row["exam"]: int(row["done"]) for row in rows}
+
     def count(self, user_id: UUID, exam: str) -> int:
         rows = self._client.execute(_COUNT_SIMULATIONS, {"user_id": str(user_id), "exam": exam})
         done: int = rows[0]["done"]

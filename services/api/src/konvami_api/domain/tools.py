@@ -5,6 +5,9 @@ the app cannot be trusted to validate what gets written to a learner's data.
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+# Candidate contributions stay short so the learner gets most of the speaking time.
+CANDIDATE_TEXT_MAX = 1200
+
 
 @dataclass(frozen=True)
 class ToolResult:
@@ -15,6 +18,8 @@ class ToolResult:
     # True when the persona has nothing to say about the result (a cosmetic tool such as
     # `set_expression`): no new reply is asked for, so the call goes on where it was.
     silent: bool = False
+    # A paired exam's other candidate speaks this through a separate audio voice.
+    candidate: str | None = None
 
 
 class ToolSet(Protocol):
