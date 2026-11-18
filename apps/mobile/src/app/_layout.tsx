@@ -6,11 +6,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 // One import per weight: the package root would bundle every font file.
-import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
-import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
-import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
-import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
-import { Lexend_600SemiBold } from '@expo-google-fonts/lexend/600SemiBold';
+import { BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque/800ExtraBold';
+import { Figtree_400Regular } from '@expo-google-fonts/figtree/400Regular';
+import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
+import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
+import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
+import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
+import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif/400Regular_Italic';
 import { track } from '@/analytics';
 import { AuthServicesProvider, authServices } from '@/auth';
 import { initMonitoring, monitored } from '@/monitoring';
@@ -48,11 +50,13 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Lexend_600SemiBold,
+    BricolageGrotesque_800ExtraBold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+    Figtree_800ExtraBold,
+    InstrumentSerif_400Regular_Italic,
   });
   const [prefsReady, setPrefsReady] = useState(false);
   useEffect(() => {
