@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import Constants from 'expo-constants';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { size } from '@konvami/design-tokens';
+import { useReducedMotion } from 'react-native-reanimated';
+import { motion, size } from '@konvami/design-tokens';
 import type { Home } from '@konvami/api-client';
 import { useAuthServices, useSession } from '@/auth';
 import { Badge } from '@/components/badge';
@@ -11,7 +12,8 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list';
-import { Reveal } from '@/components/motion';
+import { Animate, Reveal } from '@/components/motion';
+import { Tile } from '@/components/tile';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { TabScreen } from '@/components/tab-screen';
@@ -20,11 +22,10 @@ import { UserPhoto } from '@/components/user-photo';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { isLanguage } from '@/i18n';
 import { formatTimeOfDay, wholeMinutes } from '@/lib/format';
-import { staggerDelay } from '@/lib/motion';
+import { fillKeyframes, staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
-import { Meter } from '@/components/meter';
 import { TextButton } from '@/components/text-button';
 import {
   useAccount,
@@ -40,6 +41,8 @@ import { useTheme } from '@/theme';
 
 // The share of a wide window the learner's card takes; the lists get the rest.
 const SIDE_COLUMN = '38%';
+// The learner's portrait on the Profile's hero card (pt), as on the v4 prototype.
+const HERO_PHOTO = 104;
 
 /** One number about the learner's practice. Read as one phrase ("Day streak: 4"). */
 function Stat({ label, value }: { label: string; value: string }) {
@@ -77,10 +80,10 @@ function Identity({ home }: { home: Home | null }) {
 
   return (
     <View className="gap-3">
-      <Card className="items-center gap-3 p-5">
-        <UserPhoto uri={pictureUrl} name={name} diameter={size.avatarHero} />
+      <Card className="items-center gap-3 rounded-panel px-5 py-6">
+        <UserPhoto uri={pictureUrl} name={name} diameter={HERO_PHOTO} />
         <View className="items-center gap-1">
-          <Text variant="heading" className="text-center">
+          <Text variant="title" className="text-center">
             {name || t('profile.noName')}
           </Text>
           {user?.email ? (
@@ -90,15 +93,15 @@ function Identity({ home }: { home: Home | null }) {
           ) : null}
         </View>
         {language ? (
-          <View className="flex-row flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
-            <View className="flex-row items-center gap-1.5 rounded-pill bg-primary-soft px-2.5 py-1">
-              <Icon name="globe" color={color.primaryText} size={size.iconSm} />
-              <Text variant="captionStrong" tone="primary">
+          <View className="flex-row flex-wrap items-center justify-center gap-2">
+            <View className="min-h-8 flex-row items-center gap-1.5 rounded-pill bg-forest px-3 py-1">
+              <Icon name="globe" color={color.lime} size={size.iconSm} />
+              <Text variant="captionStrong" tone="lime">
                 {t('profile.learning', { language })}
               </Text>
             </View>
             {home?.level ? (
-              <View className="flex-row items-center gap-1.5 rounded-pill bg-surface px-2.5 py-1">
+              <View className="min-h-8 flex-row items-center gap-1.5 rounded-pill bg-surface px-3 py-1">
                 <Text variant="captionStrong">{home.level.level}</Text>
                 {home.level.source === 'measured' ? (
                   <Badge tone="chip" label={t('onboarding.source.measured')} />
@@ -121,6 +124,37 @@ function Identity({ home }: { home: Home | null }) {
           />
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * The minutes left as a tomato bar on the ink block. `Meter` draws ink on a light track, which
+ * would vanish on ink; this is the same bar in the block's colours.
+ */
+function MinutesBar({ share, label }: { share: number; label: string }) {
+  const reduced = useReducedMotion();
+  const fill = useMemo(() => fillKeyframes(reduced), [reduced]);
+  const bounded = Math.min(Math.max(share, 0), 1);
+  return (
+    <View
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(bounded * 100) }}
+      style={{ height: size.meterHeight * 2 }}
+      className="overflow-hidden rounded-pill"
+    >
+      {/* The track: the block's own text colour, faint, so it shows on ink in both themes. */}
+      <View aria-hidden className="absolute inset-0 bg-on-inverse opacity-ring" />
+      <Animate
+        keyframes={fill}
+        duration={motion.slow}
+        delay={motion.enter}
+        style={{ width: `${bounded * 100}%`, height: '100%', transformOrigin: 'left' }}
+      >
+        <View className="flex-1 rounded-pill bg-tomato" />
+      </Animate>
     </View>
   );
 }
@@ -158,23 +192,25 @@ function VoiceMinutes() {
   const left = Math.floor(remainingSeconds / 60);
   const usedUp = remainingSeconds < MIN_CALL_SECONDS;
   return (
-    <Card className="gap-3 p-4">
-      <View className="flex-row flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <Text variant="heading">{t('profile.minutes.left', { count: left })}</Text>
-        <Text variant="small" tone="muted">
+    <Tile color="ink" className="gap-3">
+      <View className="flex-row flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+        <Text variant="heading" tone="onInverse">
+          {t('profile.minutes.left', { count: left })}
+        </Text>
+        <Text variant="labelSmall" tone="onInverse">
           {t('profile.minutes.ofWeekly', { weekly })}
         </Text>
       </View>
-      <Meter
+      <MinutesBar
         share={weeklySeconds > 0 ? remainingSeconds / weeklySeconds : 0}
         label={t('profile.minutes.spoken', { left, weekly })}
       />
       {back ? (
-        <Text variant="small" tone="muted">
+        <Text variant="small" tone="onInverse">
           {usedUp ? withLine(t('profile.minutes.usedUp'), back) : back}
         </Text>
       ) : null}
-    </Card>
+    </Tile>
   );
 }
 
