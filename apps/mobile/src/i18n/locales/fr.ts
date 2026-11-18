@@ -70,6 +70,8 @@ export const fr: Translation = {
     memoryLine: 'Le mariage de ta sœur est en mai. On répète ton discours aujourd’hui ?',
   },
   welcome: {
+    /** The Swiss greeting's label on the Welcome flags (Grüezi). */
+    swissGerman: 'Suisse allemand',
     title: 'Bienvenue sur Konvami',
     body: 'Ton ami de conversation pour parler couramment dans la vraie vie. Parle, reçois des retours clairs et retiens-les.',
     getStarted: 'Commencer',
@@ -838,6 +840,8 @@ export const fr: Translation = {
 
     import: 'Apporter ton propre matériel',
     importHint: 'Une lettre, une page, un lien ou un menu',
+    more: 'D’autres façons de pratiquer',
+    partners: 'Tes partenaires',
   },
   conversation: {
     settings: {
@@ -1241,6 +1245,12 @@ export const fr: Translation = {
   },
   learn: {
     title: 'Apprendre',
+    headline: 'Tes mots, ta grammaire.',
+    stats: {
+      total: 'cartes',
+      due: 'à réviser',
+      waiting: 'en attente',
+    },
     grammarRow: 'Carte de grammaire',
     grammarHint: 'À quel point tu maîtrises chaque partie de la grammaire',
     examsRow: 'Centre d’examen',
@@ -1830,9 +1840,14 @@ export const fr: Translation = {
     },
     done: {
       title: 'C’est bon pour l’instant',
+      reviewed_one: 'carte révisée',
+      reviewed_other: 'cartes révisées',
+      best: 'meilleure série',
       body_one: 'Tu as révisé {{count}} carte.',
       body_other: 'Tu as révisé {{count}} cartes.',
     },
+    combo_one: '{{count}} d’affilée',
+    combo_other: '{{count}} d’affilée',
     back: 'Retour à Apprendre',
   },
   progress: {

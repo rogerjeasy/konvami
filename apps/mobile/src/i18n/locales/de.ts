@@ -70,6 +70,8 @@ export const de: Translation = {
     memoryLine: 'Die Hochzeit deiner Schwester ist im Mai. Wollen wir heute deine Rede üben?',
   },
   welcome: {
+    /** The Swiss greeting's label on the Welcome flags (Grüezi). */
+    swissGerman: 'Schweizerdeutsch',
     title: 'Willkommen bei Konvami',
     body: 'Dein Gesprächsfreund für echte Sprachpraxis. Sprich, bekomm klares Feedback und behalte es.',
     getStarted: 'Los geht’s',
@@ -840,6 +842,8 @@ export const de: Translation = {
 
     import: 'Eigenes Material mitbringen',
     importHint: 'Ein Brief, eine Seite, ein Link oder eine Speisekarte',
+    more: 'Mehr Wege zum Üben',
+    partners: 'Deine Partner',
   },
   conversation: {
     settings: {
@@ -1240,6 +1244,12 @@ export const de: Translation = {
   },
   learn: {
     title: 'Lernen',
+    headline: 'Deine Wörter, deine Grammatik.',
+    stats: {
+      total: 'Karten',
+      due: 'zu wiederholen',
+      waiting: 'warten',
+    },
     grammarRow: 'Grammatik-Landkarte',
     grammarHint: 'Wie sicher du jeden Teil der Grammatik verwendest',
     examsRow: 'Prüfungszentrum',
@@ -1828,9 +1838,14 @@ export const de: Translation = {
     },
     done: {
       title: 'Fürs Erste geschafft',
+      reviewed_one: 'Karte wiederholt',
+      reviewed_other: 'Karten wiederholt',
+      best: 'beste Serie',
       body_one: 'Du hast {{count}} Karte wiederholt.',
       body_other: 'Du hast {{count}} Karten wiederholt.',
     },
+    combo_one: '{{count}} in Folge',
+    combo_other: '{{count}} in Folge',
     back: 'Zurück zu Lernen',
   },
   progress: {

@@ -70,6 +70,8 @@ export const it: Translation = {
     memoryLine: 'Il matrimonio di tua sorella è a maggio. Proviamo il tuo brindisi oggi?',
   },
   welcome: {
+    /** The Swiss greeting's label on the Welcome flags (Grüezi). */
+    swissGerman: 'Svizzero tedesco',
     title: 'Benvenuto su Konvami',
     body: 'Il tuo amico di conversazione per parlare con sicurezza nella vita reale. Parla, ricevi feedback chiari e ricordali.',
     getStarted: 'Inizia',
@@ -832,6 +834,8 @@ export const it: Translation = {
 
     import: 'Porta il tuo materiale',
     importHint: 'Una lettera, una pagina, un link o un menu',
+    more: 'Altri modi per esercitarti',
+    partners: 'I tuoi partner',
   },
   conversation: {
     settings: {
@@ -1233,6 +1237,12 @@ export const it: Translation = {
   },
   learn: {
     title: 'Impara',
+    headline: 'Le tue parole, la tua grammatica.',
+    stats: {
+      total: 'schede',
+      due: 'da ripassare',
+      waiting: 'in attesa',
+    },
     grammarRow: 'Mappa grammaticale',
     grammarHint: 'Quanto bene usi ogni parte della grammatica',
     examsRow: 'Centro esami',
@@ -1817,9 +1827,14 @@ export const it: Translation = {
     },
     done: {
       title: 'Per ora è fatta',
+      reviewed_one: 'scheda ripassata',
+      reviewed_other: 'schede ripassate',
+      best: 'serie migliore',
       body_one: 'Hai ripassato {{count}} scheda.',
       body_other: 'Hai ripassato {{count}} schede.',
     },
+    combo_one: '{{count}} di fila',
+    combo_other: '{{count}} di fila',
     back: 'Torna a Impara',
   },
   progress: {

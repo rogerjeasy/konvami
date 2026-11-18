@@ -73,6 +73,8 @@ export const en = {
     memoryLine: 'Your sister’s wedding is in May. Want to practise your toast today?',
   },
   welcome: {
+    /** The Swiss greeting's label on the Welcome flags (Grüezi). */
+    swissGerman: 'Swiss German',
     title: 'Welcome to Konvami',
     body: 'Your conversation friend for real-world fluency. Talk, get clear feedback, and remember it.',
     getStarted: 'Get started',
@@ -824,6 +826,8 @@ export const en = {
 
     import: 'Bring your own material',
     importHint: 'A letter, a page, a link or a menu',
+    more: 'More ways to practise',
+    partners: 'Your partners',
   },
   conversation: {
     settings: {
@@ -1222,6 +1226,12 @@ export const en = {
   },
   learn: {
     title: 'Learn',
+    headline: 'Your words, your grammar.',
+    stats: {
+      total: 'cards',
+      due: 'to review',
+      waiting: 'waiting',
+    },
     grammarRow: 'Grammar map',
     grammarHint: 'How well you use each part of the grammar',
     examsRow: 'Exam centre',
@@ -1802,9 +1812,14 @@ export const en = {
     },
     done: {
       title: 'Done for now',
+      reviewed_one: 'card reviewed',
+      reviewed_other: 'cards reviewed',
+      best: 'best run',
       body_one: 'You reviewed {{count}} card.',
       body_other: 'You reviewed {{count}} cards.',
     },
+    combo_one: '{{count}} in a row',
+    combo_other: '{{count}} in a row',
     back: 'Back to Learn',
   },
   progress: {
