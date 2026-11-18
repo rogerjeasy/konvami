@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { size } from '@konvami/design-tokens';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
-import { useTheme } from '@/theme';
+import { useTheme, type ColorToken } from '@/theme';
 import { Badge } from '@/components/badge';
 
 /** Rows that belong together, as one bordered card with a line between them. */
@@ -18,6 +18,23 @@ export function ListGroup({ children }: { children: ReactNode }) {
       ))}
     </View>
   );
+}
+
+/**
+ * The v4 colour blobs behind a row's icon. Each icon always gets the same block, so a row looks
+ * the same on every screen; the four light blocks keep their dark ink in both themes.
+ */
+const BLOBS = [
+  { box: 'bg-tomato', ink: 'onTomato' },
+  { box: 'bg-butter', ink: 'onButter' },
+  { box: 'bg-pink', ink: 'onPink' },
+  { box: 'bg-lime', ink: 'onLime' },
+] as const satisfies readonly { box: string; ink: ColorToken }[];
+
+function blobFor(icon: string): (typeof BLOBS)[number] {
+  let sum = 0;
+  for (const c of icon) sum += c.charCodeAt(0);
+  return BLOBS[sum % BLOBS.length] ?? BLOBS[0];
 }
 
 /**
@@ -52,6 +69,7 @@ export function ListRow({
 }) {
   const { color } = useTheme();
   const danger = tone === 'danger';
+  const blob = blobFor(icon);
   return (
     <Pressable
       accessibilityRole="button"
@@ -65,9 +83,9 @@ export function ListRow({
       <View
         aria-hidden
         style={{ width: size.avatarSm, height: size.avatarSm }}
-        className={`items-center justify-center rounded-md ${danger ? 'bg-danger-soft' : 'bg-primary-soft'}`}
+        className={`items-center justify-center rounded-md ${danger ? 'bg-danger-soft' : blob.box}`}
       >
-        <Icon name={icon} color={danger ? color.danger : color.primaryText} size={size.iconMd} />
+        <Icon name={icon} color={danger ? color.danger : color[blob.ink]} size={size.iconMd} />
       </View>
       <View className="flex-1 gap-0.5">
         <View className="flex-row flex-wrap items-center gap-2">
