@@ -36,7 +36,7 @@ export function UserPhoto({
     <View
       aria-hidden
       style={{ width: diameter, height: diameter }}
-      className="items-center justify-center overflow-hidden rounded-pill border border-border bg-primary-soft"
+      className="items-center justify-center overflow-hidden rounded-pill bg-forest"
     >
       {uri && !broken ? (
         <Image
@@ -47,11 +47,11 @@ export function UserPhoto({
           style={{ width: diameter, height: diameter }}
         />
       ) : initial ? (
-        <Text variant={variant} tone="primary">
+        <Text variant={variant} tone="lime">
           {initial}
         </Text>
       ) : (
-        <Icon name="user" color={color.primaryText} size={Math.round(diameter * GLYPH_RATIO)} />
+        <Icon name="user" color={color.lime} size={Math.round(diameter * GLYPH_RATIO)} />
       )}
     </View>
   );
