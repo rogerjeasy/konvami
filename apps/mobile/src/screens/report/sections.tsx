@@ -1,20 +1,22 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { ReportMistake, ReportRewrite, ReportWord } from '@konvami/api-client';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
-import { CorrectionCard } from '@/components/correction-card';
 import { Icon, type IconName } from '@/components/icon';
-import { ListGroup } from '@/components/list';
-import { Pop } from '@/components/motion';
+import { Pop, PressScale } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { Section } from '@/components/section';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { diffWords } from '@/lib/word-diff';
 import { useTheme, type ColorToken } from '@/theme';
+import { PolishCard } from './polish-card';
 import type { CardSaver } from './use-card-saver';
+
+// The narrowest a correction's two buttons get side by side (pt); narrower, they stack.
+const ACTION_MIN_WIDTH = 132;
 
 /**
  * The learner's mistakes, each as what they said, how it is right and why, with the way to ask
@@ -49,6 +51,7 @@ export function Polish({
   onRetry: (index: number) => void;
 }) {
   const { t } = useTranslation();
+  const { color } = useTheme();
   if (mistakes.length === 0) {
     return (
       <NoticeBox icon="check" tone="primary">
@@ -70,7 +73,7 @@ export function Polish({
           const { before, after } = diffWords(mistake.original, mistake.corrected);
           const reported = flagged.has(i);
           return (
-            <CorrectionCard
+            <PolishCard
               key={i}
               // The server names the kind; one this app version has no name for is "Other".
               topic={t(`report.category.${mistake.category}` as 'report.category.other', {
@@ -92,26 +95,32 @@ export function Polish({
               explanation={mistake.explanation}
               note={mistake.certain ? undefined : t('report.polish.unsureNote')}
               action={
-                <View className="flex-row flex-wrap items-center gap-x-2">
+                <View className="gap-1">
                   {/* Only what the second check confirmed is worth learning by heart. */}
                   {mistake.certain && !reported ? (
-                    <>
-                      <TextButton
-                        tone="primary"
-                        label={t('report.retry.open')}
-                        onPress={() => onRetry(i)}
-                      />
-                      <SaveCorrection
-                        saved={saver.isSaved('correction', i)}
-                        saving={saver.isSaving('correction', i)}
-                        onSave={() => void saver.save('correction', i)}
-                      />
-                    </>
+                    <View className="flex-row flex-wrap gap-2">
+                      <View className="flex-1" style={{ minWidth: ACTION_MIN_WIDTH }}>
+                        <Button
+                          label={t('report.retry.open')}
+                          leading={<Icon name="mic" color={color.onPrimary} size={size.iconMd} />}
+                          onPress={() => onRetry(i)}
+                        />
+                      </View>
+                      <View className="flex-1" style={{ minWidth: ACTION_MIN_WIDTH }}>
+                        <SaveCorrection
+                          saved={saver.isSaved('correction', i)}
+                          saving={saver.isSaving('correction', i)}
+                          onSave={() => void saver.save('correction', i)}
+                        />
+                      </View>
+                    </View>
                   ) : null}
-                  <TextButton label={t('report.polish.explain')} onPress={() => onExplain(i)} />
-                  {reported ? null : (
-                    <TextButton label={t('flag.openCorrection')} onPress={() => onFlag(i)} />
-                  )}
+                  <View className="flex-row flex-wrap items-center gap-x-2">
+                    <TextButton label={t('report.polish.explain')} onPress={() => onExplain(i)} />
+                    {reported ? null : (
+                      <TextButton label={t('flag.openCorrection')} onPress={() => onFlag(i)} />
+                    )}
+                  </View>
                 </View>
               }
               accessibilityLabel={t('report.cardLabel', {
@@ -161,25 +170,28 @@ function SaveCorrection({
   onSave: () => void;
 }) {
   const { t } = useTranslation();
+  const { color } = useTheme();
   if (saved) {
+    // Where the button was, an ink pill that says the card exists (not a control any more).
     return (
-      <View className="min-h-tap flex-row items-center gap-2">
-        <SavedTick />
-        <Text variant="labelSmall" tone="success">
+      <View className="min-h-button flex-row items-center justify-center gap-2 rounded-pill bg-inverse px-4 py-3">
+        <Pop>
+          <Icon name="check" color={color.onInverse} size={size.iconMd} strokeWidth={2.4} />
+        </Pop>
+        <Text variant="labelSmall" tone="onInverse" className="shrink text-center">
           {t('report.save.correctionSaved')}
         </Text>
       </View>
     );
   }
   return (
-    <View className="items-start">
-      <TextButton
-        tone="primary"
-        label={t('report.save.correction')}
-        disabled={saving}
-        onPress={onSave}
-      />
-    </View>
+    <Button
+      variant="secondary"
+      label={t('report.save.correction')}
+      leading={<Icon name="plus" color={color.fg} size={size.iconMd} />}
+      loading={saving}
+      onPress={onSave}
+    />
   );
 }
 
@@ -261,7 +273,7 @@ export function Natural({ rewrites }: { rewrites: readonly ReportRewrite[] }) {
         {rewrites.map((rewrite, i) => {
           const { before, after } = diffWords(rewrite.original, rewrite.natural);
           return (
-            <CorrectionCard
+            <PolishCard
               key={i}
               saidLabel={t('report.said')}
               said={before}
@@ -288,54 +300,98 @@ export function Natural({ rewrites }: { rewrites: readonly ReportRewrite[] }) {
  */
 export function Words({ words, saver }: { words: readonly ReportWord[]; saver: CardSaver }) {
   const { t } = useTranslation();
-  const { color } = useTheme();
   if (words.length === 0) return null;
   return (
     <Section title={t('report.words.title')} count={words.length} collapsible>
       <View className="gap-2.5">
-        <ListGroup>
+        <View className="gap-2">
           {words.map((word, i) => (
-            <View key={word.text} className="flex-row items-center gap-2 py-2 pl-3.5 pr-1.5">
-              <View className="flex-1 gap-1 py-1.5">
-                <View className="flex-row flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
-                  <Text variant="label">{word.text}</Text>
-                  <Text variant="small" tone="muted" className="shrink">
-                    {word.meaning}
-                  </Text>
-                </View>
-                {word.example ? (
-                  <Text variant="small" tone="subtle" className="italic">
-                    {word.example}
-                  </Text>
-                ) : null}
+            <View
+              key={word.text}
+              className="gap-1.5 rounded-card border border-border bg-chip px-3.5 py-3"
+            >
+              <View className="flex-row flex-wrap items-center gap-x-2.5 gap-y-1">
+                <WordChip
+                  word={word.text}
+                  saved={saver.isSaved('word', i)}
+                  saving={saver.isSaving('word', i)}
+                  onSave={() => void saver.save('word', i)}
+                />
+                <Text variant="small" tone="muted" className="shrink">
+                  {word.meaning}
+                </Text>
               </View>
-              {saver.isSaved('word', i) ? (
-                <View
-                  accessible
-                  accessibilityRole="image"
-                  accessibilityLabel={t('report.save.savedLabel', { word: word.text })}
-                  className="min-h-tap min-w-tap items-center justify-center"
-                >
-                  <SavedTick />
-                </View>
-              ) : (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('report.save.wordLabel', { word: word.text })}
-                  accessibilityState={{ disabled: saver.isSaving('word', i) }}
-                  disabled={saver.isSaving('word', i)}
-                  onPress={() => void saver.save('word', i)}
-                  className="min-h-tap min-w-tap items-center justify-center rounded-pill active:opacity-pressed"
-                >
-                  <Icon name="plusCircle" color={color.primaryText} size={size.iconLg} />
-                </Pressable>
-              )}
+              {word.example ? (
+                <Text variant="langBody" tone="muted">
+                  {word.example}
+                </Text>
+              ) : null}
             </View>
           ))}
-        </ListGroup>
+        </View>
         <SaveFailure code={saver.failure('word')} />
       </View>
     </Section>
+  );
+}
+
+/**
+ * A word to keep, as a pill in the serif of the language learned: soft with a plus while it can
+ * be saved, ink with a tick once it is a card (then it is no longer a control).
+ */
+function WordChip({
+  word,
+  saved,
+  saving,
+  onSave,
+}: {
+  word: string;
+  saved: boolean;
+  saving: boolean;
+  onSave: () => void;
+}) {
+  const { t } = useTranslation();
+  const { color } = useTheme();
+  if (saved) {
+    return (
+      <View
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={t('report.save.savedLabel', { word })}
+        className="min-h-tap flex-row items-center gap-1.5 rounded-pill bg-inverse px-3.5 py-1.5"
+      >
+        <SavedTickOn />
+        <Text variant="langBody" tone="onInverse">
+          {word}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <PressScale
+      accessibilityRole="button"
+      accessibilityLabel={t('report.save.wordLabel', { word })}
+      accessibilityState={{ disabled: saving }}
+      disabled={saving}
+      onPress={onSave}
+    >
+      <View
+        className={`min-h-tap flex-row items-center gap-1.5 rounded-pill bg-surface px-3.5 py-1.5 ${saving ? 'opacity-disabled' : ''}`}
+      >
+        <Icon name="plus" color={color.fg} size={size.icon} strokeWidth={2.4} />
+        <Text variant="langBody">{word}</Text>
+      </View>
+    </PressScale>
+  );
+}
+
+/** The tick on an ink pill: pops in where a card was just made. */
+function SavedTickOn() {
+  const { color } = useTheme();
+  return (
+    <Pop>
+      <Icon name="check" color={color.onInverse} size={size.icon} strokeWidth={2.6} />
+    </Pop>
   );
 }
 
