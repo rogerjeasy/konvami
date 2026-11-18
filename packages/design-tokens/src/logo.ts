@@ -1,7 +1,7 @@
 import { brand } from './tokens.ts';
 
 /**
- * The Konvami logo (v2: solid teal tile, no gradient): a smiling speech bubble with a pink tongue.
+ * The Konvami logo (v4: ink tile, lime bubble, no gradient): a smiling speech bubble with a tomato tongue.
  * Geometry lives here once; the app's SVG components and scripts/export-brand-assets.ts both draw
  * from it, so the icon files and the in-app logo can never drift apart.
  */
