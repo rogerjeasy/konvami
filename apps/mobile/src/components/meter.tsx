@@ -4,6 +4,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { motion, size } from '@konvami/design-tokens';
 import { Animate } from '@/components/motion';
 import { Text } from '@/components/text';
+import { useTileInk } from '@/components/tile';
 import { fillKeyframes } from '@/lib/motion';
 
 /**
@@ -27,6 +28,9 @@ export function Meter({
   delay?: number;
 }) {
   const reduced = useReducedMotion();
+  // On a colour block: its veil as the track, lime on forest, the block's ink elsewhere.
+  const tile = useTileInk();
+  const fillClass = !tile ? 'bg-primary' : tile.ground === 'forest' ? 'bg-lime' : 'bg-tomato';
   const fill = useMemo(() => fillKeyframes(reduced), [reduced]);
   const bounded = Math.min(Math.max(share, 0), 1);
   return (
@@ -37,10 +41,14 @@ export function Meter({
       accessibilityValue={{ min: 0, max: 100, now: Math.round(bounded * 100) }}
       className="flex-row items-center gap-3"
     >
-      {value ? <Text variant="stat">{value}</Text> : null}
+      {value ? (
+        <Text variant="stat" tone={tile?.ground === 'forest' ? 'lime' : (tile?.tone ?? 'fg')}>
+          {value}
+        </Text>
+      ) : null}
       <View
         style={{ height: size.meterHeight }}
-        className="flex-1 overflow-hidden rounded-pill bg-track"
+        className={`flex-1 overflow-hidden rounded-pill ${tile ? tile.veil : 'bg-track'}`}
       >
         <Animate
           keyframes={fill}
@@ -48,7 +56,7 @@ export function Meter({
           delay={delay}
           style={{ width: `${bounded * 100}%`, height: '100%', transformOrigin: 'left' }}
         >
-          <View className="flex-1 rounded-pill bg-primary" />
+          <View className={`flex-1 rounded-pill ${fillClass}`} />
         </Animate>
       </View>
     </View>
