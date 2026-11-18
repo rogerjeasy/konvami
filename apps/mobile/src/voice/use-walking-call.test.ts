@@ -98,9 +98,12 @@ it('ignores a permission response after the call fails', async () => {
     setPushToTalk: jest.fn(),
     toggleMute: jest.fn(),
   } as unknown as VoiceCall;
-  const hook = await renderHook(({ call }: { call: VoiceCall }) => useWalkingCall(call, jest.fn()), {
-    initialProps: { call: live },
-  });
+  const hook = await renderHook(
+    ({ call }: { call: VoiceCall }) => useWalkingCall(call, jest.fn()),
+    {
+      initialProps: { call: live },
+    },
+  );
   let starting!: Promise<void>;
   await act(() => {
     starting = hook.result.current.set(true);

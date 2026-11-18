@@ -740,7 +740,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     startVoiceCall: (purpose, sdp, details = {}) =>
       request('POST', '/v1/voice/calls', { purpose, sdp, ...details }),
     continueVoiceCall: (callId, attemptId, sdpOffer) =>
-      request('POST', `/v1/voice/calls/${encodeURIComponent(callId)}/continue`, { attemptId, sdpOffer }),
+      request('POST', `/v1/voice/calls/${encodeURIComponent(callId)}/continue`, {
+        attemptId,
+        sdpOffer,
+      }),
     endVoiceCall: async (callId) =>
       void (await request('POST', `/v1/voice/calls/${encodeURIComponent(callId)}/end`)),
     getHome: (timeZone) => request('GET', withQuery('/v1/home', { tz: timeZone })),

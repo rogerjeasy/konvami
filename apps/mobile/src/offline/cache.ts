@@ -71,8 +71,11 @@ export function createOfflineCache(disk: OfflineDisk, account: () => string | nu
         delete document.entries[key];
         document.entries[key] = value;
         const pinned = document.entries.pinned as Record<string, unknown> | undefined;
-        const snapshots = Object.keys(document.entries).filter((entry) =>
-          isSnapshot(entry) && !(entry.startsWith('transcript:') && pinned?.[entry.slice('transcript:'.length)]));
+        const snapshots = Object.keys(document.entries).filter(
+          (entry) =>
+            isSnapshot(entry) &&
+            !(entry.startsWith('transcript:') && pinned?.[entry.slice('transcript:'.length)]),
+        );
         for (const oldest of snapshots.slice(0, Math.max(0, snapshots.length - MAX_SNAPSHOTS))) {
           delete document.entries[oldest];
         }

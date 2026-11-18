@@ -63,13 +63,11 @@ it('resets for a new recording and discards an older pending decode', async () =
         finish = resolve;
       }),
   );
-  jest
-    .mocked(decodeAudio)
-    .mockResolvedValueOnce({
-      channels: [new Float32Array([1])],
-      sampleRate: 16000,
-      durationMs: 1000,
-    });
+  jest.mocked(decodeAudio).mockResolvedValueOnce({
+    channels: [new Float32Array([1])],
+    sampleRate: 16000,
+    durationMs: 1000,
+  });
   function ChangingRecording() {
     const [value, setValue] = useState(recording);
     return (
