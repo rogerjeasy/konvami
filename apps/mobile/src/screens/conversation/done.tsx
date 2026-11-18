@@ -7,14 +7,11 @@ import type { Conversation } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Avatar } from '@/components/avatar/avatar';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { IconTile } from '@/components/icon-tile';
 import { Pop, Reveal } from '@/components/motion';
-import { Pill } from '@/components/pill';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
-import { TextButton } from '@/components/text-button';
 import { wholeMinutes } from '@/lib/format';
 import { successFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
@@ -22,6 +19,7 @@ import { conversationRoute, reportRoute, ROUTES } from '@/lib/routes';
 import type { ReportView } from '@/practice';
 import { useHome, usePracticeServices, useReport, useScenarios } from '@/practice/services';
 import { useTheme } from '@/theme';
+import { BlockScope } from './block-scope';
 import { Goals } from './goals';
 
 // The server saves a conversation when its call has closed, a moment after the app left it.
@@ -100,6 +98,9 @@ function Message({
   );
 }
 
+// The slight tilt of a sticker on the butter ground, as on the prototype.
+const STICKER_TILT = '-1.5deg';
+
 // Stands between the two counts of a finished report ("2 things to polish · 3 words to keep").
 const SEPARATOR = ' · ';
 /** The report was not written and will not arrive on its own: the learner can ask again. */
@@ -118,8 +119,9 @@ function ReportNews({ view }: { view: ReportView }) {
   if (view.phase === 'writing') {
     return (
       <View accessibilityLiveRegion="polite" className="flex-row items-center gap-2.5">
-        <ActivityIndicator size="small" color={color.primary} />
-        <Text variant="small" tone="muted">
+        {/* Shown on the butter ground: its own ink, in both themes. */}
+        <ActivityIndicator size="small" color={color.onButter} />
+        <Text variant="labelSmall" tone="onButter">
           {t('conversation.done.report.writing')}
         </Text>
       </View>
@@ -132,31 +134,38 @@ function ReportNews({ view }: { view: ReportView }) {
       words.length ? t('conversation.done.report.words', { count: words.length }) : null,
     ].filter((count) => count !== null);
     return (
+      // A sticker on the butter ground, set a little askew (v4 5.4).
       <Pop style={{ alignSelf: 'stretch' }}>
-        <Card accessibilityLiveRegion="polite" className="flex-row items-center gap-3 p-3.5">
+        <View
+          accessibilityLiveRegion="polite"
+          style={{ transform: [{ rotate: STICKER_TILT }] }}
+          className="flex-row items-center gap-3 rounded-card bg-inverse p-4"
+        >
           <View
             aria-hidden
             style={{ width: size.avatarSm, height: size.avatarSm }}
-            className="items-center justify-center rounded-md bg-primary-soft"
+            className="items-center justify-center rounded-md bg-veil-light"
           >
-            <Icon name="file" color={color.primaryText} size={size.iconMd} />
+            <Icon name="file" color={color.inverseAccent} size={size.iconMd} />
           </View>
           <View className="flex-1 gap-0.5">
-            <Text variant="label">{t('conversation.done.report.ready')}</Text>
+            <Text variant="heading" tone="onInverse">
+              {t('conversation.done.report.ready')}
+            </Text>
             {counts.length ? (
-              <Text variant="small" tone="muted">
+              <Text variant="labelSmall" tone="onInverse">
                 {counts.join(SEPARATOR)}
               </Text>
             ) : null}
           </View>
-        </Card>
+        </View>
       </Pop>
     );
   }
   const notWritten = view.phase === 'failed' && NOT_WRITTEN.includes(view.code);
   if (notWritten || view.phase === 'tooShort') {
     return (
-      <Text variant="small" tone="muted" className="text-center">
+      <Text variant="labelSmall" tone="onButter">
         {t(notWritten ? 'conversation.done.report.failed' : 'conversation.done.report.tooShort')}
       </Text>
     );
@@ -171,8 +180,8 @@ function GoalsReached({ id, reached }: { id: string; reached: readonly string[] 
   const scenario = useScenarios().scenarios?.find((s) => s.id === id);
   if (!scenario) return null;
   return (
-    <View className="items-center gap-1.5">
-      <Text variant="labelMedium" className="text-center">
+    <View className="items-start gap-1.5">
+      <Text variant="labelMedium">
         {t('conversation.goals.reached', { count: reached.length, total: scenario.goals.length })}
       </Text>
       <Goals scenario={scenario} reached={reached} />
@@ -194,68 +203,81 @@ function Spoken({ conversation }: { conversation: Conversation }) {
   useEffect(() => successFeedback(), []);
 
   return (
-    <StepLayout
-      header={HEADER}
-      actions={
-        // Once the report is there it is the next thing to look at; it leads to the transcript.
-        report.phase === 'ready' ? (
-          <>
-            <Button
-              label={t('conversation.done.report.open')}
-              onPress={() => router.replace(reportRoute(conversation.id))}
-            />
-            <TextButton tone="primary" label={t('conversation.done.home')} onPress={toToday} />
-          </>
-        ) : (
-          <>
-            <Button label={t('conversation.done.home')} onPress={toToday} />
-            <TextButton
-              tone="primary"
-              label={t('conversation.done.transcript')}
-              onPress={() => router.replace(conversationRoute(conversation.id))}
-            />
-          </>
-        )
-      }
-    >
-      <Message
-        lead={
-          partner ? (
-            <Avatar look={partner.look} size={size.avatarXl} />
+    <BlockScope block="butter">
+      <StepLayout
+        header={HEADER}
+        actions={
+          // Once the report is there it is the next thing to look at; it leads to the transcript.
+          report.phase === 'ready' ? (
+            <>
+              <Button
+                label={t('conversation.done.report.open')}
+                onPress={() => router.replace(reportRoute(conversation.id))}
+              />
+              <Button variant="ghost" label={t('conversation.done.home')} onPress={toToday} />
+            </>
           ) : (
-            <IconTile icon="message" />
+            <>
+              <Button label={t('conversation.done.home')} onPress={toToday} />
+              <Button
+                variant="ghost"
+                label={t('conversation.done.transcript')}
+                onPress={() => router.replace(conversationRoute(conversation.id))}
+              />
+            </>
           )
         }
-        title={
-          user?.firstName
-            ? t('conversation.done.title', { name: user.firstName })
-            : t('conversation.done.titleNoName')
-        }
-        body={
-          partner
-            ? t('conversation.done.body', { partner: partner.name, duration })
-            : t('conversation.done.bodyNoPartner', { duration })
-        }
-        extra={
-          <>
-            {/* Shown once Today's numbers have been read again and include this conversation. */}
-            {activity?.practisedToday && activity.streakDays > 0 ? (
-              <Pop>
-                <Pill
-                  tone="primary"
-                  label={t('today.week.streak', { count: activity.streakDays })}
-                  leading={<Icon name="flame" color={color.primaryText} size={size.iconSm} />}
-                />
-              </Pop>
-            ) : null}
-            {conversation.scenario ? (
+      >
+        <View className="flex-1 justify-center gap-5 py-6">
+          {/* Shown once Today's numbers have been read again and include this conversation. */}
+          {activity?.practisedToday && activity.streakDays > 0 ? (
+            <Pop>
+              <View className="gap-1">
+                <View className="flex-row items-center gap-1.5">
+                  <Icon name="flame" color={color.onButter} size={size.icon} />
+                  <Text variant="overline" tone="onButter">
+                    {t('today.week.streak', { count: activity.streakDays })}
+                  </Text>
+                </View>
+                {/* The number again, big: the overline already says it to a screen reader. */}
+                <Text
+                  variant="jumbo"
+                  tone="onButter"
+                  aria-hidden
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {activity.streakDays}
+                </Text>
+              </View>
+            </Pop>
+          ) : partner ? (
+            <Pop>
+              <Avatar look={partner.look} size={size.avatarXl} />
+            </Pop>
+          ) : null}
+          <Reveal delay={staggerDelay(1)}>
+            <View className="gap-2.5">
+              <Text variant="hero" tone="onButter" accessibilityRole="header">
+                {user?.firstName
+                  ? t('conversation.done.title', { name: user.firstName })
+                  : t('conversation.done.titleNoName')}
+              </Text>
+              <Text variant="emphasis" tone="onButter">
+                {partner
+                  ? t('conversation.done.body', { partner: partner.name, duration })
+                  : t('conversation.done.bodyNoPartner', { duration })}
+              </Text>
+            </View>
+          </Reveal>
+          {conversation.scenario ? (
+            <Reveal delay={staggerDelay(2)}>
               <GoalsReached id={conversation.scenario} reached={conversation.goalsReached} />
-            ) : null}
-            <ReportNews view={report} />
-          </>
-        }
-      />
-    </StepLayout>
+            </Reveal>
+          ) : null}
+          <ReportNews view={report} />
+        </View>
+      </StepLayout>
+    </BlockScope>
   );
 }
 
