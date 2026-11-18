@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { size } from '@konvami/design-tokens';
 import type { Persona } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { CallStage } from '@/components/call-stage';
-import type { IconName } from '@/components/icon';
+import { Icon, type IconName } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { NoticeBox } from '@/components/notice-box';
@@ -28,6 +29,7 @@ import { CaptionLookupSheet, type CaptionSelection } from './caption-lookup';
 import { Goals } from './goals';
 import { CorrectionSheet, LiveCorrections } from './live-corrections';
 import { CallPlanStrip } from './plan';
+import { BlockScope } from './block-scope';
 import { SettingsToast } from './settings-toast';
 import { setLiveCorrections, setPartnerCaptions, usePreferences } from '@/preferences';
 import { HELP_KINDS, type HelpKind } from '@/voice/help';
@@ -35,6 +37,7 @@ import { withLine } from '@/voice/problems';
 import type { LiveCorrection } from '@/voice/conversation';
 import { useWalkingCall } from '@/voice/use-walking-call';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
+import { useTheme } from '@/theme';
 
 /** Failures with their own explanation; anything else reads as the general message. */
 const PROBLEM_KEY = {
@@ -70,9 +73,12 @@ function TimeLeft({ seconds }: { seconds: number }) {
   const { t } = useTranslation();
   const { secondsLeft } = useCountdown(seconds);
   return (
-    <Text variant="labelSmall" tone="subtle">
-      {t('conversation.timeLeft', { time: formatDuration(secondsLeft) })}
-    </Text>
+    // A pill on the forest ground, as the prototype's timer.
+    <View className="min-h-tap justify-center rounded-pill bg-veil-light px-3.5">
+      <Text variant="labelSmall" tone="onForest" style={{ fontVariant: ['tabular-nums'] }}>
+        {t('conversation.timeLeft', { time: formatDuration(secondsLeft) })}
+      </Text>
+    </View>
   );
 }
 
@@ -186,6 +192,7 @@ function Call({
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
+  const { color } = useTheme();
   const { lookupCaption, saveCaptionWord } = usePracticeServices();
   const [selectedWord, setSelectedWord] = useState<CaptionSelection | null>(null);
   const call = useVoiceCall('practice', partner.id, scenario, practise);
@@ -227,116 +234,121 @@ function Call({
   }, [lost, leave]);
 
   return (
-    <CallStage
-      call={call}
-      persona={partner}
-      onLookupWord={(word, caption) => setSelectedWord({ language, word, caption })}
-      hint={t('conversation.hint', { name: partner.name })}
-      finishedLabel={t('conversation.finished')}
-      problem={call.problem && !lost ? withLine(t(problemKey(call.problem)), minutesBack) : null}
-      progress={
-        <>
-          {rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : null}
-          {plan ? <CallPlanStrip plan={plan} learnerLines={conversation.learnerLines} /> : null}
-        </>
-      }
-      notice={<SettingsToast changes={conversation.profileChanges} />}
-      belowLearner={
-        liveCorrections ? (
-          <LiveCorrections corrections={conversation.corrections} onOpen={setExplaining} />
-        ) : null
-      }
-      hiddenPersonaText={
-        partnerCaptions ? null : t('conversation.help.hidden', { name: partner.name })
-      }
-      header={
-        <View className="min-h-tap flex-row items-center justify-end pb-2">
-          {call.status === 'live' && call.maxSeconds ? (
-            <TimeLeft seconds={call.maxSeconds} />
-          ) : null}
-        </View>
-      }
-      mainAction={
-        <>
-          {call.pushToTalk ? (
-            <Button
-              label={t(call.muted ? 'call.holdToTalk' : 'call.releaseToSend')}
-              disabled={!canHelp}
-              onPressIn={call.beginTurn}
-              onPressOut={call.endTurn}
-            />
-          ) : null}
-          <Button
-            variant="secondary"
-            label={t('conversation.end')}
-            onPress={() => {
-              commitFeedback();
-              leave();
-            }}
-          />
-          {/* Modals: where they sit in the tree does not change where they show. */}
-          <CaptionLookupSheet
-            selection={selectedWord}
-            onClose={() => setSelectedWord(null)}
-            lookup={lookupCaption}
-            save={saveCaptionWord}
-            labels={{
-              loading: t('captionLookup.loading'),
-              failed: t('captionLookup.failed'),
-              save: t('captionLookup.save'),
-              saved: t('captionLookup.saved'),
-              uncertain: t('captionLookup.uncertain'),
-              saveFailed: t('captionLookup.saveFailed'),
-              plural: t('captionLookup.plural'),
-            }}
-          />
-          <CorrectionSheet correction={explaining} onClose={() => setExplaining(null)} />
-          <HelpSheet
-            walking={walking}
-            manual={call.pushToTalk}
-            onManual={(enabled) => {
-              if (enabled) void walking.set(false);
-              call.setPushToTalk(enabled);
-            }}
-            visible={helping && canHelp}
-            name={partner.name}
-            onClose={() => setHelping(false)}
-            onHelp={(kind) => {
-              commitFeedback();
-              setHelping(false);
-              call.help(kind);
-            }}
-          />
-        </>
-      }
-      sideAction={
-        <TextButton
-          tone="primary"
-          disabled={!canHelp}
-          label={t('conversation.help.open')}
-          onPress={() => setHelping(true)}
-        />
-      }
-      failedActions={
-        call.problem && FINAL.includes(call.problem) ? (
+    <BlockScope block="forest">
+      <CallStage
+        call={call}
+        persona={partner}
+        onLookupWord={(word, caption) => setSelectedWord({ language, word, caption })}
+        hint={t('conversation.hint', { name: partner.name })}
+        finishedLabel={t('conversation.finished')}
+        problem={call.problem && !lost ? withLine(t(problemKey(call.problem)), minutesBack) : null}
+        progress={
           <>
-            {call.problem === 'minutes_used_up' && canUpgrade ? (
-              <Button label={t('plan.see')} onPress={() => paywall.open('minutes')} />
+            {rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : null}
+            {plan ? <CallPlanStrip plan={plan} learnerLines={conversation.learnerLines} /> : null}
+          </>
+        }
+        notice={<SettingsToast changes={conversation.profileChanges} />}
+        belowLearner={
+          liveCorrections ? (
+            <LiveCorrections corrections={conversation.corrections} onOpen={setExplaining} />
+          ) : null
+        }
+        hiddenPersonaText={
+          partnerCaptions ? null : t('conversation.help.hidden', { name: partner.name })
+        }
+        header={
+          <View className="min-h-tap flex-row items-center justify-end pb-2">
+            {call.status === 'live' && call.maxSeconds ? (
+              <TimeLeft seconds={call.maxSeconds} />
             ) : null}
+          </View>
+        }
+        mainAction={
+          <>
+            {call.pushToTalk ? (
+              <Button
+                variant="lime"
+                label={t(call.muted ? 'call.holdToTalk' : 'call.releaseToSend')}
+                disabled={!canHelp}
+                onPressIn={call.beginTurn}
+                onPressOut={call.endTurn}
+              />
+            ) : null}
+            {/* Ending is the tomato pill: the one control that stops the talking. */}
             <Button
-              variant={call.problem === 'minutes_used_up' && canUpgrade ? 'secondary' : 'primary'}
-              label={t('conversation.back')}
-              onPress={toToday}
+              variant="tomato"
+              leading={<Icon name="stop" color={color.onTomato} size={size.iconMd} />}
+              label={t('conversation.end')}
+              onPress={() => {
+                commitFeedback();
+                leave();
+              }}
+            />
+            {/* Modals: where they sit in the tree does not change where they show. */}
+            <CaptionLookupSheet
+              selection={selectedWord}
+              onClose={() => setSelectedWord(null)}
+              lookup={lookupCaption}
+              save={saveCaptionWord}
+              labels={{
+                loading: t('captionLookup.loading'),
+                failed: t('captionLookup.failed'),
+                save: t('captionLookup.save'),
+                saved: t('captionLookup.saved'),
+                uncertain: t('captionLookup.uncertain'),
+                saveFailed: t('captionLookup.saveFailed'),
+                plural: t('captionLookup.plural'),
+              }}
+            />
+            <CorrectionSheet correction={explaining} onClose={() => setExplaining(null)} />
+            <HelpSheet
+              walking={walking}
+              manual={call.pushToTalk}
+              onManual={(enabled) => {
+                if (enabled) void walking.set(false);
+                call.setPushToTalk(enabled);
+              }}
+              visible={helping && canHelp}
+              name={partner.name}
+              onClose={() => setHelping(false)}
+              onHelp={(kind) => {
+                commitFeedback();
+                setHelping(false);
+                call.help(kind);
+              }}
             />
           </>
-        ) : (
-          <>
-            <Button label={t('conversation.retry')} onPress={onRetry} />
-            <TextButton tone="primary" label={t('conversation.back')} onPress={toToday} />
-          </>
-        )
-      }
-    />
+        }
+        sideAction={
+          <TextButton
+            tone="primary"
+            disabled={!canHelp}
+            label={t('conversation.help.open')}
+            onPress={() => setHelping(true)}
+          />
+        }
+        failedActions={
+          call.problem && FINAL.includes(call.problem) ? (
+            <>
+              {call.problem === 'minutes_used_up' && canUpgrade ? (
+                <Button label={t('plan.see')} onPress={() => paywall.open('minutes')} />
+              ) : null}
+              <Button
+                variant={call.problem === 'minutes_used_up' && canUpgrade ? 'secondary' : 'primary'}
+                label={t('conversation.back')}
+                onPress={toToday}
+              />
+            </>
+          ) : (
+            <>
+              <Button label={t('conversation.retry')} onPress={onRetry} />
+              <TextButton tone="primary" label={t('conversation.back')} onPress={toToday} />
+            </>
+          )
+        }
+      />
+    </BlockScope>
   );
 }
 
