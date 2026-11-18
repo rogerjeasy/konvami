@@ -11,7 +11,8 @@ import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
 import { Section } from '@/components/section';
-import { TabHeader, TabScreen } from '@/components/tab-screen';
+import { TabScreen } from '@/components/tab-screen';
+import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { formatDayLine } from '@/lib/format';
@@ -29,7 +30,8 @@ import { isKnownQuestion, ProfileQuestion } from './profile-question';
 import { ReminderOffer } from './reminder-offer';
 import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
-import { WeekCard } from './week-card';
+import { CardsTile } from './cards-tile';
+import { GoalTile, StreakTile, TopicsTile } from './week-card';
 
 /** The greeting and the day, with the way to the account at the end. */
 function Header({ now }: { now: Date }) {
@@ -38,19 +40,54 @@ function Header({ now }: { now: Date }) {
   const { pictureUrl } = useAccount();
   const name = user?.firstName ?? '';
   const part = dayPart(now.getHours());
+  // v4: the greeting is the biggest thing on the screen, the date above it.
   return (
-    <TabHeader
-      overline={formatDayLine(i18n.language, now)}
-      title={name ? t(`today.greeting.${part}`, { name }) : t(`today.greetingNoName.${part}`)}
-      trailing={
-        <AccountButton
-          name={name}
-          pictureUrl={pictureUrl}
-          label={t('today.account')}
-          onPress={() => router.push(ROUTES.account)}
-        />
-      }
-    />
+    <View className="flex-row items-start justify-between gap-3">
+      <View className="flex-1 gap-2">
+        <Text variant="overline" tone="subtle">
+          {formatDayLine(i18n.language, now)}
+        </Text>
+        <Text variant="hero" accessibilityRole="header">
+          {name ? t(`today.greeting.${part}`, { name }) : t(`today.greetingNoName.${part}`)}
+        </Text>
+      </View>
+      <AccountButton
+        name={name}
+        pictureUrl={pictureUrl}
+        label={t('today.account')}
+        onPress={() => router.push(ROUTES.account)}
+      />
+    </View>
+  );
+}
+
+/**
+ * The colour blocks under the talk card, two to a row (one on a narrow phone): the streak, the
+ * week's goal, the cards waiting and the week's topics. A block with nothing to say is left out,
+ * and the one left alone in a row takes its width.
+ */
+function Bento({ home }: { home: Home }) {
+  const { compact } = useScreenLayout();
+  const tiles = [
+    <StreakTile key="streak" activity={home.activity} />,
+    <GoalTile key="goal" plan={home.plan} onChangeGoal={() => router.push(ROUTES.accountGoals)} />,
+    // Shown only while cards are waiting: a count of zero is nothing to do.
+    home.cardsDue > 0 ? (
+      <CardsTile key="cards" count={home.cardsDue} onPress={() => router.push(ROUTES.review)} />
+    ) : null,
+    home.plan.topics.length ? <TopicsTile key="topics" plan={home.plan} /> : null,
+  ].filter((tile) => tile !== null);
+  const perRow = compact ? 1 : 2;
+  const rows: React.JSX.Element[][] = [];
+  for (let i = 0; i < tiles.length; i += perRow) rows.push(tiles.slice(i, i + perRow));
+  return (
+    <View className="gap-3">
+      {rows.map((row) => (
+        <View key={row.map((tile) => tile.key).join('-')} className="flex-row items-stretch gap-3">
+          {row}
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -105,23 +142,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
         />
       </ListGroup>
     ) : null,
-    // Shown only while cards are waiting: a count of zero is nothing to do.
-    home.cardsDue > 0 ? (
-      <ListGroup key="cards">
-        <ListRow
-          icon="book"
-          title={t('today.cards.title', { count: home.cardsDue })}
-          detail={t('today.cards.body')}
-          onPress={() => router.push(ROUTES.review)}
-        />
-      </ListGroup>
-    ) : null,
-    <WeekCard
-      key="week"
-      activity={home.activity}
-      plan={home.plan}
-      onChangeGoal={() => router.push(ROUTES.accountGoals)}
-    />,
+    <Bento key="bento" home={home} />,
     // Once there was a first conversation, reminders are worth offering.
     partner && home.activity.conversations > 0 ? (
       <ReminderOffer key="reminders" partnerName={partner.persona.name} />
