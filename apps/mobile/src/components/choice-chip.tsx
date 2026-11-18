@@ -25,10 +25,10 @@ export function ChoiceChip({
     >
       <View
         className={`min-h-tap min-w-tap items-center justify-center rounded-pill border px-4 py-2 ${
-          selected ? 'border-primary bg-primary-soft' : 'border-field-border bg-bg'
+          selected ? 'border-primary bg-primary' : 'border-surface bg-surface'
         }`}
       >
-        <Text variant="labelSmall" tone={selected ? 'primary' : 'fg'} className="text-center">
+        <Text variant="labelSmall" tone={selected ? 'onPrimary' : 'fg'} className="text-center">
           {label}
         </Text>
       </View>
