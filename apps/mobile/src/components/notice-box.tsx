@@ -36,7 +36,7 @@ export function NoticeBox({
     <View
       role={danger ? 'alert' : undefined}
       accessibilityLiveRegion={danger ? 'polite' : undefined}
-      className={`flex-row gap-3 rounded-button px-4 py-3 ${title ? 'items-start' : 'items-center'} ${look.box}`}
+      className={`flex-row gap-3 rounded-card px-4 py-3 ${title ? 'items-start' : 'items-center'} ${look.box}`}
     >
       <Icon name={icon} color={color[look.icon]} size={size.iconMd} />
       <View className="flex-1 gap-1">
