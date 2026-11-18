@@ -1,58 +1,30 @@
-import { useCallback, useEffect } from 'react';
-import { View } from 'react-native';
+import { useCallback, useEffect, type ComponentProps } from 'react';
+import { ScrollView, useWindowDimensions, View } from 'react-native';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
-import type { HomePartner } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
-import { PersonaSummary } from '@/components/persona-summary';
 import { TabHeader, TabScreen } from '@/components/tab-screen';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
-import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
-import { relativeDayPhrase } from '@/lib/relative-day';
 import { callRoute, penPalRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
-import { ListGroup, ListRow } from '@/components/list';
+import { ModeRow } from './mode-row';
+import { PartnerPoster } from './partner-poster';
 
-// The width of a card when two share a row: half, less half of the gap between them.
-const TWO_UP = '49%';
-
-/** One partner: who they are, when the learner last talked to them, and the way to do so now. */
-function PartnerCard({ partner, now }: { partner: HomePartner; now: Date }) {
-  const { t, i18n } = useTranslation();
-  const { color } = useTheme();
-  const { persona, lastTalkedAt } = partner;
-  return (
-    <Card className="gap-3.5 p-4">
-      <PersonaSummary persona={persona}>
-        <Text variant="small" tone="subtle">
-          {lastTalkedAt
-            ? t('talk.last', { when: relativeDayPhrase(t, i18n.language, lastTalkedAt, now) })
-            : t('talk.never')}
-        </Text>
-      </PersonaSummary>
-      <Button
-        variant="secondary"
-        label={t('talk.start')}
-        accessibilityLabel={t('talk.startLabel', { name: persona.name })}
-        leading={<Icon name="mic" color={color.fg} size={size.iconMd} />}
-        onPress={() => {
-          commitFeedback();
-          router.push(callRoute(persona.id));
-        }}
-      />
-    </Card>
-  );
-}
+// A poster's width on a phone: most of the window, so the next one peeks in (pt, prototype).
+const POSTER_WIDTH = 286;
+// What is left of the window beside a poster, so the next one shows at the edge.
+const PEEK = 56;
+// Gap between posters (pt): Tailwind `gap-3`.
+const POSTER_GAP = 12;
 
 /**
  * 5.2 Talk: the learner's partners (spec §14.1). Choosing one starts a conversation with them;
@@ -66,7 +38,9 @@ export function TalkScreen() {
   const penPal = usePenPal();
   const waiting =
     penPal.phase === 'ready' && penPal.data.threads.some((thread) => thread.unread > 0);
-  const { split } = useScreenLayout();
+  const { gutter } = useScreenLayout();
+  const { width } = useWindowDimensions();
+  const posterWidth = Math.min(POSTER_WIDTH, width - PEEK);
   const { color } = useTheme();
   const signedIn = status === 'signedIn';
 
@@ -92,60 +66,33 @@ export function TalkScreen() {
       <Reveal>
         <TabHeader title={t('talk.title')} body={t('talk.body')} />
       </Reveal>
-      <Reveal delay={staggerDelay(1)}>
-        <ListGroup>
-          <ListRow
-            icon="users"
-            title={t('rolePlays.row')}
-            detail={t('rolePlays.rowHint')}
-            onPress={() => router.push(ROUTES.rolePlays)}
-          />
-          <ListRow
-            icon="mic"
-            title={t('penPal.row')}
-            detail={t('penPal.rowHint')}
-            badge={waiting ? t('penPal.new') : undefined}
-            onPress={() => router.push(penPalRoute())}
-          />
-          {/* A lesson is on one topic, so it starts from the grammar map (5.14). */}
-          <ListRow
-            icon="book"
-            title={t('talk.lessons')}
-            detail={t('talk.lessonsHint')}
-            onPress={() => router.push(ROUTES.grammar)}
-          />
-          <ListRow
-            icon="volume"
-            title={t('talk.pronunciation')}
-            detail={t('talk.pronunciationHint')}
-            onPress={() => router.push(ROUTES.pronunciation)}
-          />
-          {/* Something of the learner's own (a letter, a page, a menu) is brought on 5.23. */}
-          <ListRow
-            icon="file"
-            title={t('talk.import')}
-            detail={t('talk.importHint')}
-            onPress={() => router.push(ROUTES.import)}
-          />
-        </ListGroup>
-      </Reveal>
       {home.phase === 'ready' ? (
-        // Two to a row on wide windows; an odd last card keeps its width instead of stretching.
-        <View className={split ? 'flex-row flex-wrap justify-between gap-y-4' : 'gap-3'}>
-          {home.data.partners.map((partner, i) => (
-            <Reveal
-              key={partner.persona.id}
-              delay={staggerDelay(i + 1)}
-              style={split ? { width: TWO_UP } : undefined}
+        <View className="gap-3">
+          {/* Posters in a row that snaps from one to the next; on wide windows they all fit. */}
+          <Reveal delay={staggerDelay(1)}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={posterWidth + POSTER_GAP}
+              decelerationRate="fast"
+              style={{ marginHorizontal: -gutter }}
+              contentContainerStyle={{ paddingHorizontal: gutter, gap: POSTER_GAP }}
+              accessibilityLabel={t('talk.partners')}
             >
-              <PartnerCard partner={partner} now={now} />
-            </Reveal>
-          ))}
-          <Reveal
-            delay={staggerDelay(home.data.partners.length + 1)}
-            style={split ? { width: '100%' } : undefined}
-          >
-            <View className="gap-1 pt-2">
+              {home.data.partners.map((partner, i) => (
+                <View key={partner.persona.id} style={{ width: posterWidth }}>
+                  <PartnerPoster
+                    partner={partner}
+                    index={i}
+                    now={now}
+                    onTalk={() => router.push(callRoute(partner.persona.id))}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </Reveal>
+          <Reveal delay={staggerDelay(2)}>
+            <View className="gap-1">
               <Button
                 variant="secondary"
                 label={t('talk.newPartner')}
@@ -171,6 +118,64 @@ export function TalkScreen() {
           onRetry={() => void store.reload()}
         />
       )}
+      <View className="gap-2.5">
+        <Reveal delay={staggerDelay(3)}>
+          <Text variant="section" accessibilityRole="header">
+            {t('talk.more')}
+          </Text>
+        </Reveal>
+        {(
+          [
+            {
+              key: 'roles',
+              icon: 'users',
+              blob: 'tomato',
+              title: t('rolePlays.row'),
+              detail: t('rolePlays.rowHint'),
+              onPress: () => router.push(ROUTES.rolePlays),
+            },
+            {
+              key: 'penPal',
+              icon: 'mic',
+              blob: 'pink',
+              title: t('penPal.row'),
+              detail: t('penPal.rowHint'),
+              badge: waiting ? t('penPal.new') : undefined,
+              onPress: () => router.push(penPalRoute()),
+            },
+            // A lesson is on one topic, so it starts from the grammar map (5.14).
+            {
+              key: 'lessons',
+              icon: 'book',
+              blob: 'forest',
+              title: t('talk.lessons'),
+              detail: t('talk.lessonsHint'),
+              onPress: () => router.push(ROUTES.grammar),
+            },
+            {
+              key: 'sounds',
+              icon: 'volume',
+              blob: 'butter',
+              title: t('talk.pronunciation'),
+              detail: t('talk.pronunciationHint'),
+              onPress: () => router.push(ROUTES.pronunciation),
+            },
+            // Something of the learner's own (a letter, a page, a menu) is brought on 5.23.
+            {
+              key: 'import',
+              icon: 'file',
+              blob: 'ink',
+              title: t('talk.import'),
+              detail: t('talk.importHint'),
+              onPress: () => router.push(ROUTES.import),
+            },
+          ] satisfies (ComponentProps<typeof ModeRow> & { key: string })[]
+        ).map(({ key, ...row }, i) => (
+          <Reveal key={key} delay={staggerDelay(4 + i)}>
+            <ModeRow {...row} />
+          </Reveal>
+        ))}
+      </View>
     </TabScreen>
   );
 }
