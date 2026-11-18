@@ -3,6 +3,7 @@ import { size } from '@konvami/design-tokens';
 import { Icon } from '@/components/icon';
 import { Pop } from '@/components/motion';
 import { Text } from '@/components/text';
+import { useTileInk } from '@/components/tile';
 import { staggerDelay } from '@/lib/motion';
 import { useTheme } from '@/theme';
 
@@ -32,16 +33,38 @@ const MARK: Record<WeekDayState, string> = {
  */
 export function WeekStrip({ days }: { days: readonly WeekDay[] }) {
   const { color } = useTheme();
+  // On a colour block the marks take the block's own ink (the butter streak tile on Today).
+  const tile = useTileInk();
+  const ink = tile ? color[tile.ink] : null;
+  const tileMark = (state: WeekDayState) =>
+    ink === null
+      ? undefined
+      : state === 'done'
+        ? { backgroundColor: ink }
+        : state === 'today'
+          ? { borderWidth: 2.5, borderColor: ink }
+          : undefined;
   return (
     <View className="flex-row justify-between">
       {days.map((day, i) => {
         const mark = (
           <View
-            style={{ width: size.dayMark, height: size.dayMark }}
-            className={`items-center justify-center rounded-pill ${MARK[day.state]}`}
+            style={[{ width: size.dayMark, height: size.dayMark }, tileMark(day.state)]}
+            className={`items-center justify-center rounded-pill ${
+              tile
+                ? day.state === 'done' || day.state === 'today'
+                  ? ''
+                  : tile.veil
+                : MARK[day.state]
+            }`}
           >
             {day.state === 'done' ? (
-              <Icon name="check" color={color.onPrimary} size={size.icon} strokeWidth={3} />
+              <Icon
+                name="check"
+                color={tile ? color[tile.ground] : color.onPrimary}
+                size={size.icon}
+                strokeWidth={3}
+              />
             ) : null}
           </View>
         );
@@ -55,7 +78,9 @@ export function WeekStrip({ days }: { days: readonly WeekDay[] }) {
             {day.state === 'done' ? <Pop delay={staggerDelay(i)}>{mark}</Pop> : mark}
             <Text
               variant="captionStrong"
-              tone={day.state === 'today' || day.state === 'done' ? 'fg' : 'subtle'}
+              tone={
+                tile ? tile.tone : day.state === 'today' || day.state === 'done' ? 'fg' : 'subtle'
+              }
               aria-hidden
             >
               {day.initial}
