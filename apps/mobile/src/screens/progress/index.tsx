@@ -7,7 +7,6 @@ import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
-import { LevelCard } from '@/components/level-card';
 import { LoadState } from '@/components/load-state';
 import { Meter } from '@/components/meter';
 import { Reveal } from '@/components/motion';
@@ -21,6 +20,7 @@ import { ROUTES } from '@/lib/routes';
 import { usePracticeServices, useProgress } from '@/practice/services';
 import { VocabularyCard } from './vocabulary-card';
 import { LastWeekCard } from './last-week-card';
+import { LevelTile } from './level-tile';
 import { Milestones } from './milestones';
 import { PolishCard } from './polish-card';
 import { PracticeCard } from './practice-card';
@@ -98,7 +98,11 @@ function Charts({ progress }: { progress: Progress }) {
   // Mistakes and the share of the talking come from reports: before the first one, neither
   // part has anything to say.
   const reported = progress.talk !== null;
+  // The level leads, as the forest block of v4; the counts and the chart follow it.
   const practice = [
+    progress.level ? (
+      <LevelTile key="level" level={progress.level} history={progress.levelHistory} />
+    ) : null,
     progress.lastWeek ? <LastWeekCard key="lastWeek" review={progress.lastWeek} /> : null,
     <PracticeCard key="practice" progress={progress} />,
     <VocabularyCard
@@ -106,9 +110,6 @@ function Charts({ progress }: { progress: Progress }) {
       active={progress.cards.activeWords ?? 0}
       passive={progress.cards.passiveWords ?? 0}
     />,
-    progress.level ? (
-      <LevelCard key="level" level={progress.level} history={progress.levelHistory} />
-    ) : null,
     progress.talk ? <TalkCard key="talk" talk={progress.talk} /> : null,
     progress.fluency ? (
       <Card key="fluency" className="gap-2.5 p-4">
