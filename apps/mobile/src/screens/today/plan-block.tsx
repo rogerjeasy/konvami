@@ -4,6 +4,7 @@ import { size } from '@konvami/design-tokens';
 import type { ExamWeek, PlanSession, WeekPlan } from '@konvami/api-client';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
+import { useTileInk } from '@/components/tile';
 import { useExamLabels } from '@/hooks/use-exam-labels';
 import { useScenarioTitle, useTopicLabels } from '@/hooks/use-labels';
 import { missedDays } from '@/lib/plan';
@@ -26,6 +27,8 @@ const KIND_ICON: Record<PlanSession['kind'], IconName> = {
 function SessionRow({ session, exam }: { session: PlanSession; exam: ExamWeek | null }) {
   const { t } = useTranslation();
   const { color } = useTheme();
+  // On the tomato talk card the plan takes the block's own ink.
+  const tile = useTileInk();
   const topics = useTopicLabels();
   const scenarioTitle = useScenarioTitle();
   const exams = useExamLabels();
@@ -48,14 +51,22 @@ function SessionRow({ session, exam }: { session: PlanSession; exam: ExamWeek | 
   return (
     <View className="flex-row items-start gap-2.5">
       <View className="pt-0.5" aria-hidden>
-        <Icon name={KIND_ICON[session.kind]} color={color.primaryText} size={size.icon} />
+        <Icon
+          name={KIND_ICON[session.kind]}
+          color={tile ? color[tile.ink] : color.primaryText}
+          size={size.icon}
+        />
       </View>
       <View className="flex-1 gap-0.5">
-        <Text variant="label" accessibilityLabel={t('today.plan.session', { minutes, kind })}>
+        <Text
+          variant="label"
+          tone={tile?.tone ?? 'fg'}
+          accessibilityLabel={t('today.plan.session', { minutes, kind })}
+        >
           {`${minutes}${SEPARATOR}${kind}`}
         </Text>
         {detail ? (
-          <Text variant="small" tone="muted">
+          <Text variant="small" tone={tile?.tone ?? 'muted'}>
             {detail}
           </Text>
         ) : null}
@@ -71,6 +82,7 @@ function SessionRow({ session, exam }: { session: PlanSession; exam: ExamWeek | 
  */
 export function PlanBlock({ plan }: { plan: WeekPlan }) {
   const { t, i18n } = useTranslation();
+  const tile = useTileInk();
   const minutes = plan.today.reduce((sum, session) => sum + session.minutes, 0);
   const heading = [
     minutes > 0 ? t('today.plan.title', { minutes: t('time.minutes', { count: minutes }) }) : null,
@@ -82,9 +94,9 @@ export function PlanBlock({ plan }: { plan: WeekPlan }) {
       : t(`today.plan.reasons.${plan.reason}`, { days: missedDays(i18n.language, plan.missed) });
   if (!heading.length && !reason) return null;
   return (
-    <View className="gap-3 border-t border-border pt-4">
+    <View className={`gap-3 border-t pt-4 ${tile ? 'border-veil' : 'border-border'}`}>
       {heading.length ? (
-        <Text variant="overline" tone="subtle" accessibilityRole="header">
+        <Text variant="overline" tone={tile?.tone ?? 'subtle'} accessibilityRole="header">
           {heading.join(SEPARATOR)}
         </Text>
       ) : null}
@@ -96,7 +108,7 @@ export function PlanBlock({ plan }: { plan: WeekPlan }) {
         </View>
       ) : null}
       {reason ? (
-        <Text variant="small" tone="muted">
+        <Text variant="small" tone={tile?.tone ?? 'muted'}>
           {reason}
         </Text>
       ) : null}

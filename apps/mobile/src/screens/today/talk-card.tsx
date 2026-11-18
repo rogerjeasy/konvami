@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { HomePartner, PlanSession, WeekPlan } from '@konvami/api-client';
 import { Avatar } from '@/components/avatar/avatar';
-import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
+import { Tile, TileChip } from '@/components/tile';
 import { relativeDayPhrase } from '@/lib/relative-day';
 import { useTheme } from '@/theme';
 import { PlanBlock } from './plan-block';
@@ -50,29 +50,32 @@ export function TalkCard({
             name: persona.name,
           })
         : t('today.talk.start', { name: persona.name });
+  // v4: talking is the tomato block, with the partner's portrait and name big.
   return (
-    <View className="gap-4 rounded-panel bg-surface p-5">
+    <Tile color="tomato" bubble="top-right" className="gap-4">
       <View className="flex-row items-center gap-4">
         <Avatar look={persona.look} size={size.avatarHero} />
         <View className="flex-1 gap-1">
-          <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
-            <Text variant="heading" className="shrink">
-              {persona.name}
-            </Text>
-            <Badge label={t(`onboarding.partners.roles.${persona.role}`)} />
-          </View>
-          <Text variant="callout" tone="muted">
-            {persona.tagline ?? t(`onboarding.partners.roleLines.${persona.role}`)}
-          </Text>
-          <Text variant="small" tone="subtle">
+          <Text variant="overline" tone="onTomato">
             {lastTalkedAt
               ? t('today.talk.last', {
                   when: relativeDayPhrase(t, i18n.language, lastTalkedAt, now),
                 })
               : t('today.talk.first')}
           </Text>
+          <Text variant="tileTitle" tone="onTomato">
+            {persona.name}
+          </Text>
+          <Text variant="labelMedium" tone="onTomato">
+            {persona.tagline ?? t(`onboarding.partners.roleLines.${persona.role}`)}
+          </Text>
         </View>
       </View>
+      <TileChip>
+        <Text variant="captionStrong" tone="onTomato">
+          {t(`onboarding.partners.roles.${persona.role}`)}
+        </Text>
+      </TileChip>
       <View className="gap-1">
         <Button
           label={label}
@@ -85,6 +88,6 @@ export function TalkCard({
       </View>
       {/* Under the button, so it stays on screen on a small phone: what the button starts. */}
       <PlanBlock plan={plan} />
-    </View>
+    </Tile>
   );
 }
