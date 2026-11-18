@@ -1,7 +1,12 @@
 # Konvami design
 
-**Source of truth:** the claude.ai Design canvas
-https://claude.ai/artifact/LHpzPuTBCcjS5WBXvZsVyG (private). Each artboard shows a phone screen in
+**Source of truth (from 2026-11-18):** the v4 clickable prototype
+https://claude.ai/artifact/U5p99ZXRFf1K1ZNt5HdEcC (private). It draws 1.5 Welcome, 5.1 Today, 5.2 Talk,
+5.3 Conversation, 5.4 Done, 5.5 Library, 5.7 Learn, 5.8 Progress, 5.10 Report, 5.11 Review and
+6.1 Profile; every other screen takes its look from the same tokens and shared components.
+
+**Before v4:** the claude.ai Design canvas
+https://claude.ai/artifact/LHpzPuTBCcjS5WBXvZsVyG (private) set the layouts of sections 1–3. Each artboard shows a phone screen in
 light and dark side by side. Build screens exactly as drawn; tokens are in
 `packages/design-tokens/src/tokens.ts` (do not copy hex values from the canvas into app code).
 
@@ -164,14 +169,29 @@ canvas after that date is not in it.
 | 6.12 | Budget emails at the target ($150) and the ceiling ($250), not at 50% and 80% as well | Past the target calls switch to the cheaper voice model and at the ceiling they stop: those are the steps worth an email |
 | 5.3 | Past the target every new call, also the setup and the placement test, uses the cheaper voice model; at the ceiling no voice call starts and text features keep working | Spec §6.19 kill switches; decided 2026-10-22 |
 
-## Visual language (v2)
+## Visual language (v4)
 
-- Graphite and stone surfaces with one deep-teal accent (`primary`: `#0F766E` light,
-  `#14B8A6` dark). No purple, indigo, lavender, gradients or glows.
-- Lexend SemiBold for titles (28/34), Inter for interface text (16/24 body).
-- 54 pt buttons (radius 14), 52 pt fields (radius 12), 44 pt minimum touch target.
-- Warnings amber, success green, errors red; learner mistakes use the amber "Let's polish this"
-  chip, never red.
+- Warm paper (`bg` `#F7F6F2`) and ink (`#141513`) surfaces; in dark mode near-black paper and
+  light ink. The main action is an ink pill.
+- Colour blocks, each owned by one feature: talking is tomato, words are pink, the streak is
+  butter, the level and the week's goal are forest with lime, the week's focus is ink
+  (`components/tile.tsx`). No purple, indigo, lavender, gradients or glows.
+- Bricolage Grotesque ExtraBold for titles and big numbers, Figtree for interface text, and the
+  language learned always in Instrument Serif italic (`langBody`, `langLine`, `langLarge`,
+  `langWord`, `langHero`).
+- 56 pt pill buttons, 52 pt fields (radius 16), tiles radius 30, 44 pt minimum touch target.
+- Learner mistakes use the amber "Let's polish this" chip, never red.
+
+### Where the app differs from the v4 prototype
+
+| Screen | Difference | Reason |
+| --- | --- | --- |
+| 1.5 | The next flag fades in over the last one instead of spreading from the bubble | A circular reveal needs a clip path, which React Native does not animate on every platform |
+| 5.1 | The greeting is in the interface language, not German in the serif; no marquee of example phrases on the focus tile | The greeting is the app's own words; example phrases for a topic are not in the data |
+| 5.1, 5.8 | No butter "almost there" step on the level path | The level engine does not report progress towards the next level |
+| 5.3 | The learner's lines sit in a lime bubble; no morphing voice blob or EN toggle | The call keeps its existing controls (help sheet, captions switch) |
+| 5.10 | The mistake is underlined in a solid amber line, not a wavy one | React Native's text decoration has no wavy style |
+| 5.11 | The article is coloured on the card's white side only; ratings two to a row; the suggested rating is lime | The gender colours do not reach 4.5:1 on pink; four buttons do not fit a 320 pt phone; an answer said out loud suggests a rating (see above) |
 
 ## Adapting the phone mockups to other sizes
 

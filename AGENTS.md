@@ -6,9 +6,9 @@ Italian.
 
 - **Product and system spec:** `docs/superpowers/specs/2026-10-06-language-companion-app-design.md`.
   Read the relevant section before building a feature. Decisions D1–D19 (§2.2) are settled.
-- **Approved UI design:** the claude.ai Design canvas (link and screen list in
-  `docs/design/README.md`). Build screens exactly as drawn, in light and dark.
-- **Brand:** `design/brand/konvami/`. The v2 logo (solid teal tile, no gradient) is drawn from
+- **Approved UI design:** the v4 prototype (link and screen list in `docs/design/README.md`).
+  Build screens in its look, in light and dark.
+- **Brand:** `design/brand/konvami/`. The v4 logo (ink tile, lime bubble, tomato tongue, no gradient) is drawn from
   `packages/design-tokens/src/logo.ts`; regenerate icons with `pnpm brand:export`.
 - **Infrastructure:** `infra/README.md`. Konvami shares the NextChronicle `nc-dev` AWS account.
 
@@ -66,12 +66,13 @@ code.
      360 pt, side-by-side above the `wide` breakpoint, readable text columns
      (`max-w-content`), screens capped at `max-w-screen`.
    - Absolute positioning is only for decorative drawings that scale with their box (see
-     `GreetingOrbit`), never for text blocks or controls.
+     `GreetingFlags`), never for text blocks or controls.
 2. **OS text size is respected.** Never set `allowFontScaling={false}`. Only decorative text inside
    illustrations may cap growth (`maxFontSizeMultiplier={ILLUSTRATION_MAX_FONT_SCALE}`).
 3. **Light and dark mode** for every screen, from the same tokens (CSS variables per theme). Text
    contrast ≥ 4.5:1; the tokens test checks the pairs. No purple, indigo, lavender, gradient washes
-   or glows: graphite and stone surfaces with one deep-teal accent.
+   or glows: warm paper and ink surfaces with the v4 colour blocks (tomato, forest + lime, butter,
+   pink), each owned by one feature; the language learned is set in the serif italic (`lang*`).
 4. **Accessibility:** touch targets ≥ 44 pt (`min-h-tap`), real roles and labels on every control,
    decorative drawings hidden (`aria-hidden`), headings marked, Reduce Motion respected
    (`useReduceMotion`). Learner mistakes are never shown as red alarms during practice (spec §14.3).
