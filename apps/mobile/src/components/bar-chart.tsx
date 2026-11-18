@@ -57,12 +57,13 @@ export function BarChart({
         accessibilityLabel={onSelect ? undefined : bar.label}
         style={{ height }}
         // The bar slides up inside its own box, which clips it until it is in place.
-        className="flex-1 overflow-hidden rounded-sm"
+        className="flex-1 overflow-hidden rounded-md"
       >
         <Bar
           height={height}
           order={Math.min(i, STAGGERED_BARS)}
           filled={bar.value > 0}
+          latest={i === bars.length - 1}
           quiet={selected != null && selected !== i}
           reduced={reduced}
         />
@@ -106,12 +107,15 @@ function Bar({
   height,
   order,
   filled,
+  latest,
   quiet,
   reduced,
 }: {
   height: number;
   order: number;
   filled: boolean;
+  /** The last bar (this week, today) stands out in tomato. */
+  latest: boolean;
   quiet: boolean;
   reduced: boolean;
 }) {
@@ -125,7 +129,7 @@ function Bar({
     >
       <View
         style={filled && quiet ? { opacity: QUIET_OPACITY } : undefined}
-        className={`flex-1 rounded-sm ${filled ? 'bg-primary' : 'bg-track'}`}
+        className={`flex-1 rounded-md ${filled ? (latest ? 'bg-tomato' : 'bg-primary') : 'bg-track'}`}
       />
     </Animate>
   );
