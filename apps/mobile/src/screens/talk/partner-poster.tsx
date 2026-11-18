@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { HomePartner } from '@konvami/api-client';
@@ -21,6 +21,9 @@ export function posterColor(index: number): TileColor {
 
 // The portrait on a poster: the poster is about the person (pt, as on the prototype).
 const POSTER_AVATAR = 148;
+// Below this window height (pt) the poster draws a smaller portrait and name, so its button
+// stays on screen on a small phone (320 × 568).
+const SHORT_WINDOW = 700;
 
 /** What sits inside the tile, so it can read the tile's colours. */
 function PosterBody({
@@ -39,6 +42,7 @@ function PosterBody({
   // On a dark block the action is lime; on a light one it is ink.
   const variant = tile?.dark ? 'lime' : 'primary';
   const { persona, lastTalkedAt } = partner;
+  const short = useWindowDimensions().height < SHORT_WINDOW;
   return (
     <View className="flex-1 gap-3">
       <TileChip>
@@ -47,9 +51,9 @@ function PosterBody({
         </Text>
       </TileChip>
       <View className="items-center py-1">
-        <PersonaAvatar look={persona.look} diameter={POSTER_AVATAR} />
+        <PersonaAvatar look={persona.look} diameter={short ? size.avatarHero : POSTER_AVATAR} />
       </View>
-      <Text variant="hero" tone={tone} accessibilityRole="header">
+      <Text variant={short ? 'tileTitle' : 'hero'} tone={tone} accessibilityRole="header">
         {persona.name}
       </Text>
       <View className="gap-1">
