@@ -11,13 +11,13 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
 import { useTheme } from '@/theme';
-import { GreetingOrbit } from './greeting-orbit';
+import { GreetingFlags } from './greeting-flags';
 import { LanguagePicker } from './language-picker';
 
 // Wordmark height in the header (pt), as on the design.
 const WORDMARK_HEIGHT = 20;
-// Text and buttons rise in after the greetings have started popping (positions in the stagger).
-const ORDER = { header: 0, title: 6, body: 7, primary: 9, secondary: 10 } as const;
+// Text and buttons rise in just after the first greeting pops (positions in the stagger).
+const ORDER = { header: 0, title: 1, body: 2, primary: 3, secondary: 4 } as const;
 
 /** 1.5 Welcome: the entry point for new and returning users, with the app-language switch. */
 export function WelcomeScreen() {
@@ -26,7 +26,7 @@ export function WelcomeScreen() {
   const { session } = useAuthServices();
   return (
     <HeroLayout
-      centerBody
+      panel="bleed"
       screenHeader={
         <Reveal delay={staggerDelay(ORDER.header)}>
           <View className="min-h-tap flex-row flex-wrap items-center justify-between gap-3">
@@ -35,18 +35,16 @@ export function WelcomeScreen() {
           </View>
         </Reveal>
       }
-      hero={<GreetingOrbit />}
+      hero={<GreetingFlags />}
       body={
         <>
           <Reveal delay={staggerDelay(ORDER.title)}>
-            <Text variant="title" accessibilityRole="header" className="text-center">
+            <Text variant="title" accessibilityRole="header">
               {t('welcome.title')}
             </Text>
           </Reveal>
           <Reveal delay={staggerDelay(ORDER.body)}>
-            <Text tone="muted" className="text-center">
-              {t('welcome.body')}
-            </Text>
+            <Text tone="muted">{t('welcome.body')}</Text>
           </Reveal>
         </>
       }
