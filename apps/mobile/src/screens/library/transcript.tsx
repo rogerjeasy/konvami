@@ -17,10 +17,10 @@ import { StepLayout } from '@/components/step-layout';
 import { TextButton } from '@/components/text-button';
 import { TextField } from '@/components/text-field';
 import { ChoiceGroup } from '@/components/choice-group';
-import { ChoiceChip } from '@/components/choice-chip';
 import type { Annotations } from '@/offline/library';
 import { NoteEditor, RecordingTools } from './tools';
 import { ConversationPronunciation } from './conversation-pronunciation';
+import { FilterPill } from './filter-pill';
 import { Text } from '@/components/text';
 import { timedText } from '@/lib/timed-text';
 import { formatClock, wholeMinutes } from '@/lib/format';
@@ -112,7 +112,7 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
       <TextField label={t('offlineLibrary.textSearch')} value={query} onChangeText={setQuery} />
       <ChoiceGroup label={t('offlineLibrary.speakers')} chips>
         {(['all', 'learner', 'persona'] as const).map((value) => (
-          <ChoiceChip
+          <FilterPill
             key={value}
             label={t(`offlineLibrary.${value}`)}
             selected={speaker === value}
