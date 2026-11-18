@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { size } from '@konvami/design-tokens';
 import type { Conversation, SessionReport, TranscriptTurn } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
 import { FlagSheet } from '@/components/flag-sheet';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
+import { Icon } from '@/components/icon';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
@@ -21,6 +22,7 @@ import { relativeDayLabel } from '@/lib/relative-day';
 import { callRoute, conversationRoute, explainRoute, ROUTES } from '@/lib/routes';
 import { useConversation, usePracticeServices, useReport } from '@/practice/services';
 import { useFlags } from '@/practice/use-flags';
+import { useTheme } from '@/theme';
 import { LevelStepNote } from './level-step';
 import { Keep, Natural, NextSteps, Polish, Wins, Words } from './sections';
 import { SayItBetterSheet } from './say-it-better';
@@ -34,6 +36,7 @@ const SEPARATOR = ' · ';
 /** The title and, once the conversation is known, who it was with, when and for how long. */
 function Heading({ conversation }: { conversation: Conversation | null }) {
   const { t, i18n } = useTranslation();
+  const { color } = useTheme();
   const { clock } = usePracticeServices();
   const meta = conversation
     ? [
@@ -44,14 +47,18 @@ function Heading({ conversation }: { conversation: Conversation | null }) {
     : [];
   return (
     <Reveal>
-      <View className="gap-1.5">
+      <View className="items-start gap-2.5">
         <Text variant="title" accessibilityRole="header">
           {t('report.title')}
         </Text>
         {meta.length ? (
-          <Text variant="small" tone="subtle">
-            {meta.join(SEPARATOR)}
-          </Text>
+          // Who, when and how long, in a soft pill under the title (as on the v4 prototype).
+          <View className="min-h-8 flex-row items-center gap-1.5 rounded-pill bg-surface px-3 py-1">
+            <Icon name="clock" color={color.fg} size={size.icon} />
+            <Text variant="labelSmall" className="shrink">
+              {meta.join(SEPARATOR)}
+            </Text>
+          </View>
         ) : null}
       </View>
     </Reveal>
@@ -121,11 +128,10 @@ function Report({
     : '';
   const parts = [
     report.levelStep ? <LevelStepNote key="level" step={report.levelStep} /> : null,
-    <Card key="summary" className="gap-4 p-4">
-      <Text>{report.summary}</Text>
-      <View className="h-px bg-border" />
-      <TalkShare stats={report.stats} partner={partner} />
-    </Card>,
+    <Text key="summary" tone="muted">
+      {report.summary}
+    </Text>,
+    <TalkShare key="share" stats={report.stats} partner={partner} />,
     <Keep
       key="keep"
       mistakes={keepable.mistakes}
