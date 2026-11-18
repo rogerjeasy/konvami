@@ -9,8 +9,8 @@ import { showAllTabLabels } from '@/lib/layout';
 import { CSS_EASE_OUT } from '@/lib/motion';
 import { useTheme } from '@/theme';
 
-// The soft mark behind the open tab's icon (pt).
-const MARK = { width: 44, height: 30 } as const;
+// The ink pill behind the open tab's icon (pt), as on the v4 prototype.
+const MARK = { width: 54, height: 34 } as const;
 // A tab on the side rail: tall enough for its icon and a name of two lines.
 const RAIL_TAB_MIN_HEIGHT = 64;
 
@@ -60,7 +60,7 @@ export function TabBar({
 }
 
 /**
- * One tab: its icon over its name. The open tab is teal on a soft mark; switching tabs only
+ * One tab: its icon over its name. The open tab's icon is lime on an ink pill; switching tabs only
  * fades that mark, because tabs are used all day (AGENTS.md 2b.4).
  */
 export function TabButton({
@@ -95,8 +95,10 @@ export function TabButton({
       <View style={MARK} className="items-center justify-center">
         <Animated.View
           aria-hidden
-          className="absolute inset-0 rounded-pill bg-primary-soft"
+          className="absolute inset-0 rounded-pill"
+          // A style, not a class: class names do not reach a Reanimated view on the web.
           style={{
+            backgroundColor: color.inverse,
             opacity: isFocused ? 1 : 0,
             transitionProperty: 'opacity',
             transitionDuration: `${motion.fast}ms`,
@@ -105,7 +107,7 @@ export function TabButton({
         />
         <Icon
           name={icon}
-          color={isFocused ? color.primaryText : color.fgSubtle}
+          color={isFocused ? color.inverseAccent : color.fgSubtle}
           size={size.iconMd}
           strokeWidth={isFocused ? 2.2 : 2}
         />
@@ -113,7 +115,7 @@ export function TabButton({
       {named ? (
         <Text
           variant="captionStrong"
-          tone={isFocused ? 'primary' : 'subtle'}
+          tone={isFocused ? 'fg' : 'subtle'}
           className="text-center"
           aria-hidden
         >
