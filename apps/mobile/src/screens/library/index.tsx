@@ -3,15 +3,12 @@ import { View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '@/auth';
-import { ChoiceChip } from '@/components/choice-chip';
 import { ChoiceGroup } from '@/components/choice-group';
 import { TextButton } from '@/components/text-button';
 import { TextField } from '@/components/text-field';
 import { Text } from '@/components/text';
 import type { LibraryQuery } from '@/practice/library-store';
 import { Button } from '@/components/button';
-import { Card } from '@/components/card';
-import { ConversationRow } from '@/components/conversation-row';
 import { EmptyState } from '@/components/empty-state';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
@@ -20,6 +17,11 @@ import { TabHeader, TabScreen } from '@/components/tab-screen';
 import { staggerDelay } from '@/lib/motion';
 import { conversationRoute, ROUTES } from '@/lib/routes';
 import { useLibrary, usePracticeServices } from '@/practice/services';
+import { ConversationCard } from './conversation-card';
+import { FilterPill } from './filter-pill';
+
+// How many cards enter one after another; the rest come in with the last of them.
+const STAGGERED = 6;
 
 /**
  * 5.5 Library: every conversation the learner has had, newest first, to read again (spec
@@ -93,7 +95,7 @@ export function LibraryScreen() {
             <>
               <ChoiceGroup label={t('offlineLibrary.mode')} chips>
                 {([undefined, 'free', 'role_play', 'review'] as const).map((value) => (
-                  <ChoiceChip
+                  <FilterPill
                     key={value ?? 'all'}
                     label={t(`offlineLibrary.${value ?? 'all'}`)}
                     selected={mode === value}
@@ -103,13 +105,13 @@ export function LibraryScreen() {
               </ChoiceGroup>
               {partners.length ? (
                 <ChoiceGroup label={t('offlineLibrary.partner')} chips>
-                  <ChoiceChip
+                  <FilterPill
                     label={t('offlineLibrary.all')}
                     selected={!partner}
                     onPress={() => setPartner(undefined)}
                   />
                   {partners.map((p) => (
-                    <ChoiceChip
+                    <FilterPill
                       key={p.id}
                       label={p.name}
                       selected={partner === p.id}
@@ -151,34 +153,31 @@ export function LibraryScreen() {
           }
         />
       ) : (
-        <Reveal delay={staggerDelay(1)}>
-          <View className="w-full max-w-content gap-3 self-center">
-            <Card className="px-3.5 py-1">
-              {conversations.map((conversation, i) => (
-                <View key={conversation.id} className={i > 0 ? 'border-t border-border' : ''}>
-                  <ConversationRow
-                    conversation={conversation}
-                    now={now}
-                    onPress={() => router.push(conversationRoute(conversation.id))}
-                  />
-                </View>
-              ))}
-            </Card>
-            {library.moreFailed ? (
-              <NoticeBox icon="alert" tone="danger">
-                {t('library.moreFailed')}
-              </NoticeBox>
-            ) : null}
-            {library.hasMore ? (
-              <Button
-                variant="secondary"
-                label={t('library.more')}
-                loading={library.loadingMore}
-                onPress={() => void store.more()}
+        <View className="w-full max-w-content gap-2.5 self-center">
+          {conversations.map((conversation, i) => (
+            // The first cards rise one after another; a long list does not wait for its end.
+            <Reveal key={conversation.id} delay={staggerDelay(Math.min(i, STAGGERED) + 2)}>
+              <ConversationCard
+                conversation={conversation}
+                now={now}
+                onPress={() => router.push(conversationRoute(conversation.id))}
               />
-            ) : null}
-          </View>
-        </Reveal>
+            </Reveal>
+          ))}
+          {library.moreFailed ? (
+            <NoticeBox icon="alert" tone="danger">
+              {t('library.moreFailed')}
+            </NoticeBox>
+          ) : null}
+          {library.hasMore ? (
+            <Button
+              variant="secondary"
+              label={t('library.more')}
+              loading={library.loadingMore}
+              onPress={() => void store.more()}
+            />
+          ) : null}
+        </View>
       )}
     </TabScreen>
   );
