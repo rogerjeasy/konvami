@@ -159,7 +159,8 @@ export function CallStage({
         onSelect={onLookupWord}
       />
     ) : (
-      <Text variant="emphasis" className="text-center">
+      // The language learned is set in the serif (v4); the learner's own line sits in a bubble.
+      <Text variant="langLine" tone={learner ? 'onPrimary' : 'fg'} className="text-center">
         {text}
       </Text>
     );
@@ -257,10 +258,7 @@ export function CallStage({
               )
             ) : (
               <View key={line.id} className="gap-2">
-                <ChatBubble
-                  from="learner"
-                  content={onLookupWord ? captionContent(line.text, true) : undefined}
-                >
+                <ChatBubble from="learner" content={captionContent(line.text, true)}>
                   {line.text}
                 </ChatBubble>
                 {belowLearner}

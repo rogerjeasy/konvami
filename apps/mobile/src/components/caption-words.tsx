@@ -3,7 +3,7 @@ import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { captionWords } from '@/lib/caption-words';
 
-/** Each word has a real touch target; punctuation remains visible in its original order. */
+/** The words of a caption, in the serif of the language learned (v4). Each word has a real touch target; punctuation remains visible in its original order. */
 export function CaptionWords({
   caption,
   lookupLabel,
@@ -22,12 +22,13 @@ export function CaptionWords({
           <TextButton
             key={index}
             tone={tone}
+            variant="langLine"
             label={part.text}
             accessibilityLabel={lookupLabel(part.text)}
             onPress={() => onSelect(part.text, caption)}
           />
         ) : part.text.trim() ? (
-          <Text key={index} tone={tone}>
+          <Text key={index} variant="langLine" tone={tone}>
             {part.text.trim()}
           </Text>
         ) : null,
