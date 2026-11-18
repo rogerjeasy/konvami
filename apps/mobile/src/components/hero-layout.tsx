@@ -37,7 +37,7 @@ export function HeroLayout({
    * Draw the hero on a panel (rounded bottom corners when stacked): `true` for the raised surface,
    * `'splash'` for the brand ground of celebratory screens.
    */
-  panel?: boolean | 'splash';
+  panel?: boolean | 'splash' | 'bleed';
   centerBody?: boolean;
   /**
    * Share of a tall window the hero takes when stacked (as drawn for the screen). Defaults to the
@@ -60,8 +60,18 @@ export function HeroLayout({
     </View>
   ) : null;
 
+  // `bleed`: the hero is its own picture (the Welcome flags), drawn edge to edge in a rounded
+  // block inside the gutters, with no padding of the layout's own.
+  const bleed = panel === 'bleed';
   // The panel clips its illustration, so moving drawings (parallax, pops) stay inside its edges.
-  const heroBlock = (
+  const heroBlock = bleed ? (
+    <View
+      className={`overflow-hidden rounded-hero ${split ? 'flex-1' : ''}`}
+      style={{ minHeight: heroMinHeight, marginHorizontal: split ? 0 : gutter }}
+    >
+      {hero}
+    </View>
+  ) : (
     <View
       className={`overflow-hidden ${panelClass} ${split ? 'flex-1 rounded-hero' : 'rounded-b-hero'}`}
       style={{
