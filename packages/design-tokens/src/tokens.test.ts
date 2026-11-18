@@ -38,6 +38,18 @@ const TEXT_PAIRS: [ColorToken, ColorToken][] = [
   ['genderFem', 'surface'],
   ['genderNeut', 'chip'],
   ['genderNeut', 'surface'],
+  // Colour blocks: the text on each block, and the accents laid on them.
+  ['onTomato', 'tomato'],
+  ['onForest', 'forest'],
+  ['lime', 'forest'],
+  ['onLime', 'lime'],
+  ['onButter', 'butter'],
+  ['onPink', 'pink'],
+  ['onInverse', 'inverse'],
+  ['inverseAccent', 'inverse'],
+  ['onPrimary', 'primary'],
+  ['fg', 'secondaryBg'],
+  ['warnText', 'warnSoft'],
 ];
 
 describe.each(['light', 'dark'] as const)('%s theme', (scheme) => {
