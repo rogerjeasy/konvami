@@ -1,18 +1,16 @@
-import { OfflineReviewStatus } from './offline-status';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { AnsweredCard, Rating } from '@konvami/api-client';
 import { useSession } from '@/auth';
-import { Badge } from '@/components/badge';
-import { Button } from '@/components/button';
-import { Card } from '@/components/card';
+import { Button, type ButtonVariant } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { Icon } from '@/components/icon';
 import { LoadState } from '@/components/load-state';
 import { Pop, Reveal } from '@/components/motion';
+import { Tile, TileChip } from '@/components/tile';
 import { NoticeBox } from '@/components/notice-box';
 import { RecordingNow } from '@/components/recording-now';
 import { HeaderButton } from '@/components/step-header';
@@ -22,6 +20,7 @@ import { TextButton } from '@/components/text-button';
 import { ArticleWord, WordForms } from '@/components/word-forms';
 import { waitOf } from '@/lib/card-times';
 import { commitFeedback, successFeedback } from '@/lib/haptics';
+import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { blankWord } from '@/lib/word-use';
 import { Listen } from '@/screens/learn/listen';
@@ -30,6 +29,8 @@ import type { ReviewItem, ReviewState } from '@/practice';
 import { usePracticeServices, useReviewSession } from '@/practice/services';
 import { useTheme } from '@/theme';
 import { useSpokenAttempt } from '@/voice/use-spoken-attempt';
+import { FlipIn } from './flip';
+import { OfflineReviewStatus } from './offline-status';
 
 // The four answers, in the order they are laid out: two rows of two.
 const RATINGS: readonly Rating[] = ['again', 'hard', 'good', 'easy'];
@@ -52,15 +53,15 @@ function Header({ state }: { state: ReviewState }) {
           className="flex-1 flex-row items-center gap-3.5"
         >
           <View
-            style={{ height: size.progressHeight }}
-            className="flex-1 overflow-hidden rounded-sm bg-track"
+            style={{ height: size.meterHeight }}
+            className="flex-1 overflow-hidden rounded-pill bg-surface"
           >
             <View
               style={{ width: `${((card.position - 1) / card.total) * 100}%` }}
-              className="h-full rounded-sm bg-primary"
+              className="h-full rounded-pill bg-primary"
             />
           </View>
-          <Text variant="fieldLabel" tone="subtle">
+          <Text variant="label" className="tabular-nums">
             {t('common.stepCounter', { current: card.position, total: card.total })}
           </Text>
         </View>
@@ -96,10 +97,21 @@ function Heard({ answer }: { answer: AnsweredCard }) {
   );
 }
 
+/** "das Wochenende, neuter": what a screen reader says for a German noun with its article. */
+function useWordLabel() {
+  const { t } = useTranslation();
+  return (text: string, article: string | null) =>
+    (article === 'der' || article === 'die' || article === 'das') &&
+    text.toLowerCase().startsWith(`${article} `)
+      ? `${text}, ${t(`learn.gender.${article}`)}`
+      : undefined;
+}
+
 /**
- * One card: the side that asks, and under it, once it is shown, the answer. Answered out loud,
- * a word card asks the other way round: its meaning (and its own sentence with a gap) asks for
- * the word.
+ * One card (v4): the side that asks is pink, the word set in the language's serif; showing the
+ * answer flips it to the white side, where the article takes its gender's colour (on pink it
+ * would be too faint to read). Answered out loud, a word card asks the other way round: its
+ * meaning (and its own sentence with a gap) asks for the word.
  */
 function Flashcard({
   item,
@@ -115,6 +127,7 @@ function Flashcard({
   answer: AnsweredCard | null;
 }) {
   const { t } = useTranslation();
+  const wordLabel = useWordLabel();
   const { card } = item;
   const article = card.details?.article ?? null;
   const askWord = aloud && card.kind === 'word';
@@ -122,66 +135,88 @@ function Flashcard({
   const ask = askWord
     ? t(article ? 'review.aloud.askNoun' : 'review.aloud.askWord')
     : t(`review.ask.${card.kind}`);
-  return (
-    <View className="flex-1 justify-center">
-      <Card className="gap-5 p-5">
-        <View className="flex-row items-center justify-between gap-3">
-          <Text variant="caption" tone="subtle" className="shrink">
+  const kind = t(`learn.kind.${card.kind}`);
+  if (!revealed) {
+    return (
+      <View className="flex-1 justify-center">
+        <Tile color="pink" className="min-h-64 items-center justify-center gap-4 p-6">
+          <TileChip>
+            <Text variant="captionStrong" tone="onPink">
+              {kind}
+            </Text>
+          </TileChip>
+          {askWord ? (
+            <View className="items-center gap-3">
+              <Text
+                variant="title"
+                tone="onPink"
+                accessibilityRole="header"
+                className="text-center"
+              >
+                {card.back}
+              </Text>
+              {gapped ? (
+                <View className="items-center gap-0.5">
+                  <Text variant="caption" tone="onPink">
+                    {t('review.aloud.fromConversation')}
+                  </Text>
+                  <Text variant="langBody" tone="onPink" className="text-center">
+                    {gapped}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            // A word stands large; a whole sentence a size smaller, so it fits a small phone.
+            <Text
+              variant={card.kind === 'word' ? 'langWord' : 'langLarge'}
+              tone="onPink"
+              accessibilityRole="header"
+              accessibilityLabel={wordLabel(card.front, article)}
+              className="text-center"
+            >
+              {card.front}
+            </Text>
+          )}
+          <Text variant="overline" tone="onPink" className="text-center">
             {ask}
           </Text>
-          <Badge label={t(`learn.kind.${card.kind}`)} tone="surface" />
-        </View>
-        {askWord ? (
-          <View className="gap-3">
-            <Text variant="title" accessibilityRole="header">
-              {card.back}
-            </Text>
-            {gapped ? (
-              <View className="gap-0.5">
-                <Text variant="caption" tone="subtle">
-                  {t('review.aloud.fromConversation')}
-                </Text>
-                <Text variant="callout" tone="muted" className="italic">
-                  {gapped}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : (
-          // A word stands large; a whole sentence a size smaller, so its answer stays in view.
+        </Tile>
+      </View>
+    );
+  }
+  return (
+    <View className="flex-1 justify-center">
+      <FlipIn>
+        <View
+          accessibilityLiveRegion="polite"
+          className="min-h-64 items-center justify-center gap-4 rounded-hero border-2 border-border bg-chip p-6"
+        >
+          {answer ? <Heard answer={answer} /> : null}
           <ArticleWord
             text={card.front}
             article={article}
-            variant={card.kind === 'word' ? 'title' : 'heading'}
-            header
+            variant={card.kind === 'word' ? 'langLarge' : 'langBody'}
+            header={!askWord}
           />
-        )}
-        {revealed ? (
-          <Reveal>
-            <View accessibilityLiveRegion="polite" className="gap-2 border-t border-border pt-4">
-              {answer ? <Heard answer={answer} /> : null}
-              {askWord ? (
-                <ArticleWord text={card.front} article={article} variant="emphasis" />
-              ) : (
-                <Text variant="emphasis" tone="primary">
-                  {card.back}
-                </Text>
-              )}
-              {card.note ? (
-                <Text
-                  variant="callout"
-                  tone="muted"
-                  className={card.kind === 'word' ? 'italic' : ''}
-                >
-                  {card.note}
-                </Text>
-              ) : null}
-              {card.details ? <WordForms details={card.details} /> : null}
-              <Listen cardId={card.id} />
-            </View>
-          </Reveal>
-        ) : null}
-      </Card>
+          {askWord ? null : (
+            <Text variant="title" className="text-center">
+              {card.back}
+            </Text>
+          )}
+          {card.note ? (
+            <Text
+              variant={card.kind === 'word' ? 'langBody' : 'callout'}
+              tone="muted"
+              className="text-center"
+            >
+              {card.note}
+            </Text>
+          ) : null}
+          {card.details ? <WordForms details={card.details} /> : null}
+          <Listen cardId={card.id} />
+        </View>
+      </FlipIn>
     </View>
   );
 }
@@ -263,6 +298,16 @@ function AloudActions({
   );
 }
 
+/**
+ * v4 colours the answers: "Easy" is ink, the expected one (Good, or what an answer out loud
+ * suggests) is lime, the rest are soft.
+ */
+function ratingLook(rating: Rating, suggested: Rating | null): ButtonVariant {
+  if (rating === (suggested ?? 'good')) return 'lime';
+  // As on the v4 prototype: Hard butter, Easy ink, Again soft.
+  return rating === 'easy' ? 'primary' : rating === 'hard' ? 'butter' : 'secondary';
+}
+
 /** A wait in words ("10 min", "2 days"). */
 function useWaitText() {
   const { t } = useTranslation();
@@ -305,7 +350,7 @@ function Ratings({
             // Two to a row: four across would break their words on a narrow phone.
             <View key={rating} className="min-w-[45%] flex-1">
               <Button
-                variant={rating === (suggested ?? 'good') ? 'primary' : 'secondary'}
+                variant={ratingLook(rating, suggested)}
                 label={label}
                 detail={wait}
                 accessibilityLabel={
@@ -325,22 +370,105 @@ function Ratings({
   );
 }
 
-/** The end of a sitting, with one success haptic for the moment. */
-function Done({ reviewed }: { reviewed: number }) {
+/** The end of a sitting (v4): a big line and stickers, with one success haptic for the moment. */
+function Done({ reviewed, best }: { reviewed: number; best: number }) {
   const { t } = useTranslation();
   useEffect(() => successFeedback(), []);
   return (
-    <EmptyState
-      icon="check"
-      title={t('review.done.title')}
-      body={t('review.done.body', { count: reviewed })}
-    />
+    <View className="w-full max-w-content flex-1 justify-center gap-5 self-center py-6">
+      <Reveal>
+        <View className="gap-2">
+          <Text variant="hero" accessibilityRole="header">
+            {t('review.done.title')}
+          </Text>
+          <Text tone="muted">{t('review.done.body', { count: reviewed })}</Text>
+        </View>
+      </Reveal>
+      <View className="flex-row flex-wrap gap-2.5" aria-hidden>
+        <Sticker color="pink" delay={staggerDelay(2)} value={reviewed}>
+          {t('review.done.reviewed', { count: reviewed })}
+        </Sticker>
+        {best >= 2 ? (
+          <Sticker color="butter" delay={staggerDelay(3)} value={best}>
+            {t('review.done.best')}
+          </Sticker>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function Sticker({
+  color,
+  value,
+  delay,
+  children,
+}: {
+  color: 'pink' | 'butter';
+  value: number;
+  delay: number;
+  children: string;
+}) {
+  const tone = color === 'pink' ? 'onPink' : 'onButter';
+  return (
+    <View className="min-w-[40%] flex-1">
+      <Pop delay={delay}>
+        <Tile color={color} className="gap-0.5 rounded-card px-4 py-3">
+          <Text variant="stat" tone={tone}>
+            {value}
+          </Text>
+          <Text variant="small" tone={tone}>
+            {children}
+          </Text>
+        </Tile>
+      </Pop>
+    </View>
+  );
+}
+
+/**
+ * How many cards in a row the learner knew (Good or Easy), counted from their own answers in
+ * this sitting: a card counts once it is saved and the next one shows.
+ */
+function useRun(state: ReviewState) {
+  const rated = useRef<Rating | null>(null);
+  const [run, setRun] = useState({ now: 0, best: 0 });
+  const position = state.phase === 'card' ? state.position : null;
+  const finished = state.phase === 'done';
+  useEffect(() => {
+    const rating = rated.current;
+    if (rating === null) return;
+    rated.current = null;
+    const knew = rating === 'good' || rating === 'easy';
+    setRun((r) => {
+      const now = knew ? r.now + 1 : 0;
+      return { now, best: Math.max(r.best, now) };
+    });
+  }, [position, finished]);
+  return { ...run, rate: (rating: Rating) => (rated.current = rating) };
+}
+
+/** "3 in a row": shown from the second known card on. */
+function RunChip({ count }: { count: number }) {
+  const { t } = useTranslation();
+  const { color } = useTheme();
+  if (count < 2) return null;
+  return (
+    <Pop key={count} style={{ alignSelf: 'center' }}>
+      <View className="min-h-8 flex-row items-center gap-1.5 rounded-pill bg-butter px-3.5 py-1">
+        <Icon name="flame" color={color.onButter} size={size.icon} />
+        <Text variant="labelSmall" tone="onButter">
+          {t('review.combo', { count })}
+        </Text>
+      </View>
+    </Pop>
   );
 }
 
 function Sitting({ aloud }: { aloud: boolean }) {
   const { t } = useTranslation();
   const { state, session } = useReviewSession();
+  const run = useRun(state);
   const backToLearn = <Button label={t('review.back')} onPress={leave} />;
   return (
     <StepLayout
@@ -352,7 +480,10 @@ function Sitting({ aloud }: { aloud: boolean }) {
               item={state.item}
               saving={state.saving}
               suggested={state.answer?.suggested ?? null}
-              onRate={(rating) => void session.rate(rating)}
+              onRate={(rating) => {
+                run.rate(rating);
+                void session.rate(rating);
+              }}
             />
           ) : aloud ? (
             // A new card starts with the microphone off.
@@ -373,6 +504,7 @@ function Sitting({ aloud }: { aloud: boolean }) {
       <OfflineReviewStatus revision={state} />
       {state.phase === 'card' ? (
         <>
+          <RunChip count={run.now} />
           {/* A new card enters; the same card showing its answer stays where it is. */}
           <Reveal key={`${state.item.card.id}-${state.position}`} style={{ flex: 1 }}>
             <Flashcard
@@ -390,7 +522,7 @@ function Sitting({ aloud }: { aloud: boolean }) {
           ) : null}
         </>
       ) : state.phase === 'done' ? (
-        <Done reviewed={state.reviewed} />
+        <Done reviewed={state.reviewed} best={run.best} />
       ) : state.phase === 'empty' ? (
         <EmptyState icon="check" title={t('review.empty.title')} body={t('review.empty.body')} />
       ) : (
