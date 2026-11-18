@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { Pressable, useWindowDimensions, View, type PressableProps } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { motion, size, space } from '@konvami/design-tokens';
+import { motion, radius, size, space } from '@konvami/design-tokens';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
 import { showAllTabLabels } from '@/lib/layout';
@@ -95,9 +95,11 @@ export function TabButton({
       <View style={MARK} className="items-center justify-center">
         <Animated.View
           aria-hidden
-          className="absolute inset-0 rounded-pill"
-          // A style, not a class: class names do not reach a Reanimated view on the web.
+          // Styles, not classes: class names do not reach a Reanimated view on the web.
           style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: radius.pill,
             backgroundColor: color.inverse,
             opacity: isFocused ? 1 : 0,
             transitionProperty: 'opacity',
