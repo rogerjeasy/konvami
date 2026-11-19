@@ -1,8 +1,8 @@
 # Privacy labels and Data safety answers
 
-Written 2026-11-05 from the database (`services/api/src/konvami_api/persistence/migrations`), the
+Written 2026-11-05, updated 2026-11-20, from the database (`services/api/src/konvami_api/persistence/migrations`), the
 code, and the privacy policy (`apps/site/content/privacy/en.md`). **The policy, these answers and the
-iOS privacy manifest in `apps/mobile/app.config.ts` (`PRIVACY_MANIFEST`) must say the same thing.**
+iOS privacy manifest (`apps/mobile/src/lib/privacy-manifest.ts`, used by `app.config.ts`) must say the same thing.**
 Change all three together, and again whenever a service below is added.
 
 ## What the app collects, and why
@@ -33,13 +33,20 @@ advertising id, precise device fingerprint. Nothing is used for tracking or adve
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
 | Amazon Web Services (Frankfurt, eu-central-1) | Everything above (hosting, sign-in, database, files, email of codes)                                               | Data processing agreement                                    |
 | OpenAI                                        | Voice and transcripts, profile and memories for context, report and memory writing, Tutor and Phrasebook questions | Learner consent on 2.5; DPA and standard contractual clauses |
-| Expo (push service)                           | Push token and the notification text                                                                               | **Not yet in the policy: add it**                            |
+| Expo (push service)                           | Push token and the notification text                                                                               | Named in the policy                                          |
 | Apple and Google push gateways                | Pass the notification on                                                                                           | Independent controllers                                      |
 
-Not integrated yet, so **not** declared: ElevenLabs, AWS Bedrock, Sentry, PostHog, RevenueCat. Add
-each to the three places above, and to the answers below, in the same change that integrates it
-(Sentry adds Crash data and Performance data; PostHog adds Product interaction as analytics;
-RevenueCat adds Purchases and a purchase id).
+Integrated, but **off unless the build or the server has its key**, and named in the policy:
+
+| Processor    | Receives                                                                        | On when                                     | Changes the labels                                                                 |
+| ------------ | ------------------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Sentry       | Crash reports with every piece of free text removed; no account                 | `EXPO_PUBLIC_SENTRY_DSN` is set             | Apple: Crash Data (not linked). Google: App info and performance › Crash logs      |
+| PostHog (EU) | Anonymous usage counts with a random install id, only after the learner opts in | `EXPO_PUBLIC_POSTHOG_KEY` is set            | Apple: Product Interaction adds Analytics. Google: App interactions adds Analytics |
+| RevenueCat   | The account number and the purchases                                            | `EXPO_PUBLIC_REVENUECAT_*_KEY` are set      | Apple: Purchase History. Google: Financial info › Purchase history                 |
+| ElevenLabs   | Only the text it reads aloud, after the learner turns it on (consent `v3`)      | The server has an ElevenLabs key and voices | None (text the learner already gave; covered by Other User Content)                |
+
+The iOS manifest adds its rows by itself from the build's keys; App Store Connect and Play Console
+must be answered by hand for the keys the store build has. AWS Bedrock is not used.
 
 ## App Store: App Privacy ("nutrition label")
 
@@ -62,7 +69,9 @@ type: **App Functionality**.
 "Data not collected" is **not** an option for the app. "Purchases" and "Diagnostics" flip to Yes when
 RevenueCat and Sentry arrive.
 
-These nine types are the same as `NSPrivacyCollectedDataTypes` in `app.config.ts`.
+These nine types are what `collectedDataTypes` in `src/lib/privacy-manifest.ts` declares for a
+build without optional keys; a build with Sentry, PostHog or RevenueCat keys adds the rows in the
+table above.
 
 ## Google Play: Data safety form
 
@@ -70,7 +79,7 @@ These nine types are the same as `NSPrivacyCollectedDataTypes` in `app.config.ts
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Collects or shares data     | Collects: yes. Shares: no (OpenAI and AWS act on Konvami's behalf under a processing agreement, which Google does not count as sharing; re-read the form's wording when filling it in) |
 | Encrypted in transit        | Yes (HTTPS; WebRTC for voice)                                                                                                                                                          |
-| Users can request deletion  | Yes: in the app (Profile › Privacy and AI › Delete account). Google also needs a **web link** to request deletion: the web form is not built yet                                       |
+| Users can request deletion  | Yes: in the app (Profile › Privacy and AI › Delete account) and on the web (`/public/delete-account` on the API's address): enter that link in the form                                |
 | Independent security review | No                                                                                                                                                                                     |
 | Follows Families policy     | No (app is for 16+)                                                                                                                                                                    |
 
@@ -95,9 +104,7 @@ deleted after one day.
 
 ## Differences to fix before submitting
 
-1. The policy says Konvami "contains no analytics or advertising tools" and lists only AWS and
-   OpenAI as recipients. That was true on 2026-10-23. Push from the server (merged 2026-10-26) sends
-   the push token and notification text through Expo's push service, so **the policy must name Expo**
-   and say the token is kept in `push_device`.
+1. ~~The policy does not name Expo's push service.~~ Fixed: the policy names Expo, Sentry, PostHog,
+   RevenueCat and ElevenLabs in all four languages.
 2. `apps/site/site.config.ts` has an empty controller name, address and email; the site build refuses
    to run until they are filled (OWNER-TO-FILL).
