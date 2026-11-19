@@ -116,21 +116,28 @@ export function ActionRow({
   icon,
   label,
   danger = false,
+  disabled = false,
   onPress,
 }: {
   icon: IconName;
   label: string;
   /** The action deletes something. */
   danger?: boolean;
+  /** Shown but not available (its label says why). */
+  disabled?: boolean;
   onPress: () => void;
 }) {
   const { color } = useTheme();
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="min-h-field flex-row items-center gap-3.5 rounded-field px-4 py-3 active:opacity-pressed"
+      accessibilityState={{ disabled }}
+      className={`min-h-field flex-row items-center gap-3.5 rounded-field px-4 py-3 active:opacity-pressed ${
+        disabled ? 'opacity-disabled' : ''
+      }`}
     >
       <Icon name={icon} color={danger ? color.danger : color.fg} size={size.iconMd} />
       <Text variant="label" tone={danger ? 'danger' : 'fg'} className="shrink">
