@@ -9,11 +9,11 @@ writes both characters, so the lead is told here who the guest is and how to let
 from typing import Any
 from uuid import UUID
 
-from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
-from konvami_api.domain.costs import Charge, Feature
+from konvami_api.domain.accounts import AccountDirectory
+from konvami_api.domain.candidate_speech import SecondVoice
+from konvami_api.domain.costs import Feature
 from konvami_api.domain.live_speech import PcmSpeech
 from konvami_api.domain.personas import Persona, personality_of
-from konvami_api.domain.speech import SpeechError, SpeechTask
 from konvami_api.domain.tools import ToolResult
 
 SPEAK_PARTNER = "speak_partner"
@@ -101,25 +101,15 @@ How {guest.name} speaks:
 
 
 class GuestSpeech:
-    """Speaks the guest's lines with the speech model, consent checked before each one."""
+    """Speaks the guest's lines: the exam's second-candidate voice (`SecondVoice`), in the
+    guest's own voice and metered as practice."""
 
     def __init__(self, accounts: AccountDirectory, speech: PcmSpeech, model: str) -> None:
-        self._accounts = accounts
-        self._speech = speech
-        # An empty name: no speech model is configured, so a guest cannot speak.
-        self._model = model
+        self._second = SecondVoice(accounts, speech, model)
 
     @property
     def available(self) -> bool:
-        return bool(self._model)
+        return self._second.available
 
     def speak(self, user_id: UUID, text: str, voice: str) -> bytes:
-        try:
-            agreed = self._accounts.get(user_id).voice_consent
-        except AccountNotFound:
-            agreed = False
-        if not agreed or not self._model or not 0 < len(text.strip()) <= GUEST_TEXT_MAX:
-            raise SpeechError("guest speech unavailable")
-        return self._speech.speak_pcm(
-            SpeechTask(self._model, voice, text, Charge(user_id, Feature.VOICE_PRACTICE))
-        )
+        return self._second.speak(user_id, text, voice, Feature.VOICE_PRACTICE, GUEST_TEXT_MAX)
