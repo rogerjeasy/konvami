@@ -12,6 +12,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { AppleLogo, GoogleLogo } from '@/components/provider-logo';
 import { StepHeader } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { openLegal } from '@/lib/external';
 import { staggerDelay } from '@/lib/motion';
@@ -76,10 +77,12 @@ export function CreateAccountScreen() {
           <View className="pb-2">
             <LogoMark size={LOGO_SIZE} tile />
           </View>
-          <Text variant="title" accessibilityRole="header">
-            {t('createAccount.title')}
-          </Text>
-          <Text tone="muted">{t('createAccount.body')}</Text>
+          <PageHero
+            color="tomato"
+            icon="user"
+            title={t('createAccount.title')}
+            body={t('createAccount.body')}
+          />
         </View>
       </Reveal>
 

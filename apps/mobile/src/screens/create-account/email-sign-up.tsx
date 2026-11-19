@@ -13,6 +13,7 @@ import { PasswordStrength } from '@/components/password-strength';
 import { StepHeader } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Switch } from '@/components/switch';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { PasswordField, TextField } from '@/components/text-field';
 import { isLanguage, DEFAULT_LANGUAGE } from '@/i18n';
@@ -125,12 +126,12 @@ export function EmailSignUpScreen() {
       }
     >
       <Reveal>
-        <View className="gap-2">
-          <Text variant="title" accessibilityRole="header">
-            {t('emailSignUp.title')}
-          </Text>
-          <Text tone="muted">{t('emailSignUp.body')}</Text>
-        </View>
+        <PageHero
+          color="ink"
+          icon="mail"
+          title={t('emailSignUp.title')}
+          body={t('emailSignUp.body')}
+        />
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
