@@ -602,6 +602,29 @@
         "title": "CardProgressOut",
         "type": "object"
       },
+      "CardsAheadOut": {
+        "additionalProperties": false,
+        "description": "The cards due within the next days, for the app to review them offline (spec \u00a710.3).",
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/CardOut"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cards",
+          "language"
+        ],
+        "title": "CardsAheadOut",
+        "type": "object"
+      },
       "CatalogOut": {
         "additionalProperties": false,
         "properties": {
@@ -3413,6 +3436,50 @@
           "cards"
         ],
         "title": "NextSimulationOut",
+        "type": "object"
+      },
+      "OfflineReviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "cardId": {
+            "format": "uuid",
+            "title": "Cardid",
+            "type": "string"
+          },
+          "clientId": {
+            "format": "uuid",
+            "title": "Clientid",
+            "type": "string"
+          },
+          "expectedReviews": {
+            "minimum": 0.0,
+            "title": "Expectedreviews",
+            "type": "integer"
+          },
+          "rating": {
+            "enum": [
+              "again",
+              "hard",
+              "good",
+              "easy"
+            ],
+            "title": "Rating",
+            "type": "string"
+          },
+          "reviewedAt": {
+            "format": "date-time",
+            "title": "Reviewedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "cardId",
+          "rating",
+          "expectedReviews",
+          "reviewedAt"
+        ],
+        "title": "OfflineReviewIn",
         "type": "object"
       },
       "OnboardingOut": {
@@ -6266,6 +6333,41 @@
         "title": "ReviewIn",
         "type": "object"
       },
+      "ReviewSyncIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/OfflineReviewIn"
+            },
+            "maxItems": 200,
+            "title": "Reviews",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reviews"
+        ],
+        "title": "ReviewSyncIn",
+        "type": "object"
+      },
+      "ReviewSyncOut": {
+        "additionalProperties": false,
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SyncedReviewOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "ReviewSyncOut",
+        "type": "object"
+      },
       "ScenarioOut": {
         "additionalProperties": false,
         "properties": {
@@ -6800,6 +6902,42 @@
         ],
         "title": "Stage",
         "type": "string"
+      },
+      "SyncedReviewOut": {
+        "additionalProperties": false,
+        "properties": {
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "clientId": {
+            "format": "uuid",
+            "title": "Clientid",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "applied",
+              "superseded",
+              "removed"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "outcome",
+          "card"
+        ],
+        "title": "SyncedReviewOut",
+        "type": "object"
       },
       "TalkShareOut": {
         "additionalProperties": false,
@@ -8500,6 +8638,45 @@
         "summary": "Save Card"
       }
     },
+    "/v1/cards/ahead": {
+      "get": {
+        "description": "The cards due within the next days, so the app can review them offline.",
+        "operationId": "getCardsAhead",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardsAheadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Cards Ahead"
+      }
+    },
     "/v1/cards/due": {
       "get": {
         "operationId": "getDueCards",
@@ -8586,6 +8763,55 @@
           }
         },
         "summary": "Export Cards"
+      }
+    },
+    "/v1/cards/reviews": {
+      "post": {
+        "description": "Stores ratings the app gave, perhaps offline, in the order they were given. Sending\nthe same batch again stores nothing twice; the server's card wins over an older rating.",
+        "operationId": "syncCardReviews",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSyncIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Sync Card Reviews"
       }
     },
     "/v1/cards/{card_id}": {

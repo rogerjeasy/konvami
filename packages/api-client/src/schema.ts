@@ -133,6 +133,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cards/ahead": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Cards Ahead
+         * @description The cards due within the next days, so the app can review them offline.
+         */
+        get: operations["getCardsAhead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cards/due": {
         parameters: {
             query?: never;
@@ -161,6 +181,27 @@ export interface paths {
         get: operations["exportCards"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cards/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Card Reviews
+         * @description Stores ratings the app gave, perhaps offline, in the order they were given. Sending
+         *     the same batch again stores nothing twice; the server's card wins over an older rating.
+         */
+        post: operations["syncCardReviews"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2157,6 +2198,16 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * CardsAheadOut
+         * @description The cards due within the next days, for the app to review them offline (spec §10.3).
+         */
+        CardsAheadOut: {
+            /** Cards */
+            cards: components["schemas"]["CardOut"][];
+            /** Language */
+            language: string;
+        };
         /** CatalogOut */
         CatalogOut: {
             /** Examlevels */
@@ -3105,6 +3156,31 @@ export interface components {
             /** Cards */
             cards: components["schemas"]["ExamCardOut"][];
             exam: components["schemas"]["SpeakingExamOut"];
+        };
+        /** OfflineReviewIn */
+        OfflineReviewIn: {
+            /**
+             * Cardid
+             * Format: uuid
+             */
+            cardId: string;
+            /**
+             * Clientid
+             * Format: uuid
+             */
+            clientId: string;
+            /** Expectedreviews */
+            expectedReviews: number;
+            /**
+             * Rating
+             * @enum {string}
+             */
+            rating: "again" | "hard" | "good" | "easy";
+            /**
+             * Reviewedat
+             * Format: date-time
+             */
+            reviewedAt: string;
         };
         /** OnboardingOut */
         OnboardingOut: {
@@ -4077,6 +4153,16 @@ export interface components {
             /** Reviewedat */
             reviewedAt?: string | null;
         };
+        /** ReviewSyncIn */
+        ReviewSyncIn: {
+            /** Reviews */
+            reviews: components["schemas"]["OfflineReviewIn"][];
+        };
+        /** ReviewSyncOut */
+        ReviewSyncOut: {
+            /** Results */
+            results: components["schemas"]["SyncedReviewOut"][];
+        };
         /** ScenarioOut */
         ScenarioOut: {
             /** Goals */
@@ -4256,6 +4342,20 @@ export interface components {
          * @enum {string}
          */
         Stage: "essentials" | "review" | "placement" | "partners" | "ready" | "done";
+        /** SyncedReviewOut */
+        SyncedReviewOut: {
+            card: components["schemas"]["CardOut"] | null;
+            /**
+             * Clientid
+             * Format: uuid
+             */
+            clientId: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "applied" | "superseded" | "removed";
+        };
         /** TalkShareOut */
         TalkShareOut: {
             /** Learnerwords */
@@ -5070,6 +5170,44 @@ export interface operations {
             };
         };
     };
+    getCardsAhead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardsAheadOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     getDueCards: {
         parameters: {
             query?: {
@@ -5126,6 +5264,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeckExportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    syncCardReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSyncIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewSyncOut"];
                 };
             };
             /** @description Unauthorized */

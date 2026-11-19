@@ -176,6 +176,13 @@ export type DeckSummary = Schemas['DeckSummaryOut'];
 export type ReviewQueue = Schemas['QueueOut'];
 export type ReviewCard = Schemas['QueueCardOut'];
 export type Rating = Schemas['ReviewIn']['rating'];
+/** The cards due in the coming days, kept on the phone to review them offline. */
+export type CardsAhead = Schemas['CardsAheadOut'];
+/** A rating given on the phone, perhaps offline, as it is sent to be stored. */
+export type OfflineReview = Schemas['OfflineReviewIn'];
+/** What became of each rating of a sync, in the order they were stored. */
+export type ReviewSync = Schemas['ReviewSyncOut'];
+export type SyncedReview = Schemas['SyncedReviewOut'];
 /** Something the learner's partners know about them from an earlier conversation. */
 export type Memory = Schemas['MemoryOut'];
 export type MemoryKind = Memory['kind'];
@@ -424,6 +431,13 @@ export interface ApiClient {
     rating: Rating,
     offline?: { expectedReviews: number; reviewedAt?: string },
   ): Promise<Card>;
+  /** The cards due in the coming days, for reviewing them offline. */
+  getCardsAhead(): Promise<CardsAhead>;
+  /**
+   * Stores ratings given on the phone, in the order they were given. Sending the same ratings
+   * again stores none twice; one made on a card that changed on the server meanwhile is dropped.
+   */
+  syncCardReviews(reviews: OfflineReview[]): Promise<ReviewSync>;
   /** Removes a card; answers with what is left of the deck. */
   removeCard(id: string): Promise<DeckSummary>;
   /** What the learner's partners know about them, newest first, and the memory settings. */
@@ -783,6 +797,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getDueCards: (limit) => request('GET', withQuery('/v1/cards/due', { limit })),
     reviewCard: (id, rating, offline) =>
       request('POST', `/v1/cards/${encodeURIComponent(id)}/review`, { rating, ...offline }),
+    getCardsAhead: () => request('GET', '/v1/cards/ahead'),
+    syncCardReviews: (reviews) => request('POST', '/v1/cards/reviews', { reviews }),
     removeCard: (id) => request('DELETE', `/v1/cards/${encodeURIComponent(id)}`),
     getMemories: () => request('GET', '/v1/memories'),
     configureMemories: (settings) => request('PATCH', '/v1/memories', settings),

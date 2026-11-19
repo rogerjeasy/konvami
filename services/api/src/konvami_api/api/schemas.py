@@ -12,7 +12,19 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool
 from pydantic.alias_generators import to_camel
 
 from konvami_api.domain.accounts import AccountView, PictureUpload
-from konvami_api.domain.cards import Article, Card, Deck, Part, Queue, Saved, WordDetails
+from konvami_api.domain.cards import (
+    SYNC_MAX,
+    Ahead,
+    Article,
+    Card,
+    Deck,
+    Part,
+    Queue,
+    Saved,
+    Synced,
+    SyncOutcome,
+    WordDetails,
+)
 from konvami_api.domain.cards import Kind as CardKind
 from konvami_api.domain.catalog import (
     CEFR_LEVELS,
@@ -1377,6 +1389,59 @@ class ReviewIn(ApiModel):
     rating: Rating
     expected_reviews: int | None = Field(default=None, ge=0)
     reviewed_at: AwareDatetime | None = None
+
+
+class CardsAheadOut(ApiModel):
+    """The cards due within the next days, for the app to review them offline (spec §10.3)."""
+
+    cards: list[CardOut]
+    # The language the cards are in (ISO 639-1).
+    language: str
+
+    @classmethod
+    def of(cls, ahead: Ahead) -> "CardsAheadOut":
+        return cls(cards=[CardOut.of(card) for card in ahead.cards], language=ahead.language)
+
+
+class OfflineReviewIn(ApiModel):
+    # The phone's id for this rating: sending it again stores it once.
+    client_id: UUID
+    card_id: UUID
+    rating: Rating
+    # The reviews the card had on the phone when it was rated.
+    expected_reviews: int = Field(ge=0)
+    reviewed_at: AwareDatetime
+
+
+class ReviewSyncIn(ApiModel):
+    reviews: list[OfflineReviewIn] = Field(max_length=SYNC_MAX)
+
+
+class SyncedReviewOut(ApiModel):
+    client_id: UUID
+    # applied: stored; superseded: the card changed on the server first and the rating was
+    # dropped; removed: the card is gone.
+    outcome: SyncOutcome
+    # The card as the server has it now; null when it is gone.
+    card: CardOut | None
+
+
+class ReviewSyncOut(ApiModel):
+    # In the order the ratings were stored: the order they were given.
+    results: list[SyncedReviewOut]
+
+    @classmethod
+    def of(cls, results: Sequence[Synced]) -> "ReviewSyncOut":
+        return cls(
+            results=[
+                SyncedReviewOut(
+                    client_id=item.client_id,
+                    outcome=item.outcome,
+                    card=CardOut.of(item.card) if item.card else None,
+                )
+                for item in results
+            ]
+        )
 
 
 class MemoryOut(ApiModel):
