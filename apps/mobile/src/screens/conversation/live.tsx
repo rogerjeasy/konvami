@@ -115,7 +115,7 @@ function HelpSheet({
   const { t } = useTranslation();
   const { partnerCaptions, liveCorrections } = usePreferences();
   return (
-    <Sheet visible={visible} title={t('conversation.help.title')} onClose={onClose}>
+    <Sheet visible={visible} title={t('conversation.help.title')} icon="info" onClose={onClose}>
       <View className="gap-4 pt-1">
         {walking.available ? (
           <View className="gap-2">

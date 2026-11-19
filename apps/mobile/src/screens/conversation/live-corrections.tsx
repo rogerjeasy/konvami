@@ -79,6 +79,7 @@ export function CorrectionSheet({
   const diff = correction ? diffWords(correction.said, correction.better) : null;
   return (
     <Sheet
+      icon="edit"
       visible={correction !== null}
       title={t('conversation.corrections.title')}
       onClose={onClose}

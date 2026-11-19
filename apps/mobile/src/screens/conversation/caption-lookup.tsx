@@ -98,7 +98,7 @@ function LookupSheet({
     }
   }
   return (
-    <Sheet visible title={selection.word} onClose={onClose}>
+    <Sheet icon="book" visible title={selection.word} onClose={onClose}>
       <ScrollView
         style={{ maxHeight: height * CONTENT_HEIGHT_SHARE }}
         contentContainerClassName="gap-3 pb-3"
