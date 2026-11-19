@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
+import { BlockScope } from '@/components/block-scope';
 import { CallStage } from '@/components/call-stage';
 import { ProgressChips } from '@/components/progress-chips';
 import { HeaderButton } from '@/components/step-header';
@@ -87,69 +88,73 @@ function Test({ onRetry }: { onRetry: () => void }) {
   const callProblem = call.problem ? withLine(t(problemKey(call.problem)), minutesBack) : null;
 
   return (
-    <CallStage
-      call={call}
-      persona={SETUP.guide}
-      hint={t('onboarding.placement.talk.hint', { name })}
-      finishedLabel={t('onboarding.placement.talk.finished')}
-      problem={skipProblem ?? callProblem}
-      header={
-        <View className="min-h-tap flex-row items-center pb-2">
-          <HeaderButton
-            icon="close"
-            label={t('onboarding.placement.talk.end')}
+    <BlockScope block="forest">
+      <CallStage
+        call={call}
+        persona={SETUP.guide}
+        hint={t('onboarding.placement.talk.hint', { name })}
+        finishedLabel={t('onboarding.placement.talk.finished')}
+        problem={skipProblem ?? callProblem}
+        header={
+          <View className="min-h-tap flex-row items-center pb-2">
+            <HeaderButton
+              icon="close"
+              label={t('onboarding.placement.talk.end')}
+              onPress={() => {
+                // A test that has begun is followed up on its result screen; before that there
+                // is nothing to follow up.
+                if (live) toResult();
+                else {
+                  call.stop();
+                  backOr(ROUTES.onboardingPlacement);
+                }
+              }}
+            />
+          </View>
+        }
+        progress={
+          <ProgressChips
+            items={TASKS.map((task) => {
+              const done = conversation.tasksDone.includes(task);
+              const label = t(`onboarding.placement.talk.tasks.${task}`);
+              return {
+                key: task,
+                label,
+                done,
+                accessibilityLabel: t(
+                  done
+                    ? 'onboarding.placement.talk.taskDone'
+                    : 'onboarding.placement.talk.taskOpen',
+                  { task: label },
+                ),
+              };
+            })}
+          />
+        }
+        mainAction={
+          <Button
+            variant="secondary"
+            label={t('onboarding.placement.talk.dontKnow')}
+            disabled={!learnersTurn || conversation.finished}
             onPress={() => {
-              // A test that has begun is followed up on its result screen; before that there
-              // is nothing to follow up.
-              if (live) toResult();
-              else {
-                call.stop();
-                backOr(ROUTES.onboardingPlacement);
-              }
+              stepFeedback();
+              call.say(t('onboarding.placement.talk.dontKnow'));
             }}
           />
-        </View>
-      }
-      progress={
-        <ProgressChips
-          items={TASKS.map((task) => {
-            const done = conversation.tasksDone.includes(task);
-            const label = t(`onboarding.placement.talk.tasks.${task}`);
-            return {
-              key: task,
-              label,
-              done,
-              accessibilityLabel: t(
-                done ? 'onboarding.placement.talk.taskDone' : 'onboarding.placement.talk.taskOpen',
-                { task: label },
-              ),
-            };
-          })}
-        />
-      }
-      mainAction={
-        <Button
-          variant="secondary"
-          label={t('onboarding.placement.talk.dontKnow')}
-          disabled={!learnersTurn || conversation.finished}
-          onPress={() => {
-            stepFeedback();
-            call.say(t('onboarding.placement.talk.dontKnow'));
-          }}
-        />
-      }
-      failedActions={
-        <>
-          <Button label={t('onboarding.placement.talk.retry')} onPress={onRetry} />
-          <TextButton
-            tone="primary"
-            label={t('onboarding.placement.talk.skip')}
-            disabled={skipping}
-            onPress={skip}
-          />
-        </>
-      }
-    />
+        }
+        failedActions={
+          <>
+            <Button label={t('onboarding.placement.talk.retry')} onPress={onRetry} />
+            <TextButton
+              tone="primary"
+              label={t('onboarding.placement.talk.skip')}
+              disabled={skipping}
+              onPress={skip}
+            />
+          </>
+        }
+      />
+    </BlockScope>
   );
 }
 

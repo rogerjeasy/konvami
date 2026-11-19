@@ -4,6 +4,7 @@ import { Redirect, router, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
+import { BlockScope } from '@/components/block-scope';
 import { CallStage } from '@/components/call-stage';
 import { ProgressChips } from '@/components/progress-chips';
 import { HeaderButton } from '@/components/step-header';
@@ -82,50 +83,52 @@ function Call({ onRetry }: { onRetry: () => void }) {
     (onboarding.phase === 'ready' ? openTopics(onboarding.data.status.missing) : SETUP_TOPICS);
 
   return (
-    <CallStage
-      call={call}
-      persona={SETUP.guide}
-      hint={t('onboarding.talk.hint', { name })}
-      finishedLabel={t('onboarding.talk.finished')}
-      problem={call.problem ? withLine(t(problemKey(call.problem)), minutesBack) : null}
-      header={
-        <View className="min-h-tap flex-row items-center justify-between gap-3 pb-2">
-          <HeaderButton
-            icon="close"
-            label={t('onboarding.talk.end')}
-            onPress={() => {
-              call.stop();
-              void store.reload();
-              backOr(ROUTES.allSet);
-            }}
+    <BlockScope block="forest">
+      <CallStage
+        call={call}
+        persona={SETUP.guide}
+        hint={t('onboarding.talk.hint', { name })}
+        finishedLabel={t('onboarding.talk.finished')}
+        problem={call.problem ? withLine(t(problemKey(call.problem)), minutesBack) : null}
+        header={
+          <View className="min-h-tap flex-row items-center justify-between gap-3 pb-2">
+            <HeaderButton
+              icon="close"
+              label={t('onboarding.talk.end')}
+              onPress={() => {
+                call.stop();
+                void store.reload();
+                backOr(ROUTES.allSet);
+              }}
+            />
+            <TextButton tone="primary" label={t('onboarding.talk.typeInstead')} onPress={toForm} />
+          </View>
+        }
+        progress={
+          <ProgressChips
+            items={SETUP_TOPICS.map((topic) => {
+              const done = !stillOpen.includes(topic);
+              const label = t(`onboarding.talk.topics.${topic}`);
+              return {
+                key: topic,
+                label,
+                done,
+                accessibilityLabel: t(
+                  done ? 'onboarding.talk.topicSaved' : 'onboarding.talk.topicOpen',
+                  { topic: label },
+                ),
+              };
+            })}
           />
-          <TextButton tone="primary" label={t('onboarding.talk.typeInstead')} onPress={toForm} />
-        </View>
-      }
-      progress={
-        <ProgressChips
-          items={SETUP_TOPICS.map((topic) => {
-            const done = !stillOpen.includes(topic);
-            const label = t(`onboarding.talk.topics.${topic}`);
-            return {
-              key: topic,
-              label,
-              done,
-              accessibilityLabel: t(
-                done ? 'onboarding.talk.topicSaved' : 'onboarding.talk.topicOpen',
-                { topic: label },
-              ),
-            };
-          })}
-        />
-      }
-      failedActions={
-        <>
-          <Button label={t('onboarding.talk.useForm')} loading={leaving} onPress={toForm} />
-          <TextButton tone="primary" label={t('onboarding.talk.retry')} onPress={onRetry} />
-        </>
-      }
-    />
+        }
+        failedActions={
+          <>
+            <Button label={t('onboarding.talk.useForm')} loading={leaving} onPress={toForm} />
+            <TextButton tone="primary" label={t('onboarding.talk.retry')} onPress={onRetry} />
+          </>
+        }
+      />
+    </BlockScope>
   );
 }
 

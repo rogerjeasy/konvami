@@ -6,6 +6,7 @@ import { size } from '@konvami/design-tokens';
 import type { NextSimulation } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
+import { BlockScope } from '@/components/block-scope';
 import { CallStage } from '@/components/call-stage';
 import type { AvatarLook } from '@/components/avatar/look';
 import { Icon } from '@/components/icon';
@@ -132,80 +133,82 @@ function Test({ next, onRetry }: { next: NextSimulation; onRetry: () => void }) 
   const problem = call.problem ? withLine(t(problemKey(call.problem)), minutesBack) : null;
 
   return (
-    <CallStage
-      compact
-      call={call}
-      persona={EXAMINER}
-      hint={t('exams.talk.hint')}
-      finishedLabel={t('exams.talk.finished')}
-      problem={problem}
-      header={
-        <View className="min-h-tap flex-row items-center pb-2">
-          <HeaderButton
-            icon="close"
-            label={t('exams.talk.end')}
-            onPress={() => {
-              if (live) toResult();
-              else {
-                call.stop();
-                backOr(examPrepRoute(exam.id));
-              }
-            }}
-          />
-        </View>
-      }
-      progress={
-        <View className="gap-3">
-          <ProgressChips
-            items={exam.parts.map((item, i) => {
-              const begun = conversation.examParts.includes(item.id);
-              const name = labels.part(i, item.kind);
-              return {
-                key: item.id,
-                label: t('exams.talk.chip', { number: i + 1 }),
-                done: begun && item.id !== part?.id,
-                accessibilityLabel: name,
-              };
-            })}
-          />
-          {exam.series && part ? (
-            <SpeakingWindow
-              key={part.id}
-              ready={
-                live && (conversation.phase === 'listening' || conversation.phase === 'hearing')
-              }
-              seconds={part.seconds}
-              label={t('examStages.speaking')}
-              onEnd={toResult}
+    <BlockScope block="forest">
+      <CallStage
+        compact
+        call={call}
+        persona={EXAMINER}
+        hint={t('exams.talk.hint')}
+        finishedLabel={t('exams.talk.finished')}
+        problem={problem}
+        header={
+          <View className="min-h-tap flex-row items-center pb-2">
+            <HeaderButton
+              icon="close"
+              label={t('exams.talk.end')}
+              onPress={() => {
+                if (live) toResult();
+                else {
+                  call.stop();
+                  backOr(examPrepRoute(exam.id));
+                }
+              }}
             />
-          ) : null}
-          {part && card ? (
-            <ExamCard
-              heading={`${labels.part(index, part.kind)} · ${labels.minutes(part.seconds)}`}
-              card={card}
+          </View>
+        }
+        progress={
+          <View className="gap-3">
+            <ProgressChips
+              items={exam.parts.map((item, i) => {
+                const begun = conversation.examParts.includes(item.id);
+                const name = labels.part(i, item.kind);
+                return {
+                  key: item.id,
+                  label: t('exams.talk.chip', { number: i + 1 }),
+                  done: begun && item.id !== part?.id,
+                  accessibilityLabel: name,
+                };
+              })}
             />
+            {exam.series && part ? (
+              <SpeakingWindow
+                key={part.id}
+                ready={
+                  live && (conversation.phase === 'listening' || conversation.phase === 'hearing')
+                }
+                seconds={part.seconds}
+                label={t('examStages.speaking')}
+                onEnd={toResult}
+              />
+            ) : null}
+            {part && card ? (
+              <ExamCard
+                heading={`${labels.part(index, part.kind)} · ${labels.minutes(part.seconds)}`}
+                card={card}
+              />
+            ) : (
+              <Text variant="small" tone="muted">
+                {t('exams.talk.waiting')}
+              </Text>
+            )}
+            <Notes />
+          </View>
+        }
+        failedActions={
+          call.problem === 'plan_required' ? (
+            <Button label={t('plan.see')} onPress={() => paywall.open('exams')} />
           ) : (
-            <Text variant="small" tone="muted">
-              {t('exams.talk.waiting')}
-            </Text>
-          )}
-          <Notes />
-        </View>
-      }
-      failedActions={
-        call.problem === 'plan_required' ? (
-          <Button label={t('plan.see')} onPress={() => paywall.open('exams')} />
-        ) : (
-          <Button
-            label={t('exams.talk.retry')}
-            onPress={() => {
-              stepFeedback();
-              onRetry();
-            }}
-          />
-        )
-      }
-    />
+            <Button
+              label={t('exams.talk.retry')}
+              onPress={() => {
+                stepFeedback();
+                onRetry();
+              }}
+            />
+          )
+        }
+      />
+    </BlockScope>
   );
 }
 
