@@ -24,7 +24,8 @@ export function PageHero({
   color: Exclude<TileColor, 'card'>;
   icon: IconName;
   title: string;
-  body?: string;
+  /** What the screen is for: a sentence, or text with parts in bold (`<Trans>`, `tone="inherit"`). */
+  body?: ReactNode;
   children?: ReactNode;
 }) {
   const { color } = useTheme();
