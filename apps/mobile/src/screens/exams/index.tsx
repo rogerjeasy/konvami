@@ -16,11 +16,12 @@ import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
+import { TextButton } from '@/components/text-button';
 import { daysUntil, formatDate, formatShortDate } from '@/lib/format';
 import { stepFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
-import { examPrepRoute, ROUTES, simulationRoute } from '@/lib/routes';
+import { examPhrasesRoute, examPrepRoute, ROUTES, simulationRoute } from '@/lib/routes';
 import { useExamCentre, usePracticeServices } from '@/practice/services';
 import { useExamLabels } from '@/hooks/use-exam-labels';
 
@@ -257,10 +258,19 @@ export function ExamCentreScreen() {
     <StepLayout
       actions={
         chosen ? (
-          <Button
-            label={t('exams.prepare')}
-            onPress={() => router.push(examPrepRoute(chosen.id))}
-          />
+          <View className="gap-1">
+            <Button
+              label={t('exams.prepare')}
+              onPress={() => router.push(examPrepRoute(chosen.id))}
+            />
+            <View className="items-center">
+              <TextButton
+                label={t('examPhrases.open')}
+                tone="primary"
+                onPress={() => router.push(examPhrasesRoute(chosen.id))}
+              />
+            </View>
+          </View>
         ) : undefined
       }
       header={

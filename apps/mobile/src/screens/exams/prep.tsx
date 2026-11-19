@@ -14,13 +14,14 @@ import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
+import { TextButton } from '@/components/text-button';
 import { TextField } from '@/components/text-field';
 import { useCountdown } from '@/hooks/use-countdown';
 import { formatDuration } from '@/lib/format';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
-import { examTalkRoute, ROUTES } from '@/lib/routes';
+import { examPhrasesRoute, examTalkRoute, ROUTES } from '@/lib/routes';
 import { ExamCard } from './exam-card';
 import { useExamLabels } from '@/hooks/use-exam-labels';
 import { useExamNotes } from './notes';
@@ -77,6 +78,13 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
           ) : null}
         </PageHero>
       </Reveal>
+      <View className="items-start">
+        <TextButton
+          label={t('examPhrases.open')}
+          tone="primary"
+          onPress={() => router.push(examPhrasesRoute(exam.id))}
+        />
+      </View>
       {exam.prepSeconds > 0 ? (
         <Reveal delay={staggerDelay(1)}>
           <PrepTime seconds={exam.prepSeconds} />
@@ -95,14 +103,20 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
                 <Text variant="label" accessibilityRole="header">
                   {t('exams.phraseBank')}
                 </Text>
-                {part.phrases.map((phrase) => (
-                  <View key={phrase.text} className="gap-1">
-                    <Text>{phrase.text}</Text>
-                    <Text variant="small" tone="muted">
-                      {phrase.meanings[i18n.language] ?? phrase.meanings.en}
-                    </Text>
-                  </View>
-                ))}
+                {part.phrases.map((phrase) => {
+                  const meaning = phrase.meanings[i18n.language] ?? phrase.meanings.en;
+                  return (
+                    <View key={phrase.text} className="gap-1">
+                      <Text variant="langBody">{phrase.text}</Text>
+                      {/* A German explanation would only repeat the phrase. */}
+                      {meaning && meaning !== phrase.text ? (
+                        <Text variant="small" tone="muted">
+                          {meaning}
+                        </Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
               </View>
             ) : null}
           </Reveal>

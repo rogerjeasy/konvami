@@ -252,6 +252,10 @@ export const explainRoute = (conversationId: string, index: number) =>
 export const examPrepRoute = (exam: string) =>
   ({ pathname: '/exams/[exam]', params: { exam } }) as const satisfies Href;
 
+/** 5.25 The phrases that help in a speaking test, by what they do. */
+export const examPhrasesRoute = (exam: string) =>
+  ({ pathname: '/exams/[exam]/phrases', params: { exam } }) as const satisfies Href;
+
 /** 5.17 The simulation itself: a call with the examiner. */
 export const examTalkRoute = (exam: string) =>
   ({ pathname: '/exams/[exam]/talk', params: { exam } }) as const satisfies Href;

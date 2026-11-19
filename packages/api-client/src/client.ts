@@ -760,8 +760,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('GET', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
     getExamCentre: () => request('GET', '/v1/exams'),
     getNextSimulation: (exam) => request('GET', `/v1/exams/${encodeURIComponent(exam)}/next`),
-    getExamPhraseBank: (exam) =>
-      request('GET', `/v1/exams/${encodeURIComponent(exam)}/phrases`),
+    getExamPhraseBank: (exam) => request('GET', `/v1/exams/${encodeURIComponent(exam)}/phrases`),
     getSimulation: (callId) =>
       request('GET', `/v1/exams/simulations/${encodeURIComponent(callId)}`),
     rescoreSimulation: (callId) =>
