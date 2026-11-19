@@ -2,7 +2,18 @@ import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { space } from '@konvami/design-tokens';
+import { BlockScope } from '@/components/block-scope';
+import { TileScope } from '@/components/tile';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
+
+/** The v4 colour blocks a hero panel can be drawn on. */
+const HERO_COLORS = {
+  tomato: 'bg-tomato',
+  pink: 'bg-pink',
+  butter: 'bg-butter',
+  forest: 'bg-forest',
+} as const;
+type HeroColor = keyof typeof HERO_COLORS;
 
 /**
  * The layout of every first-launch screen: an illustration (hero), a text block and the actions.
@@ -35,9 +46,10 @@ export function HeroLayout({
   actions: ReactNode;
   /**
    * Draw the hero on a panel (rounded bottom corners when stacked): `true` for the raised surface,
-   * `'splash'` for the brand ground of celebratory screens.
+   * `'splash'` for the brand ground of celebratory screens, or the v4 colour block of the
+   * screen's feature (talking tomato, words pink, corrections butter, level forest).
    */
-  panel?: boolean | 'splash' | 'bleed';
+  panel?: boolean | 'splash' | 'bleed' | HeroColor;
   centerBody?: boolean;
   /**
    * Share of a tall window the hero takes when stacked (as drawn for the screen). Defaults to the
@@ -49,7 +61,21 @@ export function HeroLayout({
   const { split, gutter, heroMinHeight } = useScreenLayout(heroShare);
   const topInset = insets.top + space.sm;
   const bottomInset = Math.max(insets.bottom, space.lg) + space.lg;
-  const panelClass = panel === 'splash' ? 'bg-splash' : panel ? 'bg-surface' : '';
+  const colour = typeof panel === 'string' && panel in HERO_COLORS ? (panel as HeroColor) : null;
+  const panelClass =
+    panel === 'splash' ? 'bg-splash' : colour ? HERO_COLORS[colour] : panel ? 'bg-surface' : '';
+  // On forest and butter the theme's roles take the block's values (the drawings follow); on
+  // tomato and pink the buttons inside take the block's ink.
+  const paint = (content: ReactNode) =>
+    colour === 'forest' || colour === 'butter' ? (
+      <BlockScope block={colour} whole={false}>
+        {content}
+      </BlockScope>
+    ) : colour ? (
+      <TileScope color={colour}>{content}</TileScope>
+    ) : (
+      content
+    );
 
   const header = screenHeader ? (
     <View
@@ -81,8 +107,12 @@ export function HeroLayout({
         paddingHorizontal: gutter,
       }}
     >
-      {heroHeader ? <View className="flex-row justify-end">{heroHeader}</View> : null}
-      <View className="flex-1 items-center justify-center">{hero}</View>
+      {paint(
+        <>
+          {heroHeader ? <View className="flex-row justify-end">{heroHeader}</View> : null}
+          <View className="flex-1 items-center justify-center">{hero}</View>
+        </>,
+      )}
     </View>
   );
 

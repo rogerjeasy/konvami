@@ -29,7 +29,7 @@ import { CaptionLookupSheet, type CaptionSelection } from './caption-lookup';
 import { Goals } from './goals';
 import { CorrectionSheet, LiveCorrections } from './live-corrections';
 import { CallPlanStrip } from './plan';
-import { BlockScope } from './block-scope';
+import { BlockScope } from '@/components/block-scope';
 import { SettingsToast } from './settings-toast';
 import { setLiveCorrections, setPartnerCaptions, usePreferences } from '@/preferences';
 import { HELP_KINDS, type HelpKind } from '@/voice/help';

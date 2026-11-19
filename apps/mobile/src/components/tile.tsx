@@ -82,6 +82,18 @@ export function useTileInk(): TileInk | null {
 }
 
 /**
+ * Gives what is inside the colours of a block drawn elsewhere (a hero panel on tomato or pink):
+ * buttons and chips inside take the block's ink, as they do inside a `Tile`.
+ */
+export function TileScope({ color: look, children }: { color: TileColor; children: ReactNode }) {
+  return (
+    <TileContext.Provider value={look === 'card' ? null : LOOK[look]}>
+      {children}
+    </TileContext.Provider>
+  );
+}
+
+/**
  * A rounded colour block. Text inside takes the block's own text colour through `tileTone()`;
  * `bubble` draws the logo's speech bubble faintly in a corner, as on the prototype.
  */

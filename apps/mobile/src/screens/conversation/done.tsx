@@ -19,7 +19,7 @@ import { conversationRoute, reportRoute, ROUTES } from '@/lib/routes';
 import type { ReportView } from '@/practice';
 import { useHome, usePracticeServices, useReport, useScenarios } from '@/practice/services';
 import { useTheme } from '@/theme';
-import { BlockScope } from './block-scope';
+import { BlockScope } from '@/components/block-scope';
 import { Goals } from './goals';
 
 // The server saves a conversation when its call has closed, a moment after the app left it.

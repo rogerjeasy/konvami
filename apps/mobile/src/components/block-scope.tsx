@@ -79,13 +79,22 @@ function blockVariables(block: Block, p: Palette) {
  * they keep the app's normal colours. Raw colours read with `useTheme()` (SVG icons) do not
  * follow: pass the block's own tokens to those.
  */
-export function BlockScope({ block, children }: { block: Block; children: ReactNode }) {
+export function BlockScope({
+  block,
+  whole = true,
+  children,
+}: {
+  block: Block;
+  /** The block is the whole screen: it fills it and sets the status bar. False for a panel. */
+  whole?: boolean;
+  children: ReactNode;
+}) {
   const { scheme, color } = useTheme();
   const style = useMemo(() => blockVariables(block, color), [block, color]);
   const { ground, statusBar } = BLOCKS[block];
   return (
     <View key={scheme} style={style} className={`flex-1 ${ground}`}>
-      <StatusBar style={statusBar} />
+      {whole ? <StatusBar style={statusBar} /> : null}
       {children}
     </View>
   );
