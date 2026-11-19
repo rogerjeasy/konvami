@@ -97,6 +97,7 @@ export function ChangeEmailScreen() {
   if (step === 'code') {
     return (
       <ProfilePage
+        hero={{ color: 'ink', icon: 'mail' }}
         // A new page for the reader, so its title is read out and its entrance plays.
         key="code"
         title={t('profile.email.codeTitle')}
@@ -158,6 +159,7 @@ export function ChangeEmailScreen() {
 
   return (
     <ProfilePage
+      hero={{ color: 'ink', icon: 'mail' }}
       key="address"
       title={t('profile.email.title')}
       body={t('profile.email.body')}

@@ -140,7 +140,11 @@ export function PrivacyScreen() {
   const elevenlabs = useElevenLabsConsent();
 
   return (
-    <ProfilePage title={t('profile.privacy.title')} body={t('profile.privacy.body')}>
+    <ProfilePage
+      hero={{ color: 'ink', icon: 'shield' }}
+      title={t('profile.privacy.title')}
+      body={t('profile.privacy.body')}
+    >
       <Reveal delay={staggerDelay(1)}>
         <View className="gap-3">
           <AiProviderList

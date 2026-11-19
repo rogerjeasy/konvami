@@ -37,7 +37,11 @@ export function SecurityScreen() {
   }
 
   return (
-    <ProfilePage title={t('profile.security.title')} stay={leaving}>
+    <ProfilePage
+      hero={{ color: 'ink', icon: 'lock' }}
+      title={t('profile.security.title')}
+      stay={leaving}
+    >
       <Reveal delay={staggerDelay(1)}>
         <ListGroup>
           <ListRow

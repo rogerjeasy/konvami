@@ -67,6 +67,7 @@ export function ChangePasswordScreen() {
 
   return (
     <ProfilePage
+      hero={{ color: 'ink', icon: 'key' }}
       title={t('profile.password.title')}
       body={t('profile.password.body')}
       backTo={ROUTES.accountSecurity}
