@@ -93,7 +93,7 @@ export function PaywallSheet() {
   const packs = offers.phase === 'ready' ? offers.offers.filter((o) => o.kind === 'pack') : [];
 
   return (
-    <Sheet visible={reason !== null} title={t('plan.paywall.title')} onClose={close}>
+    <Sheet icon="gift" visible={reason !== null} title={t('plan.paywall.title')} onClose={close}>
       <ScrollView
         style={{ maxHeight: height * MAX_HEIGHT_SHARE }}
         contentContainerClassName="gap-4 pb-2"

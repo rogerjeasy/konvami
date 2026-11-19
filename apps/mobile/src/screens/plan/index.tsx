@@ -88,7 +88,11 @@ export function PlanScreen() {
   }
 
   return (
-    <ProfilePage title={t('plan.title')} body={t('plan.body')}>
+    <ProfilePage
+      hero={{ color: 'ink', icon: 'gift' }}
+      title={t('plan.title')}
+      body={t('plan.body')}
+    >
       {state.phase === 'ready' ? (
         <PlanBody
           plan={state.data}
