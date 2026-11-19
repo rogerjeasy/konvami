@@ -6,12 +6,12 @@ import { size } from '@konvami/design-tokens';
 import { authErrorCode, generalErrorKey, useAuthServices } from '@/auth';
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
-import { IconTile } from '@/components/icon-tile';
 import { Link } from '@/components/link';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { commitFeedback } from '@/lib/haptics';
@@ -84,15 +84,12 @@ export function ForgotPasswordScreen() {
       }
     >
       <Reveal>
-        <View className="gap-2.5">
-          <View className="pb-2.5">
-            <IconTile icon="key" />
-          </View>
-          <Text variant="title" accessibilityRole="header">
-            {t('forgotPassword.title')}
-          </Text>
-          <Text tone="muted">{t('forgotPassword.body')}</Text>
-        </View>
+        <PageHero
+          color="ink"
+          icon="key"
+          title={t('forgotPassword.title')}
+          body={t('forgotPassword.body')}
+        />
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>

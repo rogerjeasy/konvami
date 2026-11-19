@@ -12,6 +12,7 @@ import { PasswordStrength } from '@/components/password-strength';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Switch } from '@/components/switch';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { PasswordField } from '@/components/text-field';
 import { commitFeedback } from '@/lib/haptics';
@@ -106,18 +107,18 @@ export function NewPasswordScreen() {
       }
     >
       <Reveal>
-        <View className="gap-2">
-          <Text variant="title" accessibilityRole="header">
-            {t('newPassword.title')}
-          </Text>
-          <Text tone="muted">
+        <PageHero
+          color="ink"
+          icon="lock"
+          title={t('newPassword.title')}
+          body={
             <Trans
               i18nKey="newPassword.body"
               values={{ email }}
-              components={{ strong: <Text variant="label" /> }}
+              components={{ strong: <Text variant="label" tone="inherit" /> }}
             />
-          </Text>
-        </View>
+          }
+        />
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
