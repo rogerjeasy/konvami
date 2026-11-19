@@ -46,6 +46,8 @@ import {
   type Phrase,
   type PhraseSuggestion,
   type PremiumVoices,
+  type VideoAvatars,
+  type VideoAvatarSession,
   type TutorQuestion,
   type ExamCard,
   type ExamCentre,
@@ -869,6 +871,11 @@ export interface FakeApi extends ApiClient {
   premiumVoices(
     state: Partial<Omit<PremiumVoices, 'consent'>> & { consent?: boolean | (() => boolean) },
   ): void;
+  /**
+   * The video avatars the server answers with (spec §6.20 P2). By default none are offered (no
+   * vendor is set up); `session` is what a call with a picked face is given.
+   */
+  videoAvatars(state: Partial<VideoAvatars> & { session?: VideoAvatarSession | null }): void;
   /** Phrases the phrasebook suggests next (by default `FAKE_PHRASE_SUGGESTIONS`). */
   nextPhraseSuggestions(suggestions: PhraseSuggestion[]): void;
   /** Phrases the learner kept earlier, oldest first. */
@@ -1154,6 +1161,19 @@ export function createFakeApi(): FakeApi {
     allowed: true,
     voices: [],
     chosen: null,
+  };
+  let video: VideoAvatars & { session: VideoAvatarSession | null } = {
+    offered: false,
+    vendor: '',
+    consent: false,
+    allowed: true,
+    faces: [],
+    chosen: [],
+    session: null,
+  };
+  const videoNow = (): VideoAvatars => {
+    const { session: _session, ...state } = video;
+    return state;
   };
   const premiumNow = (): PremiumVoices => ({
     ...premium,
@@ -2073,6 +2093,9 @@ export function createFakeApi(): FakeApi {
     nextTutorAnswer(answer) {
       tutorAnswer = { ...FAKE_TUTOR_ANSWER, ...answer };
     },
+    videoAvatars(state) {
+      video = { ...video, ...state };
+    },
     premiumVoices(state) {
       premium = { ...premium, ...state };
     },
@@ -2640,6 +2663,33 @@ export function createFakeApi(): FakeApi {
       }
       premium = { ...premium, chosen: voiceId };
       return premiumNow();
+    },
+    async getVideoAvatars() {
+      await record('getVideoAvatars');
+      return videoNow();
+    },
+    async chooseVideoAvatar(personaId, faceId, agreed = false) {
+      await record('chooseVideoAvatar', personaId, faceId, agreed);
+      if (faceId !== null) {
+        if (!video.offered) throw new ApiError('not_offered', 409);
+        if (!video.allowed) throw new ApiError('not_allowed', 403);
+        if (!video.faces.some((face) => face.id === faceId)) {
+          throw new ApiError('unknown_face', 422);
+        }
+        if (!video.consent && !agreed) throw new ApiError('consent_needed', 403);
+      }
+      const others = video.chosen.filter((pick) => pick.personaId !== personaId);
+      video = {
+        ...video,
+        consent: video.consent || (faceId !== null && agreed),
+        chosen: faceId === null ? others : [...others, { personaId, faceId }],
+      };
+      return videoNow();
+    },
+    async startVideoAvatar(personaId) {
+      await record('startVideoAvatar', personaId);
+      const picked = video.chosen.some((pick) => pick.personaId === personaId);
+      return video.offered && video.consent && picked ? video.session : null;
     },
     async getPremiumVoiceSample(voiceId) {
       await record('getPremiumVoiceSample', voiceId);

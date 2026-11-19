@@ -2493,6 +2493,19 @@ export const en = {
         body: 'Their portrait changes as you choose.',
         editor: 'Open the avatar editor',
         editorHint: 'See them smile, speak and react while you design.',
+        video: {
+          title: 'Video face during calls',
+          body: 'A realistic face from {{vendor}} can speak for {{name}} in your calls. Everywhere else they keep their portrait.',
+          drawn: 'Drawn portrait',
+          drawnHint: 'The portrait above, in calls too.',
+          notAllowed: 'Video faces come with Pro.',
+          consentTitle: 'Use {{vendor}} for the face?',
+          consentBody:
+            'To move the face, {{vendor}} receives what {{name}} says during your calls. Your own voice is never sent. You can go back to the portrait at any time.',
+          agree: 'Agree and use this face',
+          cancel: 'Not now',
+          failed: 'The face could not be changed. Try again.',
+        },
       },
       voice: {
         title: 'How do they sound?',

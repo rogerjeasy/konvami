@@ -30,6 +30,7 @@ import { usePartnerList, useProfileServices } from '@/profile/services';
 import { ProfilePage } from '@/screens/profile/page';
 import { IdentitySection } from './sections/identity';
 import { LookSection } from './sections/look';
+import { VideoFaceChoice } from './video-face-choice';
 import { PersonalitySection } from './sections/personality';
 import { ReviewSection } from './sections/review';
 import { SectionTitle, type SectionProps } from './sections/shared';
@@ -328,7 +329,12 @@ function Editor({ partner, header }: { partner: Persona; header: ReactNode }) {
       {/* Keyed by the part: each one enters as a new page. */}
       <View key={part} className="gap-6">
         <Section draft={draft} change={change} problems={pressed ? missing : []} />
-        {part === 'look' ? <AvatarEditorLink id={partner.id} /> : null}
+        {part === 'look' ? (
+          <>
+            <AvatarEditorLink id={partner.id} />
+            <VideoFaceChoice personaId={partner.id} name={saved.name} />
+          </>
+        ) : null}
       </View>
     </StepLayout>
   );

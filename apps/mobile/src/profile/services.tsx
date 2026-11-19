@@ -6,6 +6,7 @@ import type {
   PersonaDraft,
   PersonaVoice,
   PremiumVoices,
+  VideoAvatars,
   ProfileChanges,
   ProfileQuestionState,
   Recordings,
@@ -58,6 +59,20 @@ export interface ProfileServices {
   choosePremiumVoice: (voiceId: string | null) => Promise<PremiumVoices>;
   /** A short-lived address of a premium voice's sample. */
   premiumVoiceSample: (voiceId: string) => Promise<string>;
+  /**
+   * Video faces (spec §6.20 P2): whether a vendor is on offer, whether the learner agreed to it,
+   * its faces and the face picked for each partner. Persona Studio offers them only then.
+   */
+  videoAvatars: ResourceStore<VideoAvatars>;
+  /**
+   * Picks a vendor face for a partner (null: its drawn portrait); `agreed` after the learner read
+   * the vendor's notice. Rejects with an `ApiError`, and then what is shown stays as it was.
+   */
+  chooseVideoAvatar: (
+    personaId: string,
+    faceId: string | null,
+    agreed?: boolean,
+  ) => Promise<VideoAvatars>;
   /** What partners changed in the learner's settings by voice (6.14), with undo. */
   changes: ChangesStore;
   /** The question about a setting that is due now, shown on Today (spec §6.1.2). */
@@ -113,6 +128,7 @@ export function createProfileServices(
   const recordings = createResourceStore(() => api.getRecordings(), Date.now);
   const allowance = createResourceStore(() => api.getVoiceAllowance(), Date.now);
   const premium = createResourceStore(() => api.getPremiumVoices(), Date.now);
+  const videoAvatars = createResourceStore(() => api.getVideoAvatars(), Date.now);
 
   const plan = createResourceStore(() => api.getPlan(), Date.now);
   const memory = createMemoryStore(api, Date.now);
@@ -137,6 +153,12 @@ export function createProfileServices(
         (_, answer) => answer,
       ),
     premiumVoiceSample: (voiceId) => api.getPremiumVoiceSample(voiceId),
+    videoAvatars,
+    chooseVideoAvatar: (personaId, faceId, agreed) =>
+      videoAvatars.mutate(
+        () => api.chooseVideoAvatar(personaId, faceId, agreed),
+        (_, answer) => answer,
+      ),
     changes: createChangesStore(api, Date.now, device.onSettingsChanged),
     question: createQuestionStore(api, Date.now, () => {
       // An answer may have switched the audio or the memory on or off.
@@ -193,6 +215,7 @@ export function ProfileProvider({
     services.question.reset();
     services.allowance.reset();
     services.premium.reset();
+    services.videoAvatars.reset();
 
     services.plan.reset();
   }, [status, services]);
@@ -251,6 +274,12 @@ export function useMinutesBack(wanted: boolean): string | null {
   return t('call.minutesBack', {
     day: formatDayLine(i18n.language, new Date(state.data.resetsAt)),
   });
+}
+
+/** The video faces on offer and the learner's picks; re-renders when they change. */
+export function useVideoAvatars(): ResourceState<VideoAvatars> {
+  const { videoAvatars } = useProfileServices();
+  return useSyncExternalStore(videoAvatars.subscribe, videoAvatars.getState, videoAvatars.getState);
 }
 
 /** The premium voices and the learner's choice; re-renders when they change. */

@@ -2512,6 +2512,19 @@ export const it: Translation = {
         body: 'Il ritratto cambia a ogni tua scelta.',
         editor: 'Apri l’editor dell’avatar',
         editorHint: 'Guardalo sorridere, parlare e reagire mentre lo disegni.',
+        video: {
+          title: 'Volto video durante le chiamate',
+          body: 'Un volto realistico di {{vendor}} può parlare per {{name}} nelle tue chiamate. Altrove resta il ritratto.',
+          drawn: 'Ritratto disegnato',
+          drawnHint: 'Il ritratto qui sopra, anche nelle chiamate.',
+          notAllowed: 'I volti video sono inclusi in Pro.',
+          consentTitle: 'Usare {{vendor}} per il volto?',
+          consentBody:
+            'Per animare il volto, {{vendor}} riceve ciò che dice {{name}} durante le tue chiamate. La tua voce non viene mai inviata. Puoi tornare al ritratto in qualsiasi momento.',
+          agree: 'Accetta e usa questo volto',
+          cancel: 'Non ora',
+          failed: 'Non è stato possibile cambiare il volto. Riprova.',
+        },
       },
       voice: {
         title: 'Che voce ha?',

@@ -380,6 +380,72 @@ describe('6.6 Persona Studio: one of the learner’s partners', () => {
     });
   });
 
+  describe('the video face (spec §6.20 P2)', () => {
+    const FACES = [
+      { id: 'anna-01', name: 'Anna' },
+      { id: 'ben-02', name: 'Ben' },
+    ];
+    async function look(api: FakeApi) {
+      await open(LENA.id, api);
+      await screen.findByRole('header', { name: 'Lena' });
+      await fireEvent.press(screen.getByRole('tab', { name: 'Look' }));
+    }
+    const chosen = (api: FakeApi) =>
+      api.calls.filter(([method]) => method === 'chooseVideoAvatar').map(([, ...args]) => args);
+
+    it('is not offered while no vendor is set up', async () => {
+      const api = inApp();
+      await look(api);
+
+      await waitFor(() =>
+        expect(api.calls.some(([method]) => method === 'getVideoAvatars')).toBe(true),
+      );
+      expect(screen.queryByText('Video face during calls')).toBeNull();
+    });
+
+    it('asks for the agreement to the vendor before the first face, then keeps it', async () => {
+      const api = inApp();
+      api.videoAvatars({ offered: true, vendor: 'Facely', faces: FACES });
+      await look(api);
+
+      expect(await screen.findByText('Video face during calls')).toBeTruthy();
+      expect(screen.getByRole('radio', { name: /^Drawn portrait/ })).toBeChecked();
+      await fireEvent.press(screen.getByRole('radio', { name: 'Anna' }));
+
+      expect(await screen.findByText(/Facely receives what Lena says/)).toBeTruthy();
+      expect(chosen(api)).toEqual([]);
+      await fireEvent.press(screen.getByRole('button', { name: 'Agree and use this face' }));
+
+      await waitFor(() => expect(screen.getByRole('radio', { name: 'Anna' })).toBeChecked());
+      expect(chosen(api)).toEqual([[LENA.id, 'anna-01', true]]);
+    });
+
+    it('goes back to the portrait without asking', async () => {
+      const api = inApp();
+      api.videoAvatars({
+        offered: true,
+        vendor: 'Facely',
+        consent: true,
+        faces: FACES,
+        chosen: [{ personaId: LENA.id, faceId: 'ben-02' }],
+      });
+      await look(api);
+
+      await fireEvent.press(await screen.findByRole('radio', { name: /^Drawn portrait/ }));
+
+      await waitFor(() => expect(chosen(api)).toEqual([[LENA.id, null, false]]));
+    });
+
+    it('says video faces come with Pro to a learner who may not use them', async () => {
+      const api = inApp();
+      api.videoAvatars({ offered: true, vendor: 'Facely', allowed: false, faces: FACES });
+      await look(api);
+
+      expect(await screen.findByText('Video faces come with Pro.')).toBeTruthy();
+      expect(screen.queryByRole('radio', { name: 'Anna' })).toBeNull();
+    });
+  });
+
   it('says so when the change could not be saved, and keeps it on screen', async () => {
     const { api } = await open();
     await screen.findByRole('header', { name: 'Lena' });

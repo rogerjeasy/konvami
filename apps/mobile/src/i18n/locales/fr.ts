@@ -2528,6 +2528,19 @@ export const fr: Translation = {
         body: 'Son portrait change au fil de tes choix.',
         editor: 'Ouvrir l’éditeur d’avatar',
         editorHint: 'Vois-le sourire, parler et réagir pendant que tu le dessines.',
+        video: {
+          title: 'Visage vidéo pendant les appels',
+          body: 'Un visage réaliste de {{vendor}} peut parler pour {{name}} pendant tes appels. Partout ailleurs, son portrait reste.',
+          drawn: 'Portrait dessiné',
+          drawnHint: 'Le portrait ci-dessus, aussi pendant les appels.',
+          notAllowed: 'Les visages vidéo sont inclus dans Pro.',
+          consentTitle: 'Utiliser {{vendor}} pour le visage ?',
+          consentBody:
+            'Pour animer le visage, {{vendor}} reçoit ce que dit {{name}} pendant tes appels. Ta propre voix n’est jamais envoyée. Tu peux revenir au portrait à tout moment.',
+          agree: 'Accepter et utiliser ce visage',
+          cancel: 'Pas maintenant',
+          failed: 'Le visage n’a pas pu être changé. Réessaie.',
+        },
       },
       voice: {
         title: 'Quelle est sa voix ?',
