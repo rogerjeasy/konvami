@@ -62,6 +62,20 @@ describe('5.12 Ask the tutor', () => {
     expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled();
   });
 
+  it('offers example questions that fill the field, ready to send or change', async () => {
+    await open();
+
+    await fireEvent.press(
+      screen.getByRole('button', { name: /What’s the difference between “kennen” and “wissen”\?/ }),
+    );
+
+    expect(screen.getByLabelText(FIELD)).toHaveProp(
+      'value',
+      'What’s the difference between “kennen” and “wissen”?',
+    );
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled();
+  });
+
   it('answers a question with examples and the topic it rests on', async () => {
     const api = inApp();
     await open(api);

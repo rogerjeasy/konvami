@@ -9,15 +9,17 @@ import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ChatBubble } from '@/components/chat';
+import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
+import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
-import { commitFeedback } from '@/lib/haptics';
+import { commitFeedback, stepFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
@@ -214,6 +216,25 @@ export function TutorScreen() {
               {asking ? <ChatBubble from="learner">{asking}</ChatBubble> : null}
               <Text tone="muted">{t('tutor.thinking')}</Text>
             </View>
+          ) : null}
+          {state.data.questions.length === 0 && !busy ? (
+            <Reveal delay={staggerDelay(1)}>
+              <Section title={t('tutor.tryTitle')}>
+                <ListGroup>
+                  {(['one', 'two', 'three'] as const).map((key) => (
+                    <ListRow
+                      key={key}
+                      icon="message"
+                      title={t(`tutor.try.${key}`)}
+                      onPress={() => {
+                        stepFeedback();
+                        setDraft(t(`tutor.try.${key}`));
+                      }}
+                    />
+                  ))}
+                </ListGroup>
+              </Section>
+            </Reveal>
           ) : null}
           {state.data.questions.map((asked, i) => (
             <Reveal key={asked.id} delay={staggerDelay(Math.min(i, 3) + 1)}>
