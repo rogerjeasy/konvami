@@ -180,8 +180,18 @@ canvas after that date is not in it.
   `PageHero` tile at the top (title, what it is for, the learner's own number in lime or ink):
   talking (role-plays, pen-pal) tomato; words (phrasebook, import, pronunciation) pink; level and
   goals (grammar map and topics, exam centre, a simulation's score, Then vs Now) forest; asking
-  (the Tutor) ink. Settings pages (Profile's sub-pages, Help, legal, the owner's pages) stay on
-  paper, calm, with colour only in their row blobs (`IconBlob`) and the ink voice-minutes tile.
+  (the Tutor) ink. Profile's pages open the same way (`ProfilePage` `hero`): the learner's own
+  things butter (personal, reminders, voice changes, help), goals and learning forest, partners
+  tomato, memories and the read-aloud voice pink, the account and its data ink (security,
+  privacy, plan, export, the owner's pages). Deleting the account and the legal texts stay on
+  paper. A value picked from a short scale (days and minutes a week, the reminder's time, pen-pal
+  notes and quiet hours) is a `Stepper`, not a wall of chips; a choice between named things
+  (the exam to simulate) is a list of `OptionCard`s.
+- Account and setup screens open the same way: signing in and creating an account tomato, the
+  birthday and anything about the learner butter, email, passwords and AI consent ink, the
+  setup's questions by subject (language and course pink, explanations ink, goals and level
+  forest, partners and Persona Studio tomato). A sheet names its subject with an `IconBlob`
+  beside its title.
 - First-launch heroes sit on a block: the intro's slides tomato, butter and pink, the microphone
   tomato, the placement test and Face ID forest. Every call (practice, setup with Mia, the
   placement test, an exam simulation) is the forest block with lime (`BlockScope`).
