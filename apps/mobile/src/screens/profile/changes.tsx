@@ -120,7 +120,11 @@ export function ProfileChangesScreen() {
       : '';
 
   return (
-    <ProfilePage title={t('profile.changes.title')} body={t('profile.changes.body')}>
+    <ProfilePage
+      hero={{ color: 'butter', icon: 'refresh' }}
+      title={t('profile.changes.title')}
+      body={t('profile.changes.body')}
+    >
       {state.phase === 'ready' ? (
         state.data.changes.length === 0 ? (
           <EmptyState
