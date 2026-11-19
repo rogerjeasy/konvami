@@ -38,7 +38,11 @@ def test_the_formats_of_the_spec_are_there() -> None:
         "goethe_b2",
         "telc_b1",
         "dtz",
+        "osd_a1",
+        "osd_a2",
         "osd_b1",
+        "osd_b2",
+        "osd_c1",
         *(f"testdaf_paper_{index}" for index in range(1, 8)),
     }
     b1 = format_for(GERMAN_EXAMS, "goethe", "B1")
@@ -60,6 +64,29 @@ def test_osd_b1_uses_the_joint_b1_format_without_duplicating_task_content() -> N
     assert format_for(GERMAN_EXAMS, "osd", "C2") is None
 
 
+def test_osd_levels_have_cards_of_their_own_and_grow_from_contact_to_discussion() -> None:
+    levels = ("A1", "A2", "B2", "C1")
+    found = {level: format_for(GERMAN_EXAMS, "osd", level) for level in levels}
+    others = {
+        card.id
+        for exam in GERMAN_EXAMS
+        if exam.exam != "osd"
+        for part in exam.parts
+        for card in part.cards
+    }
+
+    for level, exam in found.items():
+        assert exam is not None, level
+        assert exam.name == f"ÖSD Zertifikat {level}"
+        # Cards of their own, not another exam's copied under a new name.
+        assert not others & {card.id for part in exam.parts for card in part.cards}
+    kinds = {level: [part.kind for part in exam.parts] for level, exam in found.items() if exam}
+    assert kinds["A1"][0] == "introduce"
+    assert "plan_together" in kinds["A2"]
+    assert kinds["B2"][-1] == "discussion"
+    assert kinds["C1"][-1] == "discussion"
+
+
 @pytest.mark.parametrize(
     ("exam", "level", "expected"),
     [
@@ -70,6 +97,10 @@ def test_osd_b1_uses_the_joint_b1_format_without_duplicating_task_content() -> N
         ("dtz", None, "dtz"),
         ("telc", "C1", None),
         ("testdaf", "B2", "testdaf_paper_1"),
+        ("osd", "A1", "osd_a1"),
+        ("osd", "A2", "osd_a2"),
+        ("osd", "B2", "osd_b2"),
+        ("osd", "C1", "osd_c1"),
     ],
 )
 def test_a_learners_exam_finds_its_format(exam: str, level: str | None, expected: str) -> None:

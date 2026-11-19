@@ -615,6 +615,287 @@ GERMAN_EXAMS += tuple(
     if exam.id == "goethe_b1"
 )
 
+# The other ÖSD levels, after the public descriptions of their oral parts and simplified to one
+# call like the rest: contact and everyday tasks at A1/A2, a talk and a discussion at B2/C1. The
+# cards are our own. https://osd.at/pruefungen/
+GERMAN_EXAMS += (
+    SpeakingExam(
+        id="osd_a1",
+        exam="osd",
+        levels=("A1",),
+        name="ÖSD Zertifikat A1",
+        prep_seconds=0,
+        parts=(
+            ExamPart(
+                "aufgabe_1",
+                "introduce",
+                "Make contact",
+                "The learner introduces themselves along the card's keywords; then ask one "
+                "simple question about one of them.",
+                90,
+                (
+                    _card(
+                        "osd_a1_1",
+                        "Kontakt aufnehmen",
+                        "Name?",
+                        "Woher?",
+                        "Wo wohnen Sie?",
+                        "Familie?",
+                        "Was machen Sie gern?",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "aufgabe_2",
+                "ask_answer",
+                "Ask for and give information",
+                "Take turns asking and answering simple questions about the card's topic; "
+                "keep your answers short and at A1.",
+                150,
+                (
+                    _card(
+                        "osd_a1_2a",
+                        "Thema: Wohnung",
+                        "Zimmer",
+                        "Küche",
+                        "Miete",
+                        "Nachbarn",
+                    ),
+                    _card(
+                        "osd_a1_2b",
+                        "Thema: Arbeit und Schule",
+                        "Wann?",
+                        "Wo?",
+                        "Kollegen",
+                        "Pause",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "aufgabe_3",
+                "requests",
+                "Manage a situation",
+                "Act out the card's everyday situation: you are the shop assistant or the "
+                "neighbour; the learner asks for what they need and reacts to your answer.",
+                120,
+                (
+                    _card(
+                        "osd_a1_3a",
+                        "In der Bäckerei",
+                        "zwei Semmeln",
+                        "Was kostet das?",
+                        "mit Karte bezahlen",
+                    ),
+                    _card(
+                        "osd_a1_3b",
+                        "Beim Nachbarn",
+                        "eine Leiter (leihen)",
+                        "heute Abend",
+                        "Danke sagen",
+                    ),
+                ),
+            ),
+        ),
+    ),
+    SpeakingExam(
+        id="osd_a2",
+        exam="osd",
+        levels=("A2",),
+        name="ÖSD Zertifikat A2",
+        prep_seconds=0,
+        parts=(
+            ExamPart(
+                "aufgabe_1",
+                "questions_about_you",
+                "Make contact",
+                "Get to know each other: take turns asking and answering questions along the "
+                "card's keywords.",
+                120,
+                (
+                    _card(
+                        "osd_a2_1",
+                        "Kontakt aufnehmen",
+                        "Wohnort und Wohnung",
+                        "Arbeit oder Ausbildung",
+                        "Freizeit",
+                        "Deutsch lernen: warum?",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "aufgabe_2",
+                "talk_about_life",
+                "Talk about a topic",
+                "The learner talks for about a minute about the card's question, using its "
+                "points; then ask one or two follow-up questions.",
+                180,
+                (
+                    _card(
+                        "osd_a2_2a",
+                        "Wie kommen Sie zur Arbeit oder zum Kurs?",
+                        "Verkehrsmittel",
+                        "Wie lange?",
+                        "Was ist gut, was ist schlecht?",
+                    ),
+                    _card(
+                        "osd_a2_2b",
+                        "Ihr letzter Urlaub",
+                        "Wohin?",
+                        "Mit wem?",
+                        "Was haben Sie gemacht?",
+                        "Wetter",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "aufgabe_3",
+                "plan_together",
+                "Plan something together",
+                _PLAN_TOGETHER,
+                180,
+                (
+                    _card(
+                        "osd_a2_3a",
+                        "Sie möchten zusammen einen Ausflug an den See machen.",
+                        "Wann?",
+                        "Wie fahren Sie hin?",
+                        "Was nehmen Sie mit?",
+                        "Was machen Sie bei Regen?",
+                    ),
+                    _card(
+                        "osd_a2_3b",
+                        "Ein Kollege hat ein Baby bekommen. Sie kaufen zusammen ein Geschenk.",
+                        "Was?",
+                        "Wie viel Geld?",
+                        "Wo kaufen?",
+                        "Wann übergeben?",
+                    ),
+                ),
+            ),
+        ),
+    ),
+    SpeakingExam(
+        id="osd_b2",
+        exam="osd",
+        levels=("B2",),
+        name="ÖSD Zertifikat B2",
+        prep_seconds=15 * 60,
+        parts=(
+            ExamPart(
+                "aufgabe_1",
+                "talk",
+                "Give a talk",
+                "The learner presents the card's topic for about three minutes without your "
+                "help, following its points; then ask one question about it.",
+                270,
+                (
+                    _card(
+                        "osd_b2_1a",
+                        "Lebenslanges Lernen: notwendig oder Druck?",
+                        "Das Thema einleiten",
+                        "Beispiele aus Ihrer Erfahrung",
+                        "Vor- und Nachteile abwägen",
+                        "Ihre Meinung und ein Fazit",
+                    ),
+                    _card(
+                        "osd_b2_1b",
+                        "Einkaufen im Internet oder im Geschäft?",
+                        "Das Thema einleiten",
+                        "Beispiele aus Ihrer Erfahrung",
+                        "Vor- und Nachteile abwägen",
+                        "Ihre Meinung und ein Fazit",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "aufgabe_2",
+                "discussion",
+                "Discussion",
+                "Discuss the card's question with the learner as the other candidate: take the "
+                "opposite side, ask for reasons, and work towards a compromise together.",
+                240,
+                (
+                    _card(
+                        "osd_b2_2a",
+                        "Sollte es in der Arbeitswelt eine Vier-Tage-Woche geben?",
+                        "Argumente austauschen",
+                        "Auf Gegenargumente eingehen",
+                        "Einen Kompromiss finden",
+                    ),
+                    _card(
+                        "osd_b2_2b",
+                        "Sollten Handys an Schulen verboten werden?",
+                        "Argumente austauschen",
+                        "Auf Gegenargumente eingehen",
+                        "Einen Kompromiss finden",
+                    ),
+                ),
+            ),
+        ),
+    ),
+    SpeakingExam(
+        id="osd_c1",
+        exam="osd",
+        levels=("C1",),
+        name="ÖSD Zertifikat C1",
+        prep_seconds=15 * 60,
+        parts=(
+            ExamPart(
+                "aufgabe_1",
+                "talk",
+                "Give a talk",
+                "The learner gives a structured talk of about four minutes on the card's "
+                "statement: its context, arguments on both sides weighed against each other, "
+                "and a reasoned position. Then ask one probing question.",
+                300,
+                (
+                    _card(
+                        "osd_c1_1a",
+                        "„Künstliche Intelligenz wird mehr Arbeitsplätze schaffen als vernichten.“",
+                        "Hintergrund des Themas",
+                        "Argumente dafür und dagegen",
+                        "Abwägung",
+                        "Eigene, begründete Position",
+                    ),
+                    _card(
+                        "osd_c1_1b",
+                        "„Wer in der Stadt wohnt, braucht kein eigenes Auto mehr.“",
+                        "Hintergrund des Themas",
+                        "Argumente dafür und dagegen",
+                        "Abwägung",
+                        "Eigene, begründete Position",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "aufgabe_2",
+                "discussion",
+                "Discussion",
+                "Discuss the card's question as the other candidate at C1: challenge the "
+                "learner's arguments with counter-examples, ask them to qualify claims, and "
+                "let them conclude.",
+                240,
+                (
+                    _card(
+                        "osd_c1_2a",
+                        "Sollen Museen ihren Eintritt für alle abschaffen?",
+                        "Position beziehen",
+                        "Gegenargumente entkräften",
+                        "Zu einem Ergebnis kommen",
+                    ),
+                    _card(
+                        "osd_c1_2b",
+                        "Soll Tourismus in beliebten Städten begrenzt werden?",
+                        "Position beziehen",
+                        "Gegenargumente entkräften",
+                        "Zu einem Ergebnis kommen",
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
 
 GERMAN_EXAMS = tuple(
     replace(
