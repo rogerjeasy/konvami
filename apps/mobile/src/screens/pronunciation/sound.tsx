@@ -4,7 +4,6 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { PronunciationSoundDetail } from '@konvami/api-client';
 import { useSession } from '@/auth';
-import { Card } from '@/components/card';
 import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
@@ -12,6 +11,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
@@ -50,14 +50,7 @@ function SoundBody({
   return (
     <View className="gap-6">
       <Reveal>
-        <View className="gap-3">
-          <Text variant="title" accessibilityRole="header">
-            {sound.title}
-          </Text>
-          <Card className="p-4">
-            <Text>{sound.tip}</Text>
-          </Card>
-        </View>
+        <PageHero color="pink" icon="volume" title={sound.title} body={sound.tip} />
       </Reveal>
       {sound.listening && detail.pairs.length > 0 ? (
         <Reveal delay={staggerDelay(1)}>

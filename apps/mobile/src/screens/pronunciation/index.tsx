@@ -11,6 +11,7 @@ import { Reveal } from '@/components/motion';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
@@ -52,12 +53,12 @@ export function PronunciationLabScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('pronunciation.title')}
-          </Text>
-          <Text tone="muted">{t('pronunciation.body')}</Text>
-        </View>
+        <PageHero
+          color="pink"
+          icon="volume"
+          title={t('pronunciation.title')}
+          body={t('pronunciation.body')}
+        />
       </Reveal>
       {!data ? (
         <LoadState

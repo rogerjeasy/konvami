@@ -13,6 +13,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { commitFeedback } from '@/lib/haptics';
@@ -140,12 +141,12 @@ export function PhrasebookScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('phrasebook.title')}
-          </Text>
-          <Text tone="muted">{t('phrasebook.body')}</Text>
-        </View>
+        <PageHero
+          color="pink"
+          icon="book"
+          title={t('phrasebook.title')}
+          body={t('phrasebook.body')}
+        />
       </Reveal>
       {!ready ? (
         <LoadState

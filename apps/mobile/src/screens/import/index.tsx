@@ -16,6 +16,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { commitFeedback } from '@/lib/haptics';
@@ -145,12 +146,7 @@ export function ImportScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('import.title')}
-          </Text>
-          <Text tone="muted">{t('import.body')}</Text>
-        </View>
+        <PageHero color="pink" icon="image" title={t('import.title')} body={t('import.body')} />
       </Reveal>
       {!ready ? (
         <LoadState
