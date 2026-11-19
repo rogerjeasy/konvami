@@ -124,6 +124,9 @@ class AzurePronunciation:
             "ReferenceText": reference,
             "GradingSystem": "HundredMark",
             "Granularity": "Phoneme",
+            # Phoneme names in IPA where the locale supports it (otherwise the provider's own set;
+            # domain/sound_phonemes.py accepts both and falls back to word scores).
+            "PhonemeAlphabet": "IPA",
             "Dimension": "Comprehensive",
             "EnableMiscue": True,
             # Prosody is supported for en-US; other languages must not receive invented marks.
