@@ -2196,6 +2196,7 @@ export interface components {
             endedAt: string | null;
             /** Goalsreached */
             goalsReached: string[];
+            guest: components["schemas"]["PersonaOut"] | null;
             /** Id */
             id: string;
             /** Learnerturns */
@@ -4366,6 +4367,8 @@ export interface components {
         /** TurnOut */
         TurnOut: {
             audio: components["schemas"]["TurnAudioOut"] | null;
+            /** Guest */
+            guest: boolean;
             /**
              * Speaker
              * @enum {string}
@@ -4445,6 +4448,8 @@ export interface components {
              * @default false
              */
             assessmentConsent: boolean;
+            /** Guestpersonaid */
+            guestPersonaId?: string | null;
             /** Localdate */
             localDate?: string | null;
             /** Personaid */

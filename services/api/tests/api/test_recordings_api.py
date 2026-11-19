@@ -47,6 +47,7 @@ def test_a_recorded_turn_comes_with_a_short_lived_address_and_its_verbatim_text(
         "text": "Gut, danke!",
         "verbatim": "Gut, dank.",
         "audio": {"url": f"https://files.test/{key}?expires=900", "milliseconds": 200},
+        "guest": False,
     }
 
 

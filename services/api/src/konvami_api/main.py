@@ -63,6 +63,7 @@ from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.two_partners import GuestSpeech
 from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
@@ -452,6 +453,8 @@ def build_backend(
         current_language=lambda user: profiles.get(user).target_language,
         live_speech=LiveSpeech(premium_voices, premium_speech),
         candidate_speech=CandidateSpeech(directory, speech, models.speech, exams.candidate_voice),
+        # The second partner of a two-partner conversation speaks with the same speech model.
+        guest_speech=GuestSpeech(directory, speech, models.speech),
         settings=voice_config,
         scripts={
             CallPurpose.ONBOARDING: HostScript(CATALOG, profiles),
