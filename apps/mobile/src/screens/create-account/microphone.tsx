@@ -6,6 +6,7 @@ import { motion, size } from '@konvami/design-tokens';
 import { LogoMark } from '@/components/brand';
 import { Button } from '@/components/button';
 import { HeroLayout } from '@/components/hero-layout';
+import { IconBlob } from '@/components/list';
 import { Icon, type IconName } from '@/components/icon';
 import { Loop, Pop, Reveal } from '@/components/motion';
 import { HeaderButton } from '@/components/step-header';
@@ -128,7 +129,7 @@ export function MicrophoneScreen() {
 
   return (
     <HeroLayout
-      panel
+      panel="tomato"
       heroShare={HERO_SHARE}
       heroHeader={<HeaderButton icon="close" label={t('common.close')} onPress={next} />}
       hero={<MicIllustration />}
@@ -146,13 +147,7 @@ export function MicrophoneScreen() {
             <View className="gap-4 pt-3">
               {POINTS.map(({ icon, text }) => (
                 <View key={text} className="flex-row items-center gap-3.5">
-                  <View
-                    aria-hidden
-                    style={{ width: size.avatarSm, height: size.avatarSm }}
-                    className="items-center justify-center rounded-md bg-surface"
-                  >
-                    <Icon name={icon} color={color.fg} size={size.iconMd} />
-                  </View>
+                  <IconBlob icon={icon} />
                   <Text variant="bodySmall" className="flex-1">
                     {t(`microphone.${text}`)}
                   </Text>

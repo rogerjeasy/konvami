@@ -15,13 +15,15 @@ import { CorrectionsIllustration, MemoryIllustration, SpeakIllustration } from '
 type Slide = {
   key: 'speak' | 'corrections' | 'memory';
   Illustration: ComponentType<{ play: boolean }>;
+  panel: 'tomato' | 'butter' | 'pink';
 };
 
 /** Screens 1.2–1.4. Order here is the order shown. */
 const SLIDES: readonly Slide[] = [
-  { key: 'speak', Illustration: SpeakIllustration },
-  { key: 'corrections', Illustration: CorrectionsIllustration },
-  { key: 'memory', Illustration: MemoryIllustration },
+  // Each slide on the colour of what it shows: talking, corrections, the partners' memory.
+  { key: 'speak', Illustration: SpeakIllustration, panel: 'tomato' },
+  { key: 'corrections', Illustration: CorrectionsIllustration, panel: 'butter' },
+  { key: 'memory', Illustration: MemoryIllustration, panel: 'pink' },
 ];
 
 /**
@@ -72,7 +74,7 @@ export function IntroScreen() {
           // Each page clips its own content, so nothing can ever draw over a neighbouring slide.
           <View key={slide.key} style={{ width, height, overflow: 'hidden' }}>
             <HeroLayout
-              panel
+              panel={slide.panel}
               heroHeader={
                 <TextButton
                   label={t('common.skip')}

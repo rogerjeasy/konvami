@@ -85,7 +85,7 @@ export function WelcomeBackScreen() {
 
   return (
     <HeroLayout
-      panel
+      panel="forest"
       centerBody
       heroShare={HERO_SHARE}
       hero={

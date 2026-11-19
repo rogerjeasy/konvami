@@ -12,6 +12,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { motion, size } from '@konvami/design-tokens';
 import { Card } from '@/components/card';
 import { ChatBubble } from '@/components/chat';
+import { IconBlob } from '@/components/list';
 import { Icon } from '@/components/icon';
 import { Animate, Loop, Pop, Reveal } from '@/components/motion';
 import { PersonaAvatar } from '@/components/persona-avatar';
@@ -122,12 +123,12 @@ export function SpeakIllustration({ play }: SceneProps) {
       </Pop>
 
       <Reveal play={play} delay={staggerDelay(SPEAK.question)}>
-        <ChatBubble from="persona" gloss={t('illustration.personaLineGloss')} decorative>
+        <ChatBubble from="persona" gloss={t('illustration.personaLineGloss')} decorative lang>
           {SAMPLE.chat.personaLine}
         </ChatBubble>
       </Reveal>
       <Reveal play={play} delay={staggerDelay(SPEAK.answer)}>
-        <ChatBubble from="learner" decorative>
+        <ChatBubble from="learner" decorative lang>
           {SAMPLE.chat.learnerLine}
         </ChatBubble>
       </Reveal>
@@ -187,11 +188,11 @@ export function CorrectionsIllustration({ play }: SceneProps) {
   return (
     <Illustration>
       <Reveal play={play} delay={staggerDelay(CORRECT.said)}>
-        <ChatBubble from="learner" decorative>
+        <ChatBubble from="learner" decorative lang>
           {c.before}
           <Text
-            variant="chat"
-            tone="onPrimary"
+            variant="langBody"
+            tone="onLime"
             className="underline"
             style={{ textDecorationColor: color.warnMark }}
           >
@@ -246,12 +247,7 @@ export function CorrectionsIllustration({ play }: SceneProps) {
 
       <Reveal play={play} delay={staggerDelay(CORRECT.word)}>
         <Card className="flex-row items-center gap-3 px-3.5 py-3">
-          <View
-            style={{ width: size.avatarSm, height: size.avatarSm }}
-            className="items-center justify-center rounded-md bg-primary-soft"
-          >
-            <Icon name="book" color={color.primaryText} size={size.iconMd} />
-          </View>
+          <IconBlob icon="book" />
           <View className="flex-1">
             <Text variant="captionStrong" tone="primary" maxFontSizeMultiplier={MAX_SCALE}>
               {t('illustration.newWordSaved')}

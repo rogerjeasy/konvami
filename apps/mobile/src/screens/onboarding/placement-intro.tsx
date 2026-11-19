@@ -8,6 +8,7 @@ import { Avatar } from '@/components/avatar/avatar';
 import { Button } from '@/components/button';
 import { HeroLayout } from '@/components/hero-layout';
 import { Icon, type IconName } from '@/components/icon';
+import { IconBlob } from '@/components/list';
 import { Pop, Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton } from '@/components/step-header';
@@ -68,7 +69,7 @@ function Intro({ data }: { data: OnboardingData }) {
 
   return (
     <HeroLayout
-      panel
+      panel="forest"
       heroShare={HERO_SHARE}
       screenHeader={
         <View className="min-h-tap flex-row items-center pb-2">
@@ -116,13 +117,7 @@ function Intro({ data }: { data: OnboardingData }) {
             {FACTS.map((fact, i) => (
               <Reveal key={fact.key} delay={staggerDelay(5 + i)}>
                 <View className="flex-row items-center gap-3">
-                  <View
-                    aria-hidden
-                    style={{ width: size.avatarSm, height: size.avatarSm }}
-                    className="items-center justify-center rounded-md bg-primary-soft"
-                  >
-                    <Icon name={fact.icon} color={color.primaryText} size={size.iconMd} />
-                  </View>
+                  <IconBlob icon={fact.icon} />
                   <Text variant="callout" className="flex-1">
                     {t(`onboarding.placement.intro.facts.${fact.key}`)}
                   </Text>
