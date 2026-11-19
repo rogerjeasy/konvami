@@ -14,6 +14,7 @@ import { Reveal } from '@/components/motion';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { daysUntil, formatDate, formatShortDate } from '@/lib/format';
 import { stepFeedback } from '@/lib/haptics';
@@ -272,12 +273,7 @@ export function ExamCentreScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('exams.title')}
-          </Text>
-          <Text tone="muted">{t('exams.body')}</Text>
-        </View>
+        <PageHero color="forest" icon="award" title={t('exams.title')} body={t('exams.body')} />
       </Reveal>
       {centre ? (
         <Centre centre={centre} now={new Date(clock.now())} chosen={chosen} onChoose={setPicked} />

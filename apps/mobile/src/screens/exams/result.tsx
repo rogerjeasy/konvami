@@ -13,6 +13,7 @@ import { Pill } from '@/components/pill';
 import { PlayButton } from '@/components/play-button';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useSound } from '@/hooks/use-sound';
@@ -234,14 +235,12 @@ export function SimulationScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {exam?.name ?? t('exams.result.title')}
-          </Text>
-          <Text variant="small" tone="muted">
-            {t('exams.result.estimate')}
-          </Text>
-        </View>
+        <PageHero
+          color="forest"
+          icon="award"
+          title={exam?.name ?? t('exams.result.title')}
+          body={t('exams.result.estimate')}
+        />
       </Reveal>
       {view.phase === 'ready' ? (
         <Scored simulation={view.value} exam={exam} />

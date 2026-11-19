@@ -12,6 +12,7 @@ import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { useCountdown } from '@/hooks/use-countdown';
@@ -68,17 +69,13 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {exam.name}
-          </Text>
-          <Text tone="muted">{t('exams.prepBody')}</Text>
+        <PageHero color="forest" icon="award" title={exam.name} body={t('exams.prepBody')}>
           {exam.stage && exam.stages ? (
-            <Text variant="small" tone="muted">
+            <Text variant="labelSmall" tone="lime">
               {t('examStages.stage', { stage: exam.stage, total: exam.stages })}
             </Text>
           ) : null}
-        </View>
+        </PageHero>
       </Reveal>
       {exam.prepSeconds > 0 ? (
         <Reveal delay={staggerDelay(1)}>
