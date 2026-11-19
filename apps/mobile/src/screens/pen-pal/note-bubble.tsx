@@ -1,6 +1,7 @@
 import { ActivityIndicator, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PenPalCorrection, PenPalNote } from '@konvami/api-client';
+import { chatText } from '@/components/chat';
 import { CorrectionCard } from '@/components/correction-card';
 import { NoticeBox } from '@/components/notice-box';
 import { PlayButton, type PlayState } from '@/components/play-button';
@@ -82,7 +83,7 @@ export function NoteBubble({
     <View
       className={`max-w-[88%] gap-2 rounded-card px-3.5 py-3 ${
         mine
-          ? 'self-end rounded-br-sm border border-primary bg-primary-soft'
+          ? 'self-end rounded-br-sm bg-lime'
           : 'self-start rounded-bl-sm border border-border bg-chip'
       }`}
     >
@@ -95,15 +96,18 @@ export function NoteBubble({
           />
         ) : null}
         <View className="shrink gap-0.5">
-          <Text variant="captionStrong" tone={mine ? 'primary' : 'muted'}>
+          <Text variant="captionStrong" tone={mine ? 'onLime' : 'muted'}>
             {mine ? t('penPal.yourNote') : name}
           </Text>
-          <Text variant="caption" tone="subtle">
+          <Text variant="caption" tone={mine ? 'onLime' : 'subtle'}>
             {formatClock(i18n.language, note.createdAt)}
           </Text>
         </View>
       </View>
-      <Text variant="chat" accessibilityLabel={`${who}. ${note.text}`}>
+      <Text
+        {...chatText(mine ? 'learner' : 'persona', true)}
+        accessibilityLabel={`${who}. ${note.text}`}
+      >
         {note.text}
       </Text>
     </View>
