@@ -66,7 +66,12 @@ function TurnAssessment({ callId, turn, audio }: Props) {
   return (
     <>
       <TextButton label={t('pronunciation.comparison.assessTurn')} onPress={() => setOpen(true)} />
-      <Sheet visible={open} title={t('pronunciation.assessment.title')} onClose={close}>
+      <Sheet
+        icon="volume"
+        visible={open}
+        title={t('pronunciation.assessment.title')}
+        onClose={close}
+      >
         <View className="gap-4 pt-2">
           {result?.assessment ? (
             <AssessmentResult assessment={result.assessment} />

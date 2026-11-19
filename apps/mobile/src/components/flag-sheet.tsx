@@ -83,7 +83,7 @@ export function FlagSheet({
   }
 
   return (
-    <Sheet visible={kind !== null} title={t('flag.title')} onClose={close}>
+    <Sheet icon="flag" visible={kind !== null} title={t('flag.title')} onClose={close}>
       {step === 'sent' ? (
         <View className="gap-4 pt-1" accessibilityLiveRegion="polite">
           <Text variant="heading" accessibilityRole="header">

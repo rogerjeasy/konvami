@@ -47,6 +47,7 @@ function ScenarioSheet({
   const partnerId = chosen ?? partners[0]?.id ?? null;
   return (
     <Sheet
+      icon="users"
       visible={scenario !== null}
       title={scenario ? t(titleKey(scenario)) : ''}
       onClose={() => {

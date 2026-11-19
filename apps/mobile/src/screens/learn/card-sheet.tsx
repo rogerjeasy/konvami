@@ -47,7 +47,7 @@ export function CardSheet({ card, onClose }: { card: Card | null; onClose: () =>
     dueLabel(t, i18n.language, card.dueAt, new Date(clock.now()), true),
   ];
   return (
-    <Sheet visible title={t(`learn.kind.${card.kind}`)} onClose={close}>
+    <Sheet icon="book" visible title={t(`learn.kind.${card.kind}`)} onClose={close}>
       <View testID="card-sheet" className="gap-4 pb-1 pt-2">
         {correction ? (
           <View className="gap-3">

@@ -115,7 +115,7 @@ export function SayItBetterSheet({
     ? () => clips.play(before.url, () => {}, before.milliseconds)
     : undefined;
   return (
-    <Sheet visible={open} title={t('report.retry.title')} onClose={close}>
+    <Sheet icon="mic" visible={open} title={t('report.retry.title')} onClose={close}>
       <View className="gap-4 pt-1">
         <View className="gap-1.5">
           <Text variant="small" tone="muted">

@@ -72,6 +72,7 @@ export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose
   const shadow = drill?.kind === 'shadow';
   return (
     <Sheet
+      icon="mic"
       visible={drill !== null}
       title={t(shadow ? 'pronunciation.sheet.shadowTitle' : 'pronunciation.sheet.wordTitle')}
       onClose={close}

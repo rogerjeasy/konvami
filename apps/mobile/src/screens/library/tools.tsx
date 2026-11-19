@@ -102,7 +102,12 @@ export function RecordingTools({
           {t('offlineLibrary.pinned')}
         </Text>
       ) : null}
-      <Sheet visible={open} onClose={() => setOpen(false)} title={t('offlineLibrary.tools')}>
+      <Sheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        title={t('offlineLibrary.tools')}
+        icon="volume"
+      >
         <ScrollView style={{ maxHeight: height * SHEET_BODY_SHARE }}>
           <View className="gap-4">
             <ChoiceGroup label={t('offlineLibrary.speed')} chips>
@@ -186,7 +191,7 @@ export function NoteEditor({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   return (
-    <Sheet visible={visible} onClose={onClose} title={t('offlineLibrary.note')}>
+    <Sheet visible={visible} onClose={onClose} title={t('offlineLibrary.note')} icon="edit">
       <ScrollView style={{ maxHeight: height * SHEET_BODY_SHARE }}>
         <View className="gap-3">
           <TextField

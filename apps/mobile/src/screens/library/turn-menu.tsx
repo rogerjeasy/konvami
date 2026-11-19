@@ -36,7 +36,7 @@ export function TurnMenu({
   return (
     <>
       <IconButton icon="more" label={t('offlineLibrary.more')} onPress={() => setOpen(true)} />
-      <Sheet visible={open} title={title} onClose={() => setOpen(false)}>
+      <Sheet icon="more" visible={open} title={title} onClose={() => setOpen(false)}>
         <View className="gap-1">
           {highlight ? (
             <ActionRow

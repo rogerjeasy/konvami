@@ -30,7 +30,7 @@ export function AppLanguageSheet({
   };
 
   return (
-    <Sheet visible={visible} title={t('welcome.languageSheetTitle')} onClose={onClose}>
+    <Sheet icon="globe" visible={visible} title={t('welcome.languageSheetTitle')} onClose={onClose}>
       <View accessibilityRole="radiogroup" className="gap-1">
         <ChoiceRow
           label={t('welcome.phoneLanguage', {

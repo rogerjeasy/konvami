@@ -69,7 +69,12 @@ export function DateChoice({
           onPress={() => setPicking(opensOn)}
         />
       )}
-      <Sheet visible={picking !== null} title={labels.title} onClose={() => setPicking(null)}>
+      <Sheet
+        icon="calendar"
+        visible={picking !== null}
+        title={labels.title}
+        onClose={() => setPicking(null)}
+      >
         {picking ? (
           <View className="gap-4 pt-1">
             <DateWheels
