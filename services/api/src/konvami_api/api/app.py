@@ -36,6 +36,7 @@ from konvami_api.api.schemas import (
     DeckSummaryOut,
     ExamCardOut,
     ExamCentreOut,
+    ExamPhraseBankOut,
     FeedbackIn,
     FeedbackInboxOut,
     FeedbackOut,
@@ -559,6 +560,11 @@ def _router(services: Services) -> APIRouter:
             exam=SpeakingExamOut.of(upcoming.exam),
             cards=[ExamCardOut.of(card) for card in upcoming.cards],
         )
+
+    @router.get("/exams/{exam_id}/phrases", operation_id="getExamPhraseBank", responses=NOT_FOUND)
+    def get_exam_phrase_bank(user: CurrentUser, exam_id: str) -> ExamPhraseBankOut:
+        """The phrases that help in a speaking test, by what they do (5.25)."""
+        return ExamPhraseBankOut.of(services.exams.phrase_bank(user, exam_id))
 
     def simulation_of(user: UUID, simulation: Simulation) -> SimulationOut:
         return SimulationOut.of(simulation, services.exams.cards_of(user, simulation))

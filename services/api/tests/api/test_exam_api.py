@@ -92,6 +92,23 @@ def test_the_centre_shows_the_learners_exam_and_the_formats(
     assert (centre["simulations"], centre["readiness"]) == ([], {})
 
 
+def test_the_phrase_bank_lists_phrases_by_function(
+    call: Call, text_model: ScriptedTextModel
+) -> None:
+    learner(call, text_model)
+
+    bank = call("GET", "/v1/exams/goethe_b1/phrases")
+    unknown = call("GET", "/v1/exams/toefl/phrases")
+
+    assert bank.status == 200, bank.body
+    assert bank.body["exam"] == "goethe_b1"
+    assert bank.body["name"] == "Goethe-Zertifikat B1"
+    first = bank.body["groups"][0]
+    assert first["function"] == "suggest"
+    assert {"text", "meanings", "level"} <= set(first["phrases"][0])
+    assert unknown.status == 404
+
+
 def test_the_next_simulation_shows_its_cards(call: Call, text_model: ScriptedTextModel) -> None:
     learner(call, text_model)
 
