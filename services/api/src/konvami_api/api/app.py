@@ -26,6 +26,7 @@ from konvami_api.api.schemas import (
     CardAudioOut,
     CardIn,
     CardOut,
+    CardsAheadOut,
     CatalogOut,
     ConversationAssessmentIn,
     ConversationsOut,
@@ -111,6 +112,8 @@ from konvami_api.api.schemas import (
     RetriesOut,
     RetryOut,
     ReviewIn,
+    ReviewSyncIn,
+    ReviewSyncOut,
     SimulationOut,
     SoundDetailOut,
     SoundOut,
@@ -134,7 +137,7 @@ from konvami_api.domain.accounts import AccountService, AccountView
 from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
-from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService
+from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService, OfflineReview
 from konvami_api.domain.catalog import Catalog
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationQuery, ConversationService
@@ -708,6 +711,31 @@ def _router(services: Services) -> APIRouter:
     @router.get("/cards/due", operation_id="getDueCards", responses=REFUSED)
     def get_due_cards(user: CurrentUser, limit: int = QUEUE_DEFAULT) -> QueueOut:
         return QueueOut.of(services.cards.queue(user, limit=limit))
+
+    @router.get("/cards/ahead", operation_id="getCardsAhead", responses=REFUSED)
+    def get_cards_ahead(user: CurrentUser) -> CardsAheadOut:
+        """The cards due within the next days, so the app can review them offline."""
+        return CardsAheadOut.of(services.cards.ahead(user))
+
+    @router.post("/cards/reviews", operation_id="syncCardReviews", responses=REFUSED)
+    def sync_card_reviews(user: CurrentUser, batch: ReviewSyncIn) -> ReviewSyncOut:
+        """Stores ratings the app gave, perhaps offline, in the order they were given. Sending
+        the same batch again stores nothing twice; the server's card wins over an older rating."""
+        return ReviewSyncOut.of(
+            services.cards.sync(
+                user,
+                [
+                    OfflineReview(
+                        client_id=item.client_id,
+                        card_id=item.card_id,
+                        rating=item.rating,
+                        expected_reviews=item.expected_reviews,
+                        reviewed_at=item.reviewed_at,
+                    )
+                    for item in batch.reviews
+                ],
+            )
+        )
 
     @router.post(
         "/cards/{card_id}/review",

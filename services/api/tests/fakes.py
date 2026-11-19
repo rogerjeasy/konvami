@@ -833,6 +833,8 @@ class InMemoryCardRepository:
         self.cards: dict[UUID, tuple[UUID, str, str, Card]] = {}
         # (card, rating, when) of every review, in order.
         self.reviews: list[tuple[UUID, str, datetime]] = []
+        # (card, the phone's id) of every review a phone sent with an id.
+        self.client_ids: set[tuple[UUID, UUID]] = set()
 
     def _of(self, user_id: UUID, language: str) -> list[tuple[str, Card]]:
         return [
@@ -878,14 +880,31 @@ class InMemoryCardRepository:
         cards = [card for _, card in self._of(user_id, language)]
         return len(cards), sum(1 for card in cards if card.due_at <= now)
 
-    def reviewed(self, user_id: UUID, card: Card, rating: str, reviews_before: int) -> bool:
+    def reviewed(
+        self,
+        user_id: UUID,
+        card: Card,
+        rating: str,
+        reviews_before: int,
+        client_id: UUID | None = None,
+    ) -> bool:
         stored = self.cards.get(card.id)
         if stored is None or stored[0] != user_id or stored[3].reviews != reviews_before:
+            return False
+        if client_id is not None and (card.id, client_id) in self.client_ids:
             return False
         self.cards[card.id] = (*stored[:3], card)
         assert card.reviewed_at is not None
         self.reviews.append((card.id, rating, card.reviewed_at))
+        if client_id is not None:
+            self.client_ids.add((card.id, client_id))
         return True
+
+    def has_review(self, user_id: UUID, card_id: UUID, client_id: UUID) -> bool:
+        stored = self.cards.get(card_id)
+        return (
+            stored is not None and stored[0] == user_id and (card_id, client_id) in self.client_ids
+        )
 
     def remove(self, user_id: UUID, card_id: UUID) -> bool:
         stored = self.cards.get(card_id)

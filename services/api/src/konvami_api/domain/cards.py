@@ -34,6 +34,13 @@ PAGE_MAX = 100
 # How many cards one review session holds.
 QUEUE_DEFAULT = 20
 QUEUE_MAX = 50
+# How far ahead the app keeps cards on the phone, so a learner who goes offline can still
+# review what comes due during a week away from a connection.
+OFFLINE_AHEAD = dt.timedelta(days=7)
+# The most cards the app keeps for that; a week's reviews of a large deck stay well below it.
+OFFLINE_MAX = 300
+# The most reviews one sync carries: a long offline week, in one request.
+SYNC_MAX = 200
 # Far enough ahead that every card is due by then: past FSRS's longest interval.
 BRING_BACK_HORIZON = dt.timedelta(days=fsrs.MAX_INTERVAL_DAYS + 1)
 
@@ -117,6 +124,40 @@ class Queue:
 
 
 @dataclass(frozen=True)
+class Ahead:
+    """The cards due from now to `OFFLINE_AHEAD`, for the app to review them offline."""
+
+    cards: tuple[Card, ...]
+    language: str
+
+
+@dataclass(frozen=True)
+class OfflineReview:
+    """A rating the learner gave on the phone, perhaps while offline, sent when it can be."""
+
+    # Made by the phone for this rating; the same rating sent twice is stored once.
+    client_id: UUID
+    card_id: UUID
+    rating: Rating
+    # The reviews the card had on the phone when it was rated: the version it was rated on.
+    expected_reviews: int
+    reviewed_at: dt.datetime
+
+
+# What became of an offline rating: stored (now or by an earlier sync of the same rating),
+# dropped because the card had changed on the server meanwhile, or dropped with its card.
+SyncOutcome = Literal["applied", "superseded", "removed"]
+
+
+@dataclass(frozen=True)
+class Synced:
+    client_id: UUID
+    outcome: SyncOutcome
+    # The card as the server has it now; None when it is gone.
+    card: Card | None
+
+
+@dataclass(frozen=True)
 class Saved:
     """Which words and mistakes of a report the learner has as cards, in the report's order."""
 
@@ -186,9 +227,20 @@ class CardRepository(Protocol):
     def counts(self, user_id: UUID, language: str, now: dt.datetime) -> tuple[int, int]:
         """How many cards the learner has in a language, and how many of them are due."""
 
-    def reviewed(self, user_id: UUID, card: Card, rating: Rating, reviews_before: int) -> bool:
+    def reviewed(
+        self,
+        user_id: UUID,
+        card: Card,
+        rating: Rating,
+        reviews_before: int,
+        client_id: UUID | None = None,
+    ) -> bool:
         """Stores a card as a review left it and logs the review. Only when the card still has
-        `reviews_before` reviews: of two reviews at once, one is stored and one gets False."""
+        `reviews_before` reviews: of two reviews at once, one is stored and one gets False.
+        `client_id` is the phone's id of an offline rating, logged with the review."""
+
+    def has_review(self, user_id: UUID, card_id: UUID, client_id: UUID) -> bool:
+        """Whether a review with the phone's id `client_id` is logged for the card."""
 
     def remove(self, user_id: UUID, card_id: UUID) -> bool: ...
 
@@ -494,6 +546,49 @@ class CardService:
             # Another review of the same card was stored first (a rating tapped twice).
             raise CardError("conflict")
         return after
+
+    def ahead(self, user_id: UUID) -> Ahead:
+        """The cards due by `OFFLINE_AHEAD` from now, soonest first, for the phone to keep."""
+        language = self._language(user_id)
+        horizon = self._clock() + OFFLINE_AHEAD
+        cards = self._repository.due(user_id, language, horizon, OFFLINE_MAX)
+        return Ahead(cards=tuple(cards), language=language)
+
+    def sync(self, user_id: UUID, reviews: Sequence[OfflineReview]) -> list[Synced]:
+        """Stores the ratings a phone made, perhaps offline, in the order they were given.
+
+        The server's card wins: a rating is stored only on the version of the card it was made
+        on (`expected_reviews`). One made on an older version (another device reviewed the card
+        meanwhile) is dropped, because scheduling it from a history the learner did not have
+        would put the card at a wrong date. A rating already stored (a sync whose answer was
+        lost) is answered as stored again. A review time outside the card's history (a phone
+        clock that is wrong) is moved to its nearest end. Raises `CardError("invalid_review")`
+        for a batch over `SYNC_MAX` or a time without a zone."""
+        if len(reviews) > SYNC_MAX or any(r.reviewed_at.tzinfo is None for r in reviews):
+            raise CardError("invalid_review")
+        results: list[Synced] = []
+        # Python's sort is stable: ratings given at the same moment keep the phone's order.
+        for item in sorted(reviews, key=lambda r: r.reviewed_at):
+            results.append(self._sync_one(user_id, item))
+        return results
+
+    def _sync_one(self, user_id: UUID, item: OfflineReview) -> Synced:
+        card = self._repository.get(user_id, item.card_id)
+        if card is None:
+            return Synced(item.client_id, "removed", None)
+        if self._repository.has_review(user_id, card.id, item.client_id):
+            return Synced(item.client_id, "applied", card)
+        if card.reviews != item.expected_reviews:
+            return Synced(item.client_id, "superseded", card)
+        now = self._clock()
+        at = min(max(item.reviewed_at, card.reviewed_at or card.created_at), now)
+        after = _reviewed(card, item.rating, at)
+        if not self._repository.reviewed(
+            user_id, after, item.rating, card.reviews, client_id=item.client_id
+        ):
+            # Reviewed at this very moment by another request.
+            return Synced(item.client_id, "superseded", self._repository.get(user_id, card.id))
+        return Synced(item.client_id, "applied", after)
 
     def reviewed_in_conversation(self, user_id: UUID, card_id: UUID, started: dt.datetime) -> bool:
         """Counts a word the learner used in a conversation that began at `started` as known

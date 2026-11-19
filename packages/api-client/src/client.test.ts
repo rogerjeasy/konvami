@@ -522,9 +522,18 @@ describe('api client', () => {
       json(200, { cards: [], due: 0 }),
       json(200, { cards: [], due: 0 }),
       json(200, card),
+      json(200, { cards: [], language: 'de' }),
+      json(200, { results: [] }),
       json(200, { total: 0, due: 0 }),
     );
     const { api } = client(fetch);
+    const offline = {
+      clientId: 'c1',
+      cardId: 'card/1',
+      rating: 'good' as const,
+      expectedReviews: 0,
+      reviewedAt: '2026-10-09T10:00:00Z',
+    };
 
     expect(await api.saveCard({ conversationId: 'rtc_1', kind: 'word', index: 2 })).toEqual(card);
     expect(await api.getCards()).toEqual(deck);
@@ -532,6 +541,8 @@ describe('api client', () => {
     expect(await api.getDueCards()).toEqual({ cards: [], due: 0 });
     await api.getDueCards(5);
     expect(await api.reviewCard('card/1', 'good')).toEqual(card);
+    expect(await api.getCardsAhead()).toEqual({ cards: [], language: 'de' });
+    expect(await api.syncCardReviews([offline])).toEqual({ results: [] });
     expect(await api.removeCard('card/1')).toEqual({ total: 0, due: 0 });
 
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
@@ -541,8 +552,11 @@ describe('api client', () => {
       'GET https://api.example.test/v1/cards/due',
       'GET https://api.example.test/v1/cards/due?limit=5',
       'POST https://api.example.test/v1/cards/card%2F1/review',
+      'GET https://api.example.test/v1/cards/ahead',
+      'POST https://api.example.test/v1/cards/reviews',
       'DELETE https://api.example.test/v1/cards/card%2F1',
     ]);
+    expect(calls[7]?.body).toEqual({ reviews: [offline] });
     expect(calls[0]?.body).toEqual({ conversationId: 'rtc_1', kind: 'word', index: 2 });
     expect(calls[5]?.body).toEqual({ rating: 'good' });
   });

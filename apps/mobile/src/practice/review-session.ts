@@ -34,6 +34,12 @@ export type ReviewState =
       saving: boolean;
       /** Why the last rating could not be stored; the card is still there to rate again. */
       error: string | null;
+      /**
+       * The cards were read from the phone because the network is not there: ratings are kept
+       * on the phone until they can be sent, and nothing that needs the server (an answer out
+       * loud) is offered.
+       */
+      offline: boolean;
     }
   | { phase: 'done'; reviewed: number };
 
@@ -60,6 +66,7 @@ export function createReviewSession(
   let queue: ReviewItem[] = [];
   let total = 0;
   let language = '';
+  let offline = false;
   /** Cards that will not come back in this sitting. */
   let finished = 0;
   /** Raised by `start`, so the answer of an earlier start is dropped. */
@@ -87,6 +94,7 @@ export function createReviewSession(
       total,
       saving: false,
       error: null,
+      offline,
     });
   }
 
@@ -106,6 +114,8 @@ export function createReviewSession(
         if (from !== run) return;
         const { cards } = due;
         language = due.language;
+        // Set by the offline side of the API (`offline/api.ts`) for a queue read from the phone.
+        offline = 'offline' in due && due.offline === true;
         queue = [...cards];
         total = cards.length;
         finished = 0;

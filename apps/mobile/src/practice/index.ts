@@ -22,11 +22,14 @@ const offlineCache = createOfflineCache(
   deviceOfflineDisk,
   () => authServices.session.getState().user?.email ?? null,
 );
-export const offlineApi = createOfflineApi(api, offlineCache, Date.now);
+export const offlineApi = createOfflineApi(api, offlineCache, Date.now, deviceLibraryMedia);
 // Delete personal device data while the old account identity is still available.
 const libraryTools = createLibraryTools(offlineCache, deviceLibraryMedia, api);
 export const clearOfflineRecordings = () => libraryTools.clearRecordings();
-export const clearOfflineAccount = () => libraryTools.clear();
+export const clearOfflineAccount = async () => {
+  await offlineApi.clearSounds();
+  await libraryTools.clear();
+};
 authServices.session.beforeSignOut(async () => {
   await offlineApi.syncReviews();
   if (await offlineApi.pendingReviews()) return;

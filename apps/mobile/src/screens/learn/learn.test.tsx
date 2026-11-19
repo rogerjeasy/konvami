@@ -1,8 +1,11 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { createFakeApi, type FakeApi } from '@/test/fake-api';
+import { ApiError } from '@konvami/api-client';
+import { createOfflineApi } from '@/offline/api';
+import { createFakeApi, FAKE_NOW, type FakeApi } from '@/test/fake-api';
 import { createFakeProfileDevice } from '@/test/fake-profile-device';
+import { createPhoneStorage } from '@/test/fake-phone-storage';
 import { renderScreen } from '@/test/render';
 import { LearnScreen } from '.';
 
@@ -271,5 +274,25 @@ describe('5.7 Learn', () => {
     await renderScreen(<LearnScreen />, { api: inApp() });
 
     expect(screen.getByText('redirect:/welcome')).toBeTruthy();
+  });
+
+  it('shows ratings given offline that are still on the phone, and sends them', async () => {
+    const api = await learning();
+    const cache = createPhoneStorage();
+    const offline = createOfflineApi(api, cache, () => Date.parse(FAKE_NOW));
+    await offline.getDueCards();
+    const sync = api.syncCardReviews;
+    api.syncCardReviews = jest.fn().mockRejectedValue(new ApiError('network'));
+    await offline.reviewCard('card_1', 'good');
+    api.syncCardReviews = sync;
+
+    await renderScreen(<LearnScreen />, { api, offline: cache, signedIn: true });
+
+    expect(await screen.findByText('1 review saved on this device, waiting to sync.')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Sync reviews' }));
+    await waitFor(() =>
+      expect(screen.queryByText('1 review saved on this device, waiting to sync.')).toBeNull(),
+    );
+    expect((await api.getCard('card_1')).reviews).toBe(1);
   });
 });

@@ -18,6 +18,7 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { reviewAloudRoute, reviewCallRoute, ROUTES } from '@/lib/routes';
 import { useDeck, usePracticeServices, useSuggestedPartner } from '@/practice/services';
+import { OfflineReviewStatus } from '@/screens/review/offline-status';
 import { CardRow } from './card-row';
 import { CardSheet } from './card-sheet';
 import { dueLabel } from './due-label';
@@ -122,6 +123,8 @@ export function LearnScreen() {
         />
       ) : (
         <View className="w-full max-w-content gap-6 self-center">
+          {/* Ratings given offline that are still on the phone, with a way to send them. */}
+          <OfflineReviewStatus revision={deck} />
           <Reveal delay={staggerDelay(1)}>
             <ReviewCard
               due={deck.summary?.due ?? 0}

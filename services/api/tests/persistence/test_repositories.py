@@ -1895,6 +1895,21 @@ def test_a_review_is_stored_only_for_the_card_as_it_was_read(cards: CardReposito
     assert cards.get(USER, after.id) == after
 
 
+def test_a_review_sent_by_a_phone_is_logged_with_its_id_once(cards: CardRepository) -> None:
+    add(cards, card(1))
+    sent = UUID("5e1f1e4b-0000-4000-8000-000000000001")
+    after = card(1, reviewed_at=NOON, memory=Memory(2.3065, 2.1181), reviews=1)
+    assert cards.has_review(USER, after.id, sent) is False
+
+    assert cards.reviewed(USER, after, "good", 0, client_id=sent) is True
+    again = replace(after, reviews=2, reviewed_at=NOON + HOUR)
+
+    assert cards.has_review(USER, after.id, sent) is True
+    assert cards.has_review(OTHER_USER, after.id, sent) is False
+    assert cards.reviewed(USER, again, "good", 1, client_id=sent) is False
+    assert cards.get(USER, after.id) == after
+
+
 def test_a_card_is_removed_by_its_owner_only(cards: CardRepository) -> None:
     add(cards, card(1))
 

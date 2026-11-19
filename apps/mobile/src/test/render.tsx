@@ -14,6 +14,8 @@ import { createFakeProfileDevice, type FakeProfileDevice } from '@/test/fake-pro
 import { OnboardingProvider } from '@/onboarding/services';
 import { createOnboardingStore } from '@/onboarding/store';
 import { createPracticeServices, PracticeProvider } from '@/practice/services';
+import { createOfflineApi } from '@/offline/api';
+import type { OfflineCache } from '@/offline/cache';
 import { createProfileServices, ProfileProvider } from '@/profile/services';
 import { createFakeApi, FAKE_NOW, type FakeApi } from '@/test/fake-api';
 import { createFakeVoiceEngine, type FakeVoiceEngine } from '@/test/fake-voice-engine';
@@ -27,7 +29,7 @@ import { RemindersProvider } from '@/reminders/services';
 import { PaywallSheet } from '@/screens/plan/paywall-sheet';
 import { createFakePurchaseDevice, type FakePurchaseDevice } from '@/test/fake-purchase-device';
 
-const TEST_ACCOUNT = { email: 'amara.diallo@mail.com', password: 'Sommer2026!' };
+export const TEST_ACCOUNT = { email: 'amara.diallo@mail.com', password: 'Sommer2026!' };
 
 /** Auth for a test: an in-memory provider and a session store on top of it, already "restored". */
 export async function createTestAuth(): Promise<AuthServices & { provider: FakeAuthProvider }> {
@@ -63,6 +65,7 @@ export async function renderScreen(
     reminders,
     photos,
     documents,
+    offline,
 
     purchases,
     signedIn = false,
@@ -79,6 +82,8 @@ export async function renderScreen(
     /** The photo picker of the course companion. */
     photos?: FakeImportPhotos;
     documents?: ImportDocuments;
+    /** The phone's offline store: given, the API reads and reviews offline as in the app. */
+    offline?: OfflineCache;
 
     /** The store: unavailable unless a test brings one that can sell. */
     purchases?: FakePurchaseDevice;
@@ -98,16 +103,18 @@ export async function renderScreen(
   const moment = now ?? new Date(FAKE_NOW);
   const profileDevice = device ?? createFakeProfileDevice();
   const importPhotos = photos ?? createFakeImportPhotos();
+  const clock = typeof moment === 'function' ? moment : () => moment.getTime();
+  const offlineApi = offline ? createOfflineApi(backend, offline, clock) : null;
   const practice = createPracticeServices(
-    backend,
+    offlineApi ?? backend,
     {
       timeZone: () => 'Europe/Zurich',
-      now: typeof moment === 'function' ? moment : () => moment.getTime(),
+      now: clock,
     },
     // As in the app: one audio player for samples and recordings.
     profileDevice.samples,
     importPhotos,
-    { documents },
+    offlineApi ? { documents, offline: offlineApi } : { documents },
   );
   const engine = voice ?? createFakeVoiceEngine();
   const sentences = recorder ?? createFakeRecorder();

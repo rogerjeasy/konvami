@@ -469,6 +469,9 @@ function Sitting({ aloud }: { aloud: boolean }) {
   const { t } = useTranslation();
   const { state, session } = useReviewSession();
   const run = useRun(state);
+  const offline = state.phase === 'card' && state.offline;
+  // Answering out loud needs the server to hear the answer: offline, cards are turned over.
+  const speaking = aloud && !offline;
   const backToLearn = <Button label={t('review.back')} onPress={leave} />;
   return (
     <StepLayout
@@ -485,7 +488,7 @@ function Sitting({ aloud }: { aloud: boolean }) {
                 void session.rate(rating);
               }}
             />
-          ) : aloud ? (
+          ) : speaking ? (
             // A new card starts with the microphone off.
             <AloudActions
               key={`${state.item.card.id}-${state.position}`}
@@ -501,6 +504,11 @@ function Sitting({ aloud }: { aloud: boolean }) {
         ) : undefined
       }
     >
+      {offline ? (
+        <NoticeBox icon="info">
+          {t(aloud ? 'review.offline.aloud' : 'review.offline.notice')}
+        </NoticeBox>
+      ) : null}
       <OfflineReviewStatus revision={state} />
       {state.phase === 'card' ? (
         <>
@@ -510,7 +518,7 @@ function Sitting({ aloud }: { aloud: boolean }) {
             <Flashcard
               item={state.item}
               revealed={state.revealed}
-              aloud={aloud}
+              aloud={speaking}
               language={state.language}
               answer={state.answer}
             />

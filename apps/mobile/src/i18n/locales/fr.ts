@@ -1856,6 +1856,12 @@ export const fr: Translation = {
       years_other: '{{count}} ans',
     },
     saveFailed: 'Impossible d’enregistrer. Touche à nouveau ta réponse.',
+    offline: {
+      notice:
+        'Tu es hors ligne. Tes réponses restent sur cet appareil et sont envoyées dès que tu es de nouveau en ligne.',
+      aloud:
+        'Répondre à voix haute demande une connexion : pour l’instant, tu retournes les cartes. Tes réponses restent sur cet appareil et sont envoyées dès que tu es de nouveau en ligne.',
+    },
     empty: {
       title: 'Rien à réviser',
       body: 'Tes cartes reviennent quand c’est le moment. D’ici là, le meilleur exercice, c’est de parler.',

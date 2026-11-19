@@ -477,3 +477,63 @@ def test_anki_export_is_complete_and_account_scoped(
     assert "das Wochenende" in exported.body["text"]
     assert "die Ausstellung" in exported.body["text"]
     assert "das Wochenende" not in call("GET", "/v1/cards/export", subject=OTHER_USER).body["text"]
+
+
+def test_reviews_made_offline_are_synced_once_in_the_order_they_were_given(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+    clock: FixedClock,
+) -> None:
+    reported(call, text_model, calls, services)
+    call("POST", "/v1/cards", WORD)
+    clock.now += timedelta(days=3)
+    first = {
+        "clientId": str(UUID(int=1)),
+        "cardId": FIRST_ID,
+        "rating": "again",
+        "expectedReviews": 0,
+        "reviewedAt": "2026-10-09T13:00:00Z",
+    }
+    second = {
+        **first,
+        "clientId": str(UUID(int=2)),
+        "rating": "good",
+        "expectedReviews": 1,
+        "reviewedAt": "2026-10-10T13:00:00Z",
+    }
+
+    synced = call("POST", "/v1/cards/reviews", {"reviews": [second, first]}).body
+    again = call("POST", "/v1/cards/reviews", {"reviews": [first, second]}).body
+    theirs = call("POST", "/v1/cards/reviews", {"reviews": [first]}, subject=OTHER_USER).body
+
+    assert [(r["clientId"], r["outcome"]) for r in synced["results"]] == [
+        (first["clientId"], "applied"),
+        (second["clientId"], "applied"),
+    ]
+    assert synced["results"][1]["card"]["reviewedAt"] == "2026-10-10T13:00:00Z"
+    assert [r["outcome"] for r in again["results"]] == ["applied", "applied"]
+    assert again["results"][1]["card"]["reviews"] == 2
+    assert theirs["results"] == [
+        {"clientId": first["clientId"], "outcome": "removed", "card": None}
+    ]
+    bad = call("POST", "/v1/cards/reviews", {"reviews": [{**first, "rating": "x"}]})
+    assert bad.status == 422
+
+
+def test_the_cards_ahead_are_the_ones_due_in_the_coming_days(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    reported(call, text_model, calls, services)
+    call("POST", "/v1/cards", WORD)
+    call("POST", f"/v1/cards/{FIRST_ID}/review", {"rating": "good"})
+
+    ahead = call("GET", "/v1/cards/ahead").body
+
+    assert ahead["language"] == "de"
+    assert [card["front"] for card in ahead["cards"]] == ["das Wochenende"]
+    assert ahead["cards"][0]["memory"]["stability"] == 2.3065

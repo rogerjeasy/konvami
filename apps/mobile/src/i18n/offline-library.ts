@@ -39,7 +39,8 @@ export const offlineLibrary = {
     downloadFailed: 'Could not download all recordings. Check your connection and device storage.',
     export: 'Export transcript',
     localOnly: 'Bookmarks and notes stay on this device.',
-    pending: '{{count}} reviews saved on this device, waiting to sync.',
+    pending_one: '1 review saved on this device, waiting to sync.',
+    pending_other: '{{count}} reviews saved on this device, waiting to sync.',
     sync: 'Sync reviews',
     synced: 'Reviews synced',
     offlineRefresh: 'Connect once to refresh this card before reviewing it offline.',
@@ -84,7 +85,8 @@ export const offlineLibrary = {
       'Nicht alle Aufnahmen konnten geladen werden. Prüfe Verbindung und Gerätespeicher.',
     export: 'Transkript exportieren',
     localOnly: 'Lesezeichen und Notizen bleiben auf diesem Gerät.',
-    pending: '{{count}} Wiederholungen auf diesem Gerät warten auf die Synchronisierung.',
+    pending_one: '1 Wiederholung auf diesem Gerät wartet auf die Synchronisierung.',
+    pending_other: '{{count}} Wiederholungen auf diesem Gerät warten auf die Synchronisierung.',
     sync: 'Wiederholungen synchronisieren',
     synced: 'Wiederholungen synchronisiert',
     offlineRefresh:
@@ -130,7 +132,9 @@ export const offlineLibrary = {
       'Certaines prises audio n’ont pas été téléchargées. Vérifie la connexion et le stockage.',
     export: 'Exporter la transcription',
     localOnly: 'Les repères et les notes restent sur cet appareil.',
-    pending: '{{count}} révisions enregistrées sur cet appareil attendent la synchronisation.',
+    pending_one: '1 révision enregistrée sur cet appareil attend la synchronisation.',
+    pending_other:
+      '{{count}} révisions enregistrées sur cet appareil attendent la synchronisation.',
     sync: 'Synchroniser les révisions',
     synced: 'Révisions synchronisées',
     offlineRefresh:
@@ -176,7 +180,8 @@ export const offlineLibrary = {
       'Impossibile scaricare tutte le registrazioni. Controlla la connessione e lo spazio.',
     export: 'Esporta trascrizione',
     localOnly: 'Segnalibri e note restano su questo dispositivo.',
-    pending: '{{count}} ripassi salvati su questo dispositivo attendono la sincronizzazione.',
+    pending_one: '1 ripasso salvato su questo dispositivo attende la sincronizzazione.',
+    pending_other: '{{count}} ripassi salvati su questo dispositivo attendono la sincronizzazione.',
     sync: 'Sincronizza ripassi',
     synced: 'Ripassi sincronizzati',
     offlineRefresh:

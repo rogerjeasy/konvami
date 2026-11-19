@@ -1855,6 +1855,12 @@ export const de: Translation = {
       years_other: '{{count}} Jahre',
     },
     saveFailed: 'Das konnte nicht gespeichert werden. Tippe noch einmal auf deine Antwort.',
+    offline: {
+      notice:
+        'Du bist offline. Deine Antworten bleiben auf diesem Gerät und werden gesendet, sobald du wieder online bist.',
+      aloud:
+        'Laut antworten geht nur mit Verbindung, darum drehst du die Karten jetzt um. Deine Antworten bleiben auf diesem Gerät und werden gesendet, sobald du wieder online bist.',
+    },
     empty: {
       title: 'Nichts zu wiederholen',
       body: 'Deine Karten kommen zurück, wenn es Zeit ist. Bis dahin ist Sprechen die beste Übung.',
