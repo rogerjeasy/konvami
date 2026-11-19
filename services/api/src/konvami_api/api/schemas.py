@@ -131,6 +131,7 @@ from konvami_api.domain.then_vs_now import ThenVsNow
 from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
 from konvami_api.domain.tutor import Source as TutorSource
 from konvami_api.domain.tutor import TutorQuestion
+from konvami_api.domain.video_avatars import VideoAvatarSession, VideoAvatarStatus
 from konvami_api.domain.voice import CallPurpose, CallStarted
 from konvami_api.domain.voice_review import Answered, Outcome
 from konvami_api.domain.week_review import WeekReview
@@ -819,6 +820,84 @@ class PremiumVoicesOut(ApiModel):
 class PremiumVoiceChoiceIn(ApiModel):
     # null goes back to the standard voice.
     voice_id: str | None
+
+
+class VideoAvatarFaceOut(ApiModel):
+    id: str
+    name: str
+
+
+class VideoAvatarPickOut(ApiModel):
+    persona_id: UUID
+    face_id: str
+
+
+class VideoAvatarsOut(ApiModel):
+    # A video avatar vendor is set up: Persona Studio offers its faces only then.
+    offered: bool
+    # The vendor's name, for the notice the learner agrees to.
+    vendor: str
+    # The learner agreed to this vendor.
+    consent: bool
+    # The learner may use video faces (Pro, or a tester while there is no subscription).
+    allowed: bool
+    faces: list[VideoAvatarFaceOut]
+    # The face picked for each partner that has one; the others draw their portrait.
+    chosen: list[VideoAvatarPickOut]
+
+    @classmethod
+    def of(cls, status: VideoAvatarStatus) -> "VideoAvatarsOut":
+        return cls(
+            offered=status.offered,
+            vendor=status.vendor,
+            consent=status.consent,
+            allowed=status.allowed,
+            faces=[VideoAvatarFaceOut(id=face.id, name=face.name) for face in status.faces],
+            chosen=[
+                VideoAvatarPickOut(persona_id=persona, face_id=face)
+                for persona, face in sorted(status.chosen.items(), key=lambda item: str(item[0]))
+            ],
+        )
+
+
+class VideoAvatarChoiceIn(ApiModel):
+    # null goes back to the drawn portrait.
+    face_id: str | None
+    # The learner read and accepted the notice naming the vendor in the same sheet.
+    agreed: bool = False
+
+
+class VideoAvatarSessionIn(ApiModel):
+    persona_id: UUID
+
+
+class VideoAvatarSessionOut(ApiModel):
+    id: str
+    vendor: str
+    # Where the app connects to receive the face as a WebRTC video track.
+    connect_url: str
+    # The short-lived credential for that connection.
+    token: str
+    expires_at: int
+
+
+class VideoAvatarStartOut(ApiModel):
+    # null: draw the partner's portrait (nothing offered, not picked, or the vendor failed).
+    session: VideoAvatarSessionOut | None
+
+    @classmethod
+    def of(cls, session: VideoAvatarSession | None) -> "VideoAvatarStartOut":
+        if session is None:
+            return cls(session=None)
+        return cls(
+            session=VideoAvatarSessionOut(
+                id=session.id,
+                vendor=session.vendor,
+                connect_url=session.connect_url,
+                token=session.token,
+                expires_at=session.expires_at,
+            )
+        )
 
 
 class ConversationOut(ApiModel):

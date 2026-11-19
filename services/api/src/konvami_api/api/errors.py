@@ -39,6 +39,7 @@ from konvami_api.domain.reports import ReportError
 from konvami_api.domain.retries import RetryError
 from konvami_api.domain.scenarios import ScenarioError
 from konvami_api.domain.tutor import TutorError
+from konvami_api.domain.video_avatars import VideoAvatarError
 from konvami_api.domain.voice import VoiceError
 from konvami_api.domain.voices import SampleError
 from konvami_api.domain.web_deletion import WebDeletionError
@@ -88,6 +89,13 @@ _PREMIUM_STATUS = {
     "not_offered": 409,
     "no_language": 409,
     "unknown_voice": 422,
+}
+_VIDEO_AVATAR_STATUS = {
+    "consent_needed": 403,
+    "not_allowed": 403,
+    "not_offered": 409,
+    "unknown_face": 422,
+    "unknown_persona": 404,
 }
 _CARD_STATUS = {
     "unavailable": 503,
@@ -223,6 +231,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PremiumError)
     async def _premium_error(_: Request, error: PremiumError) -> JSONResponse:
         return _response(_PREMIUM_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(VideoAvatarError)
+    async def _video_avatar_error(_: Request, error: VideoAvatarError) -> JSONResponse:
+        return _response(_VIDEO_AVATAR_STATUS.get(error.code, 422), error.code)
 
     @app.exception_handler(ConversationError)
     async def _conversation_error(_: Request, error: ConversationError) -> JSONResponse:

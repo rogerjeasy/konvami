@@ -123,6 +123,10 @@ from konvami_api.api.schemas import (
     TutorQuestionIn,
     TutorQuestionOut,
     TutorQuestionsOut,
+    VideoAvatarChoiceIn,
+    VideoAvatarSessionIn,
+    VideoAvatarsOut,
+    VideoAvatarStartOut,
     VoiceCallIn,
     VoiceCallOut,
     VoiceContinuationIn,
@@ -168,6 +172,7 @@ from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.video_avatars import VideoAvatarService
 from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
@@ -205,6 +210,7 @@ class Services:
     course_imports: CourseImportService
     voices: VoiceSampleService
     premium_voices: PremiumVoiceService
+    video_avatars: VideoAvatarService
     costs: CostService
     grammar: GrammarMapService
     card_details: CardDetailsService
@@ -436,6 +442,26 @@ def _router(services: Services) -> APIRouter:
     )
     def get_premium_voice_sample(user: CurrentUser, voice_id: str) -> VoiceSampleOut:
         return VoiceSampleOut(url=services.premium_voices.sample(user, voice_id))
+
+    @router.get("/video-avatars", operation_id="getVideoAvatars")
+    def get_video_avatars(user: CurrentUser) -> VideoAvatarsOut:
+        return VideoAvatarsOut.of(services.video_avatars.status(user))
+
+    @router.put(
+        "/video-avatars/personas/{persona_id}",
+        operation_id="chooseVideoAvatar",
+        responses=REFUSED | CONFLICT | NOT_FOUND | {403: {"model": ErrorBody}},
+    )
+    def choose_video_avatar(
+        user: CurrentUser, persona_id: UUID, body: VideoAvatarChoiceIn
+    ) -> VideoAvatarsOut:
+        return VideoAvatarsOut.of(
+            services.video_avatars.choose(user, persona_id, body.face_id, agreed=body.agreed)
+        )
+
+    @router.post("/video-avatars/sessions", operation_id="startVideoAvatar")
+    def start_video_avatar(user: CurrentUser, body: VideoAvatarSessionIn) -> VideoAvatarStartOut:
+        return VideoAvatarStartOut.of(services.video_avatars.start(user, body.persona_id))
 
     @router.delete("/personas/{persona_id}", operation_id="removePersona", responses=NOT_FOUND)
     def remove_persona(user: CurrentUser, persona_id: UUID) -> PersonasOut:

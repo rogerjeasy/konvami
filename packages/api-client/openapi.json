@@ -7344,6 +7344,185 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VideoAvatarChoiceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "agreed": {
+            "default": false,
+            "title": "Agreed",
+            "type": "boolean"
+          },
+          "faceId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Faceid"
+          }
+        },
+        "required": [
+          "faceId"
+        ],
+        "title": "VideoAvatarChoiceIn",
+        "type": "object"
+      },
+      "VideoAvatarFaceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "VideoAvatarFaceOut",
+        "type": "object"
+      },
+      "VideoAvatarPickOut": {
+        "additionalProperties": false,
+        "properties": {
+          "faceId": {
+            "title": "Faceid",
+            "type": "string"
+          },
+          "personaId": {
+            "format": "uuid",
+            "title": "Personaid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "personaId",
+          "faceId"
+        ],
+        "title": "VideoAvatarPickOut",
+        "type": "object"
+      },
+      "VideoAvatarSessionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "personaId": {
+            "format": "uuid",
+            "title": "Personaid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "personaId"
+        ],
+        "title": "VideoAvatarSessionIn",
+        "type": "object"
+      },
+      "VideoAvatarSessionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "connectUrl": {
+            "title": "Connecturl",
+            "type": "string"
+          },
+          "expiresAt": {
+            "title": "Expiresat",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vendor",
+          "connectUrl",
+          "token",
+          "expiresAt"
+        ],
+        "title": "VideoAvatarSessionOut",
+        "type": "object"
+      },
+      "VideoAvatarStartOut": {
+        "additionalProperties": false,
+        "properties": {
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VideoAvatarSessionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "session"
+        ],
+        "title": "VideoAvatarStartOut",
+        "type": "object"
+      },
+      "VideoAvatarsOut": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "chosen": {
+            "items": {
+              "$ref": "#/components/schemas/VideoAvatarPickOut"
+            },
+            "title": "Chosen",
+            "type": "array"
+          },
+          "consent": {
+            "title": "Consent",
+            "type": "boolean"
+          },
+          "faces": {
+            "items": {
+              "$ref": "#/components/schemas/VideoAvatarFaceOut"
+            },
+            "title": "Faces",
+            "type": "array"
+          },
+          "offered": {
+            "title": "Offered",
+            "type": "boolean"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "offered",
+          "vendor",
+          "consent",
+          "allowed",
+          "faces",
+          "chosen"
+        ],
+        "title": "VideoAvatarsOut",
+        "type": "object"
+      },
       "VoiceCallIn": {
         "additionalProperties": false,
         "properties": {
@@ -14449,6 +14628,172 @@
           }
         },
         "summary": "Ask Tutor"
+      }
+    },
+    "/v1/video-avatars": {
+      "get": {
+        "operationId": "getVideoAvatars",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoAvatarsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Video Avatars"
+      }
+    },
+    "/v1/video-avatars/personas/{persona_id}": {
+      "put": {
+        "operationId": "chooseVideoAvatar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "persona_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Persona Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VideoAvatarChoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoAvatarsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Choose Video Avatar"
+      }
+    },
+    "/v1/video-avatars/sessions": {
+      "post": {
+        "operationId": "startVideoAvatar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VideoAvatarSessionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoAvatarStartOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Video Avatar"
       }
     },
     "/v1/voice/allowance": {

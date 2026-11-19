@@ -63,6 +63,7 @@ from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.video_avatars import VideoAvatarService
 from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
 from konvami_api.domain.voice_review import VoiceReviewService
@@ -108,6 +109,7 @@ from konvami_api.persistence.repositories import (
     SqlWeekReviewRepository,
 )
 from konvami_api.persistence.sql import SqlClient
+from konvami_api.persistence.video_avatar_repository import SqlVideoAvatarRepository
 from konvami_api.persistence.vocabulary_repository import SqlVocabularyRepository
 from konvami_api.providers.audio_encoding import FfmpegEncoder
 from konvami_api.providers.aws import (
@@ -134,17 +136,20 @@ from konvami_api.providers.openai_speech import OpenAiSpeech
 from konvami_api.providers.openai_text import OpenAiText
 from konvami_api.providers.openai_transcription import OpenAiTranscription
 from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
+from konvami_api.providers.video_avatar import vendor_for
 from konvami_api.providers.web_page import WebPageFetcher
 from konvami_api.settings import (
     COSTS_VARIABLE,
     PLANS_VARIABLE,
     PREMIUM_VOICES_VARIABLE,
     TEXT_MODELS_VARIABLE,
+    VIDEO_AVATARS_VARIABLE,
     VOICE_VARIABLE,
     cost_settings,
     plan_settings,
     premium_voice_settings,
     text_models,
+    video_avatar_settings,
     voice_settings,
 )
 from konvami_api.worker import follow_call
@@ -160,6 +165,8 @@ _APP_CLIENT_ID = "KONVAMI_APP_CLIENT_ID"
 _OPENAI_SECRET = "KONVAMI_OPENAI_SECRET_ARN"  # noqa: S105 - the name of a setting
 # Empty until ElevenLabs is turned on (infra/envs/dev `elevenlabs_enabled`).
 _ELEVENLABS_SECRET = "KONVAMI_ELEVENLABS_SECRET_ARN"  # noqa: S105 - the name of a setting
+# The video avatar vendor's key (spec §6.20 P2); unset until a vendor is chosen.
+_VIDEO_AVATAR_SECRET = "KONVAMI_VIDEO_AVATAR_SECRET_ARN"  # noqa: S105 - the name of a setting
 _CALL_WORKER = "KONVAMI_CALL_WORKER"
 # The secret RevenueCat's webhook sends in its Authorization header (infra/envs/dev `plans`).
 _STORE_SECRET = "KONVAMI_REVENUECAT_SECRET_ARN"  # noqa: S105 - the name of a setting
@@ -206,6 +213,28 @@ def _sql_client(
         raise RuntimeError(f"Missing settings: {', '.join(missing)}")
     settings = {key: environment[name] for key, name in _DB_SETTINGS.items()}
     return DataApiClient(rds_data, sleep=sleep, **settings)
+
+
+def video_avatars(
+    environment: Mapping[str, str],
+    clients: Clients,
+    sql: SqlClient,
+    plans: PlanService,
+    profiles: ProfileService,
+) -> VideoAvatarService:
+    """Video avatars (spec §6.20 P2): offered only when a vendor is configured, implemented in
+    `providers/video_avatar.py` and has its key's secret. Video faces are a Pro feature, gated
+    like the premium voices."""
+    config = video_avatar_settings(environment.get(VIDEO_AVATARS_VARIABLE))
+    secret = environment.get(_VIDEO_AVATAR_SECRET, "")
+    vendor = vendor_for(config.vendor, cached_secret(clients.secrets, secret)) if secret else None
+    return VideoAvatarService(
+        avatars=config,
+        vendor=vendor,
+        choices=SqlVideoAvatarRepository(sql, _now),
+        allowed=plans.can_use_premium_voices,
+        language=lambda user: profiles.get(user).target_language or "",
+    )
 
 
 def build_backend(
@@ -575,6 +604,7 @@ def build_backend(
             profiles=profiles, files=files, speech=speech, model=models.speech
         ),
         premium_voices=premium_voices,
+        video_avatars=video_avatars(environment, clients, sql, plans, profiles),
         card_details=CardDetailsService(
             profiles=profiles,
             personas=personas,

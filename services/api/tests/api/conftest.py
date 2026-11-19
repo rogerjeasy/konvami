@@ -55,6 +55,7 @@ from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.video_avatars import VideoAvatarFace, VideoAvatars, VideoAvatarService
 from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
 from konvami_api.domain.voice_review import VoiceReviewService
@@ -113,6 +114,7 @@ from tests.fakes import (
     ScriptedTranscriber,
     text_guard,
 )
+from tests.video_avatars_fake import FakeVideoAvatarVendor, InMemoryVideoAvatarChoices
 from tests.vocabulary_fake import MemoryVocabularyRepository
 
 USER = "11111111-1111-4111-8111-111111111111"
@@ -402,10 +404,11 @@ def services(
         model="gpt-6.1-sol",
         clock=clock,
     )
+    persona_store = InMemoryPersonaRepository()
     personas = PersonaService(
         profiles=profiles,
         onboarding=onboarding,
-        repository=InMemoryPersonaRepository(),
+        repository=persona_store,
         text_model=text_model,
         model="gpt-6-luna",
         drafts=InMemoryDraftLog(),
@@ -675,6 +678,20 @@ def services(
             speech=premium_speech,
             profiles=profiles,
             files=files,
+        ),
+        # A pretend vendor with two faces, open to every tester.
+        video_avatars=VideoAvatarService(
+            avatars=VideoAvatars(
+                "facely", (VideoAvatarFace("anna-01", "Anna"), VideoAvatarFace("ben-02", "Ben"))
+            ),
+            vendor=FakeVideoAvatarVendor(),
+            choices=InMemoryVideoAvatarChoices(
+                owns=lambda user, persona: (
+                    persona in persona_store.personas and persona_store.personas[persona][0] == user
+                )
+            ),
+            allowed=lambda _: True,
+            language=lambda user: profiles.get(user).target_language or "",
         ),
         grammar=grammar,
         director=director,

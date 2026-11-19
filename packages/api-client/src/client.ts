@@ -222,6 +222,11 @@ export type ThenVsNow = Schemas['ThenVsNowOut'];
 export type VoiceAllowance = Schemas['AllowanceOut'];
 export type PremiumVoices = Schemas['PremiumVoicesOut'];
 export type PremiumVoice = Schemas['PremiumVoiceOut'];
+/** The video avatar vendor's faces and the learner's picks (spec §6.20 P2). */
+export type VideoAvatars = Schemas['VideoAvatarsOut'];
+export type VideoAvatarFace = Schemas['VideoAvatarFaceOut'];
+/** How to reach a vendor's video stream of a partner's face for one call. */
+export type VideoAvatarSession = Schemas['VideoAvatarSessionOut'];
 
 /** What the learner has bought and what it includes (spec §6.21.2). */
 export type Plan = Schemas['PlanOut'];
@@ -611,6 +616,23 @@ export interface ApiClient {
    */
   getPremiumVoiceSample(voiceId: string): Promise<string>;
   /**
+   * Video avatars (spec §6.20 P2): whether a vendor is on offer, whether the learner agreed to it
+   * and may use it, its faces and the face picked for each partner.
+   */
+  getVideoAvatars(): Promise<VideoAvatars>;
+  /**
+   * Picks a vendor face for a partner (null: its drawn portrait). `agreed` records the learner's
+   * agreement to the vendor, read in the same sheet. Fails with `consent_needed`, `not_allowed`,
+   * `not_offered`, `unknown_face` or `unknown_persona`.
+   */
+  chooseVideoAvatar(
+    personaId: string,
+    faceId: string | null,
+    agreed?: boolean,
+  ): Promise<VideoAvatars>;
+  /** A session for a partner's video face during a call; null: draw the portrait. */
+  startVideoAvatar(personaId: string): Promise<VideoAvatarSession | null>;
+  /**
    * A month's estimated spending, for the owner only (fails with `not_owner`). `month` is the
    * first day of the month (`2026-09-01`); this month when left out.
    */
@@ -874,6 +896,18 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
           `/v1/premium-voices/${encodeURIComponent(voiceId)}/sample`,
         )
       ).url,
+    getVideoAvatars: () => request('GET', '/v1/video-avatars'),
+    chooseVideoAvatar: (personaId, faceId, agreed = false) =>
+      request('PUT', `/v1/video-avatars/personas/${encodeURIComponent(personaId)}`, {
+        faceId,
+        agreed,
+      }),
+    startVideoAvatar: async (personaId) =>
+      (
+        await request<Schemas['VideoAvatarStartOut']>('POST', '/v1/video-avatars/sessions', {
+          personaId,
+        })
+      ).session ?? null,
 
     getPlan: () => request('GET', '/v1/plan'),
     getCosts: (month) => request('GET', withQuery('/v1/owner/costs', { month })),

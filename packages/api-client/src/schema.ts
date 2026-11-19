@@ -1785,6 +1785,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/video-avatars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Video Avatars */
+        get: operations["getVideoAvatars"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/video-avatars/personas/{persona_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Choose Video Avatar */
+        put: operations["chooseVideoAvatar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/video-avatars/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Video Avatar */
+        post: operations["startVideoAvatar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/voice/allowance": {
         parameters: {
             query?: never;
@@ -4437,6 +4488,73 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VideoAvatarChoiceIn */
+        VideoAvatarChoiceIn: {
+            /**
+             * Agreed
+             * @default false
+             */
+            agreed: boolean;
+            /** Faceid */
+            faceId: string | null;
+        };
+        /** VideoAvatarFaceOut */
+        VideoAvatarFaceOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** VideoAvatarPickOut */
+        VideoAvatarPickOut: {
+            /** Faceid */
+            faceId: string;
+            /**
+             * Personaid
+             * Format: uuid
+             */
+            personaId: string;
+        };
+        /** VideoAvatarSessionIn */
+        VideoAvatarSessionIn: {
+            /**
+             * Personaid
+             * Format: uuid
+             */
+            personaId: string;
+        };
+        /** VideoAvatarSessionOut */
+        VideoAvatarSessionOut: {
+            /** Connecturl */
+            connectUrl: string;
+            /** Expiresat */
+            expiresAt: number;
+            /** Id */
+            id: string;
+            /** Token */
+            token: string;
+            /** Vendor */
+            vendor: string;
+        };
+        /** VideoAvatarStartOut */
+        VideoAvatarStartOut: {
+            session: components["schemas"]["VideoAvatarSessionOut"] | null;
+        };
+        /** VideoAvatarsOut */
+        VideoAvatarsOut: {
+            /** Allowed */
+            allowed: boolean;
+            /** Chosen */
+            chosen: components["schemas"]["VideoAvatarPickOut"][];
+            /** Consent */
+            consent: boolean;
+            /** Faces */
+            faces: components["schemas"]["VideoAvatarFaceOut"][];
+            /** Offered */
+            offered: boolean;
+            /** Vendor */
+            vendor: string;
         };
         /** VoiceCallIn */
         VoiceCallIn: {
@@ -10007,6 +10125,148 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getVideoAvatars: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoAvatarsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    chooseVideoAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                persona_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoAvatarChoiceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoAvatarsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    startVideoAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoAvatarSessionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoAvatarStartOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
