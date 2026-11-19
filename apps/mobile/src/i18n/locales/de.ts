@@ -858,6 +858,15 @@ export const de: Translation = {
       failed:
         'Das ließ sich nicht rückgängig machen. Du findest es in deinem Profil unter Änderungen per Sprache.',
     },
+    forget: {
+      done_zero: 'Vergessen. Aus diesem Gespräch wird nichts davon behalten.',
+      done_one: 'Vergessen: {{count}} Notiz von früher, und nichts aus diesem Gespräch.',
+      done_other: 'Vergessen: {{count}} Notizen von früher, und nichts aus diesem Gespräch.',
+      restored: 'Wieder gemerkt',
+      failed:
+        'Das ließ sich nicht rückgängig machen: Das Gespräch ist vorbei, es ist endgültig vergessen.',
+      undoLabel: 'Vergessen rückgängig machen',
+    },
     goals: {
       chipDone: '{{goal}}: erreicht',
       chipOpen: '{{goal}}: noch offen',
