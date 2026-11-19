@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { size } from '@konvami/design-tokens';
 import { Card } from '@/components/card';
+import { IconBlob } from '@/components/list';
 import { Icon, type IconName } from '@/components/icon';
 import { PressScale } from '@/components/motion';
 import { Text } from '@/components/text';
@@ -43,13 +44,7 @@ export function AnswerCard({
       onPress={onPress}
     >
       <Card className="flex-row items-start gap-3 p-3.5">
-        <View
-          aria-hidden
-          style={{ width: size.avatarSm, height: size.avatarSm }}
-          className="items-center justify-center rounded-md bg-primary-soft"
-        >
-          <Icon name={icon} color={color.primaryText} size={size.iconMd} />
-        </View>
+        <IconBlob icon={icon} />
         <View className="flex-1 gap-1">
           <Text variant="overline" tone="subtle">
             {title}

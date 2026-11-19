@@ -21,6 +21,24 @@ export function ListGroup({ children }: { children: ReactNode }) {
 }
 
 /**
+ * The small rounded colour block with an icon that leads a row or a fact (decorative). `danger`
+ * draws it for an action that deletes something.
+ */
+export function IconBlob({ icon, danger = false }: { icon: IconName; danger?: boolean }) {
+  const { color } = useTheme();
+  const blob = blobFor(icon);
+  return (
+    <View
+      aria-hidden
+      style={{ width: size.avatarSm, height: size.avatarSm }}
+      className={`items-center justify-center rounded-md ${danger ? 'bg-danger-soft' : blob.box}`}
+    >
+      <Icon name={icon} color={danger ? color.danger : color[blob.ink]} size={size.iconMd} />
+    </View>
+  );
+}
+
+/**
  * The v4 colour blobs behind a row's icon. Each icon always gets the same block, so a row looks
  * the same on every screen; the four light blocks keep their dark ink in both themes.
  */
@@ -31,7 +49,7 @@ const BLOBS = [
   { box: 'bg-lime', ink: 'onLime' },
 ] as const satisfies readonly { box: string; ink: ColorToken }[];
 
-function blobFor(icon: string): (typeof BLOBS)[number] {
+export function blobFor(icon: string): (typeof BLOBS)[number] {
   let sum = 0;
   for (const c of icon) sum += c.charCodeAt(0);
   return BLOBS[sum % BLOBS.length] ?? BLOBS[0];
@@ -69,7 +87,6 @@ export function ListRow({
 }) {
   const { color } = useTheme();
   const danger = tone === 'danger';
-  const blob = blobFor(icon);
   return (
     <Pressable
       accessibilityRole="button"
@@ -80,13 +97,7 @@ export function ListRow({
       onPress={onPress}
       className={`min-h-button flex-row items-center gap-3 p-3.5 active:opacity-pressed ${disabled ? 'opacity-disabled' : ''}`}
     >
-      <View
-        aria-hidden
-        style={{ width: size.avatarSm, height: size.avatarSm }}
-        className={`items-center justify-center rounded-md ${danger ? 'bg-danger-soft' : blob.box}`}
-      >
-        <Icon name={icon} color={danger ? color.danger : color[blob.ink]} size={size.iconMd} />
-      </View>
+      <IconBlob icon={icon} danger={danger} />
       <View className="flex-1 gap-0.5">
         <View className="flex-row flex-wrap items-center gap-2">
           <Text variant="label" tone={danger ? 'danger' : 'fg'} className="shrink">
