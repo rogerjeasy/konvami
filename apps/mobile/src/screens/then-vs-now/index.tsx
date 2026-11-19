@@ -12,6 +12,7 @@ import { Reveal } from '@/components/motion';
 import { PlayButton } from '@/components/play-button';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { Card } from '@/components/card';
@@ -92,6 +93,7 @@ function Moment({
               <View className="shrink">
                 <ChatBubble
                   from="learner"
+                  lang
                   accessibilityLabel={t('thenVsNow.line', { when, text: line.text })}
                 >
                   {line.text}
@@ -137,15 +139,16 @@ function Pair({
   return (
     <>
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('thenVsNow.title')}
-          </Text>
-          <Text tone="muted">{t('thenVsNow.intro')}</Text>
-          <Text variant="captionStrong" tone="primary">
+        <PageHero
+          color="forest"
+          icon="clock"
+          title={t('thenVsNow.title')}
+          body={t('thenVsNow.intro')}
+        >
+          <Text variant="label" tone="lime">
             {t('thenVsNow.weeksApart', { count: weeksApart })}
           </Text>
-        </View>
+        </PageHero>
       </Reveal>
       <View className={split ? 'flex-row items-start gap-4' : 'gap-4'}>
         <View className={split ? 'flex-1' : undefined}>

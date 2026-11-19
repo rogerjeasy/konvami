@@ -14,6 +14,7 @@ import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { commitFeedback } from '@/lib/haptics';
@@ -188,12 +189,7 @@ export function TutorScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('tutor.title')}
-          </Text>
-          <Text tone="muted">{t('tutor.body')}</Text>
-        </View>
+        <PageHero color="ink" icon="info" title={t('tutor.title')} body={t('tutor.body')} />
       </Reveal>
       {!ready ? (
         <LoadState
