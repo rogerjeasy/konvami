@@ -1,6 +1,7 @@
 import type { ExpoConfig } from 'expo/config';
 import { brand, color } from '@konvami/design-tokens';
 import { SUPPORTED_LANGUAGES } from './src/i18n/languages.ts';
+import { collectedDataTypes, optionalServicesFrom } from './src/lib/privacy-manifest.ts';
 
 /**
  * Expo app config. Brand colors come from @konvami/design-tokens; nothing here is a secret.
@@ -25,28 +26,13 @@ const MICROPHONE_REASON =
 const CAMERA_REASON = 'Konvami uses the camera when you choose to photograph material to practise.';
 
 // iOS privacy manifest (PrivacyInfo.xcprivacy), merged by Expo with those of the libraries.
-// Keep the data types in step with docs/store/privacy-labels.md, which says where each comes from.
-const COLLECTED_FOR_THE_APP = {
-  NSPrivacyCollectedDataTypeLinked: true,
-  NSPrivacyCollectedDataTypeTracking: false,
-  NSPrivacyCollectedDataTypePurposes: ['NSPrivacyCollectedDataTypePurposeAppFunctionality'],
-};
+// The data types follow the optional services this build has keys for (src/lib/privacy-manifest.ts);
+// keep them in step with docs/store/privacy-labels.md, which says where each comes from.
 const PRIVACY_MANIFEST = {
-  // Konvami has no advertising, no cross-app tracking and no analytics SDK.
+  // Konvami has no advertising and no cross-app tracking.
   NSPrivacyTracking: false,
   NSPrivacyTrackingDomains: [],
-  NSPrivacyCollectedDataTypes: [
-    'NSPrivacyCollectedDataTypeEmailAddress',
-    'NSPrivacyCollectedDataTypeName',
-    'NSPrivacyCollectedDataTypeUserID',
-    'NSPrivacyCollectedDataTypeDeviceID',
-    'NSPrivacyCollectedDataTypePhotosorVideos',
-    'NSPrivacyCollectedDataTypeAudioData',
-    'NSPrivacyCollectedDataTypeOtherUserContent',
-    'NSPrivacyCollectedDataTypeProductInteraction',
-    // Age group, consent choices and the learning profile (level, goals, interests).
-    'NSPrivacyCollectedDataTypeOtherDataTypes',
-  ].map((NSPrivacyCollectedDataType) => ({ NSPrivacyCollectedDataType, ...COLLECTED_FOR_THE_APP })),
+  NSPrivacyCollectedDataTypes: collectedDataTypes(optionalServicesFrom(process.env)),
   // The required-reason APIs that React Native, Expo and the app's libraries use, with the reasons
   // Expo documents for them (preferences, file times, boot time, free disk space).
   NSPrivacyAccessedAPITypes: [
