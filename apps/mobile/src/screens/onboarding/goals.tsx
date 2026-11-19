@@ -138,16 +138,17 @@ function GoalsForm({ data, today }: { data: OnboardingData; today: Date }) {
 
       {wantsExam ? (
         <Reveal>
-          <Card className="gap-4 bg-surface p-4">
+          <Card className="gap-5 p-5">
             <View className="gap-2.5">
               <Text variant="heading" accessibilityRole="header">
                 {t('onboarding.goals.examTitle')}
               </Text>
-              <View accessibilityRole="radiogroup" className="flex-row flex-wrap gap-2">
+              <View accessibilityRole="radiogroup" className="gap-2">
                 {[...exams, { id: OTHER_EXAM, name: t('onboarding.goals.examOther') }].map(
                   ({ id, name }) => (
-                    <ChoiceChip
+                    <OptionCard
                       key={id}
+                      role="radio"
                       label={name}
                       selected={examType === id}
                       onPress={() => chooseExam(id)}
