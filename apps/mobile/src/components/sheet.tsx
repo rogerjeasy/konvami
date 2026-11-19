@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { motion, size, space } from '@konvami/design-tokens';
 import { Icon, type IconName } from '@/components/icon';
+import { IconBlob } from '@/components/list';
 import { Text } from '@/components/text';
 import { Animate } from '@/components/motion';
 import { slideUpKeyframes } from '@/lib/motion';
@@ -18,11 +19,14 @@ import { ThemeScope, useTheme } from '@/theme';
 export function Sheet({
   visible,
   title,
+  icon,
   onClose,
   children,
 }: {
   visible: boolean;
   title: string;
+  /** What the sheet is about, as a colour blob beside its title (v4). */
+  icon?: IconName;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -59,9 +63,12 @@ export function Sheet({
               style={{ paddingBottom: Math.max(insets.bottom, space.lg) + space.sm }}
             >
               <View className="flex-row items-center justify-between gap-3 pb-2">
-                <Text variant="heading" accessibilityRole="header" className="shrink">
-                  {title}
-                </Text>
+                <View className="shrink flex-row items-center gap-3">
+                  {icon ? <IconBlob icon={icon} /> : null}
+                  <Text variant="heading" accessibilityRole="header" className="shrink">
+                    {title}
+                  </Text>
+                </View>
                 <Pressable
                   onPress={onClose}
                   accessibilityRole="button"
