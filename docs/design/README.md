@@ -176,6 +176,17 @@ canvas after that date is not in it.
 - Colour blocks, each owned by one feature: talking is tomato, words are pink, the streak is
   butter, the level and the week's goal are forest with lime, the week's focus is ink
   (`components/tile.tsx`). No purple, indigo, lavender, gradients or glows.
+- Screens the prototype does not draw take the colour of their feature's family, in a
+  `PageHero` tile at the top (title, what it is for, the learner's own number in lime or ink):
+  talking (role-plays, pen-pal) tomato; words (phrasebook, import, pronunciation) pink; level and
+  goals (grammar map and topics, exam centre, a simulation's score, Then vs Now) forest; asking
+  (the Tutor) ink. Settings pages (Profile's sub-pages, Help, legal, the owner's pages) stay on
+  paper, calm, with colour only in their row blobs (`IconBlob`) and the ink voice-minutes tile.
+- First-launch heroes sit on a block: the intro's slides tomato, butter and pink, the microphone
+  tomato, the placement test and Face ID forest. Every call (practice, setup with Mia, the
+  placement test, an exam simulation) is the forest block with lime (`BlockScope`).
+- The learner's own lines are lime bubbles everywhere (the call, the transcript, the Tutor,
+  pen-pal notes, Then vs Now); lines in the language learned are set in the serif italic.
 - Bricolage Grotesque ExtraBold for titles and big numbers, Figtree for interface text, and the
   language learned always in Instrument Serif italic (`langBody`, `langLine`, `langLarge`,
   `langWord`, `langHero`).
