@@ -745,11 +745,21 @@ _REVIEW_CARD = """
             reviews = :reviews, lapses = :lapses
         WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
           AND reviews = :reviews_before
+          AND NOT EXISTS (
+              SELECT 1 FROM card_review r
+              WHERE r.card_id = CAST(:id AS uuid) AND r.client_id = CAST(:client_id AS uuid)
+          )
         RETURNING id, reviews, reviewed_at
     )
-    INSERT INTO card_review (card_id, position, reviewed_at, rating)
-    SELECT id, reviews, reviewed_at, :rating FROM done
+    INSERT INTO card_review (card_id, position, reviewed_at, rating, client_id)
+    SELECT id, reviews, reviewed_at, :rating, CAST(:client_id AS uuid) FROM done
     RETURNING card_id
+"""
+
+_HAS_CLIENT_REVIEW = """
+    SELECT 1 FROM card_review r JOIN card c ON c.id = r.card_id
+    WHERE r.card_id = CAST(:id AS uuid) AND c.user_id = CAST(:user_id AS uuid)
+      AND r.client_id = CAST(:client_id AS uuid)
 """
 
 _REMOVE_CARD = """
@@ -2072,7 +2082,14 @@ class SqlCardRepository:
         )
         return rows[0]["total"], rows[0]["due"]
 
-    def reviewed(self, user_id: UUID, card: Card, rating: Rating, reviews_before: int) -> bool:
+    def reviewed(
+        self,
+        user_id: UUID,
+        card: Card,
+        rating: Rating,
+        reviews_before: int,
+        client_id: UUID | None = None,
+    ) -> bool:
         memory = card.memory
         rows = self._client.execute(
             _REVIEW_CARD,
@@ -2087,7 +2104,15 @@ class SqlCardRepository:
                 "lapses": card.lapses,
                 "reviews_before": reviews_before,
                 "rating": rating,
+                "client_id": str(client_id) if client_id else None,
             },
+        )
+        return bool(rows)
+
+    def has_review(self, user_id: UUID, card_id: UUID, client_id: UUID) -> bool:
+        rows = self._client.execute(
+            _HAS_CLIENT_REVIEW,
+            {"id": str(card_id), "user_id": str(user_id), "client_id": str(client_id)},
         )
         return bool(rows)
 
