@@ -77,11 +77,18 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
   const flags = useFlags(conversation.id);
   // The partner's line being reported (its place in the transcript); null while none is.
   const [reporting, setReporting] = useState<number | null>(null);
-  const playLabel = (speaker: 'persona' | 'learner') =>
-    speaker === 'learner'
+  // A line of the second partner of a two-partner conversation (5.24) is theirs, not the lead's.
+  const nameOf = (turn: { speaker: 'persona' | 'learner'; guest?: boolean }) =>
+    turn.speaker === 'learner'
+      ? t('library.transcript.you')
+      : turn.guest
+        ? (conversation.guest?.name ?? t('conversations.formerPartner'))
+        : partner;
+  const playLabel = (turn: { speaker: 'persona' | 'learner'; guest?: boolean }) =>
+    turn.speaker === 'learner'
       ? t('library.transcript.playYou')
-      : conversation.partner
-        ? t('library.transcript.playPartner', { name: partner })
+      : (turn.guest ? conversation.guest : conversation.partner)
+        ? t('library.transcript.playPartner', { name: nameOf(turn) })
         : t('library.transcript.playFormer');
   // Plays the line with its words lit up, asking for their timing the first time.
   const highlight = (i: number) => {
@@ -185,11 +192,17 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                 <View
                   className={`gap-1.5 ${compact ? 'self-stretch' : 'flex-1'} ${turn.speaker === 'learner' ? 'items-end' : 'items-start'}`}
                 >
+                  {/* With two partners, each of their lines says whose it is. */}
+                  {conversation.guest && turn.speaker === 'persona' ? (
+                    <Text variant="labelSmall" tone="muted" aria-hidden>
+                      {nameOf(turn)}
+                    </Text>
+                  ) : null}
                   <ChatBubble
                     from={turn.speaker}
                     lang
                     accessibilityLabel={t('library.transcript.line', {
-                      speaker: turn.speaker === 'persona' ? partner : t('library.transcript.you'),
+                      speaker: nameOf(turn),
                       text,
                     })}
                   >
@@ -232,17 +245,13 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                 >
                   {turn.audio ? (
                     <PlayButton
-                      label={
-                        playing === i
-                          ? t('library.transcript.stopPlaying')
-                          : playLabel(turn.speaker)
-                      }
+                      label={playing === i ? t('library.transcript.stopPlaying') : playLabel(turn)}
                       state={playing === i ? 'playing' : 'idle'}
                       onPress={() => toggle(i)}
                     />
                   ) : null}
                   <TurnMenu
-                    title={turn.speaker === 'persona' ? partner : t('library.transcript.you')}
+                    title={nameOf(turn)}
                     highlight={
                       turn.audio
                         ? {

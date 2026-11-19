@@ -17,6 +17,7 @@ import { TextButton } from '@/components/text-button';
 import { wholeMinutes } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
+import { partnerNames } from '@/lib/partner-names';
 import { practiceSentence } from '@/lib/practice-sentence';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { callRoute, conversationRoute, explainRoute, ROUTES } from '@/lib/routes';
@@ -40,7 +41,14 @@ function Heading({ conversation }: { conversation: Conversation | null }) {
   const { clock } = usePracticeServices();
   const meta = conversation
     ? [
-        conversation.partner ? t('report.with', { name: conversation.partner.name }) : null,
+        conversation.partner
+          ? t('report.with', {
+              name: partnerNames(conversation, {
+                together: (first, second) => t('call.together', { first, second }),
+                former: t('conversations.formerPartner'),
+              }),
+            })
+          : null,
         relativeDayLabel(t, i18n.language, conversation.startedAt, new Date(clock.now())),
         t('time.minutes', { count: wholeMinutes(conversation.seconds) }),
       ].filter((part) => part !== null)

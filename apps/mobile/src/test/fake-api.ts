@@ -850,6 +850,8 @@ export interface FakeApi extends ApiClient {
       /** A role-play: its scenario id, and the goals reached in it. */
       scenario?: string | null;
       goalsReached?: string[];
+      /** A two-partner conversation (5.24): the index of the second partner. */
+      guest?: number;
     },
   ): Conversation;
   /**
@@ -1276,12 +1278,19 @@ export function createFakeApi(): FakeApi {
     verbatim: (string | null)[] = [],
   ): TranscriptTurn[] {
     const turns: TranscriptTurn[] = [
-      { speaker: 'persona', text: 'Hallo! Wie geht’s dir heute?', verbatim: null, audio: null },
+      {
+        speaker: 'persona',
+        text: 'Hallo! Wie geht’s dir heute?',
+        verbatim: null,
+        audio: null,
+        guest: false,
+      },
       ...learnerSays.map((text, i): TranscriptTurn => ({
         speaker: 'learner',
         text,
         verbatim: verbatim[i] ?? null,
         audio: null,
+        guest: false,
       })),
     ];
     return recordedAs
@@ -1643,12 +1652,14 @@ export function createFakeApi(): FakeApi {
         verbatim,
         scenario = null,
         goalsReached = [],
+        guest,
       } = {},
     ) {
       const started = now - daysAgo * DAY_MS - hoursAgo * 60 * MINUTE_MS;
       const conversation: Conversation = {
         id,
         partner: personas?.[partner] ?? null,
+        guest: guest === undefined ? null : (personas?.[guest] ?? null),
         startedAt: new Date(started).toISOString(),
         endedAt: ended ? new Date(started + minutes * MINUTE_MS).toISOString() : null,
         seconds: ended ? minutes * 60 : 0,

@@ -7,6 +7,7 @@ import { PressScale } from '@/components/motion';
 import { PersonaAvatar } from '@/components/persona-avatar';
 import { Text } from '@/components/text';
 import { wholeMinutes } from '@/lib/format';
+import { partnerNames } from '@/lib/partner-names';
 import { relativeDayLabel, relativeDayPhrase } from '@/lib/relative-day';
 import { useTheme } from '@/theme';
 
@@ -30,7 +31,10 @@ export function ConversationRow({
   const { t, i18n } = useTranslation();
   const { color } = useTheme();
   const { partner, startedAt } = conversation;
-  const name = partner?.name ?? t('conversations.formerPartner');
+  const name = partnerNames(conversation, {
+    together: (first, second) => t('call.together', { first, second }),
+    former: t('conversations.formerPartner'),
+  });
   const duration = t('time.minutes', { count: wholeMinutes(conversation.seconds) });
   return (
     <PressScale
