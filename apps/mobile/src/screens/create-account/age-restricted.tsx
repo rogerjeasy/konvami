@@ -5,8 +5,7 @@ import { Button } from '@/components/button';
 import { Reveal } from '@/components/motion';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Text } from '@/components/text';
-import { staggerDelay } from '@/lib/motion';
+import { PageHero } from '@/components/page-hero';
 import { ROUTES } from '@/lib/routes';
 
 /**
@@ -26,12 +25,12 @@ export function AgeRestrictedScreen() {
       actions={<Button label={t('ageRestricted.back')} onPress={toStart} />}
     >
       <Reveal>
-        <Text variant="title" accessibilityRole="header">
-          {t('ageRestricted.title')}
-        </Text>
-      </Reveal>
-      <Reveal delay={staggerDelay(1)}>
-        <Text tone="muted">{t('ageRestricted.body')}</Text>
+        <PageHero
+          color="butter"
+          icon="info"
+          title={t('ageRestricted.title')}
+          body={t('ageRestricted.body')}
+        />
       </Reveal>
     </StepLayout>
   );

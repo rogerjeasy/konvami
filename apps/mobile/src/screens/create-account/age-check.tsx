@@ -9,6 +9,7 @@ import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { StepHeader } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { calendarDateOf, withDatePart, type DatePart } from '@/lib/dates';
 import { commitFeedback } from '@/lib/haptics';
@@ -72,12 +73,12 @@ export function AgeCheckScreen({ today: givenToday }: { today?: Date }) {
       actions={<Button label={t('common.continue')} disabled={!touched} onPress={onContinue} />}
     >
       <Reveal>
-        <View className="gap-2.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('ageCheck.title')}
-          </Text>
-          <Text tone="muted">{t('ageCheck.body')}</Text>
-        </View>
+        <PageHero
+          color="butter"
+          icon="calendar"
+          title={t('ageCheck.title')}
+          body={t('ageCheck.body')}
+        />
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
