@@ -109,6 +109,7 @@ function ExplanationsForm({ data }: { data: OnboardingData }) {
       </Reveal>
 
       <Sheet
+        icon="message"
         visible={listOpen}
         title={t('onboarding.explanations.listTitle')}
         onClose={() => setListOpen(false)}
