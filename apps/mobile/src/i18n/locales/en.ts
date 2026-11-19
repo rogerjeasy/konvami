@@ -1411,6 +1411,24 @@ export const en = {
       fluency: 'Fluency: {{score}} / 100',
       prosody: 'Stress and rhythm: {{score}} / 100',
     },
+    soundScore: {
+      band: {
+        good: '{{sound}} sounds good',
+        close: '{{sound}} is nearly there',
+        practise: 'Keep practising {{sound}}',
+      },
+      bandShort: {
+        good: 'Sounds good',
+        close: 'Nearly there',
+        practise: 'Keep practising',
+      },
+      outOf: '{{score}} / 100',
+      again: 'Say “{{word}}” again first.',
+      fromWords:
+        'No single sounds came back for this language, so this score is from the whole words.',
+      recent_one: '{{band}} · {{score}} / 100 from {{count}} assessed drill',
+      recent_other: '{{band}} · {{score}} / 100 from your last {{count}} assessed drills',
+    },
     title: 'Pronunciation lab',
     body: 'Sounds that are hard to hear and to say. Listen, say it, and see which words were heard as asked.',
     loading: 'Opening the pronunciation lab',
