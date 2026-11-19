@@ -1219,6 +1219,17 @@ def _router(services: Services) -> APIRouter:
         services.memories.remove(user, memory_id)
         return memories_of(user, services.memories.view(user))
 
+    @router.post(
+        "/memories/forgets/{forget_id}/undo",
+        operation_id="undoForget",
+        status_code=204,
+        responses=NOT_FOUND,
+    )
+    def undo_forget(user: CurrentUser, forget_id: UUID) -> None:
+        """Takes back a "forget that" said during the call that is still going on: what it hid
+        is remembered again. Once the call has ended it is final."""
+        services.memories.undo_forget(user, forget_id)
+
     def account_of(user: UUID, view: AccountView) -> AccountOut:
         return AccountOut.of(view, owner=services.costs.is_owner(user))
 

@@ -437,6 +437,11 @@ export interface ApiClient {
   changeMemory(id: string, change: MemoryChange): Promise<Memory>;
   /** Forgets a memory for good; answers with what is left. */
   removeMemory(id: string): Promise<Memories>;
+  /**
+   * Takes back a "forget that" the learner said during the call that is still going on (spec
+   * §6.11): what it hid is remembered again. Rejects with `not_found` once the call has ended.
+   */
+  undoForget(id: string): Promise<void>;
   /** The questions asked to the Tutor, newest first. */
   getTutorQuestions(): Promise<{ questions: TutorQuestion[] }>;
   /**
@@ -880,5 +885,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     changeMemory: (id, change) =>
       request('PATCH', `/v1/memories/${encodeURIComponent(id)}`, change),
     removeMemory: (id) => request('DELETE', `/v1/memories/${encodeURIComponent(id)}`),
+    undoForget: async (id) =>
+      void (await request('POST', `/v1/memories/forgets/${encodeURIComponent(id)}/undo`)),
   };
 }

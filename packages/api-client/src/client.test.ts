@@ -328,6 +328,22 @@ describe('api client', () => {
     });
   });
 
+  it('takes back a forget said during the call', async () => {
+    const { fetch, calls } = fakeFetch(
+      new Response(null, { status: 204 }),
+      json(404, { error: { code: 'not_found', field: null } }),
+    );
+    const { api } = client(fetch);
+
+    await api.undoForget('f/1');
+    await expect(api.undoForget('f/1')).rejects.toMatchObject({ code: 'not_found' });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/memories/forgets/f%2F1/undo',
+      'POST https://api.example.test/v1/memories/forgets/f%2F1/undo',
+    ]);
+  });
+
   it('continues a logical call with a stable attempt and explicitly ends it', async () => {
     const answer = { callId: 'rtc_1', sdp: 'answer', maxSeconds: 120, plan: null };
     const { fetch, calls } = fakeFetch(json(200, answer), new Response(null, { status: 204 }));

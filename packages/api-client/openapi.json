@@ -10872,6 +10872,60 @@
         "summary": "Configure Memories"
       }
     },
+    "/v1/memories/forgets/{forget_id}/undo": {
+      "post": {
+        "description": "Takes back a \"forget that\" said during the call that is still going on: what it hid\nis remembered again. Once the call has ended it is final.",
+        "operationId": "undoForget",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "forget_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Forget Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Forget"
+      }
+    },
     "/v1/memories/{memory_id}": {
       "delete": {
         "description": "Forgets one memory for good.",

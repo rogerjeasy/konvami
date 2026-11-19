@@ -6,7 +6,7 @@ from uuid import UUID
 
 import pytest
 
-from konvami_api.domain.memories import MAX_MEMORIES, Memory, memory_key
+from konvami_api.domain.memories import MAX_MEMORIES, Forget, Memory, memory_key
 from tests.api.conftest import OTHER_USER, USER, Call
 from tests.api.test_api import NOON, onboarded
 from tests.fakes import InMemoryMemoryRepository, ScriptedTextModel
@@ -256,3 +256,18 @@ def test_nobody_changes_or_forgets_what_is_someone_elses(
 
 def test_memories_are_for_signed_in_learners(call: Call) -> None:
     assert call("GET", "/v1/memories", subject=None).status == 401
+
+
+def test_a_forget_said_during_the_call_is_undone(
+    call: Call, memory_store: InMemoryMemoryRepository
+) -> None:
+    kept(memory_store, 1, "Lives in Zurich.")
+    forget = Forget(UUID("ffffffff-ffff-4fff-8fff-000000000001"), "Zurich", NOON)
+    memory_store.forget(UUID(USER), forget, [UUID(FIRST_ID)])
+
+    undone = call("POST", f"/v1/memories/forgets/{forget.id}/undo")
+    again = call("POST", f"/v1/memories/forgets/{forget.id}/undo")
+
+    assert undone.status == 204
+    assert [m["text"] for m in call("GET", "/v1/memories").body["memories"]] == ["Lives in Zurich."]
+    assert again.status == 404
