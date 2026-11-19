@@ -46,3 +46,18 @@ it('ignores malformed or local URLs', () => {
   playback.handle(null);
   expect(clips.play).not.toHaveBeenCalled();
 });
+
+it('says when a line is the second voice of the call', () => {
+  const emit = jest.fn();
+  const playback = premiumPlayback({ play: jest.fn(), stop: jest.fn() }, emit);
+  const guest = note();
+  const part = guest.item.content[0]!;
+  part.text = part.text.replace('"milliseconds"', '"speaker":"guest","milliseconds"');
+  playback.handle(guest);
+  expect(emit).toHaveBeenCalledWith({
+    type: 'response.output_audio_transcript.done',
+    item_id: 'reply1',
+    transcript: 'Bonjour!',
+    guest: true,
+  });
+});

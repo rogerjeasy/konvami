@@ -7,7 +7,7 @@ import { track } from '@/analytics';
 import { conversationReducer, INITIAL_CONVERSATION, type ConversationState } from './conversation';
 import { VoiceError, type StartedCall, type VoiceEngine, type VoiceErrorCode } from './engine';
 import type { HelpKind } from './help';
-import { useVoiceEngineFactory } from './services';
+import { useVoiceEngineFactory, type VoiceCallOptions } from './services';
 
 /** Why a call is not running: it could not start, or its connection dropped (`lost`). */
 export type CallProblem = VoiceErrorCode | 'lost';
@@ -57,9 +57,11 @@ export function useVoiceCall(
   personaId?: string,
   scenario?: string,
   practise?: string,
-  options?: { assessmentConsent?: boolean },
+  options?: VoiceCallOptions,
 ): VoiceCall {
   const assessmentConsent = options?.assessmentConsent ?? false;
+  // The second partner of a two-partner conversation (5.24).
+  const guestId = options?.guestId;
   const createEngine = useVoiceEngineFactory();
   const [status, setStatus] = useState<VoiceCall['status']>('starting');
   const [problem, setProblem] = useState<CallProblem | null>(null);
@@ -74,7 +76,10 @@ export function useVoiceCall(
   const voice = useSharedValue(0);
 
   useEffect(() => {
-    const call = createEngine(purpose, personaId, scenario, practise, { assessmentConsent });
+    const call = createEngine(purpose, personaId, scenario, practise, {
+      assessmentConsent,
+      ...(guestId ? { guestId } : {}),
+    });
     engine.current = call;
     let current = true;
     const fail = (reason: CallProblem) => {
@@ -114,7 +119,7 @@ export function useVoiceCall(
       unsubscribe();
       call.stop();
     };
-  }, [createEngine, purpose, personaId, scenario, practise, assessmentConsent]);
+  }, [createEngine, purpose, personaId, scenario, practise, assessmentConsent, guestId]);
 
   // The lips and the listening ring follow the voice levels while the call is live.
   const speaking = conversation.phase === 'speaking';

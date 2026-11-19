@@ -20,7 +20,8 @@ export type ConversationPhase =
 
 export interface Caption {
   id: string;
-  speaker: 'persona' | 'learner';
+  /** `guest`: the call's second voice (a second partner, 5.24, or an exam's other candidate). */
+  speaker: 'persona' | 'learner' | 'guest';
   text: string;
   /** False while the line is still being spoken or transcribed. */
   final: boolean;
@@ -89,6 +90,8 @@ export interface ConversationState {
   profileChanges: ProfileChangeNote[];
   /** The face the partner asked for last; null before it asked for one. */
   expression: ExpressionRequest | null;
+  /** Whose voice spoke last: the call's own (`persona`) or its second one (`guest`). */
+  voiceOf: 'persona' | 'guest';
 }
 
 export const INITIAL_CONVERSATION: ConversationState = {
@@ -104,6 +107,7 @@ export const INITIAL_CONVERSATION: ConversationState = {
   examParts: [],
   profileChanges: [],
   expression: null,
+  voiceOf: 'persona',
 };
 
 /** The tool the partner shows its face with (services/api: `domain/practice.py`). */
@@ -265,9 +269,18 @@ export function conversationReducer(state: ConversationState, event: unknown): C
     case 'input_audio_buffer.speech_stopped':
       return { ...state, phase: 'thinking' };
     case 'response.output_audio_transcript.delta':
-      return withCaption(state, 'persona', text(e.item_id), (t) => t + text(e.delta), false);
-    case 'response.output_audio_transcript.done':
-      return withCaption(state, 'persona', text(e.item_id), () => text(e.transcript), true);
+      return {
+        ...withCaption(state, 'persona', text(e.item_id), (t) => t + text(e.delta), false),
+        voiceOf: 'persona',
+      };
+    case 'response.output_audio_transcript.done': {
+      // A clip of the call's second voice says so (`premiumPlayback`).
+      const voiceOf = e.guest === true ? 'guest' : 'persona';
+      return {
+        ...withCaption(state, voiceOf, text(e.item_id), () => text(e.transcript), true),
+        voiceOf,
+      };
+    }
     case 'conversation.item.input_audio_transcription.delta':
       return withCaption(state, 'learner', text(e.item_id), (t) => t + text(e.delta), false);
     case 'conversation.item.input_audio_transcription.completed':
