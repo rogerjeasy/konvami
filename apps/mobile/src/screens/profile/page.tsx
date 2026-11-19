@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { View } from 'react-native';
 import { Redirect, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
+import type { IconName } from '@/components/icon';
 import { IconTile } from '@/components/icon-tile';
+import { PageHero } from '@/components/page-hero';
 import { Pop, Reveal } from '@/components/motion';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
@@ -21,6 +23,7 @@ export function ProfilePage({
   title,
   body,
   lead,
+  hero,
   backTo = ROUTES.account,
   stay = false,
   actions,
@@ -30,6 +33,8 @@ export function ProfilePage({
   body?: string;
   /** Something above the title (a portrait, an icon tile). */
   lead?: ReactNode;
+  /** Draws the title and its line on the page's colour block, with its icon (v4). */
+  hero?: { color: ComponentProps<typeof PageHero>['color']; icon: IconName };
   /** Where Back goes when the screen was opened directly (a reload on the web). */
   backTo?: Href;
   /** Keeps the screen up although nobody is signed in any more (while the app leaves it). */
@@ -45,12 +50,16 @@ export function ProfilePage({
       <Reveal>
         <View className="gap-3.5">
           {lead}
-          <View className="gap-2.5">
-            <Text variant="title" accessibilityRole="header">
-              {title}
-            </Text>
-            {body ? <Text tone="muted">{body}</Text> : null}
-          </View>
+          {hero ? (
+            <PageHero color={hero.color} icon={hero.icon} title={title} body={body} />
+          ) : (
+            <View className="gap-2.5">
+              <Text variant="title" accessibilityRole="header">
+                {title}
+              </Text>
+              {body ? <Text tone="muted">{body}</Text> : null}
+            </View>
+          )}
         </View>
       </Reveal>
       {children}
