@@ -134,7 +134,8 @@ export function NewStudioScreen() {
   }
 
   // The partner belongs to an account.
-  if (status !== 'signedIn') return <ProfilePage title="" />;
+  if (status !== 'signedIn')
+    return <ProfilePage hero={{ color: 'tomato', icon: 'users' }} title="" />;
 
   const props: SectionProps = { draft, change, problems: pressed ? missing : [] };
   const Section = step === 'review' ? null : SECTION[step];
@@ -349,7 +350,7 @@ export function EditStudioScreen() {
     if (signedIn) void store.load();
   }, [signedIn, store]);
 
-  if (!signedIn) return <ProfilePage title="" />;
+  if (!signedIn) return <ProfilePage hero={{ color: 'tomato', icon: 'users' }} title="" />;
 
   const header = (
     <View className="min-h-tap flex-row items-center">

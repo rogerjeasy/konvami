@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import type { PersonaDraft } from '@konvami/api-client';
 import { Reveal } from '@/components/motion';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import type { DraftProblem } from '@/profile/persona-draft';
 
@@ -17,12 +18,7 @@ export interface SectionProps {
 export function SectionTitle({ title, body }: { title: string; body: string }) {
   return (
     <Reveal>
-      <View className="gap-2.5">
-        <Text variant="title" accessibilityRole="header">
-          {title}
-        </Text>
-        <Text tone="muted">{body}</Text>
-      </View>
+      <PageHero color="tomato" icon="users" title={title} body={body} />
     </Reveal>
   );
 }
