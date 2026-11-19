@@ -240,6 +240,7 @@ def test_the_partner_can_end_the_conversation_when_the_learner_says_goodbye() ->
         "ask_tutor",
         "set_expression",
         "update_profile",
+        "forget_memory",
     ]
     result = tools.run("end_conversation", {})
     assert result.finished

@@ -16,7 +16,8 @@ from uuid import UUID
 from konvami_api.domain.accounts import Account
 from konvami_api.domain.conversations import ConversationService, PartnerHistory
 from konvami_api.domain.live_call import LIVE_CORRECTION_NOTE
-from konvami_api.domain.memories import Memory, MemoryService, Recall
+from konvami_api.domain.memories import Memory, MemoryService, Recall, memory_ref
+from konvami_api.domain.memory_voice import FORGET_MEMORY, MemoryVoice
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.persona_parts import (
     Expression,
@@ -113,11 +114,13 @@ class PracticeTools:
         user_id: UUID,
         goals: tuple[Goal, ...] = (),
         profile_voice: ProfileVoice | None = None,
+        memory_voice: MemoryVoice | None = None,
     ) -> None:
         self._tutor = tutor
         self._user_id = user_id
         self._goals = goals
         self._profile_voice = profile_voice
+        self._memory_voice = memory_voice
         self._reached: set[str] = set()
 
     @property
@@ -188,6 +191,7 @@ class PracticeTools:
             },
             *self._goal_tool(),
             *([self._profile_voice.definition()] if self._profile_voice else []),
+            *([self._memory_voice.definition()] if self._memory_voice else []),
         ]
 
     def _goal_tool(self) -> list[dict[str, Any]]:
@@ -224,6 +228,8 @@ class PracticeTools:
             return self._mark(arguments.get("goal"))
         if name == UPDATE_PROFILE and self._profile_voice:
             return self._profile_voice.run(arguments)
+        if name == FORGET_MEMORY and self._memory_voice:
+            return self._memory_voice.run(arguments)
         if name == SET_EXPRESSION:
             return _expression(arguments)
         if name == ASK_TUTOR:
@@ -550,12 +556,12 @@ def _dated(memory: Memory, today: dt.date) -> str:
     it."""
     day = memory.day or today
     when = "today" if day == today else f"{day.strftime('%A')}, {day.isoformat()}"
-    return f"- {when}: {memory.text}"
+    return f"- {when}: {memory.text} [{memory_ref(memory)}]"
 
 
 def _noted(memory: Memory) -> str:
     day = f" ({memory.day.isoformat()})" if memory.day else ""
-    return f"- {memory.text}{day}"
+    return f"- {memory.text}{day} [{memory_ref(memory)}]"
 
 
 def _remembered(recall: Recall | None, target: str, today: dt.date) -> str:
@@ -582,6 +588,8 @@ that is how you know these things, and you say so if asked. In each note the lea
 subject unless it names someone else. The notes may be in another language; you still speak
 {target}.
 {chr(10).join(parts)}
+Each note ends with its ref in square brackets, which is only for forgetting it (see
+"Forgetting"): never say a ref aloud.
 Use this the way a friend would: bring one thing up when it fits, and never list or recite the
 notes. This is all you remember of earlier conversations: if they refer to anything else, say
 honestly that you do not recall it and ask them to tell you again.
@@ -891,7 +899,21 @@ The learner can tap for help. You then get a system note, which they did not say
   {target} and go on in {target}.
 - "{HELP_NOTE}explain": they did not understand something in your last reply. Explain it
   briefly in {explanation} (call {ASK_TUTOR} if it is about grammar), then go on in {target}.
-{_settings(learner, explanation)}"""
+{_forgetting()}{_settings(learner, explanation)}"""
+
+
+def _forgetting() -> str:
+    """The section on "forget that" (spec §6.11): the learner may ask a partner to forget
+    something, from before or from this conversation."""
+    return f"""
+# Forgetting
+They may ask you to forget something ("forget what I told you about...", "please don't remember
+that"). Then say in one short sentence what you understood and ask whether that is right. Only
+when they clearly say yes, call {FORGET_MEMORY} with confirmed true, the refs of the notes from
+before it is about (none if it is only about something said today) and briefly what it
+is. Then say in one short sentence that it is forgotten, and never bring it up again. If the
+result says it was not possible, say so honestly.
+"""
 
 
 def _settings(learner: Learner, explanation: str) -> str:
@@ -916,7 +938,8 @@ they follow. When they do: say in one short sentence what you understood and ask
 right. Only when they clearly say yes, call {UPDATE_PROFILE} with confirmed true, then say in one
 short sentence that it is done and go back to where you were. If the result says it was not
 possible, say so honestly. Never change anything on your own idea, and never for anything else
-(privacy, recordings, memory, their account, their level): those they change in the app's profile.
+(privacy, recordings, turning memory on or off, their account, their level): those they change
+in the app's profile. Forgetting one thing is not a setting: see "Forgetting".
 {check}"""
 
 
@@ -1055,7 +1078,13 @@ class PracticeScript:
             # Checked when the call started; a pack changed since leaves the call without goals.
             role_play = None
         voice = ProfileVoice(self._profiles, user_id, self._live_effect)
-        return PracticeTools(self._tutor, user_id, role_play.goals if role_play else (), voice)
+        return PracticeTools(
+            self._tutor,
+            user_id,
+            role_play.goals if role_play else (),
+            voice,
+            MemoryVoice(self._memories, user_id),
+        )
 
     def _live_effect(self, field: str, value: Json) -> str | None:
         """What a setting changed by voice means for the rest of this call (spec §12.7 step 4):
