@@ -128,7 +128,11 @@ export function FeedbackInboxScreen() {
   }
 
   return (
-    <ProfilePage title={t('feedbackInbox.title')} body={t('feedbackInbox.body')}>
+    <ProfilePage
+      hero={{ color: 'ink', icon: 'message' }}
+      title={t('feedbackInbox.title')}
+      body={t('feedbackInbox.body')}
+    >
       {state.phase === 'failed' && state.error === 'not_owner' ? (
         <NoticeBox icon="lock">{t('feedbackInbox.notOwner')}</NoticeBox>
       ) : (

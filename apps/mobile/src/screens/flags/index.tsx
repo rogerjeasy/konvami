@@ -128,7 +128,11 @@ export function FlagQueueScreen() {
   }
 
   return (
-    <ProfilePage title={t('flagQueue.title')} body={t('flagQueue.body')}>
+    <ProfilePage
+      hero={{ color: 'ink', icon: 'flag' }}
+      title={t('flagQueue.title')}
+      body={t('flagQueue.body')}
+    >
       {state.phase === 'failed' && state.error === 'not_owner' ? (
         <NoticeBox icon="lock">{t('flagQueue.notOwner')}</NoticeBox>
       ) : (

@@ -303,7 +303,11 @@ export function CostsScreen() {
   };
 
   return (
-    <ProfilePage title={t('costs.title')} body={t('costs.body')}>
+    <ProfilePage
+      hero={{ color: 'ink', icon: 'barChart' }}
+      title={t('costs.title')}
+      body={t('costs.body')}
+    >
       {state.phase === 'failed' && state.error === 'not_owner' ? (
         <NoticeBox icon="lock">{t('costs.notOwner')}</NoticeBox>
       ) : (
