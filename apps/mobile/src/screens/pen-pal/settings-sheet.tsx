@@ -3,19 +3,20 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PenPalSettings, PenPalSettingsChange } from '@konvami/api-client';
 import { Button } from '@/components/button';
-import { ChoiceChip } from '@/components/choice-chip';
-import { ChoiceGroup, ToggleRow } from '@/components/choice-group';
+import { Card } from '@/components/card';
+import { ToggleRow } from '@/components/choice-group';
 import { NoticeBox } from '@/components/notice-box';
 import { Sheet } from '@/components/sheet';
+import { Stepper } from '@/components/stepper';
 import { Text } from '@/components/text';
 import { formatTimeOfDay } from '@/lib/format';
 import { commitFeedback } from '@/lib/haptics';
 
 // How many notes a week a learner can ask their partners for.
-const NOTES_PER_WEEK = [1, 3, 5, 7] as const;
+const NOTES_PER_WEEK: readonly number[] = [1, 3, 5, 7];
 // The hours between which no note is sent: from late evening, until the morning.
-const QUIET_FROM_HOURS = [20, 21, 22, 23] as const;
-const QUIET_TO_HOURS = [6, 7, 8, 9, 10] as const;
+const QUIET_FROM_HOURS: readonly number[] = [20, 21, 22, 23];
+const QUIET_TO_HOURS: readonly number[] = [6, 7, 8, 9, 10];
 
 const hour = (value: number) => `${String(value).padStart(2, '0')}:00`;
 
@@ -52,7 +53,7 @@ export function PenPalSettingsSheet({
   }
 
   return (
-    <Sheet visible={visible} title={t('penPal.sheet.title')} onClose={onClose}>
+    <Sheet icon="mic" visible={visible} title={t('penPal.sheet.title')} onClose={onClose}>
       <View className="gap-4 pt-1">
         <ToggleRow
           label={t('penPal.sheet.on')}
@@ -61,36 +62,51 @@ export function PenPalSettingsSheet({
         />
         {settings.enabled ? (
           <>
-            <ChoiceGroup label={t('penPal.sheet.perWeek')} chips>
-              {NOTES_PER_WEEK.map((count) => (
-                <ChoiceChip
-                  key={count}
-                  label={String(count)}
-                  selected={settings.perWeek === count}
-                  onPress={() => void change({ perWeek: count })}
+            <Card className="gap-4 p-4">
+              <Stepper
+                title={t('penPal.sheet.perWeek')}
+                options={NOTES_PER_WEEK}
+                value={settings.perWeek}
+                onChange={(perWeek) => void change({ perWeek })}
+                number={String}
+                unit={(count) => t('penPal.sheet.noteUnit', { count })}
+                label={(count) => `${count} ${t('penPal.sheet.noteUnit', { count })}`}
+                lessLabel={t('common.less', { what: t('penPal.sheet.perWeek') })}
+                moreLabel={t('common.more', { what: t('penPal.sheet.perWeek') })}
+              />
+            </Card>
+            <Card className="gap-4 p-4">
+              <View className="gap-1">
+                <Text variant="heading" accessibilityRole="header">
+                  {t('penPal.sheet.quiet')}
+                </Text>
+                <Text variant="small" tone="muted">
+                  {t('penPal.sheet.quietHint')}
+                </Text>
+              </View>
+              <View className="gap-5">
+                <Stepper
+                  title={t('penPal.sheet.quietFrom')}
+                  options={QUIET_FROM_HOURS}
+                  value={settings.quietFrom}
+                  onChange={(quietFrom) => void change({ quietFrom })}
+                  number={(value) => formatTimeOfDay(i18n.language, hour(value))}
+                  label={(value) => formatTimeOfDay(i18n.language, hour(value))}
+                  lessLabel={t('common.earlier', { what: t('penPal.sheet.quietFrom') })}
+                  moreLabel={t('common.later', { what: t('penPal.sheet.quietFrom') })}
                 />
-              ))}
-            </ChoiceGroup>
-            <ChoiceGroup label={t('penPal.sheet.quietFrom')} chips>
-              {QUIET_FROM_HOURS.map((value) => (
-                <ChoiceChip
-                  key={value}
-                  label={formatTimeOfDay(i18n.language, hour(value))}
-                  selected={settings.quietFrom === value}
-                  onPress={() => void change({ quietFrom: value })}
+                <Stepper
+                  title={t('penPal.sheet.quietTo')}
+                  options={QUIET_TO_HOURS}
+                  value={settings.quietTo}
+                  onChange={(quietTo) => void change({ quietTo })}
+                  number={(value) => formatTimeOfDay(i18n.language, hour(value))}
+                  label={(value) => formatTimeOfDay(i18n.language, hour(value))}
+                  lessLabel={t('common.earlier', { what: t('penPal.sheet.quietTo') })}
+                  moreLabel={t('common.later', { what: t('penPal.sheet.quietTo') })}
                 />
-              ))}
-            </ChoiceGroup>
-            <ChoiceGroup label={t('penPal.sheet.quietTo')} chips>
-              {QUIET_TO_HOURS.map((value) => (
-                <ChoiceChip
-                  key={value}
-                  label={formatTimeOfDay(i18n.language, hour(value))}
-                  selected={settings.quietTo === value}
-                  onPress={() => void change({ quietTo: value })}
-                />
-              ))}
-            </ChoiceGroup>
+              </View>
+            </Card>
           </>
         ) : null}
         <Text variant="small" tone="muted">

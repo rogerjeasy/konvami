@@ -204,7 +204,7 @@ describe('5.21 Pen-pal', () => {
         { enabled: true, timezone: 'Europe/Zurich' },
       ]),
     );
-    await fireEvent.press(await screen.findByRole('radio', { name: '5' }));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Notes a week: more' }));
     await waitFor(() =>
       expect(api.calls).toContainEqual([
         'updatePenPalSettings',
