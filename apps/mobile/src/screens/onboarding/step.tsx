@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 import type { ProfileChange } from '@konvami/api-client';
 import { apiErrorCode, apiErrorKey } from '@/api/messages';
 import { Button } from '@/components/button';
+import type { IconName } from '@/components/icon';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton, StepHeader } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Text } from '@/components/text';
+import { PageHero } from '@/components/page-hero';
 import { commitFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
@@ -19,6 +20,18 @@ import { STEP_ROUTES } from '@/onboarding/routing';
 import { useOnboardingStore } from '@/onboarding/services';
 import { usePracticeServices } from '@/practice/services';
 import type { OnboardingData } from '@/onboarding/store';
+
+/**
+ * Each question of the setup on the colour of what it is about: the language and the course are
+ * words (pink), how much to explain is asking (ink), the goals and the level are forest.
+ */
+const STEP_LOOK = {
+  language: { color: 'pink', icon: 'globe' },
+  explanations: { color: 'ink', icon: 'message' },
+  goals: { color: 'forest', icon: 'target' },
+  level: { color: 'forest', icon: 'barChart' },
+  course: { color: 'pink', icon: 'book' },
+} as const satisfies Record<EssentialStep, { color: 'pink' | 'ink' | 'forest'; icon: IconName }>;
 
 /**
  * Where a step was opened from to change one answer: the review at the end of the setup, or
@@ -155,12 +168,12 @@ export function StepFrame({
       }
     >
       <Reveal>
-        <View className="gap-2.5">
-          <Text variant="title" accessibilityRole="header">
-            {title}
-          </Text>
-          <Text tone="muted">{body}</Text>
-        </View>
+        <PageHero
+          color={STEP_LOOK[step].color}
+          icon={STEP_LOOK[step].icon}
+          title={title}
+          body={body}
+        />
       </Reveal>
       {children}
     </StepLayout>
