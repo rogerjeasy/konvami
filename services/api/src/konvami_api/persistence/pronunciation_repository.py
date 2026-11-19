@@ -26,9 +26,9 @@ _RESERVE_DRILL = f"""
 _RECORD_DRILL = f"""
     WITH {_ENSURE_USER}
     INSERT INTO pronunciation_drill
-        (user_id, language, drilled_at, drill, sound_id, target, heard, was_right)
+        (user_id, language, drilled_at, drill, sound_id, target, heard, was_right, sound_score)
     VALUES (CAST(:user_id AS uuid), :language, CAST(:at AS timestamptz), :drill, :sound_id,
-            :target, :heard, :right)
+            :target, :heard, :right, :sound_score)
 """
 
 # A miss is a row (or one more miss); a hit extends the run only for a word that was missed once.
@@ -56,6 +56,19 @@ _PROGRESS = """
     FROM pronunciation_drill
     WHERE user_id = CAST(:user_id AS uuid) AND language = :language AND sound_id IS NOT NULL
     GROUP BY sound_id
+"""
+
+_SOUND_SCORES = """
+    SELECT sound_id, sound_score
+    FROM (
+        SELECT sound_id, sound_score,
+               row_number() OVER (PARTITION BY sound_id ORDER BY drilled_at DESC, id) AS newest
+        FROM pronunciation_drill
+        WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+            AND sound_id IS NOT NULL AND sound_score IS NOT NULL
+    ) scored
+    WHERE newest <= :recent
+    ORDER BY sound_id, newest
 """
 
 _PROBLEMS = """
@@ -92,6 +105,7 @@ class SqlPronunciationRepository:
         heard: str,
         right: bool,
         marks: Sequence[tuple[str, bool]],
+        sound_score: float | None = None,
     ) -> None:
         self._client.execute(
             _RECORD_DRILL,
@@ -104,6 +118,7 @@ class SqlPronunciationRepository:
                 "target": target,
                 "heard": heard,
                 "right": right,
+                "sound_score": sound_score,
             },
         )
         if not marks:
@@ -122,6 +137,15 @@ class SqlPronunciationRepository:
     def progress(self, user_id: UUID, language: str) -> dict[str, tuple[int, int]]:
         rows = self._client.execute(_PROGRESS, {"user_id": str(user_id), "language": language})
         return {str(row["sound_id"]): (int(row["tries"]), int(row["rights"])) for row in rows}
+
+    def sound_scores(self, user_id: UUID, language: str, recent: int) -> dict[str, list[float]]:
+        rows = self._client.execute(
+            _SOUND_SCORES, {"user_id": str(user_id), "language": language, "recent": recent}
+        )
+        found: dict[str, list[float]] = {}
+        for row in rows:
+            found.setdefault(str(row["sound_id"]), []).append(float(row["sound_score"]))
+        return found
 
     def problems(self, user_id: UUID, language: str, limit: int) -> list[ProblemWord]:
         rows = self._client.execute(
