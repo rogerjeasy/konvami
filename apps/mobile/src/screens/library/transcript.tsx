@@ -4,7 +4,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Transcript, RecordingTiming } from '@konvami/api-client';
 import { useSession } from '@/auth';
-import { ChatBubble } from '@/components/chat';
+import { ChatBubble, chatText } from '@/components/chat';
 import { FlagButton } from '@/components/flag-button';
 import { FlagSheet } from '@/components/flag-sheet';
 import { ListGroup, ListRow } from '@/components/list';
@@ -14,14 +14,16 @@ import { NoticeBox } from '@/components/notice-box';
 import { PlayButton } from '@/components/play-button';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { TextButton } from '@/components/text-button';
+import { Pill } from '@/components/pill';
 import { TextField } from '@/components/text-field';
 import { ChoiceGroup } from '@/components/choice-group';
 import type { Annotations } from '@/offline/library';
 import { NoteEditor, RecordingTools } from './tools';
 import { ConversationPronunciation } from './conversation-pronunciation';
 import { FilterPill } from './filter-pill';
+import { TurnMenu } from './turn-menu';
 import { Text } from '@/components/text';
+import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { timedText } from '@/lib/timed-text';
 import { formatClock, wholeMinutes } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
@@ -38,6 +40,7 @@ const SEPARATOR = ' · ';
 function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
   const { t, i18n } = useTranslation();
   const { conversation } = transcript;
+  const { compact } = useScreenLayout();
   const { libraryTools, readRecordingTiming } = usePracticeServices();
   const [timings, setTimings] = useState<Record<number, RecordingTiming>>({});
   const [timingBusy, setTimingBusy] = useState<number | null>(null);
@@ -80,6 +83,22 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
       : conversation.partner
         ? t('library.transcript.playPartner', { name: partner })
         : t('library.transcript.playFormer');
+  // Plays the line with its words lit up, asking for their timing the first time.
+  const highlight = (i: number) => {
+    if (timings[i]) {
+      toggle(i);
+      return;
+    }
+    setTimingBusy(i);
+    setTimingFailed(false);
+    void readRecordingTiming(conversation.id, i)
+      .then((value) => {
+        setTimings((before) => ({ ...before, [i]: value }));
+        if (value.words.length) toggle(i);
+      })
+      .catch(() => setTimingFailed(true))
+      .finally(() => setTimingBusy(null));
+  };
   const meta = [
     relativeDayLabel(t, i18n.language, conversation.startedAt, now),
     formatClock(i18n.language, conversation.startedAt),
@@ -149,14 +168,26 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
             return (
               <View
                 key={i}
-                className={`w-full items-center gap-2 ${
-                  turn.speaker === 'learner' ? 'flex-row-reverse' : 'flex-row'
+                // On a narrow phone the buttons go under the line, so it keeps its width.
+                className={`w-full gap-2 ${
+                  compact
+                    ? turn.speaker === 'learner'
+                      ? 'items-end'
+                      : 'items-start'
+                    : turn.speaker === 'learner'
+                      ? 'flex-row-reverse items-center'
+                      : 'flex-row items-center'
                 }`}
               >
                 {/* A screen reader hears who said each line; sighted readers see it by the side. */}
-                <View className="shrink">
+                {/* The line takes the row, its bubble on the speaker's side, so the buttons beside
+                    every line stand in one column and a short line never gets squeezed. */}
+                <View
+                  className={`gap-1.5 ${compact ? 'self-stretch' : 'flex-1'} ${turn.speaker === 'learner' ? 'items-end' : 'items-start'}`}
+                >
                   <ChatBubble
                     from={turn.speaker}
+                    lang
                     accessibilityLabel={t('library.transcript.line', {
                       speaker: turn.speaker === 'persona' ? partner : t('library.transcript.you'),
                       text,
@@ -167,8 +198,7 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                           (part, index) => (
                             <Text
                               key={index}
-                              variant="chat"
-                              tone={turn.speaker === 'persona' ? 'fg' : 'onPrimary'}
+                              {...chatText(turn.speaker, true)}
                               className={part.active ? 'underline font-body-semibold' : undefined}
                             >
                               {part.text}
@@ -177,34 +207,6 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                         )
                       : text}
                   </ChatBubble>
-                  {turn.audio ? (
-                    <TextButton
-                      label={t(
-                        timings[i] && !timings[i]!.words.length
-                          ? 'offlineLibrary.noTiming'
-                          : 'offlineLibrary.highlight',
-                      )}
-                      disabled={
-                        timingBusy !== null ||
-                        (timings[i] !== undefined && !timings[i]!.words.length)
-                      }
-                      onPress={() => {
-                        if (timings[i]) {
-                          toggle(i);
-                          return;
-                        }
-                        setTimingBusy(i);
-                        setTimingFailed(false);
-                        void readRecordingTiming(conversation.id, i)
-                          .then((value) => {
-                            setTimings((before) => ({ ...before, [i]: value }));
-                            if (value.words.length) toggle(i);
-                          })
-                          .catch(() => setTimingFailed(true))
-                          .finally(() => setTimingBusy(null));
-                      }}
-                    />
-                  ) : null}
                   {turn.speaker === 'learner' && turn.audio ? (
                     <ConversationPronunciation
                       callId={conversation.id}
@@ -217,48 +219,67 @@ function Lines({ transcript, now }: { transcript: Transcript; now: Date }) {
                       {annotation.note}
                     </Text>
                   ) : null}
-                  {libraryTools ? (
-                    <View className="flex-row flex-wrap gap-1">
-                      <TextButton
-                        label={t(
-                          annotation.bookmarked
-                            ? 'offlineLibrary.bookmarked'
-                            : 'offlineLibrary.bookmark',
-                        )}
-                        onPress={() => {
-                          void libraryTools
-                            .annotate(conversation.id, i, {
-                              ...annotation,
-                              bookmarked: !annotation.bookmarked,
-                            })
-                            .then(() => setRevision((value) => value + 1))
-                            .catch(() => setNoteTurn(i));
-                        }}
-                      />
-                      <TextButton
-                        label={t('offlineLibrary.editNote')}
-                        onPress={() => setNoteTurn(i)}
-                      />
+                  {annotation.bookmarked ? (
+                    <View className={`flex-row ${turn.speaker === 'learner' ? 'justify-end' : ''}`}>
+                      <Pill tone="primary" label={t('offlineLibrary.bookmarked')} />
                     </View>
                   ) : null}
                 </View>
-                {turn.audio ? (
-                  <PlayButton
-                    label={
-                      playing === i ? t('library.transcript.stopPlaying') : playLabel(turn.speaker)
+                <View
+                  className={`flex-row items-center gap-2 ${
+                    turn.speaker === 'learner' ? 'flex-row-reverse' : ''
+                  }`}
+                >
+                  {turn.audio ? (
+                    <PlayButton
+                      label={
+                        playing === i
+                          ? t('library.transcript.stopPlaying')
+                          : playLabel(turn.speaker)
+                      }
+                      state={playing === i ? 'playing' : 'idle'}
+                      onPress={() => toggle(i)}
+                    />
+                  ) : null}
+                  <TurnMenu
+                    title={turn.speaker === 'persona' ? partner : t('library.transcript.you')}
+                    highlight={
+                      turn.audio
+                        ? {
+                            label: t(
+                              timings[i] && !timings[i]!.words.length
+                                ? 'offlineLibrary.noTiming'
+                                : 'offlineLibrary.highlight',
+                            ),
+                            disabled:
+                              timingBusy !== null ||
+                              (timings[i] !== undefined && !timings[i]!.words.length),
+                            onPress: () => highlight(i),
+                          }
+                        : null
                     }
-                    state={playing === i ? 'playing' : 'idle'}
-                    onPress={() => toggle(i)}
+                    bookmarked={libraryTools ? annotation.bookmarked : null}
+                    onBookmark={() => {
+                      if (!libraryTools) return;
+                      void libraryTools
+                        .annotate(conversation.id, i, {
+                          ...annotation,
+                          bookmarked: !annotation.bookmarked,
+                        })
+                        .then(() => setRevision((value) => value + 1))
+                        .catch(() => setNoteTurn(i));
+                    }}
+                    onNote={libraryTools ? () => setNoteTurn(i) : null}
                   />
-                ) : null}
-                {/* Every AI line can be reported (Google Play's AI-generated content policy). */}
-                {turn.speaker === 'persona' ? (
-                  <FlagButton
-                    label={t(flags.has('turn', i) ? 'flag.reported' : 'flag.openLine')}
-                    flagged={flags.has('turn', i)}
-                    onPress={() => setReporting(i)}
-                  />
-                ) : null}
+                  {/* Every AI line can be reported (Google Play's AI-generated content policy). */}
+                  {turn.speaker === 'persona' ? (
+                    <FlagButton
+                      label={t(flags.has('turn', i) ? 'flag.reported' : 'flag.openLine')}
+                      flagged={flags.has('turn', i)}
+                      onPress={() => setReporting(i)}
+                    />
+                  ) : null}
+                </View>
               </View>
             );
           })}

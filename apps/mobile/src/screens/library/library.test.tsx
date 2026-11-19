@@ -201,8 +201,10 @@ describe('5.6 Transcript', () => {
     api.talked(0, { id: 'rtc_1', recorded: true });
     await open(api, 'rtc_1');
     expect(timing).not.toHaveBeenCalled();
-    await fireEvent.press(screen.getAllByRole('button', { name: 'Highlight words' })[0]!);
+    await fireEvent.press(screen.getAllByRole('button', { name: 'More for this line' })[0]!);
+    await fireEvent.press(screen.getByRole('button', { name: 'Highlight words' }));
     expect(timing).toHaveBeenCalledWith('rtc_1', 0);
+    await fireEvent.press(screen.getAllByRole('button', { name: 'More for this line' })[0]!);
     expect(
       await screen.findByRole('button', { name: 'Word timing unavailable for this recording' }),
     ).toBeDisabled();
