@@ -48,6 +48,7 @@ export function ExportScreen() {
 
   return (
     <ProfilePage
+      hero={{ color: 'ink', icon: 'archive' }}
       title={t('profile.export.title')}
       body={t('profile.export.body')}
       actions={
