@@ -9,6 +9,7 @@ from konvami_api.settings import (
     cost_settings,
     premium_voice_settings,
     text_models,
+    video_avatar_settings,
     voice_settings,
 )
 
@@ -233,3 +234,23 @@ def test_a_model_without_voices_offers_nothing() -> None:
 def test_a_broken_premium_voice_setting_is_named_at_start_up(raw: str) -> None:
     with pytest.raises(RuntimeError, match="KONVAMI_PREMIUM_VOICES"):
         premium_voice_settings(raw)
+
+
+def test_video_avatar_settings_name_the_vendor_and_its_faces() -> None:
+    raw = json.dumps({"vendor": "facely", "faces": [{"id": "anna-01", "name": "Anna"}]})
+
+    avatars = video_avatar_settings(raw)
+
+    assert avatars.vendor == "facely"
+    assert [(face.id, face.name) for face in avatars.faces] == [("anna-01", "Anna")]
+
+
+@pytest.mark.parametrize("missing", [None, ""])
+def test_without_video_avatar_settings_none_are_offered(missing: str | None) -> None:
+    assert not video_avatar_settings(missing).offered
+
+
+@pytest.mark.parametrize("raw", ["{", '{"vendor": "x", "faces": [{"id": "bad id", "name": "A"}]}'])
+def test_a_broken_video_avatar_setting_is_named_at_start_up(raw: str) -> None:
+    with pytest.raises(RuntimeError, match="KONVAMI_VIDEO_AVATARS"):
+        video_avatar_settings(raw)
