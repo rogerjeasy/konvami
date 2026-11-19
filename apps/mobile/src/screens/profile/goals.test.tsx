@@ -68,11 +68,13 @@ describe('6.3 Your goals', () => {
         'During testing you have 60 voice minutes a week. A plan never asks for more.',
       ),
     ).toBeTruthy();
-    expect(screen.getByRole('radio', { name: '4 days' }).props.accessibilityState.checked).toBe(
-      true,
-    );
-    await fireEvent.press(screen.getByRole('radio', { name: '3 days' }));
-    await fireEvent.press(screen.getByRole('radio', { name: '30 min' }));
+    expect(
+      screen.getByRole('adjustable', { name: 'Days a week' }).props.accessibilityValue.text,
+    ).toBe('4 days');
+    expect(screen.getByText('4 days, 40 min a week')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Days a week: less' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Minutes a week: less' }));
+    expect(screen.getByText('3 days, 30 min a week')).toBeTruthy();
     await fireEvent.press(screen.getByRole('radio', { name: 'B1' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Save' }));
 
@@ -85,6 +87,17 @@ describe('6.3 Your goals', () => {
       ]),
     );
     expect(router.back).toHaveBeenCalled();
+  });
+
+  it('stops at the last choice', async () => {
+    await open(<GoalsScreen />);
+    await screen.findByText(
+      'During testing you have 60 voice minutes a week. A plan never asks for more.',
+    );
+    for (let i = 0; i < 3; i++)
+      await fireEvent.press(screen.getByRole('button', { name: 'Minutes a week: more' }));
+    expect(screen.getByText('4 days, 120 min a week')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Minutes a week: more' })).toBeDisabled();
   });
 
   it('offers only levels above the learner’s own, and no level at all', async () => {

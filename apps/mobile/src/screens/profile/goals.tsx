@@ -7,6 +7,9 @@ import { Card } from '@/components/card';
 import { ChoiceChip } from '@/components/choice-chip';
 import { DateChoice } from '@/components/date-choice';
 import { Reveal } from '@/components/motion';
+import { PageHero } from '@/components/page-hero';
+import { Stepper } from '@/components/stepper';
+import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { NoticeBox } from '@/components/notice-box';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
@@ -24,6 +27,9 @@ import { usePracticeServices } from '@/practice/services';
 import { goalLevels, HABIT_DAYS, HABIT_MINUTES, habitOf, levelGoalOf } from '@/profile/goals';
 import { useAllowance, useProfileServices } from '@/profile/services';
 import { wholeMinutes } from '@/lib/format';
+
+// Stands between the habit and the level in the summary ("4 days, 40 min a week · B1").
+const SEPARATOR = ' · ';
 
 // The date wheels open this many months ahead and offer this many years.
 const DATE_START_MONTHS_AHEAD = 6;
@@ -74,6 +80,9 @@ function GoalsForm({
   useEffect(() => {
     void allowance.load();
   }, [allowance]);
+  // The week's voice minutes: a habit asking for more is planned within them.
+  const voiceMinutes = voice.phase === 'ready' ? wholeMinutes(voice.data.weeklySeconds) : null;
+  const { compact } = useScreenLayout();
 
   const pick = <Value,>(set: (value: Value) => void, value: Value) => {
     stepFeedback();
@@ -117,51 +126,71 @@ function GoalsForm({
       }
     >
       <Reveal>
-        <View className="gap-2.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('profile.goals.title')}
+        <PageHero
+          color="forest"
+          icon="target"
+          title={t('profile.goals.title')}
+          body={t('profile.goals.body')}
+        >
+          <Text variant="label" tone="lime" accessibilityLiveRegion="polite">
+            {[
+              t('profile.goals.habitValue', {
+                days: t('profile.goals.days', { count: days }),
+                minutes: t('time.minutes', { count: minutes }),
+              }),
+              level ? level : null,
+            ]
+              .filter(Boolean)
+              .join(SEPARATOR)}
           </Text>
-          <Text tone="muted">{t('profile.goals.body')}</Text>
-        </View>
+        </PageHero>
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
-        <Card className="gap-5 bg-surface p-4">
+        <Card className="gap-5 p-5">
           <Text variant="heading" accessibilityRole="header">
             {t('profile.goals.habit')}
           </Text>
-          <Choices title={t('profile.goals.daysTitle')}>
-            {HABIT_DAYS.map((count) => (
-              <ChoiceChip
-                key={count}
-                label={t('profile.goals.days', { count })}
-                selected={days === count}
-                onPress={() => pick(setDays, count)}
-              />
-            ))}
-          </Choices>
-          <Choices title={t('profile.goals.minutesTitle')}>
-            {HABIT_MINUTES.map((count) => (
-              <ChoiceChip
-                key={count}
-                label={t('time.minutes', { count })}
-                selected={minutes === count}
-                onPress={() => pick(setMinutes, count)}
-              />
-            ))}
-          </Choices>
-          {voice.phase === 'ready' ? (
-            <Text variant="small" tone="muted">
-              {t('profile.goals.minutesHint', {
-                minutes: wholeMinutes(voice.data.weeklySeconds),
-              })}
-            </Text>
+          <View className={compact ? 'gap-5' : 'flex-row gap-5'}>
+            <Stepper
+              title={t('profile.goals.daysTitle')}
+              options={HABIT_DAYS}
+              value={days}
+              onChange={setDays}
+              number={String}
+              unit={(count) => t('profile.goals.dayUnit', { count })}
+              label={(count) => t('profile.goals.days', { count })}
+              lessLabel={t('common.less', { what: t('profile.goals.daysTitle') })}
+              moreLabel={t('common.more', { what: t('profile.goals.daysTitle') })}
+            />
+            <Stepper
+              title={t('profile.goals.minutesTitle')}
+              options={HABIT_MINUTES}
+              value={minutes}
+              onChange={setMinutes}
+              number={String}
+              unit={() => t('profile.goals.minuteUnit')}
+              label={(count) => t('time.minutes', { count })}
+              lessLabel={t('common.less', { what: t('profile.goals.minutesTitle') })}
+              moreLabel={t('common.more', { what: t('profile.goals.minutesTitle') })}
+            />
+          </View>
+          {voiceMinutes !== null ? (
+            minutes > voiceMinutes ? (
+              <NoticeBox icon="info" tone="warn">
+                {t('profile.goals.minutesHint', { minutes: voiceMinutes })}
+              </NoticeBox>
+            ) : (
+              <Text variant="small" tone="muted">
+                {t('profile.goals.minutesHint', { minutes: voiceMinutes })}
+              </Text>
+            )
           ) : null}
         </Card>
       </Reveal>
 
       <Reveal delay={staggerDelay(2)}>
-        <Card className="gap-5 bg-surface p-4">
+        <Card className="gap-5 p-5">
           <Text variant="heading" accessibilityRole="header">
             {t('profile.goals.levelTitle')}
           </Text>
@@ -206,9 +235,7 @@ function GoalsForm({
       </Reveal>
 
       <Reveal delay={staggerDelay(3)}>
-        <Text variant="small" tone="muted">
-          {t('profile.goals.exam')}
-        </Text>
+        <NoticeBox icon="award">{t('profile.goals.exam')}</NoticeBox>
       </Reveal>
     </StepLayout>
   );
