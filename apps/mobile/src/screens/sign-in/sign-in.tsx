@@ -22,6 +22,7 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
+import { showsPendingSignIn } from '@/lib/sign-in-methods';
 import { isEmail } from '@/lib/validation';
 import { useSignUpDraft } from '@/screens/create-account/draft';
 import { useTheme } from '@/theme';
@@ -42,8 +43,8 @@ type Unavailable = keyof typeof PROVIDER_NAME | 'link';
  *
  * A wrong password and an unknown email get the same answer, so the screen never reveals who has
  * an account. After a few wrong passwords sign-in pauses on this device (`@/auth/attempts`).
- * Apple, Google and the emailed sign-in link are drawn as designed but not connected yet, and
- * say so.
+ * Apple, Google and the emailed sign-in link are not connected yet: store builds leave them out,
+ * and a build that shows them (`showsPendingSignIn`) says so.
  */
 export function SignInScreen() {
   const { t } = useTranslation();
@@ -58,6 +59,7 @@ export function SignInScreen() {
   /** A wrong password (with the tries left), or a general failure message. */
   const [failure, setFailure] = useState<{ triesLeft: number } | { message: string } | null>(null);
   const [unavailable, setUnavailable] = useState<Unavailable | null>(null);
+  const pendingShown = showsPendingSignIn();
 
   const wrong = failure && 'triesLeft' in failure && !attempts.paused ? failure : null;
   const valid = isEmail(email) && password.length > 0;
@@ -127,11 +129,13 @@ export function SignInScreen() {
             loading={sending}
             onPress={submit}
           />
-          <TextButton
-            tone="primary"
-            label={t('signIn.emailLink')}
-            onPress={() => setUnavailable('link')}
-          />
+          {pendingShown ? (
+            <TextButton
+              tone="primary"
+              label={t('signIn.emailLink')}
+              onPress={() => setUnavailable('link')}
+            />
+          ) : null}
           <Text variant="bodySmall" tone="muted" className="pb-1 pt-2 text-center">
             {t('signIn.newHere')}{' '}
             <Link
@@ -165,7 +169,7 @@ export function SignInScreen() {
             <NoticeBox icon="alert" tone="danger" title={t('signIn.wrongTitle')}>
               <Trans i18nKey="signIn.wrongBody" components={{ reset: resetLink }} />
             </NoticeBox>
-          ) : (
+          ) : pendingShown ? (
             // As drawn: when an error needs the space, it takes the place of the provider buttons.
             <>
               <View className="flex-row gap-3">
@@ -198,7 +202,7 @@ export function SignInScreen() {
                 <View className="h-px flex-1 bg-border" />
               </View>
             </>
-          )}
+          ) : null}
           {unavailable ? (
             <NoticeBox icon="info">
               {unavailable === 'link'

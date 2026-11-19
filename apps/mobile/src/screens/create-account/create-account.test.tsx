@@ -22,6 +22,13 @@ jest.mock('expo-router', () => ({
   },
 }));
 
+/** Store builds hide the sign-in ways that are not connected yet; some tests show them. */
+let mockShowPendingSignIn = false;
+jest.mock('@/lib/sign-in-methods', () => ({ showsPendingSignIn: () => mockShowPendingSignIn }));
+afterEach(() => {
+  mockShowPendingSignIn = false;
+});
+
 const EMAIL = 'amara.diallo@mail.com';
 const PASSWORD = 'Sommer2026!';
 const TODAY = new Date('2026-10-09T12:00:00');
@@ -102,10 +109,18 @@ describe('2.2 Create account', () => {
     ['Continue with Apple', 'Apple sign-in is coming soon. Use email for now.'],
     ['Continue with Google', 'Google sign-in is coming soon. Use email for now.'],
   ])('says %s is not available yet instead of doing nothing', async (button, notice) => {
+    mockShowPendingSignIn = true;
     await renderScreen(<CreateAccountScreen />, { draft: { ageBracket: '25-34' } });
     await fireEvent.press(screen.getByRole('button', { name: button }));
     expect(screen.getByText(notice)).toBeTruthy();
     expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it('offers only email while Apple and Google are not connected', async () => {
+    await renderScreen(<CreateAccountScreen />, { draft: { ageBracket: '25-34' } });
+    expect(screen.queryByRole('button', { name: 'Continue with Apple' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continue with Google' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Continue with email' })).toBeTruthy();
   });
 
   it('leads to sign in for someone who already has an account', async () => {

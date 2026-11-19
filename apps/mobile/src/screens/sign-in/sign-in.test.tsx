@@ -19,6 +19,13 @@ jest.mock('expo-router', () => ({
   },
 }));
 
+/** Store builds hide the sign-in ways that are not connected yet; some tests show them. */
+let mockShowPendingSignIn = false;
+jest.mock('@/lib/sign-in-methods', () => ({ showsPendingSignIn: () => mockShowPendingSignIn }));
+afterEach(() => {
+  mockShowPendingSignIn = false;
+});
+
 const EMAIL = 'amara.diallo@mail.com';
 const PASSWORD = 'Sommer2026!';
 const NEW_PASSWORD = 'Bergsee!Wandern42';
@@ -106,9 +113,18 @@ describe('3.1 Sign in', () => {
       'Sign-in links by email are coming soon. Use your password for now.',
     ],
   ])('says "%s" is not available yet instead of doing nothing', async (button, notice) => {
+    mockShowPendingSignIn = true;
     await renderScreen(<SignInScreen />);
     await fireEvent.press(screen.getByRole('button', { name: button }));
     expect(screen.getByText(notice)).toBeTruthy();
+  });
+
+  it('leaves out Apple, Google and the sign-in link while they are not connected', async () => {
+    await renderScreen(<SignInScreen />);
+    expect(screen.queryByRole('button', { name: 'Sign in with Apple' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Email me a sign-in link instead' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy();
   });
 
   it('sends someone whose email was never verified on to the code, with a new code', async () => {

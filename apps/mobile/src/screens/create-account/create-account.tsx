@@ -17,6 +17,7 @@ import { Text } from '@/components/text';
 import { openLegal } from '@/lib/external';
 import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
+import { showsPendingSignIn } from '@/lib/sign-in-methods';
 import { useTheme } from '@/theme';
 import { useSignUpDraft } from './draft';
 import { SIGN_UP_STEPS } from './steps';
@@ -28,15 +29,16 @@ const LOGO_SIZE = 52;
 const PROVIDER_NAME = { apple: 'Apple', google: 'Google' } as const;
 
 /**
- * 2.2 Create account: choose how to sign up. Email is live. Apple and Google are drawn as
- * designed but not connected yet (they need the developer accounts' credentials), so they say so
- * instead of failing silently.
+ * 2.2 Create account: choose how to sign up. Email is live. Apple and Google are not connected
+ * yet (they need the developer accounts' credentials): store builds leave them out, and a build
+ * that shows them (`showsPendingSignIn`) says so instead of failing silently.
  */
 export function CreateAccountScreen() {
   const { t, i18n } = useTranslation();
   const { color } = useTheme();
   const { draft } = useSignUpDraft();
   const [unavailable, setUnavailable] = useState<keyof typeof PROVIDER_NAME | null>(null);
+  const pendingShown = showsPendingSignIn();
 
   // Reached without passing the age check (a deep link, a reload on web): start there.
   if (!draft.ageBracket) return <Redirect href={ROUTES.createAccount} />;
@@ -88,34 +90,45 @@ export function CreateAccountScreen() {
 
       <Reveal delay={staggerDelay(1)}>
         <View className="gap-3">
-          <Button
-            variant="apple"
-            label={t('createAccount.apple')}
-            leading={<AppleLogo color={color.appleFg} />}
-            onPress={() => setUnavailable('apple')}
-          />
-          <Button
-            variant="secondary"
-            label={t('createAccount.google')}
-            leading={<GoogleLogo />}
-            onPress={() => setUnavailable('google')}
-          />
-          {unavailable ? (
-            <NoticeBox icon="info">
-              {t('createAccount.comingSoon', { provider: PROVIDER_NAME[unavailable] })}
-            </NoticeBox>
+          {pendingShown ? (
+            <>
+              <Button
+                variant="apple"
+                label={t('createAccount.apple')}
+                leading={<AppleLogo color={color.appleFg} />}
+                onPress={() => setUnavailable('apple')}
+              />
+              <Button
+                variant="secondary"
+                label={t('createAccount.google')}
+                leading={<GoogleLogo />}
+                onPress={() => setUnavailable('google')}
+              />
+              {unavailable ? (
+                <NoticeBox icon="info">
+                  {t('createAccount.comingSoon', { provider: PROVIDER_NAME[unavailable] })}
+                </NoticeBox>
+              ) : null}
+              <View className="flex-row items-center gap-3 py-1.5">
+                <View className="h-px flex-1 bg-border" />
+                <Text variant="small" tone="subtle">
+                  {t('common.or')}
+                </Text>
+                <View className="h-px flex-1 bg-border" />
+              </View>
+            </>
           ) : null}
-          <View className="flex-row items-center gap-3 py-1.5">
-            <View className="h-px flex-1 bg-border" />
-            <Text variant="small" tone="subtle">
-              {t('common.or')}
-            </Text>
-            <View className="h-px flex-1 bg-border" />
-          </View>
+          {/* The only way to sign up while Apple and Google are hidden, so it is the main action. */}
           <Button
-            variant="secondary"
+            variant={pendingShown ? 'secondary' : 'primary'}
             label={t('createAccount.email')}
-            leading={<Icon name="mail" color={color.fg} size={size.iconMd} />}
+            leading={
+              <Icon
+                name="mail"
+                color={pendingShown ? color.fg : color.onPrimary}
+                size={size.iconMd}
+              />
+            }
             onPress={() => router.push(ROUTES.signUpEmail)}
           />
         </View>
