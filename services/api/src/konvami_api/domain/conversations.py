@@ -46,8 +46,12 @@ class Conversation:
     goals_reached: tuple[str, ...] = ()
     # A review conversation (spec §6.7): one built around the learner's due words.
     review: bool = False
-    # Filled in by `ConversationService`; a repository leaves it out.
+    # The second partner of a two-partner conversation; None for one with one partner, and
+    # once the second partner has been removed.
+    guest_id: UUID | None = None
+    # Filled in by `ConversationService`; a repository leaves them out.
     partner: Persona | None = None
+    guest: Persona | None = None
 
     @property
     def counts(self) -> bool:
@@ -191,9 +195,11 @@ class ConversationService:
             return ()
         partners = {persona.id: persona for persona in self._personas.partners(user_id)}
         return tuple(
-            replace(conversation, partner=partners.get(conversation.persona_id))
-            if conversation.persona_id
-            else conversation
+            replace(
+                conversation,
+                partner=partners.get(conversation.persona_id) if conversation.persona_id else None,
+                guest=partners.get(conversation.guest_id) if conversation.guest_id else None,
+            )
             for conversation in conversations
         )
 
