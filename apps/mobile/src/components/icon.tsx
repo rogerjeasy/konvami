@@ -264,6 +264,7 @@ const ICONS = {
     </>
   ),
   plus: <Path d="M12 5v14M5 12h14" />,
+  minus: <Path d="M5 12h14" />,
 } as const;
 
 /** Filled glyphs (no stroke). */
