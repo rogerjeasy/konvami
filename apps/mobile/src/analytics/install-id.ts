@@ -1,3 +1,4 @@
+import { randomUuid } from '@/lib/random-id';
 import { readItem, removeItem, writeItem } from '@/lib/storage';
 
 /**
@@ -8,17 +9,6 @@ import { readItem, removeItem, writeItem } from '@/lib/storage';
  */
 export const INSTALL_ID_KEY = 'konvami.analytics.id';
 
-/** A random id for this install. Not an account id, and not a security token. */
-function randomId(): string {
-  const crypto = globalThis.crypto as { randomUUID?: () => string } | undefined;
-  if (crypto?.randomUUID) return crypto.randomUUID();
-  return Array.from({ length: 4 }, () =>
-    Math.floor(Math.random() * 0x100000000)
-      .toString(16)
-      .padStart(8, '0'),
-  ).join('');
-}
-
 let pending: Promise<string> | null = null;
 // Counts withdrawals, so an id being made while the learner withdraws is not saved afterwards.
 let withdrawals = 0;
@@ -28,7 +18,8 @@ export function installId(): Promise<string> {
   const started = withdrawals;
   pending ??= readItem(INSTALL_ID_KEY).then(async (saved) => {
     if (saved) return saved;
-    const made = randomId();
+    // Random for this install: not an account id, and not a security token.
+    const made = randomUuid();
     if (started === withdrawals) {
       await writeItem(INSTALL_ID_KEY, made);
       // The learner withdrew while it was being saved: take it back out.
