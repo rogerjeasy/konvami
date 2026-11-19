@@ -7,7 +7,7 @@ import { useAuthServices, useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
 import { Reveal } from '@/components/motion';
-import { Text } from '@/components/text';
+import { PageHero } from '@/components/page-hero';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { backOr } from '@/lib/navigation';
 import { ROUTES } from '@/lib/routes';
@@ -42,12 +42,12 @@ export function UpcomingScreen() {
       </Pressable>
       <View className="w-full max-w-content gap-3 self-center pt-8">
         <Reveal>
-          <Text variant="title" accessibilityRole="header">
-            {t('upcoming.title')}
-          </Text>
-        </Reveal>
-        <Reveal delay={motion.stagger}>
-          <Text tone="muted">{t('upcoming.body')}</Text>
+          <PageHero
+            color="butter"
+            icon="clock"
+            title={t('upcoming.title')}
+            body={t('upcoming.body')}
+          />
         </Reveal>
         {status === 'signedIn' ? (
           <Reveal delay={motion.stagger * 2}>

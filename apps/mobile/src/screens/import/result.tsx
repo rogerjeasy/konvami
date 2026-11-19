@@ -14,6 +14,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { commitFeedback } from '@/lib/haptics';
@@ -140,16 +141,13 @@ export function ImportResultScreen() {
       ) : (
         <View className="gap-6">
           <Reveal>
-            <View className="gap-2">
-              <Text variant="title" accessibilityRole="header">
-                {item.title}
-              </Text>
+            <PageHero color="pink" icon="file" title={item.title}>
               <View className="flex-row flex-wrap items-center gap-2">
                 <Badge label={t(`import.${item.genre}`)} />
                 <Badge label={t('import.result.level', { level: item.level })} tone="surface" />
                 {book ? <Badge label={t('import.result.from', { book })} tone="surface" /> : null}
               </View>
-            </View>
+            </PageHero>
           </Reveal>
           {failure ? (
             <View accessibilityLiveRegion="polite">
