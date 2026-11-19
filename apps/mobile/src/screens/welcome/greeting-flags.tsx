@@ -117,6 +117,7 @@ export function GreetingFlags() {
       <View className="absolute left-5 top-5 rounded-pill border-2 border-brand-on-bubble bg-brand-speech px-3 py-1.5">
         <Text
           variant="overline"
+          tone="inherit"
           className="text-brand-on-bubble"
           maxFontSizeMultiplier={ILLUSTRATION_MAX_FONT_SCALE}
         >
@@ -139,6 +140,7 @@ export function GreetingFlags() {
             />
             <Text
               variant="langHero"
+              tone="inherit"
               className="text-brand-on-bubble"
               maxFontSizeMultiplier={ILLUSTRATION_MAX_FONT_SCALE}
             >
