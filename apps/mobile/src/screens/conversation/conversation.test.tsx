@@ -315,6 +315,49 @@ describe('5.3 Conversation', () => {
     });
   });
 
+  describe('something the partner forgot on the learner’s word', () => {
+    const forgot = (forget: string, notes: number) => ({
+      type: 'conversation.item.done',
+      item: {
+        id: `item_${forget}`,
+        type: 'function_call_output',
+        call_id: `call_${forget}`,
+        output: JSON.stringify({ forgot: true, forget, notes }),
+      },
+    });
+
+    it('is told to the learner with a way to undo it while the call goes on', async () => {
+      const api = inApp();
+      const { voice } = await live({ api });
+
+      await play(voice, forgot('f1', 1));
+
+      expect(
+        await screen.findByText(
+          'Forgotten: 1 note from before, and nothing from this conversation.',
+        ),
+      ).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Undo forgetting' }));
+
+      expect(await screen.findByText('Remembered again')).toBeTruthy();
+      expect(api.calls).toContainEqual(['undoForget', 'f1']);
+    });
+
+    it('says so when it is final already', async () => {
+      const api = inApp();
+      const { voice } = await live({ api });
+      await play(voice, forgot('f2', 0));
+      api.failNext('undoForget', 'not_found');
+
+      expect(
+        await screen.findByText('Forgotten. Nothing about it is kept from this conversation.'),
+      ).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Undo forgetting' }));
+
+      expect(await screen.findByText(/forgotten for good/)).toBeTruthy();
+    });
+  });
+
   it('shows no goals in a free conversation', async () => {
     const { voice } = await live();
 

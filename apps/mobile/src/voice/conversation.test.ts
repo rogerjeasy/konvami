@@ -251,6 +251,38 @@ describe('a setting the partner changes by voice', () => {
   });
 });
 
+describe('something the partner forgets on the learner’s word', () => {
+  it('notes the forget once, for the toast with Undo, as the latest notice', () => {
+    const forgot = toolResult({ forgot: true, forget: 'f1', notes: 2, from_now_on: 'ignored' });
+    const state = after(
+      SESSION_CREATED,
+      toolResult({ changed: true, change: 7, field: 'exam' }),
+      forgot,
+      forgot,
+    );
+
+    expect(state.forgets).toEqual([{ forget: 'f1', notes: 2 }]);
+    expect(state.lastNotice).toBe('forget');
+    expect(state.finished).toBe(false);
+  });
+
+  it('notes nothing when the forget was refused', () => {
+    const state = after(toolResult({ forgot: false, reason: 'not_confirmed' }));
+
+    expect(state.forgets).toEqual([]);
+    expect(state.lastNotice).toBeNull();
+  });
+
+  it('shows a setting changed after it as the latest notice', () => {
+    const state = after(
+      toolResult({ forgot: true, forget: 'f1', notes: 0 }),
+      toolResult({ changed: true, change: 8, field: 'exam' }),
+    );
+
+    expect(state.lastNotice).toBe('setting');
+  });
+});
+
 describe('the face the partner shows', () => {
   const asked = (expression: string, gesture = 'none', callId = 'call_e1') => ({
     type: 'response.function_call_arguments.done',

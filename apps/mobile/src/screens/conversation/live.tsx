@@ -30,7 +30,7 @@ import { Goals } from './goals';
 import { CorrectionSheet, LiveCorrections } from './live-corrections';
 import { CallPlanStrip } from './plan';
 import { BlockScope } from '@/components/block-scope';
-import { SettingsToast } from './settings-toast';
+import { CallNotice } from './forget-toast';
 import { setLiveCorrections, setPartnerCaptions, usePreferences } from '@/preferences';
 import { HELP_KINDS, type HelpKind } from '@/voice/help';
 import { withLine } from '@/voice/problems';
@@ -248,7 +248,7 @@ function Call({
             {plan ? <CallPlanStrip plan={plan} learnerLines={conversation.learnerLines} /> : null}
           </>
         }
-        notice={<SettingsToast changes={conversation.profileChanges} />}
+        notice={<CallNotice conversation={conversation} />}
         belowLearner={
           liveCorrections ? (
             <LiveCorrections corrections={conversation.corrections} onOpen={setExplaining} />
