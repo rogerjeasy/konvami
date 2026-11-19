@@ -10,7 +10,7 @@ import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { StepHeader } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Text } from '@/components/text';
+import { PageHero } from '@/components/page-hero';
 import { TextButton } from '@/components/text-button';
 import { openLegal } from '@/lib/external';
 import { commitFeedback } from '@/lib/haptics';
@@ -94,14 +94,12 @@ export function AiConsentScreen() {
       }
     >
       <Reveal>
-        <View className="gap-2">
-          <Text variant="title" accessibilityRole="header">
-            {t('aiConsent.title')}
-          </Text>
-          <Text variant="bodySmall" tone="muted">
-            {t('aiConsent.body')}
-          </Text>
-        </View>
+        <PageHero
+          color="ink"
+          icon="shield"
+          title={t('aiConsent.title')}
+          body={t('aiConsent.body')}
+        />
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>

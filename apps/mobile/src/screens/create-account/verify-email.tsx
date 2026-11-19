@@ -7,10 +7,10 @@ import { authErrorCode, generalErrorKey, useAuthServices } from '@/auth';
 import { Button } from '@/components/button';
 import { CodeInput } from '@/components/code-input';
 import { Icon } from '@/components/icon';
-import { IconTile } from '@/components/icon-tile';
 import { Reveal } from '@/components/motion';
 import { StepHeader } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useCountdown } from '@/hooks/use-countdown';
@@ -127,21 +127,18 @@ export function VerifyEmailScreen() {
       }
     >
       <Reveal>
-        <View className="gap-2.5">
-          <View className="pb-2.5">
-            <IconTile icon="mail" />
-          </View>
-          <Text variant="title" accessibilityRole="header">
-            {t('verifyEmail.title')}
-          </Text>
-          <Text tone="muted">
+        <PageHero
+          color="ink"
+          icon="mail"
+          title={t('verifyEmail.title')}
+          body={
             <Trans
               i18nKey="verifyEmail.body"
               values={{ email }}
-              components={{ strong: <Text variant="label" /> }}
+              components={{ strong: <Text variant="label" tone="inherit" /> }}
             />
-          </Text>
-        </View>
+          }
+        />
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
