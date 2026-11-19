@@ -74,3 +74,25 @@ def test_forgetting_never_makes_a_memory_stronger() -> None:
 
     assert review(memory, 4, "again").stability < memory.stability
     assert review(memory, 4, "again").difficulty > memory.difficulty
+
+
+def test_the_shared_histories_are_what_the_scheduler_gives_now() -> None:
+    """The app's offline scheduler is checked against the same file: when this fails after a
+    change to `fsrs.py`, write it again (`python -m tests.domain.fsrs_cases`) and run the app's
+    scheduler test."""
+    import json
+
+    from tests.domain.fsrs_cases import FIXTURE, cases
+
+    stored = json.loads(FIXTURE.read_text())
+    fresh = cases()
+    assert len(stored) == len(fresh)
+    for kept, now in zip(stored, fresh, strict=True):
+        for a, b in zip(kept, now, strict=True):
+            assert (a["days"], a["rating"], a["interval"]) == (
+                b["days"],
+                b["rating"],
+                b["interval"],
+            )
+            assert a["stability"] == pytest.approx(b["stability"], abs=1e-9)
+            assert a["difficulty"] == pytest.approx(b["difficulty"], abs=1e-9)
