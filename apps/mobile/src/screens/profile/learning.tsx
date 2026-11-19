@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { AnswerCard } from '@/components/answer-card';
+import { PageHero } from '@/components/page-hero';
 import { Reveal } from '@/components/motion';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
@@ -121,12 +122,12 @@ export function LearningScreen() {
       {(data) => (
         <StepLayout header={header}>
           <Reveal>
-            <View className="gap-2.5">
-              <Text variant="title" accessibilityRole="header">
-                {t('profile.learningScreen.title')}
-              </Text>
-              <Text tone="muted">{t('profile.learningScreen.body')}</Text>
-            </View>
+            <PageHero
+              color="forest"
+              icon="book"
+              title={t('profile.learningScreen.title')}
+              body={t('profile.learningScreen.body')}
+            />
           </Reveal>
           <Reveal delay={staggerDelay(1)}>
             <Goals data={data} />
