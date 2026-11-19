@@ -10,6 +10,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Icon } from '@/components/icon';
 import { IconTile } from '@/components/icon-tile';
+import { LevelBadge } from '@/components/level-badge';
 import { LoadState } from '@/components/load-state';
 import { Pop, Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
@@ -253,15 +254,7 @@ function Result({
     >
       <View className="items-center gap-4">
         <Pop>
-          <View
-            aria-hidden
-            style={{ width: size.levelBadge, height: size.levelBadge }}
-            className="items-center justify-center rounded-pill border-2 border-primary bg-primary-soft"
-          >
-            <Text variant="stat" tone="primary">
-              {result.overall}
-            </Text>
-          </View>
+          <LevelBadge level={result.overall} large />
         </Pop>
         <Reveal delay={staggerDelay(2)}>
           <View className="items-center gap-2">
