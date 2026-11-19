@@ -849,6 +849,15 @@ export const it: Translation = {
       restored: '{{setting}} è tornato com’era',
       failed: 'Non è stato possibile annullare. Puoi farlo nel profilo, in Modifiche fatte a voce.',
     },
+    forget: {
+      done_zero: 'Dimenticato. Di questa conversazione non se ne tiene nulla.',
+      done_one: 'Dimenticato: {{count}} nota di prima, e niente di questa conversazione.',
+      done_other: 'Dimenticato: {{count}} note di prima, e niente di questa conversazione.',
+      restored: 'Di nuovo ricordato',
+      failed:
+        'Non è stato possibile annullare: la conversazione è finita, è dimenticato per sempre.',
+      undoLabel: 'Annulla l’oblio',
+    },
     goals: {
       chipDone: '{{goal}}: raggiunto',
       chipOpen: '{{goal}}: ancora da fare',

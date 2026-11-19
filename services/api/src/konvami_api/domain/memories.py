@@ -63,6 +63,16 @@ MAX_COMING_UP = 3
 FOLLOW_UP_DAYS = 14
 # How much a memory matters, from a passing detail to what shapes the learner's life.
 IMPORTANCE = (1, 2, 3)
+# A "forget that" said during a call (`memory_voice.py`) hides what it is about at once and
+# deletes it when the call ends; until then it can be undone. A call that ended without saying
+# so (a worker that stopped) is settled once this long has passed, longer than any call lasts.
+FORGET_SETTLE = dt.timedelta(hours=2)
+# The learner's words of a "forget that" are kept only for the reading of the conversation they
+# were said in, which leaves them out of its memories; after this long they go in any case.
+FORGET_KEEP = dt.timedelta(days=2)
+# How a partner names a memory when asked to forget it: the end of its id, stable from one
+# instruction to the next and short enough to be read back exactly.
+REF_LENGTH = 8
 
 
 @dataclass(frozen=True)
@@ -110,6 +120,21 @@ class MemoryBook:
     memories: tuple[Memory, ...]
 
 
+@dataclass(frozen=True)
+class Forget:
+    """Something the learner asked to be forgotten during a call (spec §6.11 "forget that")."""
+
+    id: UUID
+    # What it is about, in a few of the learner's words as the partner understood them.
+    about: str
+    created_at: dt.datetime
+
+
+def memory_ref(memory: Memory) -> str:
+    """How the partner is shown a memory, and names it back to forget it."""
+    return memory.id.hex[-REF_LENGTH:]
+
+
 class MemoryChange(TypedDict, total=False):
     """What a learner may change about a memory. A key left out is not a change."""
 
@@ -150,6 +175,26 @@ class MemoryRepository(Protocol):
     def get(self, user_id: UUID, memory_id: UUID) -> Memory | None: ...
 
     def remove(self, user_id: UUID, memory_id: UUID) -> bool: ...
+
+    def forget(self, user_id: UUID, forget: Forget, memory_ids: Sequence[UUID]) -> int:
+        """Keeps a "forget that" and hides the learner's memories with these ids (not already
+        hidden) until it is settled or undone. Hidden memories are not listed nor got. The
+        answer is how many were hidden."""
+
+    def unforget(self, user_id: UUID, forget_id: UUID) -> bool:
+        """Undoes a "forget that" that is not settled yet: it is gone, its memories are back.
+        False for one that is settled or not the learner's."""
+
+    def settle(self, user_id: UUID, until: dt.datetime) -> None:
+        """The learner's "forget that"s made until then are final: their memories are deleted
+        for good, and they can no longer be undone."""
+
+    def forgets(self, user_id: UUID, since: dt.datetime, until: dt.datetime) -> list[Forget]:
+        """The learner's "forget that"s made from `since` to before `until`, settled or not,
+        oldest first."""
+
+    def drop_forgets(self, user_id: UUID, forget_ids: Sequence[UUID]) -> None:
+        """Deletes these "forget that"s of the learner, with their words, if they are settled."""
 
 
 def memory_key(text: str) -> str:
@@ -253,6 +298,10 @@ an event that is today or already over, and for every other kind.
 
 `never_about` lists topics the learner asked the app to leave alone, in their own words. Write
 nothing down that touches one of them, however clearly it was said.
+
+`forget_now` lists what the learner asked, during this very conversation, to be forgotten, as
+their partner understood it. Write nothing down about any of it, in any words: not what they
+said about it, not what follows from it.
 
 Write down only what the transcript says. Never guess, never conclude something from a mistake
 in their {target}, and leave out how well they speak: that is not what this memory is for. Leave
@@ -407,6 +456,38 @@ class MemoryService:
         if not self._repository.remove(user_id, memory_id):
             raise MemoriesError("not_found")
 
+    def forget(self, user_id: UUID, refs: Sequence[str], about: str) -> tuple[Forget, int]:
+        """The learner asked, during a call, to forget something: the memories the partner names
+        by `memory_ref` are hidden at once and deleted when the call ends, and `about` keeps
+        what was said in this call out of its memories. Returns the forget, to undo it, and how
+        many memories it hid. Raises `MemoriesError` when it names nothing at all."""
+        self._tidy(user_id)
+        words = one_line(about)[:TEXT_MAX].strip()
+        wanted = {ref.strip().lower() for ref in refs}
+        matched = [
+            memory.id for memory in self._repository.listed(user_id) if memory_ref(memory) in wanted
+        ]
+        if not matched and not wording(words):
+            raise MemoriesError("invalid_value")
+        forget = Forget(self._new_id(), words, self._clock())
+        return forget, self._repository.forget(user_id, forget, matched)
+
+    def undo_forget(self, user_id: UUID, forget_id: UUID) -> None:
+        """The learner took a "forget that" back while the call still went on."""
+        if not self._repository.unforget(user_id, forget_id):
+            raise MemoriesError("not_found")
+
+    def _tidy(self, user_id: UUID) -> None:
+        """Settles a "forget that" whose call ended without saying so, and drops the words of
+        those whose conversation was never read (memory off, too short)."""
+        now = self._clock()
+        self._repository.settle(user_id, now - FORGET_SETTLE)
+        old = self._repository.forgets(
+            user_id, dt.datetime.min.replace(tzinfo=dt.UTC), now - FORGET_KEEP
+        )
+        if old:
+            self._repository.drop_forgets(user_id, [forget.id for forget in old])
+
     def _known(self, user_id: UUID, persona_id: UUID | None) -> list[Memory]:
         """What a partner may know: what every partner knows, and what is theirs."""
         return [
@@ -420,6 +501,7 @@ class MemoryService:
     ) -> Recall | None:
         """What a partner is told before a conversation on `today`; `last_talked` is the day of
         their last one, None before the first. None while memory is off."""
+        self._tidy(user_id)
         if not self._profiles.get(user_id).memory_enabled:
             return None
         known = self._known(user_id, persona_id)
@@ -449,6 +531,8 @@ class MemoryService:
         it ended (a report that could not be started and is asked for again), so what counts
         is the learner's choice when they talked; and where that choice is not on record (it
         was off, or recording it failed), nothing is read, whatever happens later."""
+        # What the learner asked to forget during the call can no longer be undone.
+        self._repository.settle(user_id, self._clock())
         if self._profiles.get(user_id).memory_enabled:
             self._repository.allow(call_id, self._clock())
 
@@ -481,6 +565,12 @@ class MemoryService:
         catalog = self._profiles.catalog
         language = profile.target_language or ""
         explained_in = profile.value(language, "explanation_language") or "en"
+        # What the learner asked to be forgotten during the call: its memories were hidden at
+        # once, so they are not among what is known; what was said in this call is left out.
+        # A call lasts less than the time it takes to settle a forget.
+        forgets = self._repository.forgets(
+            user_id, session.started_at, session.started_at + FORGET_SETTLE
+        )
         known = self._known(user_id, partner.id if partner else None)
         content = {
             # The server's date. Near midnight it can be a day off the learner's own.
@@ -496,6 +586,7 @@ class MemoryService:
                 for number, memory in enumerate(known)
             ],
             "never_about": list(profile.avoid_topics),
+            "forget_now": [forget.about for forget in forgets],
             "transcript": [
                 {"turn": number, "speaker": turn.speaker, "text": turn.text}
                 for number, turn in enumerate(turns)
@@ -521,6 +612,8 @@ class MemoryService:
             return
         notes = _notes(answer.memories, turns, partner, session.started_at.date())
         self._keep(user_id, call_id, partner, known, notes)
+        # Their words were needed only for this reading.
+        self._repository.drop_forgets(user_id, [forget.id for forget in forgets])
 
     def remember(
         self,

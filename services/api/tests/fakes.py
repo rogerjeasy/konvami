@@ -33,7 +33,7 @@ from konvami_api.domain.feedback import Feedback, FeedbackStatus
 from konvami_api.domain.flags import Flag, FlagStatus
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn
-from konvami_api.domain.memories import Memory
+from konvami_api.domain.memories import Forget, Memory
 from konvami_api.domain.moderation import ModeratorError, TextGuard, Verdict
 from konvami_api.domain.onboarding import OnboardingState
 from konvami_api.domain.penpal import Correction as PenPalCorrection
@@ -944,6 +944,10 @@ class InMemoryMemoryRepository:
         self._read: set[str] = set()
         # Per memory: its owner, what makes it the same memory as another, and the memory.
         self.memories: dict[UUID, tuple[UUID, str, Memory]] = {}
+        # Per "forget that": its owner, the forget, and whether it is settled.
+        self.forgotten: dict[UUID, tuple[UUID, Forget, bool]] = {}
+        # The memories hidden, each with the forget that hides it.
+        self.hidden: dict[UUID, UUID] = {}
 
     def allow(self, call_id: str, at: datetime) -> None:
         if call_id in self._calls.sessions:
@@ -979,12 +983,55 @@ class InMemoryMemoryRepository:
         return True
 
     def listed(self, user_id: UUID) -> list[Memory]:
-        mine = [memory for owner, _, memory in self.memories.values() if owner == user_id]
+        mine = [
+            memory
+            for owner, _, memory in self.memories.values()
+            if owner == user_id and memory.id not in self.hidden
+        ]
         return sorted(mine, key=lambda m: (m.created_at, str(m.id)), reverse=True)
 
     def get(self, user_id: UUID, memory_id: UUID) -> Memory | None:
         stored = self.memories.get(memory_id)
-        return stored[2] if stored and stored[0] == user_id else None
+        visible = stored and stored[0] == user_id and memory_id not in self.hidden
+        return stored[2] if stored and visible else None
+
+    def forget(self, user_id: UUID, forget: Forget, memory_ids: Sequence[UUID]) -> int:
+        self.forgotten[forget.id] = (user_id, forget, False)
+        hiding = [memory_id for memory_id in memory_ids if self.get(user_id, memory_id)]
+        for memory_id in hiding:
+            self.hidden[memory_id] = forget.id
+        return len(hiding)
+
+    def unforget(self, user_id: UUID, forget_id: UUID) -> bool:
+        stored = self.forgotten.get(forget_id)
+        if stored is None or stored[0] != user_id or stored[2]:
+            return False
+        del self.forgotten[forget_id]
+        self.hidden = {m: f for m, f in self.hidden.items() if f != forget_id}
+        return True
+
+    def settle(self, user_id: UUID, until: datetime) -> None:
+        for forget_id, (owner, forget, settled) in list(self.forgotten.items()):
+            if owner != user_id or settled or forget.created_at > until:
+                continue
+            self.forgotten[forget_id] = (owner, forget, True)
+            for memory_id in [m for m, f in self.hidden.items() if f == forget_id]:
+                del self.hidden[memory_id]
+                del self.memories[memory_id]
+
+    def forgets(self, user_id: UUID, since: datetime, until: datetime) -> list[Forget]:
+        mine = [
+            forget
+            for owner, forget, _ in self.forgotten.values()
+            if owner == user_id and since <= forget.created_at < until
+        ]
+        return sorted(mine, key=lambda forget: forget.created_at)
+
+    def drop_forgets(self, user_id: UUID, forget_ids: Sequence[UUID]) -> None:
+        for forget_id in forget_ids:
+            stored = self.forgotten.get(forget_id)
+            if stored and stored[0] == user_id and stored[2]:
+                del self.forgotten[forget_id]
 
     def remove(self, user_id: UUID, memory_id: UUID) -> bool:
         if self.get(user_id, memory_id) is None:

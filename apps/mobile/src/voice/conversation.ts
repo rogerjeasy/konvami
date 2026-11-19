@@ -54,6 +54,15 @@ export interface ProfileChangeNote {
 }
 
 /**
+ * Something the partner forgot on the learner's word during the call (spec §6.11 "forget that"):
+ * the id an undo refers to, and how many notes from before it hid.
+ */
+export interface ForgetNote {
+  forget: string;
+  notes: number;
+}
+
+/**
  * What the partner asked its face to show (the `set_expression` tool, spec §6.20.1). `seq` counts
  * the requests, so asking for the same face twice shows it for a fresh while.
  */
@@ -87,6 +96,10 @@ export interface ConversationState {
   examParts: string[];
   /** The settings the partner changed by voice, in order. */
   profileChanges: ProfileChangeNote[];
+  /** What the partner forgot on the learner's word, in order. */
+  forgets: ForgetNote[];
+  /** Which of the two the latest was: the call shows one note with Undo at a time. */
+  lastNotice: 'setting' | 'forget' | null;
   /** The face the partner asked for last; null before it asked for one. */
   expression: ExpressionRequest | null;
 }
@@ -103,6 +116,8 @@ export const INITIAL_CONVERSATION: ConversationState = {
   examPart: null,
   examParts: [],
   profileChanges: [],
+  forgets: [],
+  lastNotice: null,
   expression: null,
 };
 
@@ -188,6 +203,9 @@ function withToolResult(state: ConversationState, output: unknown): Conversation
     changed,
     change,
     field,
+    forgot,
+    forget,
+    notes,
   } = result as {
     done?: unknown;
     still_open?: unknown;
@@ -197,10 +215,28 @@ function withToolResult(state: ConversationState, output: unknown): Conversation
     changed?: unknown;
     change?: unknown;
     field?: unknown;
+    forgot?: unknown;
+    forget?: unknown;
+    notes?: unknown;
   };
   // The partner changed a setting on the learner's word (services/api: domain/profile_voice.py).
   if (changed === true && typeof change === 'number' && typeof field === 'string') {
-    return { ...state, profileChanges: [...state.profileChanges, { change, field }] };
+    return {
+      ...state,
+      profileChanges: [...state.profileChanges, { change, field }],
+      lastNotice: 'setting',
+    };
+  }
+  // The partner forgot something on the learner's word (services/api: domain/memory_voice.py).
+  if (forgot === true && typeof forget === 'string') {
+    // The provider can report one call's output twice.
+    if (state.forgets.some((note) => note.forget === forget)) return state;
+    const hidden = typeof notes === 'number' ? notes : 0;
+    return {
+      ...state,
+      forgets: [...state.forgets, { forget, notes: hidden }],
+      lastNotice: 'forget',
+    };
   }
   if (done === true) return { ...state, finished: true, stillOpen: [] };
   // An exam's examiner begins a part (services/api: domain/exam_centre.py `begin_part`).

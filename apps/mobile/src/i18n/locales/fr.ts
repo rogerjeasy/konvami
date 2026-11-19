@@ -856,6 +856,14 @@ export const fr: Translation = {
       failed:
         'Impossible d’annuler. Tu peux le faire dans ton profil, sous Changements faits à la voix.',
     },
+    forget: {
+      done_zero: 'Oublié. Rien n’en est gardé de cette conversation.',
+      done_one: 'Oublié : {{count}} note d’avant, et rien de cette conversation.',
+      done_other: 'Oublié : {{count}} notes d’avant, et rien de cette conversation.',
+      restored: 'De nouveau en mémoire',
+      failed: 'Impossible d’annuler : la conversation est terminée, c’est oublié pour de bon.',
+      undoLabel: 'Annuler l’oubli',
+    },
     goals: {
       chipDone: '{{goal}} : atteint',
       chipOpen: '{{goal}} : encore à faire',

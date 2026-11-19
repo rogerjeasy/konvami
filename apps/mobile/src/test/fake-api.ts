@@ -2687,6 +2687,9 @@ export function createFakeApi(): FakeApi {
       memories = memories.filter((memory) => memory.id !== id);
       return memoryBook();
     },
+    async undoForget(id) {
+      await record('undoForget', id);
+    },
     async getPlacement() {
       await record('getPlacement');
       return placementView();

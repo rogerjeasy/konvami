@@ -841,6 +841,14 @@ export const en = {
       restored: '{{setting}} is back as it was',
       failed: 'That couldn’t be undone. You can do it under Changes made by voice in your profile.',
     },
+    forget: {
+      done_zero: 'Forgotten. Nothing about it is kept from this conversation.',
+      done_one: 'Forgotten: {{count}} note from before, and nothing from this conversation.',
+      done_other: 'Forgotten: {{count}} notes from before, and nothing from this conversation.',
+      restored: 'Remembered again',
+      failed: 'That couldn’t be undone: the conversation has ended, and it is forgotten for good.',
+      undoLabel: 'Undo forgetting',
+    },
     goals: {
       chipDone: '{{goal}}: reached',
       chipOpen: '{{goal}}: still to do',

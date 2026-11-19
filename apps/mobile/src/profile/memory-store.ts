@@ -25,10 +25,19 @@ export interface MemoryStore extends ResourceStore<Memories> {
   change(id: string, change: MemoryChange): Promise<Memory>;
   /** Forgets a memory for good. Rejects with an `ApiError`. */
   remove(id: string): Promise<void>;
+  /**
+   * Takes back a "forget that" said during the call that is still going on (spec §6.11), and
+   * reads the memories again so the screen shows what came back. Rejects with an `ApiError`
+   * (`not_found` once the call has ended).
+   */
+  undoForget(id: string): Promise<void>;
 }
 
 export function createMemoryStore(
-  api: Pick<ApiClient, 'getMemories' | 'configureMemories' | 'changeMemory' | 'removeMemory'>,
+  api: Pick<
+    ApiClient,
+    'getMemories' | 'configureMemories' | 'changeMemory' | 'removeMemory' | 'undoForget'
+  >,
   /** Milliseconds since the epoch. */
   now: () => number,
 ): MemoryStore {
@@ -54,6 +63,10 @@ export function createMemoryStore(
         () => api.removeMemory(id),
         (_, book) => book,
       );
+    },
+    async undoForget(id) {
+      await api.undoForget(id);
+      await store.refresh();
     },
   };
 }

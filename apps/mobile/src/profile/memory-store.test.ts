@@ -50,6 +50,16 @@ describe('the memory store', () => {
     expect(count('getMemories')).toBe(1);
   });
 
+  it('takes back a forget said during a call and reads the memories again', async () => {
+    const { api, store, count } = setup();
+    await store.load();
+
+    await store.undoForget('forget-1');
+
+    expect(api.calls).toContainEqual(['undoForget', 'forget-1']);
+    expect(count('getMemories')).toBe(2);
+  });
+
   it('keeps the topics the learner wants left alone', async () => {
     const { store } = setup();
     await store.load();
