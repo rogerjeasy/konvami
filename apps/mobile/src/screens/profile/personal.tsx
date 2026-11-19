@@ -178,7 +178,11 @@ export function PersonalScreen() {
   const [choosingLanguage, setChoosingLanguage] = useState(false);
 
   return (
-    <ProfilePage title={t('profile.personal.title')} body={t('profile.personal.body')}>
+    <ProfilePage
+      hero={{ color: 'butter', icon: 'user' }}
+      title={t('profile.personal.title')}
+      body={t('profile.personal.body')}
+    >
       <Reveal delay={staggerDelay(1)}>
         <Photo name={user?.firstName ?? ''} />
       </Reveal>
