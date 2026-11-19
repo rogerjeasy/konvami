@@ -61,7 +61,9 @@ const config: ExpoConfig = {
   // The Expo account and EAS project that build and distribute the app (`eas build`).
   owner: 'rogerjeasy',
   scheme: 'konvami',
-  version: '0.1.0',
+  // The version people see in the stores. Build numbers and version codes come from EAS
+  // (`appVersionSource: remote`, `autoIncrement`), so only this changes between releases.
+  version: '1.0.0',
   orientation: 'default',
   icon: './assets/brand/icon.png',
   userInterfaceStyle: 'automatic',
