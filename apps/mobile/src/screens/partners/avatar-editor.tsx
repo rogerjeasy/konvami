@@ -63,6 +63,7 @@ function AvatarEditor({ partner }: { partner: Persona }) {
 
   return (
     <ProfilePage
+      hero={{ color: 'tomato', icon: 'user' }}
       title={t('partners.avatar.title', { name: partner.name })}
       body={t('partners.avatar.body')}
       backTo={ROUTES.accountPartners}
@@ -166,12 +167,16 @@ export function AvatarEditorScreen() {
     if (signedIn) void store.load();
   }, [signedIn, store]);
 
-  if (!signedIn) return <ProfilePage title="" />;
+  if (!signedIn) return <ProfilePage hero={{ color: 'tomato', icon: 'user' }} title="" />;
 
   const title = t('partners.studio.steps.look');
   if (state.phase !== 'ready') {
     return (
-      <ProfilePage title={title} backTo={ROUTES.accountPartners}>
+      <ProfilePage
+        hero={{ color: 'tomato', icon: 'user' }}
+        title={title}
+        backTo={ROUTES.accountPartners}
+      >
         <LoadState
           failed={state.phase === 'failed'}
           loadingLabel={t('onboarding.partners.loading')}
@@ -189,7 +194,11 @@ export function AvatarEditorScreen() {
   const partner = state.partners.find((candidate) => candidate.id === id);
   if (!partner) {
     return (
-      <ProfilePage title={title} backTo={ROUTES.accountPartners}>
+      <ProfilePage
+        hero={{ color: 'tomato', icon: 'user' }}
+        title={title}
+        backTo={ROUTES.accountPartners}
+      >
         <NoticeBox icon="info">{t('partners.avatar.notFound')}</NoticeBox>
       </ProfilePage>
     );
