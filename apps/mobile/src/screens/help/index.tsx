@@ -30,7 +30,11 @@ export function HelpScreen() {
   const { t } = useTranslation();
   const email = SUPPORT_EMAIL;
   return (
-    <ProfilePage title={t('help.title')} body={t('help.body')}>
+    <ProfilePage
+      hero={{ color: 'butter', icon: 'info' }}
+      title={t('help.title')}
+      body={t('help.body')}
+    >
       <Reveal delay={staggerDelay(1)}>
         <Section title={t('help.faqTitle')}>
           <ListGroup>
