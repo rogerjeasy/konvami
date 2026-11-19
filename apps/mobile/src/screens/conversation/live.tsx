@@ -37,6 +37,7 @@ import { withLine } from '@/voice/problems';
 import type { LiveCorrection } from '@/voice/conversation';
 import { useWalkingCall } from '@/voice/use-walking-call';
 import { useVoiceCall, type CallProblem } from '@/voice/use-voice-call';
+import { useVideoAvatar } from '@/voice/video-avatar';
 import { useTheme } from '@/theme';
 
 /** Failures with their own explanation; anything else reads as the general message. */
@@ -196,6 +197,8 @@ function Call({
   const { lookupCaption, saveCaptionWord } = usePracticeServices();
   const [selectedWord, setSelectedWord] = useState<CaptionSelection | null>(null);
   const call = useVoiceCall('practice', partner.id, scenario, practise);
+  // A vendor's video face while the call is live, where one is offered and picked (6.6).
+  const video = useVideoAvatar(partner.id, call.status === 'live');
   const { scenarios } = useScenarios();
   const rolePlay = scenario ? scenarios?.find(({ id }) => id === scenario) : undefined;
   const { conversation, callId, stop, plan } = call;
@@ -238,6 +241,7 @@ function Call({
       <CallStage
         call={call}
         persona={partner}
+        video={video}
         onLookupWord={(word, caption) => setSelectedWord({ language, word, caption })}
         hint={t('conversation.hint', { name: partner.name })}
         finishedLabel={t('conversation.finished')}

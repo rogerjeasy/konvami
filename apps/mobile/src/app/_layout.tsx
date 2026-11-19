@@ -32,9 +32,11 @@ import { ExamNotesProvider } from '@/screens/exams/notes';
 import { AccessDraftProvider } from '@/screens/sign-in/draft';
 import { ThemeProvider, useTheme } from '@/theme';
 import {
+  appVideoAvatars,
   createAppVoiceEngine,
   RecorderProvider,
   useAppSentenceRecorder,
+  VideoAvatarProvider,
   VoiceProvider,
 } from '@/voice';
 
@@ -86,16 +88,18 @@ function RootLayout() {
                 <RemindersProvider device={appReminderDevice}>
                   <RecorderProvider useRecorder={useAppSentenceRecorder}>
                     <VoiceProvider createEngine={createAppVoiceEngine}>
-                      <SignUpDraftProvider>
-                        <AccessDraftProvider>
-                          <ExamNotesProvider>
-                            <StatusBar style="auto" />
-                            <ReminderKeeper />
-                            <RootStack />
-                            <PaywallSheet />
-                          </ExamNotesProvider>
-                        </AccessDraftProvider>
-                      </SignUpDraftProvider>
+                      <VideoAvatarProvider avatars={appVideoAvatars}>
+                        <SignUpDraftProvider>
+                          <AccessDraftProvider>
+                            <ExamNotesProvider>
+                              <StatusBar style="auto" />
+                              <ReminderKeeper />
+                              <RootStack />
+                              <PaywallSheet />
+                            </ExamNotesProvider>
+                          </AccessDraftProvider>
+                        </SignUpDraftProvider>
+                      </VideoAvatarProvider>
                     </VoiceProvider>
                   </RecorderProvider>
                 </RemindersProvider>
