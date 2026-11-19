@@ -25,8 +25,8 @@ from konvami_api.domain.fsrs import Memory, Rating
 from konvami_api.domain.grammar_map import Mastery
 from konvami_api.domain.levels import LevelFit, LevelRepository, LevelStep
 from konvami_api.domain.live_call import Turn, TurnAudio
+from konvami_api.domain.memories import Forget, MemoryRepository, memory_key
 from konvami_api.domain.memories import Memory as Remembered
-from konvami_api.domain.memories import MemoryRepository, memory_key
 from konvami_api.domain.onboarding import OnboardingRepository, OnboardingState, PlacementStatus
 from konvami_api.domain.penpal import Correction as PenPalCorrection
 from konvami_api.domain.penpal import Note as PenPalNote
@@ -2433,6 +2433,77 @@ def test_a_deleted_learner_has_no_memories_left(db: SqlClient) -> None:
     # Nothing can be written down for them again.
     with pytest.raises(psycopg.Error):
         keep(stored, remembered(2))
+
+
+def forgetting(number: int, about: str = "Zurich", minutes: int = 0) -> Forget:
+    return Forget(
+        UUID(f"ffffffff-ffff-4fff-8fff-{number:012d}"), about, NOON + timedelta(minutes=minutes)
+    )
+
+
+def test_a_forget_hides_its_memories_until_it_is_undone(memories: Memories) -> None:
+    store = memories.memories
+    zurich, bike = remembered(1), remembered(2, "Aime le vélo.")
+    keep(store, zurich)
+    keep(store, bike)
+
+    hidden = store.forget(USER, forgetting(1), [zurich.id, UUID(int=9)])
+
+    assert hidden == 1
+    assert store.listed(USER) == [store.get(USER, bike.id)]
+    assert store.get(USER, zurich.id) is None
+    assert store.remove(USER, zurich.id) is False
+
+    assert store.unforget(USER, forgetting(1).id) is True
+    assert {memory.id for memory in store.listed(USER)} == {zurich.id, bike.id}
+
+
+def test_a_settled_forget_deletes_its_memories_for_good(memories: Memories) -> None:
+    store = memories.memories
+    zurich = remembered(1)
+    keep(store, zurich)
+    store.forget(USER, forgetting(1), [zurich.id])
+    store.forget(USER, forgetting(2, "Berne", minutes=30), [])
+
+    store.settle(USER, NOON + timedelta(minutes=10))
+
+    assert store.unforget(USER, forgetting(1).id) is False
+    assert store.listed(USER) == []
+    # The memory is gone: the words can be written down again.
+    assert keep(store, remembered(3)) is True
+    # The later one is not settled yet.
+    assert store.unforget(USER, forgetting(2).id) is True
+
+
+def test_the_words_of_a_forget_are_read_and_dropped_once_settled(memories: Memories) -> None:
+    store = memories.memories
+    store.forget(USER, forgetting(1, "Zurich"), [])
+    store.forget(USER, forgetting(2, "Berne", minutes=20), [])
+
+    assert store.forgets(USER, NOON, NOON + timedelta(minutes=30)) == [
+        forgetting(1, "Zurich"),
+        forgetting(2, "Berne", minutes=20),
+    ]
+    assert store.forgets(USER, NOON + timedelta(minutes=1), NOON + HOUR) == [
+        forgetting(2, "Berne", minutes=20)
+    ]
+    assert store.forgets(OTHER_USER, NOON, NOON + HOUR) == []
+
+    store.settle(USER, NOON)
+    store.drop_forgets(USER, [forgetting(1).id, forgetting(2).id])
+
+    # Only the settled one goes.
+    assert store.forgets(USER, NOON, NOON + HOUR) == [forgetting(2, "Berne", minutes=20)]
+
+
+def test_a_forget_never_hides_another_learners_memory(memories: Memories) -> None:
+    store = memories.memories
+    theirs = remembered(1)
+    keep(store, theirs, user=OTHER_USER)
+
+    assert store.forget(USER, forgetting(1), [theirs.id]) == 0
+    assert store.unforget(OTHER_USER, forgetting(1).id) is False
+    assert store.listed(OTHER_USER) == [store.get(OTHER_USER, theirs.id)]
 
 
 # --- Role-play ---------------------------------------------------------------------------------

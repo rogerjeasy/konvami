@@ -51,6 +51,7 @@ EXPORTED: tuple[ExportedTable, ...] = (
             "exam_simulation",
             "feedback",
             "memory",
+            "memory_forget",
             "minute_pack",
             "minute_pack_purchase",
             "minute_pack_week",

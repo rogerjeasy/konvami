@@ -900,17 +900,66 @@ _REPLACE_MEMORY = """
     RETURNING id
 """
 
+# A memory hidden by a "forget that" (migration 0180) is not shown, told nor changed.
 _LIST_MEMORIES = f"""
     {_MEMORY}
-    WHERE user_id = CAST(:user_id AS uuid)
+    WHERE user_id = CAST(:user_id AS uuid) AND hidden_by IS NULL
     ORDER BY created_at DESC, id DESC
 """
 
-_MEMORY_BY_ID = f"{_MEMORY} WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)"
+_MEMORY_BY_ID = f"""
+    {_MEMORY}
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid) AND hidden_by IS NULL
+"""
 
 _REMOVE_MEMORY = """
-    DELETE FROM memory WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+    DELETE FROM memory
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid) AND hidden_by IS NULL
     RETURNING id
+"""
+
+_FORGET = f"""
+    WITH {_ENSURE_USER},
+    made AS (
+        INSERT INTO memory_forget (id, user_id, about, created_at)
+        VALUES (CAST(:id AS uuid), CAST(:user_id AS uuid), :about, CAST(:at AS timestamptz))
+        RETURNING id
+    )
+    UPDATE memory SET hidden_by = (SELECT id FROM made)
+    WHERE user_id = CAST(:user_id AS uuid) AND hidden_by IS NULL
+      AND CAST(id AS text) IN (SELECT jsonb_array_elements_text(CAST(:memory_ids AS jsonb)))
+    RETURNING id
+"""
+
+# Deleting the row brings its memories back (ON DELETE SET NULL).
+_UNFORGET = """
+    DELETE FROM memory_forget
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid) AND settled_at IS NULL
+    RETURNING id
+"""
+
+_SETTLE = """
+    WITH due AS (
+        UPDATE memory_forget SET settled_at = CAST(:at AS timestamptz)
+        WHERE user_id = CAST(:user_id AS uuid) AND settled_at IS NULL
+          AND created_at <= CAST(:until AS timestamptz)
+        RETURNING id
+    )
+    DELETE FROM memory WHERE hidden_by IN (SELECT id FROM due)
+"""
+
+_FORGETS = f"""
+    SELECT CAST(id AS text) AS id, about, {epoch_micros("created_at")} AS created_at
+    FROM memory_forget
+    WHERE user_id = CAST(:user_id AS uuid)
+      AND created_at >= CAST(:since AS timestamptz) AND created_at < CAST(:until AS timestamptz)
+    ORDER BY created_at, id
+"""
+
+_DROP_FORGETS = """
+    DELETE FROM memory_forget
+    WHERE user_id = CAST(:user_id AS uuid) AND settled_at IS NOT NULL
+      AND CAST(id AS text) IN (SELECT jsonb_array_elements_text(CAST(:ids AS jsonb)))
 """
 
 # Allowing a call to be read is a write for its learner, so it begins like every other one
@@ -2181,6 +2230,50 @@ class SqlMemoryRepository:
     def remove(self, user_id: UUID, memory_id: UUID) -> bool:
         rows = self._client.execute(_REMOVE_MEMORY, {"id": str(memory_id), "user_id": str(user_id)})
         return bool(rows)
+
+    def forget(self, user_id: UUID, forget: memories.Forget, memory_ids: Sequence[UUID]) -> int:
+        rows = self._client.execute(
+            _FORGET,
+            {
+                "id": str(forget.id),
+                "user_id": str(user_id),
+                "about": forget.about,
+                "at": forget.created_at.isoformat(),
+                "memory_ids": json.dumps([str(memory_id) for memory_id in memory_ids]),
+            },
+        )
+        return len(rows)
+
+    def unforget(self, user_id: UUID, forget_id: UUID) -> bool:
+        rows = self._client.execute(_UNFORGET, {"id": str(forget_id), "user_id": str(user_id)})
+        return bool(rows)
+
+    def settle(self, user_id: UUID, until: dt.datetime) -> None:
+        self._client.execute(
+            _SETTLE,
+            {"user_id": str(user_id), "until": until.isoformat(), "at": until.isoformat()},
+        )
+
+    def forgets(
+        self, user_id: UUID, since: dt.datetime, until: dt.datetime
+    ) -> list[memories.Forget]:
+        rows = self._client.execute(
+            _FORGETS,
+            {"user_id": str(user_id), "since": since.isoformat(), "until": until.isoformat()},
+        )
+        return [
+            memories.Forget(UUID(row["id"]), row["about"], from_epoch_micros(row["created_at"]))
+            for row in rows
+        ]
+
+    def drop_forgets(self, user_id: UUID, forget_ids: Sequence[UUID]) -> None:
+        self._client.execute(
+            _DROP_FORGETS,
+            {
+                "user_id": str(user_id),
+                "ids": json.dumps([str(forget_id) for forget_id in forget_ids]),
+            },
+        )
 
 
 # The learner is named only while their account exists (`app_user`); a deleted one's request
