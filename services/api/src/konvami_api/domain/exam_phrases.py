@@ -1,113 +1,587 @@
-"""Original practice phrases, not copied exam answers (§6.13)."""
+"""Exam phrase banks (5.25, spec §6.13): phrases that help in each kind of speaking task, grouped
+by what they do (suggesting, disagreeing, structuring a talk…), each with the lowest level it
+suits and its meaning in every explanation language.
 
-from collections.abc import Mapping
+Written by hand: original phrases, not copied exam answers, and the same for every learner, so
+no model request and no second check. German explanations show the phrase itself.
+"""
+
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Literal
+
+from konvami_api.domain.exams import SpeakingExam
+
+LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
+Level = Literal["A1", "A2", "B1", "B2", "C1", "C2"]
+
+Function = Literal[
+    "introduce",
+    "ask",
+    "request",
+    "tell",
+    "suggest",
+    "agree",
+    "disagree",
+    "opinion",
+    "structure",
+    "describe",
+    "react",
+    "time",
+]
+
+# How many phrases the preparation screen shows under one part; the bank (5.25) shows all.
+PER_PART = 4
 
 
 @dataclass(frozen=True)
 class ExamPhrase:
     text: str
     meanings: Mapping[str, str]
+    # The lowest level the phrase suits.
+    level: Level
 
 
-def _phrase(text: str, en: str, fr: str, it: str) -> ExamPhrase:
-    return ExamPhrase(text, {"de": text, "en": en, "fr": fr, "it": it})
+@dataclass(frozen=True)
+class PhraseGroup:
+    function: Function
+    phrases: tuple[ExamPhrase, ...]
 
 
-_INTRODUCE = (
-    _phrase(
-        "Ich möchte mich kurz vorstellen.",
-        "I'd like to introduce myself briefly.",
-        "Je voudrais me présenter brièvement.",
-        "Vorrei presentarmi brevemente.",
-    ),
-)
-_QUESTION = (
-    _phrase(
-        "Könnten Sie mir bitte sagen, wann das beginnt?",
-        "Could you please tell me when it starts?",
-        "Pourriez-vous me dire quand cela commence ?",
-        "Potrebbe dirmi quando inizia?",
-    ),
-)
-_REQUEST = (
-    _phrase(
-        "Könnten Sie mir bitte helfen?",
-        "Could you please help me?",
-        "Pourriez-vous m'aider ?",
-        "Potrebbe aiutarmi?",
-    ),
-)
-_LIFE = (
-    _phrase(
-        "In meiner Freizeit gehe ich gern spazieren.",
-        "In my free time I enjoy going for walks.",
-        "Pendant mon temps libre, j'aime me promener.",
-        "Nel tempo libero mi piace passeggiare.",
-    ),
-)
-_PLAN = (
-    _phrase(
-        "Ich schlage vor, dass wir uns am Samstag treffen.",
-        "I suggest we meet on Saturday.",
-        "Je propose de nous retrouver samedi.",
-        "Propongo di incontrarci sabato.",
-    ),
-    _phrase(
-        "Das klingt gut. Wie wäre es mit zehn Uhr?",
-        "That sounds good. How about ten o'clock?",
-        "Cela me semble bien. Et à dix heures ?",
-        "Mi sembra una buona idea. Che ne dici delle dieci?",
-    ),
-)
-_PRESENT = (
-    _phrase(
-        "Zuerst möchte ich über meine Erfahrungen sprechen.",
-        "First I'd like to talk about my experiences.",
-        "Je voudrais d'abord parler de mes expériences.",
-        "Per prima cosa vorrei parlare delle mie esperienze.",
-    ),
-)
-_FEEDBACK = (
-    _phrase(
-        "Vielen Dank für die Frage. Meiner Meinung nach ist das wichtig.",
-        "Thank you for the question. In my opinion that is important.",
-        "Merci pour la question. À mon avis, c'est important.",
-        "Grazie per la domanda. Secondo me è importante.",
-    ),
-)
-_DISCUSS = (
-    _phrase(
-        "Ich verstehe deinen Standpunkt, aber ich sehe das anders.",
-        "I understand your point of view, but I see it differently.",
-        "Je comprends ton point de vue, mais je vois les choses autrement.",
-        "Capisco il tuo punto di vista, ma la penso diversamente.",
-    ),
-)
-_PICTURE = (
-    _phrase(
-        "Auf dem Bild sehe ich mehrere Menschen.",
-        "In the picture I can see several people.",
-        "Sur l'image, je vois plusieurs personnes.",
-        "Nell'immagine vedo diverse persone.",
-    ),
-)
+def _p(level: Level, text: str, en: str, fr: str, it: str) -> ExamPhrase:
+    return ExamPhrase(text, {"de": text, "en": en, "fr": fr, "it": it}, level)
 
-_PHRASES: Mapping[str, tuple[ExamPhrase, ...]] = {
-    "introduce": _INTRODUCE,
-    "ask_answer": _QUESTION,
-    "requests": _REQUEST,
-    "questions_about_you": _INTRODUCE,
-    "talk_about_life": _LIFE,
-    "plan_together": _PLAN,
-    "present_topic": _PRESENT,
-    "feedback_questions": _FEEDBACK,
-    "talk": _PRESENT,
-    "discussion": _DISCUSS,
-    "topic_conversation": _DISCUSS,
-    "picture_experience": _PICTURE,
+
+FUNCTIONS: Mapping[Function, tuple[ExamPhrase, ...]] = {
+    "introduce": (
+        _p("A1", "Ich heiße …", "My name is …", "Je m'appelle …", "Mi chiamo …"),
+        _p("A1", "Ich komme aus …", "I come from …", "Je viens de …", "Vengo da …"),
+        _p("A1", "Ich wohne in …", "I live in …", "J'habite à …", "Abito a …"),
+        _p(
+            "A1",
+            "Ich spreche … und ein bisschen Deutsch.",
+            "I speak … and a little German.",
+            "Je parle … et un peu allemand.",
+            "Parlo … e un po' di tedesco.",
+        ),
+        _p(
+            "A2",
+            "Ich arbeite als … / Ich mache eine Ausbildung als …",
+            "I work as a … / I'm training to be a …",
+            "Je travaille comme … / Je fais une formation de …",
+            "Lavoro come … / Sto facendo una formazione da …",
+        ),
+        _p(
+            "B1",
+            "Ich möchte mich kurz vorstellen.",
+            "I'd like to introduce myself briefly.",
+            "Je voudrais me présenter brièvement.",
+            "Vorrei presentarmi brevemente.",
+        ),
+    ),
+    "ask": (
+        _p(
+            "A1",
+            "Wie heißen Sie?",
+            "What is your name?",
+            "Comment vous appelez-vous ?",
+            "Come si chiama?",
+        ),
+        _p(
+            "A1",
+            "Was machen Sie gern?",
+            "What do you like doing?",
+            "Qu'aimez-vous faire ?",
+            "Che cosa le piace fare?",
+        ),
+        _p("A1", "Und Sie?", "And you?", "Et vous ?", "E Lei?"),
+        _p(
+            "A2",
+            "Wie oft machen Sie das?",
+            "How often do you do that?",
+            "À quelle fréquence faites-vous cela ?",
+            "Quante volte lo fa?",
+        ),
+        _p(
+            "B1",
+            "Könnten Sie mir bitte sagen, wann das beginnt?",
+            "Could you please tell me when it starts?",
+            "Pourriez-vous me dire quand cela commence ?",
+            "Potrebbe dirmi quando inizia?",
+        ),
+        _p(
+            "B2",
+            "Darf ich noch einmal nachfragen: Wie haben Sie das gemeint?",
+            "May I ask again: what did you mean by that?",
+            "Puis-je vous redemander : qu'entendiez-vous par là ?",
+            "Posso chiedere di nuovo: che cosa intendeva?",
+        ),
+    ),
+    "request": (
+        _p(
+            "A1",
+            "Können Sie mir bitte helfen?",
+            "Can you help me, please?",
+            "Pouvez-vous m'aider, s'il vous plaît ?",
+            "Può aiutarmi, per favore?",
+        ),
+        _p(
+            "A1",
+            "Ich möchte bitte …",
+            "I would like … please.",
+            "Je voudrais … s'il vous plaît.",
+            "Vorrei … per favore.",
+        ),
+        _p(
+            "A1",
+            "Können Sie bitte langsamer sprechen?",
+            "Can you speak more slowly, please?",
+            "Pouvez-vous parler plus lentement, s'il vous plaît ?",
+            "Può parlare più lentamente, per favore?",
+        ),
+        _p("A1", "Haben Sie …?", "Do you have …?", "Avez-vous … ?", "Ha …?"),
+        _p(
+            "A2",
+            "Würden Sie bitte das Fenster aufmachen?",
+            "Would you open the window, please?",
+            "Pourriez-vous ouvrir la fenêtre, s'il vous plaît ?",
+            "Potrebbe aprire la finestra, per favore?",
+        ),
+        _p(
+            "B1",
+            "Wäre es möglich, dass …?",
+            "Would it be possible that …?",
+            "Serait-il possible que … ?",
+            "Sarebbe possibile che …?",
+        ),
+    ),
+    "tell": (
+        _p("A1", "Am Wochenende …", "At the weekend …", "Le week-end …", "Nel fine settimana …"),
+        _p(
+            "A2",
+            "In meiner Freizeit gehe ich gern spazieren.",
+            "In my free time I enjoy going for walks.",
+            "Pendant mon temps libre, j'aime me promener.",
+            "Nel tempo libero mi piace passeggiare.",
+        ),
+        _p(
+            "A2",
+            "Letztes Jahr habe ich …",
+            "Last year I …",
+            "L'année dernière, j'ai …",
+            "L'anno scorso ho …",
+        ),
+        _p(
+            "B1",
+            "Ich habe damit gute Erfahrungen gemacht.",
+            "I've had good experiences with that.",
+            "J'en ai fait de bonnes expériences.",
+            "Ne ho avuto buone esperienze.",
+        ),
+        _p(
+            "B1",
+            "In meinem Heimatland ist das ganz anders: …",
+            "In my home country it is quite different: …",
+            "Dans mon pays d'origine, c'est très différent : …",
+            "Nel mio paese d'origine è molto diverso: …",
+        ),
+        _p(
+            "B2",
+            "Ich erinnere mich noch gut daran, wie …",
+            "I still remember well how …",
+            "Je me souviens encore bien de la façon dont …",
+            "Ricordo ancora bene come …",
+        ),
+    ),
+    "suggest": (
+        _p("A2", "Wie wäre es mit …?", "How about …?", "Que dirais-tu de … ?", "Che ne dici di …?"),
+        _p(
+            "A2",
+            "Wollen wir am Samstag …?",
+            "Shall we … on Saturday?",
+            "On … samedi ?",
+            "Vogliamo … sabato?",
+        ),
+        _p(
+            "A2",
+            "Hast du am Freitag Zeit?",
+            "Are you free on Friday?",
+            "Tu es libre vendredi ?",
+            "Hai tempo venerdì?",
+        ),
+        _p(
+            "B1",
+            "Ich schlage vor, dass wir uns am Samstag treffen.",
+            "I suggest we meet on Saturday.",
+            "Je propose de nous retrouver samedi.",
+            "Propongo di incontrarci sabato.",
+        ),
+        _p(
+            "B1",
+            "Was hältst du davon, wenn wir …?",
+            "What do you think if we …?",
+            "Que penses-tu si nous … ?",
+            "Che ne pensi se noi …?",
+        ),
+        _p(
+            "B1",
+            "Dann machen wir es so: Du kümmerst dich um …, und ich …",
+            "Then let's do it like this: you take care of …, and I …",
+            "Alors faisons comme ça : tu t'occupes de …, et moi …",
+            "Allora facciamo così: tu ti occupi di …, e io …",
+        ),
+        _p(
+            "B2",
+            "Könnten wir uns vielleicht in der Mitte treffen?",
+            "Could we perhaps meet halfway?",
+            "Pourrions-nous peut-être trouver un compromis ?",
+            "Potremmo forse trovare una via di mezzo?",
+        ),
+    ),
+    "agree": (
+        _p("A2", "Gute Idee!", "Good idea!", "Bonne idée !", "Buona idea!"),
+        _p(
+            "A2", "Das passt mir gut.", "That suits me well.", "Ça me convient bien.", "Mi va bene."
+        ),
+        _p(
+            "B1",
+            "Da hast du recht.",
+            "You're right about that.",
+            "Tu as raison.",
+            "Hai ragione.",
+        ),
+        _p(
+            "B1",
+            "Das sehe ich genauso.",
+            "I see it the same way.",
+            "Je vois les choses de la même façon.",
+            "La penso allo stesso modo.",
+        ),
+        _p(
+            "B2",
+            "Da stimme ich dir voll und ganz zu.",
+            "I agree with you completely.",
+            "Je suis entièrement d'accord avec toi.",
+            "Sono completamente d'accordo con te.",
+        ),
+        _p(
+            "C1",
+            "Dem kann ich nur beipflichten, zumal …",
+            "I can only agree with that, especially since …",
+            "Je ne peux qu'approuver, d'autant plus que …",
+            "Non posso che essere d'accordo, tanto più che …",
+        ),
+    ),
+    "disagree": (
+        _p(
+            "A2",
+            "Am Samstag kann ich leider nicht.",
+            "Unfortunately I can't on Saturday.",
+            "Samedi, je ne peux malheureusement pas.",
+            "Sabato purtroppo non posso.",
+        ),
+        _p("A2", "Ich weiß nicht …", "I'm not sure …", "Je ne sais pas …", "Non so …"),
+        _p(
+            "B1",
+            "Das finde ich nicht so gut, weil …",
+            "I don't think that's so good, because …",
+            "Je ne trouve pas ça très bien, parce que …",
+            "Non mi sembra una buona idea, perché …",
+        ),
+        _p(
+            "B1",
+            "Ich verstehe deinen Standpunkt, aber ich sehe das anders.",
+            "I understand your point of view, but I see it differently.",
+            "Je comprends ton point de vue, mais je vois les choses autrement.",
+            "Capisco il tuo punto di vista, ma la penso diversamente.",
+        ),
+        _p(
+            "B2",
+            "Da bin ich anderer Meinung, denn …",
+            "I disagree there, because …",
+            "Là, je ne suis pas d'accord, car …",
+            "Su questo non sono d'accordo, perché …",
+        ),
+        _p(
+            "C1",
+            "Das mag zwar stimmen, allerdings übersiehst du dabei, dass …",
+            "That may be true, but you are overlooking the fact that …",
+            "C'est peut-être vrai, mais tu oublies que …",
+            "Sarà anche vero, però trascuri il fatto che …",
+        ),
+    ),
+    "opinion": (
+        _p("A2", "Ich finde …", "I think …", "Je trouve …", "Trovo che …"),
+        _p(
+            "B1",
+            "Meiner Meinung nach ist das wichtig.",
+            "In my opinion that is important.",
+            "À mon avis, c'est important.",
+            "Secondo me è importante.",
+        ),
+        _p(
+            "B1",
+            "Ich bin der Meinung, dass …",
+            "I am of the opinion that …",
+            "Je suis d'avis que …",
+            "Sono dell'opinione che …",
+        ),
+        _p(
+            "B2",
+            "Einerseits …, andererseits …",
+            "On the one hand …, on the other hand …",
+            "D'un côté …, de l'autre …",
+            "Da un lato …, dall'altro …",
+        ),
+        _p(
+            "B2",
+            "Ein wichtiges Argument dafür ist, dass …",
+            "An important argument for it is that …",
+            "Un argument important en faveur de cela est que …",
+            "Un argomento importante a favore è che …",
+        ),
+        _p(
+            "C1",
+            "Wenn man alle Argumente gegeneinander abwägt, komme ich zu dem Schluss, dass …",
+            "Weighing all the arguments against each other, I come to the conclusion that …",
+            "En pesant tous les arguments, j'en arrive à la conclusion que …",
+            "Valutando tutti gli argomenti, arrivo alla conclusione che …",
+        ),
+        _p(
+            "C1",
+            "Ausschlaggebend ist für mich letztlich …",
+            "What is decisive for me in the end is …",
+            "Ce qui est déterminant pour moi, en fin de compte, c'est …",
+            "Ciò che per me alla fine è decisivo è …",
+        ),
+    ),
+    "structure": (
+        _p(
+            "A2",
+            "Zuerst …, dann …, zum Schluss …",
+            "First …, then …, finally …",
+            "D'abord …, ensuite …, pour finir …",
+            "Prima …, poi …, alla fine …",
+        ),
+        _p(
+            "B1",
+            "Ich möchte heute über das Thema … sprechen.",
+            "Today I'd like to talk about …",
+            "Aujourd'hui, je voudrais parler de …",
+            "Oggi vorrei parlare di …",
+        ),
+        _p(
+            "B1",
+            "Zuerst möchte ich über meine Erfahrungen sprechen.",
+            "First I'd like to talk about my experiences.",
+            "Je voudrais d'abord parler de mes expériences.",
+            "Per prima cosa vorrei parlare delle mie esperienze.",
+        ),
+        _p(
+            "B1",
+            "Damit komme ich zum Schluss. Vielen Dank fürs Zuhören.",
+            "That brings me to the end. Thank you for listening.",
+            "J'en arrive à la conclusion. Merci de votre attention.",
+            "Con questo arrivo alla conclusione. Grazie per l'attenzione.",
+        ),
+        _p(
+            "B2",
+            "Mein Vortrag besteht aus drei Teilen: …",
+            "My talk has three parts: …",
+            "Mon exposé comporte trois parties : …",
+            "La mia presentazione ha tre parti: …",
+        ),
+        _p(
+            "B2",
+            "Ich komme nun zum nächsten Punkt.",
+            "I now come to the next point.",
+            "J'en viens maintenant au point suivant.",
+            "Passo ora al punto successivo.",
+        ),
+        _p(
+            "C1",
+            "Zusammenfassend lässt sich festhalten, dass …",
+            "In summary, it can be said that …",
+            "En résumé, on peut retenir que …",
+            "Riassumendo, si può affermare che …",
+        ),
+    ),
+    "describe": (
+        _p(
+            "A2",
+            "Auf dem Bild sehe ich mehrere Menschen.",
+            "In the picture I can see several people.",
+            "Sur l'image, je vois plusieurs personnes.",
+            "Nell'immagine vedo diverse persone.",
+        ),
+        _p(
+            "A2",
+            "Links / rechts / in der Mitte ist …",
+            "On the left / on the right / in the middle there is …",
+            "À gauche / à droite / au milieu, il y a …",
+            "A sinistra / a destra / al centro c'è …",
+        ),
+        _p(
+            "B1",
+            "Es sieht so aus, als ob die Leute warten.",
+            "It looks as if the people are waiting.",
+            "On dirait que les gens attendent.",
+            "Sembra che le persone stiano aspettando.",
+        ),
+        _p(
+            "B2",
+            "Die Grafik zeigt, wie sich … entwickelt hat.",
+            "The chart shows how … has developed.",
+            "Le graphique montre comment … a évolué.",
+            "Il grafico mostra come si è sviluppato …",
+        ),
+        _p(
+            "B2",
+            "Der Anteil ist von … auf … Prozent gestiegen.",
+            "The share rose from … to … percent.",
+            "La part est passée de … à … pour cent.",
+            "La quota è salita dal … al … per cento.",
+        ),
+        _p(
+            "C1",
+            "Auffällig ist vor allem, dass …",
+            "What is particularly striking is that …",
+            "Ce qui frappe surtout, c'est que …",
+            "Colpisce soprattutto il fatto che …",
+        ),
+    ),
+    "react": (
+        _p("A1", "Ja, gern.", "Yes, gladly.", "Oui, volontiers.", "Sì, volentieri."),
+        _p(
+            "A1",
+            "Nein, leider nicht.",
+            "No, unfortunately not.",
+            "Non, malheureusement pas.",
+            "No, purtroppo no.",
+        ),
+        _p(
+            "A2",
+            "Danke für die Frage.",
+            "Thank you for the question.",
+            "Merci pour la question.",
+            "Grazie per la domanda.",
+        ),
+        _p(
+            "B1",
+            "Vielen Dank für die Rückmeldung.",
+            "Thank you very much for the feedback.",
+            "Merci beaucoup pour le retour.",
+            "Grazie mille per il riscontro.",
+        ),
+        _p(
+            "B1",
+            "Das ist eine gute Frage. Ich denke, …",
+            "That's a good question. I think …",
+            "C'est une bonne question. Je pense que …",
+            "È una bella domanda. Penso che …",
+        ),
+        _p(
+            "B2",
+            "Darauf bin ich in meinem Vortrag nicht eingegangen, aber …",
+            "I didn't go into that in my talk, but …",
+            "Je n'ai pas abordé ce point dans mon exposé, mais …",
+            "Non ne ho parlato nella mia presentazione, ma …",
+        ),
+    ),
+    "time": (
+        _p("A1", "Wie bitte?", "Sorry? / Pardon?", "Pardon ?", "Come, scusi?"),
+        _p(
+            "A1",
+            "Noch einmal, bitte.",
+            "Once more, please.",
+            "Encore une fois, s'il vous plaît.",
+            "Ancora una volta, per favore.",
+        ),
+        _p(
+            "A2",
+            "Moment, ich überlege kurz.",
+            "Just a moment, let me think.",
+            "Un instant, je réfléchis.",
+            "Un momento, ci penso un attimo.",
+        ),
+        _p(
+            "A2",
+            "Wie sagt man … auf Deutsch?",
+            "How do you say … in German?",
+            "Comment dit-on … en allemand ?",
+            "Come si dice … in tedesco?",
+        ),
+        _p(
+            "B1",
+            "Ich meine damit, dass …",
+            "What I mean by that is …",
+            "Je veux dire par là que …",
+            "Intendo dire che …",
+        ),
+        _p(
+            "B2",
+            "Lassen Sie es mich anders ausdrücken: …",
+            "Let me put it another way: …",
+            "Laissez-moi le formuler autrement : …",
+            "Mi lasci dire in un altro modo: …",
+        ),
+    ),
+}
+
+# What each kind of part asks for, most useful first.
+_KIND_FUNCTIONS: Mapping[str, tuple[Function, ...]] = {
+    "introduce": ("introduce", "ask", "time"),
+    "ask_answer": ("ask", "react", "time"),
+    "requests": ("request", "react", "time"),
+    "questions_about_you": ("ask", "introduce", "react"),
+    "talk_about_life": ("tell", "structure", "time"),
+    "plan_together": ("suggest", "agree", "disagree"),
+    "present_topic": ("structure", "opinion", "tell"),
+    "feedback_questions": ("react", "opinion", "time"),
+    "talk": ("structure", "opinion", "describe"),
+    "discussion": ("opinion", "agree", "disagree"),
+    "topic_conversation": ("opinion", "tell", "agree", "disagree"),
+    "picture_experience": ("describe", "tell", "time"),
 }
 
 
-def phrases_for(kind: str) -> tuple[ExamPhrase, ...]:
-    return _PHRASES.get(kind, ())
+def _fits(phrase: ExamPhrase, levels: Sequence[str]) -> bool:
+    top = max((LEVELS.index(level) for level in levels if level in LEVELS), default=0)
+    return LEVELS.index(phrase.level) <= top
+
+
+def _at(function: Function, levels: Sequence[str]) -> tuple[ExamPhrase, ...]:
+    return tuple(phrase for phrase in FUNCTIONS[function] if _fits(phrase, levels))
+
+
+def phrases_for(kind: str, levels: Sequence[str]) -> tuple[ExamPhrase, ...]:
+    """A few phrases for one part, taking turns between its functions: those of the exam's own
+    level first (what the learner aims at), each level in the bank's order."""
+    columns = [
+        sorted(_at(function, levels), key=lambda phrase: -LEVELS.index(phrase.level))
+        for function in _KIND_FUNCTIONS.get(kind, ())
+    ]
+    found: list[ExamPhrase] = []
+    while len(found) < PER_PART and any(columns):
+        for column in columns:
+            if column and len(found) < PER_PART:
+                found.append(column.pop(0))
+    return tuple(found)
+
+
+def bank_for(*exams: SpeakingExam) -> tuple[PhraseGroup, ...]:
+    """Every phrase that helps in the parts of an exam (or of all the stages of one), by
+    function, in the order the parts need them."""
+    seen: list[Function] = []
+    for exam in exams:
+        for part in exam.parts:
+            # A card with a picture or a chart asks for describing it, whatever the part.
+            drawn: tuple[Function, ...] = (
+                ("describe",) if any(c.picture or c.figure for c in part.cards) else ()
+            )
+            for function in (*_KIND_FUNCTIONS.get(part.kind, ()), *drawn):
+                if function not in seen:
+                    seen.append(function)
+    levels = tuple({level for exam in exams for level in exam.levels})
+    groups = (PhraseGroup(function, _at(function, levels)) for function in seen)
+    return tuple(group for group in groups if group.phrases)

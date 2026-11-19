@@ -22,6 +22,7 @@ from konvami_api.domain.accounts import Account, AccountDirectory, AccountNotFou
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.exam_acoustics import ExamAcoustics, ExamPronunciation
+from konvami_api.domain.exam_phrases import PhraseGroup, bank_for
 from konvami_api.domain.exams import (
     CRITERIA,
     MAX_MARK,
@@ -81,6 +82,12 @@ class ExamError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+@dataclass(frozen=True)
+class PhraseBank:
+    exam: SpeakingExam
+    groups: tuple[PhraseGroup, ...]
 
 
 @dataclass(frozen=True)
@@ -464,6 +471,18 @@ class ExamService:
         if found is None:
             raise ScenarioError("not_found")
         return found
+
+    def phrase_bank(self, user_id: UUID, exam_id: str) -> PhraseBank:
+        """The phrases that help in a speaking test; a staged test's bank covers every stage.
+        Raises `ScenarioError("not_found")`."""
+        exam = self.speaking_exam(user_id, exam_id)
+        _, formats = self._formats(user_id)
+        stages = (
+            tuple(found for found in formats if found.series == exam.series)
+            if exam.series
+            else (exam,)
+        )
+        return PhraseBank(exam, bank_for(*stages))
 
     def centre(self, user_id: UUID) -> ExamCentre:
         language, formats = self._formats(user_id)
