@@ -4,8 +4,10 @@ hard, a place to hear a word before saying it, and a list of the learner's own p
 What it can and cannot tell. A recording is written down by the verbatim pass (`Listener`, spec
 §9.4) and compared with the words that were to be said, word by word. That shows words that were
 not heard as asked, which is often a sound that was off, but it is an approximation: it gives no
-phoneme scores or marks for stress and rhythm (spec §9.5 names scoring as later work), and a
-word can be missed because of the microphone or the recogniser. The app says so wherever it
+phoneme scores or marks for stress and rhythm, and a word can be missed because of the microphone
+or the recogniser. Where an acoustic assessment provider is configured and the learner agrees per
+drill, the recording is scored phoneme by phoneme instead, and the drill says how its sound went
+(`sound_phonemes.py`); stress and rhythm are still not scored. The app says so wherever it
 shows a result, and a missed word is never a failure: it joins the learner's problem words until
 they have said it right twice in a row.
 
@@ -34,6 +36,7 @@ from konvami_api.domain.pronunciation_assessment import (
 )
 from konvami_api.domain.pronunciation_sounds import ProblemSound
 from konvami_api.domain.reports import words_in
+from konvami_api.domain.sound_phonemes import SoundScore, band, score_sound
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.speech import SpeechError
 from konvami_api.domain.spoken import Listener, SpokenError, matched_words
@@ -49,6 +52,9 @@ TARGET_MAX = 200
 CLEARED_AFTER = 2
 # A pedagogical review suggestion on a 0-100 provider scale, never a CEFR or exam cutoff.
 ACOUSTIC_REVIEW_BELOW = 70
+# A sound's score is the mean of its last few scored drills: recent enough to show progress,
+# enough of them that one noisy recording does not swing it.
+RECENT_SCORES = 5
 
 # `word`: one or two words said (a word, a pair, a problem word). `shadow`: a sentence said right
 # after hearing it. (Picking which word was heard is `pick`, not an attempt with a recording.)
@@ -77,6 +83,8 @@ class Attempt:
     right: bool
     words: tuple[WordMark, ...]
     assessment: PronunciationAssessment | None = None
+    # How the drill's sound went, when the drill was assessed and the sound can be scored.
+    sound_score: SoundScore | None = None
 
 
 @dataclass(frozen=True)
@@ -90,6 +98,14 @@ class SoundSummary:
     # Drills made on this sound, and how many were right.
     tries: int
     right: int
+    # The mean of the last `RECENT_SCORES` assessed drills of this sound, and how many there were;
+    # None and 0 without any.
+    score: float | None = None
+    scored: int = 0
+
+    @property
+    def band(self) -> str | None:
+        return band(self.score) if self.score is not None else None
 
 
 @dataclass(frozen=True)
@@ -125,12 +141,17 @@ class PronunciationRepository(Protocol):
         heard: str,
         right: bool,
         marks: Sequence[tuple[str, bool]],
+        sound_score: float | None = None,
     ) -> None:
         """One drill, and per word of it whether it was heard. The words' tallies change with it:
-        a miss counts, a hit extends the run of hits."""
+        a miss counts, a hit extends the run of hits. `sound_score` is the drill's acoustic score
+        for its sound, when it has one."""
 
     def progress(self, user_id: UUID, language: str) -> dict[str, tuple[int, int]]:
         """Per sound, the drills made and how many were right."""
+
+    def sound_scores(self, user_id: UUID, language: str, recent: int) -> dict[str, list[float]]:
+        """Per sound, the acoustic scores of its last `recent` scored drills, newest first."""
 
     def problems(self, user_id: UUID, language: str, limit: int) -> list[ProblemWord]:
         """The words missed that have not been said right `CLEARED_AFTER` times in a row since,
@@ -186,10 +207,15 @@ class PronunciationService:
         return explained if isinstance(explained, str) else "en"
 
     def _summary(
-        self, sound: ProblemSound, explained_in: str, progress: dict[str, tuple[int, int]]
+        self,
+        sound: ProblemSound,
+        explained_in: str,
+        progress: dict[str, tuple[int, int]],
+        scores: dict[str, list[float]],
     ) -> SoundSummary:
         text = sound.text(explained_in)
         tries, right = progress.get(sound.id, (0, 0))
+        recent = scores.get(sound.id, [])
         return SoundSummary(
             id=sound.id,
             title=text.title,
@@ -198,6 +224,8 @@ class PronunciationService:
             pairs=len(sound.pairs),
             tries=tries,
             right=right,
+            score=round(sum(recent) / len(recent), 1) if recent else None,
+            scored=len(recent),
         )
 
     def sounds(self, user_id: UUID) -> list[SoundSummary]:
@@ -208,7 +236,8 @@ class PronunciationService:
             return []
         explained = self._explained_in(user_id, language)
         progress = self._repository.progress(user_id, language)
-        return [self._summary(sound, explained, progress) for sound in pack.pronunciation]
+        scores = self._repository.sound_scores(user_id, language, RECENT_SCORES)
+        return [self._summary(sound, explained, progress, scores) for sound in pack.pronunciation]
 
     def sound(self, user_id: UUID, sound_id: str) -> SoundDetail:
         """One sound with the words that practise it. Raises `PronunciationError`
@@ -221,6 +250,7 @@ class PronunciationService:
             sound,
             self._explained_in(user_id, language),
             self._repository.progress(user_id, language),
+            self._repository.sound_scores(user_id, language, RECENT_SCORES),
         )
         return SoundDetail(summary, sound.pairs, sound.words, sound.sentences)
 
@@ -394,6 +424,11 @@ class PronunciationService:
         found = matched_words([word.casefold() for word in shown], words_in(heard))
         marks = tuple(WordMark(word, ok) for word, ok in zip(shown, found, strict=True))
         right = bool(marks) and all(mark.ok for mark in marks)
+        sound_score = (
+            score_sound(sound_id, shown, assessed)
+            if assessed is not None and sound_id is not None
+            else None
+        )
         self._repository.record(
             user_id,
             language,
@@ -415,8 +450,9 @@ class PronunciationService:
                 if acoustic_words and assessed is not None
                 else _per_word(marks)
             ),
+            sound_score=sound_score.score if sound_score is not None else None,
         )
-        return Attempt(heard, right, marks, assessed)
+        return Attempt(heard, right, marks, assessed, sound_score)
 
     def _check_target(
         self,

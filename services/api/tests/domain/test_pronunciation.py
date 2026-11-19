@@ -342,3 +342,77 @@ def test_acoustic_provider_requires_opt_in_and_preserves_actual_scores(
     assert result.assessment is not None
     assert result.assessment.words[0].phonemes[0].accuracy == 62
     assert len(world.pronunciation_transcriber.tasks) == 1
+
+
+def _assessing(world: World, monkeypatch: pytest.MonkeyPatch, *phones: tuple[str, float]) -> None:
+    from konvami_api.domain.costs import Charge
+    from konvami_api.domain.pronunciation_assessment import (
+        AssessedWord,
+        PhonemeScore,
+        PronunciationAssessment,
+    )
+
+    class Assessor:
+        provider = "Test acoustic provider"
+
+        def supports(self, language: str, audio_format: str) -> bool:
+            return audio_format == "wav"
+
+        def assess(
+            self,
+            language: str,
+            reference: str,
+            audio: bytes,
+            audio_format: str,
+            *,
+            charge: Charge | None = None,
+        ) -> PronunciationAssessment:
+            words = tuple(
+                AssessedWord(text, 80, tuple(PhonemeScore(p, a) for p, a in phones))
+                for text in reference.split()
+            )
+            return PronunciationAssessment(self.provider, reference, 80, None, None, words)
+
+    monkeypatch.setattr(world.pronunciation, "_assessor", Assessor())
+
+
+def test_an_assessed_drill_says_how_its_sound_went_and_the_sound_keeps_recent_scores(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    world = lab()
+    _assessing(world, monkeypatch, ("f", 99), ("y", 60), ("ʁ", 90))
+    result = world.pronunciation.attempt(
+        USER, "word", "ue", "für", AUDIO, "wav", assessment_consent=True
+    )
+    assert result.sound_score is not None
+    assert (result.sound_score.score, result.sound_score.band) == (60, "practise")
+    _assessing(world, monkeypatch, ("y", 90))
+    world.pronunciation.attempt(USER, "word", "ue", "Tür", AUDIO, "wav", assessment_consent=True)
+    summary = world.pronunciation.sound(USER, "ue").summary
+    assert summary.score == 75
+    assert summary.scored == 2
+
+
+def test_only_the_last_scored_drills_count_towards_a_sound(monkeypatch: pytest.MonkeyPatch) -> None:
+    from konvami_api.domain.pronunciation import RECENT_SCORES
+
+    world = lab()
+    _assessing(world, monkeypatch, ("y", 10))
+    world.pronunciation.attempt(USER, "word", "ue", "für", AUDIO, "wav", assessment_consent=True)
+    _assessing(world, monkeypatch, ("y", 90))
+    for _ in range(RECENT_SCORES):
+        world.pronunciation.attempt(
+            USER, "word", "ue", "für", AUDIO, "wav", assessment_consent=True
+        )
+    summary = next(s for s in world.pronunciation.sounds(USER) if s.id == "ue")
+    assert summary.score == 90
+    assert summary.scored == RECENT_SCORES
+
+
+def test_without_assessment_there_is_no_sound_score() -> None:
+    world = lab()
+    result = say(world, "für", "für")
+    assert result.sound_score is None
+    summary = world.pronunciation.sound(USER, "ue").summary
+    assert summary.score is None
+    assert summary.scored == 0
