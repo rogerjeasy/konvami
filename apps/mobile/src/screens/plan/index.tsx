@@ -7,7 +7,6 @@ import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { LoadState } from '@/components/load-state';
-import { Meter } from '@/components/meter';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { Text } from '@/components/text';
@@ -17,8 +16,9 @@ import { formatDate } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { readUntilChanged } from '@/plan/refresh';
 import { usePaywall, usePurchaseDevice } from '@/plan/services';
-import { useAllowance, usePlan, useProfileServices } from '@/profile/services';
+import { usePlan, useProfileServices } from '@/profile/services';
 import { ProfilePage } from '../profile/page';
+import { VoiceMinutes } from '@/screens/profile/voice-minutes';
 import { TierSummary } from './tier-summary';
 
 // A stored moment ("2026-10-09T12:00:00Z") as its calendar day.
@@ -35,30 +35,6 @@ function Standing({ plan }: { plan: Plan }) {
     <Text variant="small" tone="muted">
       {t(key, { date })}
     </Text>
-  );
-}
-
-/** Voice minutes left this week out of the plan's, as a bar. */
-function Minutes() {
-  const { t } = useTranslation();
-  const state = useAllowance();
-  if (state.phase !== 'ready') return null;
-  const { weeklySeconds, remainingSeconds } = state.data;
-  const weekly = Math.round(weeklySeconds / SECONDS_PER_MINUTE);
-  const left = Math.floor(remainingSeconds / SECONDS_PER_MINUTE);
-  return (
-    <View className="gap-3">
-      <View className="flex-row flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <Text variant="heading">{t('profile.minutes.left', { count: left })}</Text>
-        <Text variant="small" tone="muted">
-          {t('profile.minutes.ofWeekly', { weekly })}
-        </Text>
-      </View>
-      <Meter
-        share={weeklySeconds > 0 ? remainingSeconds / weeklySeconds : 0}
-        label={t('profile.minutes.spoken', { left, weekly })}
-      />
-    </View>
   );
 }
 
@@ -178,14 +154,13 @@ function PlanBody({
         </Card>
       </Reveal>
       <Reveal delay={staggerDelay(2)}>
-        <Card className="gap-3 p-4">
-          <Minutes />
+        <VoiceMinutes>
           {plan.packSeconds > 0 ? (
-            <Text variant="small" tone="muted">
+            <Text variant="small" tone="onInverse">
               {t('plan.packLeft', { count: Math.floor(plan.packSeconds / SECONDS_PER_MINUTE) })}
             </Text>
           ) : null}
-        </Card>
+        </VoiceMinutes>
       </Reveal>
       {plan.billingIssue ? (
         <NoticeBox icon="alert" tone="danger">
