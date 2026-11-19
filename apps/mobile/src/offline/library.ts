@@ -12,7 +12,8 @@ export interface Annotation {
 }
 export type Annotations = Record<string, Annotation>;
 export interface LibraryMedia {
-  download(url: string, key: string): Promise<string>;
+  /** Saves a file on the device; `extension` names its format (recordings are WAV). */
+  download(url: string, key: string, extension?: 'wav' | 'mp3'): Promise<string>;
   remove(uri: string): Promise<void>;
   resolve?(uri: string): Promise<string>;
   shareAudio?(url: string, name: string, format: 'mp3' | 'm4a'): Promise<void>;

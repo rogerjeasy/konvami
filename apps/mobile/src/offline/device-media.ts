@@ -15,10 +15,11 @@ const mime = {
 };
 
 export const deviceLibraryMedia: LibraryMedia = {
-  async download(url, key) {
+  async download(url, key, extension = 'wav') {
     const folder = mediaFolder();
     folder.create({ idempotent: true, intermediates: true });
-    const file = new File(folder, `${encodeURIComponent(key)}.wav`);
+    // The player tells a file's format by its name.
+    const file = new File(folder, `${encodeURIComponent(key)}.${extension}`);
     try {
       await File.downloadFileAsync(url, file, { idempotent: true });
       if ((folder.size ?? 0) > MAX_MEDIA_BYTES) throw new Error('storage_limit');

@@ -383,6 +383,10 @@ export const FAKE_DUE_IN_MS: Record<Rating, number> = {
   good: 2 * DAY_MS,
   easy: 8 * DAY_MS,
 };
+/** How far ahead the cards for reviewing offline go, as on the server (`OFFLINE_AHEAD`). */
+const FAKE_OFFLINE_AHEAD_MS = 7 * DAY_MS;
+/** A middling FSRS difficulty (1 to 10) for the cards the fake server reviews. */
+const FAKE_DIFFICULTY = 5;
 /** As on the server (services/api: domain/cards.py). */
 const CARDS_PAGE_DEFAULT = 50;
 const QUEUE_DEFAULT = 20;
@@ -1340,6 +1344,22 @@ export function createFakeApi(): FakeApi {
       .filter((card) => Date.parse(card.dueAt) <= now)
       .sort((a, b) => a.dueAt.localeCompare(b.dueAt) || a.createdAt.localeCompare(b.createdAt));
   const deckSummary = () => ({ total: cards.length, due: dueCards().length });
+  /** The ids of the offline ratings stored, so one sent twice is stored once. */
+  const syncedIds = new Set<string>();
+  /** Stores a rating given `at` (ms) and answers with the card as it leaves it. */
+  function applyReview(card: Card, rating: Rating, at: number): Card {
+    const reviewed: Card = {
+      ...card,
+      dueAt: new Date(at + FAKE_DUE_IN_MS[rating]).toISOString(),
+      reviewedAt: new Date(at).toISOString(),
+      reviews: card.reviews + 1,
+      // The server always sends a reviewed card's memory; this one matches the wait above.
+      memory: { stability: FAKE_DUE_IN_MS[rating] / DAY_MS, difficulty: FAKE_DIFFICULTY },
+    };
+    cards = cards.map((candidate) => (candidate.id === card.id ? reviewed : candidate));
+    reviewLog.push({ id: card.id, rating });
+    return reviewed;
+  }
 
   /** As on the server: the last report's next steps, and until then the placement test's. */
   function focus(): Pick<Home, 'focus' | 'focusSource'> {
@@ -2013,15 +2033,39 @@ export function createFakeApi(): FakeApi {
       await record('reviewCard', id, rating);
       const card = cards.find((candidate) => candidate.id === id);
       if (!card) throw new ApiError('not_found', 404);
-      const reviewed: Card = {
-        ...card,
-        dueAt: new Date(now + FAKE_DUE_IN_MS[rating]).toISOString(),
-        reviewedAt: new Date(now).toISOString(),
-        reviews: card.reviews + 1,
+      return applyReview(card, rating, now);
+    },
+    async getCardsAhead() {
+      await record('getCardsAhead');
+      const horizon = now + FAKE_OFFLINE_AHEAD_MS;
+      return {
+        cards: cards
+          .filter((card) => Date.parse(card.dueAt) <= horizon)
+          .sort((a, b) => a.dueAt.localeCompare(b.dueAt)),
+        language: 'de',
       };
-      cards = cards.map((candidate) => (candidate.id === id ? reviewed : candidate));
-      reviewLog.push({ id, rating });
-      return reviewed;
+    },
+    async syncCardReviews(sent) {
+      await record('syncCardReviews', sent);
+      // As on the server: in the order given, once per id, only on the card as it was rated.
+      const ordered = [...sent].sort((a, b) => a.reviewedAt.localeCompare(b.reviewedAt));
+      return {
+        results: ordered.map((item) => {
+          const card = cards.find((candidate) => candidate.id === item.cardId);
+          if (!card) return { clientId: item.clientId, outcome: 'removed' as const, card: null };
+          if (syncedIds.has(item.clientId))
+            return { clientId: item.clientId, outcome: 'applied' as const, card };
+          if (card.reviews !== item.expectedReviews)
+            return { clientId: item.clientId, outcome: 'superseded' as const, card };
+          syncedIds.add(item.clientId);
+          const at = Math.min(now, Date.parse(item.reviewedAt));
+          return {
+            clientId: item.clientId,
+            outcome: 'applied' as const,
+            card: applyReview(card, item.rating, at),
+          };
+        }),
+      };
     },
     async removeCard(id) {
       await record('removeCard', id);
