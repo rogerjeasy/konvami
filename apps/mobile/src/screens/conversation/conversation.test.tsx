@@ -789,3 +789,44 @@ describe('5.4 Conversation done', () => {
     expect(router.dismissTo).toHaveBeenCalledWith('/today');
   });
 });
+
+describe('5.3 Conversation with two partners (5.24)', () => {
+  const JONAS = FAKE_PERSONAS[1]!;
+
+  it('calls with both, shows both and says whose line and voice it is', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ personaId: LENA.id, guest: JONAS.id });
+    const voice = createFakeVoiceEngine();
+    await renderScreen(<LiveConversationScreen />, { api: inApp(), voice, signedIn: true });
+    await waitFor(() => expect(voice.starts).toBe(1));
+    await screen.findByText(/left$/);
+
+    expect(voice.openedWith).toEqual([LENA.id]);
+    expect(voice.openedGuests).toEqual([JONAS.id]);
+    expect(screen.getByRole('header', { name: 'Lena and Jonas' })).toBeTruthy();
+
+    await play(voice, SESSION_CREATED, personaSaid('Hallo Amara!'));
+    await play(
+      voice,
+      {
+        type: 'response.output_audio_transcript.done',
+        item_id: 'guest_1',
+        transcript: 'Servus!',
+        guest: true,
+      },
+      AUDIO_STARTED,
+    );
+
+    expect(screen.getByText('Jonas is speaking')).toBeTruthy();
+    expect(screen.getByText('Lena')).toBeTruthy();
+    expect(screen.getByText('Jonas')).toBeTruthy();
+  });
+
+  it('does not start when the second partner is not one of the learner’s', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ personaId: LENA.id, guest: 'gone' });
+    const voice = createFakeVoiceEngine();
+    await renderScreen(<LiveConversationScreen />, { api: inApp(), voice, signedIn: true });
+
+    expect(await screen.findByRole('button', { name: 'Back to Today' })).toBeTruthy();
+    expect(voice.starts).toBe(0);
+  });
+});
