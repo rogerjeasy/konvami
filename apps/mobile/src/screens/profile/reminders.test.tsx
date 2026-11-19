@@ -54,7 +54,10 @@ describe('6.13 Reminders', () => {
     const device = createFakeReminderDevice('granted');
     await open(device);
 
-    await fireEvent.press(await screen.findByRole('radio', { name: '7:00 AM' }));
+    // 6:00 PM is four steps after 7:00 AM (7, 8, 12, 17, 18).
+    for (let i = 0; i < 4; i++)
+      await fireEvent.press(await screen.findByRole('button', { name: 'At: earlier' }));
+    expect(screen.getByRole('button', { name: 'At: earlier' })).toBeDisabled();
     await fireEvent.press(toggle('Also when cards are waiting'));
 
     expect(getPreferences().reminders).toEqual({
@@ -76,7 +79,7 @@ describe('6.13 Reminders', () => {
     await fireEvent.press(toggle('Remind me on my practice days'));
 
     await waitFor(() => expect(device.scheduled).toEqual([]));
-    expect(screen.queryByRole('radio', { name: '6:00 PM' })).toBeNull();
+    expect(screen.queryByRole('adjustable', { name: 'At' })).toBeNull();
   });
 
   it('says where the phone does not allow notifications, and opens its settings', async () => {

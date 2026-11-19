@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { size } from '@konvami/design-tokens';
 import { Card } from '@/components/card';
-import { ChoiceChip } from '@/components/choice-chip';
-import { ChoiceGroup, ToggleRow } from '@/components/choice-group';
+import { ToggleRow } from '@/components/choice-group';
+import { Icon } from '@/components/icon';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
+import { Section } from '@/components/section';
+import { Stepper } from '@/components/stepper';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { openAppSettings } from '@/lib/external';
@@ -22,6 +25,7 @@ import {
 } from '@/reminders/schedule';
 import { useReminderPermission } from '@/reminders/services';
 import { useReminderSchedule } from '@/reminders/use-reminders';
+import { useTheme } from '@/theme';
 import { ProfilePage } from './page';
 
 /** "Saturday, 18:00": when the next reminder comes, on the device's clock. */
@@ -41,6 +45,7 @@ function formatWhen(locale: string, at: Date): string {
  */
 export function RemindersScreen() {
   const { t, i18n } = useTranslation();
+  const { color } = useTheme();
   const { home: store, clock } = usePracticeServices();
   const home = useHome();
   const { reminders } = usePreferences();
@@ -78,6 +83,7 @@ export function RemindersScreen() {
 
   return (
     <ProfilePage
+      hero={{ color: 'butter', icon: 'clock' }}
       title={t('profile.reminders.title')}
       body={t('profile.reminders.body')}
       backTo={ROUTES.account}
@@ -103,20 +109,43 @@ export function RemindersScreen() {
             </Reveal>
           ) : null}
           <Reveal delay={staggerDelay(2)}>
-            <Card className="gap-4 p-4">
+            <Card className="gap-5 p-5">
               <ToggleRow label={t('profile.reminders.on')} value={on} onChange={turn} />
               {on ? (
                 <>
-                  <ChoiceGroup label={t('profile.reminders.time')} chips>
-                    {REMINDER_TIMES.map((time) => (
-                      <ChoiceChip
-                        key={time}
-                        label={formatTimeOfDay(i18n.language, time)}
-                        selected={settings.time === time}
-                        onPress={() => change({ time })}
-                      />
-                    ))}
-                  </ChoiceGroup>
+                  <Stepper
+                    title={t('profile.reminders.time')}
+                    options={REMINDER_TIMES}
+                    value={settings.time}
+                    onChange={(time) => change({ time })}
+                    number={(time) => formatTimeOfDay(i18n.language, time)}
+                    label={(time) => formatTimeOfDay(i18n.language, time)}
+                    lessLabel={t('common.earlier', { what: t('profile.reminders.time') })}
+                    moreLabel={t('common.later', { what: t('profile.reminders.time') })}
+                  />
+                  {data ? (
+                    <View
+                      accessibilityLiveRegion="polite"
+                      className="flex-row items-center gap-3 rounded-field bg-butter px-4 py-3"
+                    >
+                      <Icon name="clock" color={color.onButter} size={size.iconMd} />
+                      <Text variant="labelSmall" tone="onButter" className="shrink">
+                        {next
+                          ? t('profile.reminders.next', {
+                              when: formatWhen(i18n.language, next.at),
+                            })
+                          : t('profile.reminders.none')}
+                      </Text>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+            </Card>
+          </Reveal>
+          {on ? (
+            <Reveal delay={staggerDelay(3)}>
+              <Section title={t('profile.reminders.also')}>
+                <Card className="gap-4 p-5">
                   <ToggleRow
                     label={t('profile.reminders.cards')}
                     value={settings.cards}
@@ -132,20 +161,13 @@ export function RemindersScreen() {
                     value={settings.word}
                     onChange={(word) => change({ word })}
                   />
-                  <Text variant="small" tone="muted">
-                    {t('profile.reminders.push')}
-                  </Text>
-                  {data ? (
-                    <Text variant="small" tone="muted">
-                      {next
-                        ? t('profile.reminders.next', { when: formatWhen(i18n.language, next.at) })
-                        : t('profile.reminders.none')}
-                    </Text>
-                  ) : null}
-                </>
-              ) : null}
-            </Card>
-          </Reveal>
+                </Card>
+              </Section>
+              <Text variant="small" tone="muted" className="pt-3">
+                {t('profile.reminders.push')}
+              </Text>
+            </Reveal>
+          ) : null}
         </>
       )}
     </ProfilePage>
