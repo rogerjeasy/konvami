@@ -105,6 +105,7 @@ function Partners({ partners }: { partners: Persona[] }) {
       </View>
 
       <Sheet
+        icon="user"
         visible={menuFor !== null}
         title={menuFor?.name ?? ''}
         onClose={() => setMenuFor(null)}
@@ -194,6 +195,7 @@ export function PartnersScreen() {
 
   return (
     <ProfilePage
+      hero={{ color: 'tomato', icon: 'users' }}
       title={t('partners.title')}
       body={t('partners.body')}
       actions={

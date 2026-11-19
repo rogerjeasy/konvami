@@ -78,6 +78,7 @@ export function NewPartnerScreen() {
 
   return (
     <ProfilePage
+      hero={{ color: 'tomato', icon: 'plusCircle' }}
       title={t('partners.create.title')}
       body={t('partners.create.body')}
       backTo={ROUTES.accountPartners}
