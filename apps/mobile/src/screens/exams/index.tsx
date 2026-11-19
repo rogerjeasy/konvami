@@ -6,10 +6,10 @@ import type { ExamCentre, SpeakingExam } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
-import { ChoiceChip } from '@/components/choice-chip';
 import { ListGroup, ListRow } from '@/components/list';
 import { LoadState } from '@/components/load-state';
 import { Meter } from '@/components/meter';
+import { OptionCard } from '@/components/option-card';
 import { Reveal } from '@/components/motion';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
@@ -193,10 +193,11 @@ function Centre({
           <Text variant="fieldLabel" accessibilityRole="header">
             {t('exams.choose')}
           </Text>
-          <View accessibilityRole="radiogroup" className="flex-row flex-wrap gap-2">
+          <View accessibilityRole="radiogroup" className="gap-2">
             {centre.formats.map((format) => (
-              <ChoiceChip
+              <OptionCard
                 key={format.id}
+                role="radio"
                 label={format.name}
                 selected={format.id === chosen?.id}
                 onPress={() => {
