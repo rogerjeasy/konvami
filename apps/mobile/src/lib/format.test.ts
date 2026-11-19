@@ -10,6 +10,7 @@ import {
   formatMonth,
   formatUsd,
   formatPercent,
+  formatScore,
   formatShortDate,
   monthNames,
   weekdayInitials,
@@ -31,6 +32,13 @@ describe('weekdayInitials', () => {
 describe('formatPercent', () => {
   it('rounds to a whole percent', () => {
     expect(formatPercent('en', 0.68)).toBe('68%');
+  });
+});
+
+describe('formatScore', () => {
+  it('rounds a 0–100 score to a whole number in the language', () => {
+    expect(formatScore('en', 61.6)).toBe('62');
+    expect(formatScore('de', 100)).toBe('100');
   });
 });
 
