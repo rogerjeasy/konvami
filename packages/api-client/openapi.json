@@ -5457,6 +5457,16 @@
             "title": "Right",
             "type": "boolean"
           },
+          "soundScore": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SoundScoreOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "words": {
             "items": {
               "$ref": "#/components/schemas/WordMarkOut"
@@ -6622,10 +6632,70 @@
         "title": "SoundOut",
         "type": "object"
       },
+      "SoundScoreOut": {
+        "additionalProperties": false,
+        "description": "How a drill's sound went, from the acoustic provider's phoneme scores (0-100).",
+        "properties": {
+          "band": {
+            "enum": [
+              "good",
+              "close",
+              "practise"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "basis": {
+            "enum": [
+              "phonemes",
+              "words"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "soundId": {
+            "title": "Soundid",
+            "type": "string"
+          },
+          "weakest": {
+            "title": "Weakest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "soundId",
+          "score",
+          "band",
+          "basis",
+          "weakest"
+        ],
+        "title": "SoundScoreOut",
+        "type": "object"
+      },
       "SoundSummaryOut": {
         "additionalProperties": false,
         "description": "A problem sound of the language being learned, with what the learner did on it.",
         "properties": {
+          "band": {
+            "anyOf": [
+              {
+                "enum": [
+                  "good",
+                  "close",
+                  "practise"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -6640,6 +6710,22 @@
           },
           "right": {
             "title": "Right",
+            "type": "integer"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "scored": {
+            "default": 0,
+            "title": "Scored",
             "type": "integer"
           },
           "tip": {
