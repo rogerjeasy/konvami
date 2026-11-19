@@ -14,6 +14,7 @@ import { Reveal } from '@/components/motion';
 import { Sheet } from '@/components/sheet';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
@@ -123,12 +124,12 @@ export function RolePlaysScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('rolePlays.title')}
-          </Text>
-          <Text tone="muted">{t('rolePlays.body')}</Text>
-        </View>
+        <PageHero
+          color="tomato"
+          icon="users"
+          title={t('rolePlays.title')}
+          body={t('rolePlays.body')}
+        />
       </Reveal>
       {reading.phase === 'ready' && reading.scenarios ? (
         <Reveal delay={staggerDelay(1)}>

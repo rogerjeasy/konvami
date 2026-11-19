@@ -16,6 +16,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { RecordingNow } from '@/components/recording-now';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { commitFeedback } from '@/lib/haptics';
@@ -233,12 +234,7 @@ export function PenPalScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('penPal.title')}
-          </Text>
-          <Text tone="muted">{t('penPal.body')}</Text>
-        </View>
+        <PageHero color="tomato" icon="mic" title={t('penPal.title')} body={t('penPal.body')} />
       </Reveal>
       {partners.length > 1 ? (
         <ChoiceGroup label={t('penPal.partner')} chips>
