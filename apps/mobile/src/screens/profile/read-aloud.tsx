@@ -72,7 +72,11 @@ export function ReadAloudScreen() {
   }
 
   const page = (children: React.ReactNode) => (
-    <ProfilePage title={t('profile.readAloud.title')} body={t('profile.readAloud.body')}>
+    <ProfilePage
+      hero={{ color: 'pink', icon: 'volume' }}
+      title={t('profile.readAloud.title')}
+      body={t('profile.readAloud.body')}
+    >
       {children}
     </ProfilePage>
   );
