@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import type { PronunciationSound } from '@konvami/api-client';
 import { useSession } from '@/auth';
 import { Card } from '@/components/card';
 import { EmptyState } from '@/components/empty-state';
@@ -13,6 +14,7 @@ import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
+import { formatScore } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { pronunciationSoundRoute, ROUTES } from '@/lib/routes';
@@ -24,10 +26,11 @@ import type { LabDrill } from './lab';
  * 5.22 Pronunciation lab (spec §6.14, basic): the sounds the language is known for being hard,
  * each with a page to listen, pick and say, and the learner's own problem words, which are the
  * words they were asked to say and were not heard as asked. Reached from Learn and Talk. What it
- * tells is an approximation (words compared, no sound scores), and the screen says so.
+ * tells is an approximation (words compared), and the screen says so; where an acoustic provider
+ * is configured and the learner agrees per drill, each sound also shows its recent score.
  */
 export function PronunciationLabScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { status } = useSession();
   const { pronunciation: store } = usePracticeServices();
   const lab = usePronunciation();
@@ -40,6 +43,19 @@ export function PronunciationLabScreen() {
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;
   const data = lab.phase === 'ready' ? lab.data : null;
+  /** What was done on a sound: the recent acoustic score when drills were assessed, else the tally. */
+  const soundDetail = (sound: PronunciationSound) => {
+    if (sound.score !== null && sound.score !== undefined && sound.band) {
+      return t('pronunciation.soundScore.recent', {
+        band: t(`pronunciation.soundScore.bandShort.${sound.band}`),
+        score: formatScore(i18n.language, sound.score),
+        count: sound.scored,
+      });
+    }
+    return sound.tries > 0
+      ? t('pronunciation.progress', { right: sound.right, tries: sound.tries })
+      : t('pronunciation.notTried');
+  };
   return (
     <StepLayout
       header={
@@ -121,11 +137,7 @@ export function PronunciationLabScreen() {
                     key={sound.id}
                     icon="volume"
                     title={sound.title}
-                    detail={
-                      sound.tries > 0
-                        ? t('pronunciation.progress', { right: sound.right, tries: sound.tries })
-                        : t('pronunciation.notTried')
-                    }
+                    detail={soundDetail(sound)}
                     onPress={() => router.push(pronunciationSoundRoute(sound.id))}
                   />
                 ))}
