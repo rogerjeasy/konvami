@@ -456,6 +456,7 @@ describe('api client', () => {
     const { fetch, calls } = fakeFetch(
       json(200, { formats: [] }),
       json(200, { cards: [] }),
+      json(200, { groups: [] }),
       json(200, { status: 'pending' }),
       json(200, { status: 'pending' }),
       json(200, { url: 'https://files/model.mp3' }),
@@ -464,6 +465,7 @@ describe('api client', () => {
 
     await api.getExamCentre();
     await api.getNextSimulation('goethe_b1');
+    await api.getExamPhraseBank('goethe_b1');
     await api.getSimulation('rtc/1');
     await api.rescoreSimulation('rtc/1');
     expect(await api.getModelAnswerAudio('rtc/1', 'teil_1')).toEqual({
@@ -472,6 +474,7 @@ describe('api client', () => {
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
       'GET https://api.example.test/v1/exams',
       'GET https://api.example.test/v1/exams/goethe_b1/next',
+      'GET https://api.example.test/v1/exams/goethe_b1/phrases',
       'GET https://api.example.test/v1/exams/simulations/rtc%2F1',
       'POST https://api.example.test/v1/exams/simulations/rtc%2F1/score',
       'GET https://api.example.test/v1/exams/simulations/rtc%2F1/parts/teil_1/audio',

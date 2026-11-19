@@ -55,8 +55,9 @@ from konvami_api.domain.course_import import PASTE_MAX as IMPORT_PASTE_MAX
 from konvami_api.domain.course_import import TEXTBOOK_MAX as IMPORT_TEXTBOOK_MAX
 from konvami_api.domain.course_import import URL_MAX as IMPORT_URL_MAX
 from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind, WeekPlan
-from konvami_api.domain.exam_centre import ExamCentre, Simulation
-from konvami_api.domain.exam_phrases import phrases_for
+from konvami_api.domain.exam_centre import ExamCentre, PhraseBank, Simulation
+from konvami_api.domain.exam_phrases import ExamPhrase, Function, phrases_for
+from konvami_api.domain.exam_phrases import Level as PhraseLevel
 from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
 from konvami_api.domain.exports import DataExport
 from konvami_api.domain.feedback import (
@@ -1779,6 +1780,42 @@ class ExamCardOut(ApiModel):
 class ExamPhraseOut(ApiModel):
     text: str
     meanings: dict[str, str]
+    # The lowest level the phrase suits.
+    level: PhraseLevel = "A1"
+
+    @classmethod
+    def of(cls, phrase: ExamPhrase) -> "ExamPhraseOut":
+        return cls(text=phrase.text, meanings=dict(phrase.meanings), level=phrase.level)
+
+
+class PhraseGroupOut(ApiModel):
+    # What the phrases do; the app names each function in its own strings.
+    function: Function
+    phrases: list[ExamPhraseOut]
+
+
+class ExamPhraseBankOut(ApiModel):
+    """The phrases that help in a speaking test, by function (5.25, spec §6.13)."""
+
+    exam: str
+    name: str
+    groups: list[PhraseGroupOut]
+
+    @classmethod
+    def of(cls, bank: PhraseBank) -> "ExamPhraseBankOut":
+        # A staged test is named as a whole, not after the stage it was opened from.
+        name = bank.exam.name.split(" · ")[0]
+        return cls(
+            exam=bank.exam.id,
+            name=name,
+            groups=[
+                PhraseGroupOut(
+                    function=group.function,
+                    phrases=[ExamPhraseOut.of(phrase) for phrase in group.phrases],
+                )
+                for group in bank.groups
+            ],
+        )
 
 
 class ExamPartOut(ApiModel):
@@ -1823,8 +1860,7 @@ class SpeakingExamOut(ApiModel):
                     kind=p.kind,
                     seconds=p.seconds,
                     phrases=[
-                        ExamPhraseOut(text=phrase.text, meanings=dict(phrase.meanings))
-                        for phrase in phrases_for(p.kind)
+                        ExamPhraseOut.of(phrase) for phrase in phrases_for(p.kind, exam.levels)
                     ],
                 )
                 for p in exam.parts

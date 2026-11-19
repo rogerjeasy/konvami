@@ -51,6 +51,7 @@ import {
   type ExamCentre,
   type Simulation,
   type SpeakingExam,
+  type ExamPhraseBank,
   type ReminderNotes,
   type WeekPlan,
   type WeekReview,
@@ -244,6 +245,54 @@ export const FAKE_WEEK_REVIEW: WeekReview = {
 export const FAKE_WEEK_TEXT =
   'You spoke for 34 minutes last week, nine more than the week before. The dative is coming along nicely. Does this week’s plan suit you? You can change your weekly goal in your profile.';
 
+/** Part of the Goethe B1 phrase bank (services/api: domain/exam_phrases.py). */
+export const FAKE_PHRASE_BANK: ExamPhraseBank = {
+  exam: 'goethe_b1',
+  name: 'Goethe-Zertifikat B1',
+  groups: [
+    {
+      function: 'suggest',
+      phrases: [
+        {
+          text: 'Ich schlage vor, dass wir uns am Samstag treffen.',
+          level: 'B1',
+          meanings: {
+            en: 'I suggest we meet on Saturday.',
+            de: 'Ich schlage vor, dass wir uns am Samstag treffen.',
+            fr: 'Je propose de nous retrouver samedi.',
+            it: 'Propongo di incontrarci sabato.',
+          },
+        },
+        {
+          text: 'Wie wäre es mit …?',
+          level: 'A2',
+          meanings: {
+            en: 'How about …?',
+            de: 'Wie wäre es mit …?',
+            fr: 'Que dirais-tu de … ?',
+            it: 'Che ne dici di …?',
+          },
+        },
+      ],
+    },
+    {
+      function: 'disagree',
+      phrases: [
+        {
+          text: 'Das finde ich nicht so gut, weil …',
+          level: 'B1',
+          meanings: {
+            en: "I don't think that's so good, because …",
+            de: 'Das finde ich nicht so gut, weil …',
+            fr: 'Je ne trouve pas ça très bien, parce que …',
+            it: 'Non mi sembra una buona idea, perché …',
+          },
+        },
+      ],
+    },
+  ],
+};
+
 /** Two of the server's speaking tests (services/api: domain/exams.py), as the centre lists them. */
 export const FAKE_SPEAKING_EXAMS: SpeakingExam[] = [
   {
@@ -261,6 +310,7 @@ export const FAKE_SPEAKING_EXAMS: SpeakingExam[] = [
         phrases: [
           {
             text: 'Ich schlage vor, dass wir uns am Samstag treffen.',
+            level: 'B1',
             meanings: {
               en: 'I suggest we meet on Saturday.',
               de: 'Ich schlage vor, dass wir uns am Samstag treffen.',
@@ -1858,6 +1908,12 @@ export function createFakeApi(): FakeApi {
       const found = FAKE_SPEAKING_EXAMS.find(({ id }) => id === exam);
       if (!found) throw new ApiError('not_found', 404);
       return { exam: found, cards: FAKE_EXAM_CARDS };
+    },
+    async getExamPhraseBank(exam) {
+      await record('getExamPhraseBank', exam);
+      const found = FAKE_SPEAKING_EXAMS.find(({ id }) => id === exam);
+      if (!found) throw new ApiError('not_found', 404);
+      return { ...FAKE_PHRASE_BANK, exam: found.id, name: found.name };
     },
     async getSimulation(callId) {
       await record('getSimulation', callId);

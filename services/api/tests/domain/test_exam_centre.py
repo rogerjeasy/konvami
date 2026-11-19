@@ -58,8 +58,24 @@ def test_a_learner_without_an_exam_can_still_try_every_format() -> None:
 
     assert centre.exam is None
     assert centre.suggested is None
-    assert len(centre.formats) == 14
+    assert len(centre.formats) == 18
     assert any(exam.id == "osd_b1" for exam in centre.formats)
+
+
+def test_a_phrase_bank_covers_a_whole_staged_exam_and_unknown_exams_are_not_found() -> None:
+    world = World()
+    learner(world)
+
+    single = world.exams.phrase_bank(USER, "goethe_b1")
+    staged = world.exams.phrase_bank(USER, "testdaf_paper_3")
+
+    assert single.exam.id == "goethe_b1"
+    assert "suggest" in [group.function for group in single.groups]
+    # TestDaF runs as seven stages; its bank gathers what all of them need.
+    staged_functions = {group.function for group in staged.groups}
+    assert {"ask", "tell", "structure", "opinion", "describe"} <= staged_functions
+    with pytest.raises(ScenarioError):
+        world.exams.phrase_bank(USER, "toefl")
 
 
 def test_the_next_simulation_has_one_card_per_part_and_its_prep_time() -> None:

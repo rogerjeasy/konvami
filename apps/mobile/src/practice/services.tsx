@@ -27,6 +27,7 @@ import type {
   InboxFeedback,
   QueuedFlag,
   NextSimulation,
+  ExamPhraseBank,
   GrammarMap,
   GrammarTopicPage,
   Retried,
@@ -111,6 +112,8 @@ export interface PracticeServices {
   exams: ResourceStore<ExamCentre>;
   /** The cards of the next simulation of a speaking test. Rejects with an `ApiError`. */
   readNextSimulation: (exam: string) => Promise<NextSimulation>;
+  /** The phrase bank of a speaking test (5.25). Rejects with an `ApiError` (`not_found`). */
+  readExamPhraseBank: (exam: string) => Promise<ExamPhraseBank>;
   /** Follows a simulation's score while it is written (5.18). */
   followSimulation: (callId: string) => SimulationFollower;
   /** Where a part's model answer plays from. Rejects with an `ApiError`. */
@@ -370,6 +373,7 @@ export function createPracticeServices(
     | 'getWeekReviewAudio'
     | 'getExamCentre'
     | 'getNextSimulation'
+    | 'getExamPhraseBank'
     | 'getSimulation'
     | 'rescoreSimulation'
     | 'getModelAnswerAudio'
@@ -405,6 +409,7 @@ export function createPracticeServices(
     weekSound: async (week) => (await api.getWeekReviewAudio(week)).url,
     exams: createResourceStore(() => api.getExamCentre(), clock.now),
     readNextSimulation: (exam) => api.getNextSimulation(exam),
+    readExamPhraseBank: (exam) => api.getExamPhraseBank(exam),
     followSimulation: (callId) => createSimulationFollower(api, callId),
     modelAnswerSound: async (callId, part) => (await api.getModelAnswerAudio(callId, part)).url,
     library: createLibraryStore(api),

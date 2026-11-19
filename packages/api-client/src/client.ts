@@ -131,6 +131,10 @@ export type ExamCard = Schemas['ExamCardOut'];
 export type ExamReadiness = Schemas['ReadinessOut'];
 /** The cards of the next simulation of a speaking test, to prepare with. */
 export type NextSimulation = Schemas['NextSimulationOut'];
+/** The phrases that help in a speaking test, by what they do (5.25). */
+export type ExamPhraseBank = Schemas['ExamPhraseBankOut'];
+export type ExamPhrase = Schemas['ExamPhraseOut'];
+export type ExamPhraseFunction = Schemas['PhraseGroupOut']['function'];
 /** One simulation and, once written, its estimated score per part. */
 export type Simulation = Schemas['SimulationOut'];
 export type SimulationResult = Schemas['SimulationResultOut'];
@@ -383,6 +387,8 @@ export interface ApiClient {
   getExamCentre(): Promise<ExamCentre>;
   /** The cards of the next simulation of a speaking test. Fails with `not_found`. */
   getNextSimulation(exam: string): Promise<NextSimulation>;
+  /** The phrase bank of a speaking test (5.25). Fails with `not_found`. */
+  getExamPhraseBank(exam: string): Promise<ExamPhraseBank>;
   /** One simulation, and its score once written. Fails with `not_found`. */
   getSimulation(callId: string): Promise<Simulation>;
   /** Asks again for a score that could not be written. Fails with `not_found`, `score_limit`. */
@@ -773,6 +779,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('GET', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
     getExamCentre: () => request('GET', '/v1/exams'),
     getNextSimulation: (exam) => request('GET', `/v1/exams/${encodeURIComponent(exam)}/next`),
+    getExamPhraseBank: (exam) => request('GET', `/v1/exams/${encodeURIComponent(exam)}/phrases`),
     getSimulation: (callId) =>
       request('GET', `/v1/exams/simulations/${encodeURIComponent(callId)}`),
     rescoreSimulation: (callId) =>
