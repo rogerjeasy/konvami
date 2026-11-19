@@ -10,6 +10,8 @@ const LOOK = {
   surface: { box: 'bg-surface', tone: 'muted', icon: 'fgMuted' },
   /** A reassurance worth noticing (privacy). */
   primary: { box: 'bg-primary-soft', tone: 'primary', icon: 'primaryText' },
+  /** Worth a second look, never an alarm (a choice the plan cannot follow in full). */
+  warn: { box: 'bg-warn-soft', tone: 'warn', icon: 'warnText' },
   /** Something went wrong and the user has to act. */
   danger: { box: 'border border-danger-border bg-danger-soft', tone: 'danger', icon: 'danger' },
 } as const satisfies Record<string, { box: string; tone: TextTone; icon: ColorToken }>;
