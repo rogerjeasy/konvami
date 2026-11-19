@@ -13,6 +13,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { AppleLogo, GoogleLogo } from '@/components/provider-logo';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { PasswordField, TextField } from '@/components/text-field';
@@ -144,12 +145,7 @@ export function SignInScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('signIn.title')}
-          </Text>
-          <Text tone="muted">{t('signIn.body')}</Text>
-        </View>
+        <PageHero color="tomato" icon="user" title={t('signIn.title')} body={t('signIn.body')} />
       </Reveal>
 
       <Reveal delay={staggerDelay(1)}>
