@@ -12,7 +12,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { PersonaAvatar } from '@/components/persona-avatar';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Text } from '@/components/text';
+import { PageHero } from '@/components/page-hero';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
@@ -67,14 +67,16 @@ function ReviewBody({ data, header }: { data: OnboardingData; header: ReactNode 
       <Reveal>
         <View className="gap-3.5">
           <PersonaAvatar look={SETUP.guide.look} diameter={size.avatarMd} />
-          <View className="gap-2.5">
-            <Text variant="title" accessibilityRole="header">
-              {user?.firstName
+          <PageHero
+            color="forest"
+            icon="check"
+            title={
+              user?.firstName
                 ? t('onboarding.review.title', { name: user.firstName })
-                : t('onboarding.review.titleNoName')}
-            </Text>
-            <Text tone="muted">{t('onboarding.review.body')}</Text>
-          </View>
+                : t('onboarding.review.titleNoName')
+            }
+            body={t('onboarding.review.body')}
+          />
         </View>
       </Reveal>
       <View className="gap-2.5">

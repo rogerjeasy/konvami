@@ -13,6 +13,7 @@ import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { PersonaAvatar } from '@/components/persona-avatar';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { commitFeedback, stepFeedback } from '@/lib/haptics';
@@ -130,12 +131,12 @@ function Partners({ data }: { data: OnboardingData }) {
 
   const title = (
     <Reveal>
-      <View className="gap-2.5">
-        <Text variant="title" accessibilityRole="header">
-          {t('onboarding.partners.title')}
-        </Text>
-        <Text tone="muted">{t('onboarding.partners.body')}</Text>
-      </View>
+      <PageHero
+        color="tomato"
+        icon="users"
+        title={t('onboarding.partners.title')}
+        body={t('onboarding.partners.body')}
+      />
     </Reveal>
   );
 
