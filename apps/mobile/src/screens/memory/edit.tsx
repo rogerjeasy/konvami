@@ -95,6 +95,7 @@ function MemoryForm({ memory, onForget }: { memory: Memory; onForget: () => Prom
 
   return (
     <ProfilePage
+      hero={{ color: 'pink', icon: 'archive' }}
       title={t('memory.edit.title')}
       body={t('memory.edit.body')}
       backTo={ROUTES.accountMemory}
@@ -228,7 +229,11 @@ export function MemoryEditScreen() {
   }
   if (state.phase !== 'ready') {
     return (
-      <ProfilePage title={t('memory.edit.title')} backTo={ROUTES.accountMemory}>
+      <ProfilePage
+        hero={{ color: 'pink', icon: 'archive' }}
+        title={t('memory.edit.title')}
+        backTo={ROUTES.accountMemory}
+      >
         <LoadState
           failed={state.phase === 'failed'}
           loadingLabel={t('memory.loading')}
@@ -242,6 +247,7 @@ export function MemoryEditScreen() {
   }
   return (
     <ProfilePage
+      hero={{ color: 'pink', icon: 'archive' }}
       title={t('memory.edit.title')}
       backTo={ROUTES.accountMemory}
       actions={

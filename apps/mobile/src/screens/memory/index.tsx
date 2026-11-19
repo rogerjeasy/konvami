@@ -78,7 +78,11 @@ export function MemoryScreen() {
     ? groupMemories(book.memories, toIsoDate(calendarDateOf(new Date(clock.now()))))
     : [];
   return (
-    <ProfilePage title={t('memory.title')} body={t('memory.body')}>
+    <ProfilePage
+      hero={{ color: 'pink', icon: 'archive' }}
+      title={t('memory.title')}
+      body={t('memory.body')}
+    >
       {!book ? (
         <LoadState
           failed={state.phase === 'failed'}
