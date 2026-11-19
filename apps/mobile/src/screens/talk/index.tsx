@@ -134,6 +134,15 @@ export function TalkScreen() {
               detail: t('rolePlays.rowHint'),
               onPress: () => router.push(ROUTES.rolePlays),
             },
+            // Two of the learner's partners in one conversation (5.24).
+            {
+              key: 'together',
+              icon: 'message',
+              blob: 'tomato',
+              title: t('talk.together'),
+              detail: t('talk.togetherHint'),
+              onPress: () => router.push(ROUTES.together),
+            },
             {
               key: 'penPal',
               icon: 'mic',
