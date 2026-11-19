@@ -513,6 +513,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/exams/{exam_id}/phrases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Exam Phrase Bank
+         * @description The phrases that help in a speaking test, by what they do (5.25).
+         */
+        get: operations["getExamPhraseBank"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/feedback": {
         parameters: {
             query?: never;
@@ -2407,8 +2427,26 @@ export interface components {
             /** Seconds */
             seconds: number;
         };
+        /**
+         * ExamPhraseBankOut
+         * @description The phrases that help in a speaking test, by function (5.25, spec §6.13).
+         */
+        ExamPhraseBankOut: {
+            /** Exam */
+            exam: string;
+            /** Groups */
+            groups: components["schemas"]["PhraseGroupOut"][];
+            /** Name */
+            name: string;
+        };
         /** ExamPhraseOut */
         ExamPhraseOut: {
+            /**
+             * Level
+             * @default A1
+             * @enum {string}
+             */
+            level: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
             /** Meanings */
             meanings: {
                 [key: string]: string;
@@ -3444,6 +3482,16 @@ export interface components {
             accuracy: number;
             /** Phoneme */
             phoneme: string;
+        };
+        /** PhraseGroupOut */
+        PhraseGroupOut: {
+            /**
+             * Function
+             * @enum {string}
+             */
+            function: "introduce" | "ask" | "request" | "tell" | "suggest" | "agree" | "disagree" | "opinion" | "structure" | "describe" | "react" | "time";
+            /** Phrases */
+            phrases: components["schemas"]["ExamPhraseOut"][];
         };
         /** PhraseIn */
         PhraseIn: {
@@ -6285,6 +6333,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NextSimulationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getExamPhraseBank: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exam_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExamPhraseBankOut"];
                 };
             };
             /** @description Unauthorized */

@@ -1379,9 +1379,50 @@
         "title": "ExamPartOut",
         "type": "object"
       },
+      "ExamPhraseBankOut": {
+        "additionalProperties": false,
+        "description": "The phrases that help in a speaking test, by function (5.25, spec \u00a76.13).",
+        "properties": {
+          "exam": {
+            "title": "Exam",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/PhraseGroupOut"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exam",
+          "name",
+          "groups"
+        ],
+        "title": "ExamPhraseBankOut",
+        "type": "object"
+      },
       "ExamPhraseOut": {
         "additionalProperties": false,
         "properties": {
+          "level": {
+            "default": "A1",
+            "enum": [
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
           "meanings": {
             "additionalProperties": {
               "type": "string"
@@ -4399,6 +4440,42 @@
           "accuracy"
         ],
         "title": "PhonemeScoreOut",
+        "type": "object"
+      },
+      "PhraseGroupOut": {
+        "additionalProperties": false,
+        "properties": {
+          "function": {
+            "enum": [
+              "introduce",
+              "ask",
+              "request",
+              "tell",
+              "suggest",
+              "agree",
+              "disagree",
+              "opinion",
+              "structure",
+              "describe",
+              "react",
+              "time"
+            ],
+            "title": "Function",
+            "type": "string"
+          },
+          "phrases": {
+            "items": {
+              "$ref": "#/components/schemas/ExamPhraseOut"
+            },
+            "title": "Phrases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "function",
+          "phrases"
+        ],
+        "title": "PhraseGroupOut",
         "type": "object"
       },
       "PhraseIn": {
@@ -10123,6 +10200,66 @@
           }
         },
         "summary": "Get Next Simulation"
+      }
+    },
+    "/v1/exams/{exam_id}/phrases": {
+      "get": {
+        "description": "The phrases that help in a speaking test, by what they do (5.25).",
+        "operationId": "getExamPhraseBank",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exam_id",
+            "required": true,
+            "schema": {
+              "title": "Exam Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamPhraseBankOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Exam Phrase Bank"
       }
     },
     "/v1/feedback": {
