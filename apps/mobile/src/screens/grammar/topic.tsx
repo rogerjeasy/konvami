@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { GrammarTopicPage } from '@konvami/api-client';
 import { useSession } from '@/auth';
-import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { CorrectionCard } from '@/components/correction-card';
@@ -16,6 +15,7 @@ import { NoticeBox } from '@/components/notice-box';
 import { Section } from '@/components/section';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
+import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { commitFeedback } from '@/lib/haptics';
@@ -153,14 +153,11 @@ export function GrammarTopicScreen() {
       ) : (
         <View className="gap-6">
           <Reveal>
-            <View className="gap-2">
-              <View className="flex-row flex-wrap items-center gap-2">
-                <Text variant="title" accessibilityRole="header" className="shrink">
-                  {title}
-                </Text>
-                <Badge label={page.topic.level} tone="chip" />
-              </View>
-            </View>
+            <PageHero color="forest" icon="compass" title={title}>
+              <Text variant="label" tone="lime">
+                {page.topic.level}
+              </Text>
+            </PageHero>
           </Reveal>
           <Reveal delay={staggerDelay(1)}>
             <Standing page={page} />

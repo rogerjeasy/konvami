@@ -8,6 +8,7 @@ import { useSession } from '@/auth';
 import { Icon } from '@/components/icon';
 import { ListGroup } from '@/components/list';
 import { LoadState } from '@/components/load-state';
+import { PageHero } from '@/components/page-hero';
 import { MasterySteps } from '@/components/mastery-steps';
 import { Reveal } from '@/components/motion';
 import { Section } from '@/components/section';
@@ -100,17 +101,13 @@ export function GrammarMapScreen() {
       }
     >
       <Reveal>
-        <View className="gap-1.5">
-          <Text variant="title" accessibilityRole="header">
-            {t('grammar.title')}
-          </Text>
-          <Text tone="muted">{t('grammar.body')}</Text>
+        <PageHero color="forest" icon="compass" title={t('grammar.title')} body={t('grammar.body')}>
           {map ? (
-            <Text variant="labelSmall" tone="primary">
+            <Text variant="label" tone="lime">
               {t('grammar.summary', { count: solid, total: map.topics.length })}
             </Text>
           ) : null}
-        </View>
+        </PageHero>
       </Reveal>
       {!map ? (
         <LoadState
