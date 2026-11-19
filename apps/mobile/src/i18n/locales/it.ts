@@ -1835,6 +1835,12 @@ export const it: Translation = {
       years_other: '{{count}} anni',
     },
     saveFailed: 'Non è stato possibile salvare. Tocca di nuovo la tua risposta.',
+    offline: {
+      notice:
+        'Sei offline. Le tue risposte restano su questo dispositivo e vengono inviate appena torni online.',
+      aloud:
+        'Rispondere ad alta voce richiede una connessione, quindi per ora giri le carte. Le tue risposte restano su questo dispositivo e vengono inviate appena torni online.',
+    },
     empty: {
       title: 'Niente da ripassare',
       body: 'Le tue schede tornano quando è il momento. Fino ad allora, l’esercizio migliore è parlare.',

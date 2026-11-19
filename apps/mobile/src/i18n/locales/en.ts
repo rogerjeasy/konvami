@@ -1820,6 +1820,12 @@ export const en = {
       years_other: '{{count}} years',
     },
     saveFailed: 'That couldn’t be saved. Tap your answer again.',
+    offline: {
+      notice:
+        'You’re offline. Your answers are kept on this phone and sent when you’re back online.',
+      aloud:
+        'Answering out loud needs a connection, so for now you turn the cards over. Your answers are kept on this phone and sent when you’re back online.',
+    },
     empty: {
       title: 'Nothing to review',
       body: 'Your cards come back when it’s time. Until then, the best practice is talking.',
