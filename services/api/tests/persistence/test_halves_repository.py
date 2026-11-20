@@ -1,5 +1,6 @@
 """Two Halves' storage, in memory and on PostgreSQL: both keep the same things."""
 
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
@@ -13,11 +14,15 @@ from konvami_api.domain.halves import (
     HalvesRepository,
     Invite,
     Move,
+    Nudge,
     Profile,
     RecapLine,
     Report,
     SeatState,
+    Strike,
+    Ticket,
 )
+from konvami_api.domain.halves_writer import CaseMaterial, word_case
 from konvami_api.persistence.halves_repository import SqlHalvesRepository
 from konvami_api.persistence.sql import SqlClient
 from tests.halves_fake import InMemoryHalvesRepository
@@ -192,3 +197,59 @@ def test_deleting_a_learner_leaves_their_seat_to_an_ai_and_takes_their_moves(
     assert left.seat("A").ai
     assert store.move(MOVE) is None
     assert store.profile(USER) is None
+
+
+# --- Phase 2 -------------------------------------------------------------------------------------
+
+
+def test_a_case_written_for_it_keeps_its_template(store: HalvesRepository) -> None:
+    words = tuple((w, w) for w in ("Frist", "Kaution", "Miete", "Wohnung", "Schlüssel", "Brief"))
+    written = word_case(CaseMaterial(MOVE, "Brief", "de", "B1", "", words))
+    assert written is not None
+    store.save_case(case(template_id=written.id, custom=written))
+    assert store.case(CASE) == case(template_id=written.id, custom=written)
+
+
+def test_a_move_keeps_the_bridge_and_the_owners_decision(store: HalvesRepository) -> None:
+    store.save_case(case())
+    changed = move(bridge={"simpler": "Um 14:20."}, decided_at=NOON + timedelta(hours=3))
+    store.save_move(changed)
+    assert store.move(MOVE) == changed
+
+
+def test_a_search_is_kept_one_a_learner_and_ended(store: HalvesRepository) -> None:
+    store.save_profile(profile())
+    store.save_ticket(Ticket(USER, NOON, NOON + timedelta(hours=12)))
+    later = Ticket(USER, NOON, NOON + timedelta(hours=24), False, NOON + timedelta(hours=12))
+    store.save_ticket(later)
+    store.save_ticket(Ticket(OTHER, NOON + timedelta(hours=1), NOON + timedelta(hours=2)))
+    assert store.ticket(USER) == later
+    assert [t.user_id for t in store.tickets(10)] == [USER, OTHER]
+    store.delete_ticket(USER)
+    assert store.ticket(USER) is None
+
+
+def test_a_nudge_is_kept_once_a_move_and_found_by_state(store: HalvesRepository) -> None:
+    store.save_case(case())
+    store.save_move(move())
+    made = Nudge(MOVE, MOVE, OTHER, "um 14:20 Uhr", "checking", NOON)
+    assert store.add_nudge(made)
+    assert not store.add_nudge(replace(made, id=CASE))
+    assert store.nudge(MOVE) == made
+    assert store.stale_nudges(NOON + timedelta(minutes=6), 10) == [made]
+    held = replace(made, status="held", attempts=1, reason="contact")
+    store.save_nudge(held)
+    assert store.nudges_of(MOVE) == [held]
+    assert store.held_nudges(10) == [held]
+    assert store.stale_nudges(NOON + timedelta(minutes=6), 10) == []
+
+
+def test_strikes_and_the_owners_numbers(store: HalvesRepository) -> None:
+    store.save_profile(profile())
+    store.save_case(case())
+    store.save_move(move(status="held", reasons=("romance",), decided_at=NOON + timedelta(hours=2)))
+    store.add_strike(Strike(CASE, USER, "warning", "romance", MOVE, NOON))
+    assert [s.kind for s in store.strikes_of(USER)] == ["warning"]
+    counts = store.counts(NOON - timedelta(days=1))
+    assert (counts.moves, counts.held, counts.cases, counts.reports) == (1, 1, 1, 0)
+    assert [round(h) for h in counts.decision_hours] == [2]

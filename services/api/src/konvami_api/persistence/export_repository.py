@@ -108,6 +108,14 @@ EXPORTED: tuple[ExportedTable, ...] = (
             "halves_move",
             "halves_invite",
             "halves_redeem_day",
+            # Phase 2: their search, the nudges they wrote and what the owner recorded about them.
+            "halves_ticket",
+            "halves_nudge",
+            "halves_strike",
+            # Phase 2: their search, the nudges they wrote and what the owner recorded about them.
+            "halves_ticket",
+            "halves_nudge",
+            "halves_strike",
         )
     ),
     ExportedTable(

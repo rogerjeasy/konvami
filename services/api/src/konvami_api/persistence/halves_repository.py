@@ -13,11 +13,16 @@ from konvami_api.domain.halves import (
     Duo,
     Invite,
     Move,
+    Nudge,
     Profile,
     RecapLine,
     Report,
+    SafetyCounts,
     SeatState,
+    Strike,
+    Ticket,
 )
+from konvami_api.domain.halves_cases import template_document, template_from
 from konvami_api.persistence.sql import SqlClient, epoch_micros, from_epoch_micros
 
 
@@ -39,7 +44,8 @@ _PROFILE = f"""SELECT CAST(user_id AS text) AS user_id, codename, native_languag
 
 _CASE = f"""SELECT CAST(id AS text) AS id, template_id, mode, status,
     {epoch_micros("created_at")} AS created_at, {epoch_micros("ended_at")} AS ended_at, season,
-    CAST(recaps AS text) AS recaps, recap_status FROM halves_case"""
+    CAST(recaps AS text) AS recaps, recap_status, CAST(custom_template AS text) AS custom_template
+    FROM halves_case"""
 
 _SEATS = f"""SELECT CAST(case_id AS text) AS case_id, seat, CAST(user_id AS text) AS user_id,
     stand_in, speaks, hears, CAST(final_answers AS text) AS final_answers, again,
@@ -51,7 +57,8 @@ _MOVE = f"""SELECT CAST(id AS text) AS id, CAST(case_id AS text) AS case_id, sea
     audio_key, veil_key, veiled, CAST(reasons AS text) AS reasons,
     {epoch_micros("delivered_at")} AS delivered_at, reaction, CAST(answers AS text) AS answers,
     CAST(corrections AS text) AS corrections, attempts, hidden,
-    {epoch_micros("delete_after")} AS delete_after FROM halves_move"""
+    {epoch_micros("delete_after")} AS delete_after, CAST(bridge AS text) AS bridge,
+    {epoch_micros("decided_at")} AS decided_at FROM halves_move"""
 
 _INVITE = f"""SELECT code, CAST(user_id AS text) AS user_id, template_id,
     {epoch_micros("created_at")} AS created_at, {epoch_micros("expires_at")} AS expires_at
@@ -61,6 +68,14 @@ _REPORT = f"""SELECT CAST(id AS text) AS id, CAST(reporter AS text) AS reporter,
     CAST(move_id AS text) AS move_id, reason, note, status,
     {epoch_micros("created_at")} AS created_at, {epoch_micros("resolved_at")} AS resolved_at
     FROM halves_report"""
+
+_TICKET = f"""SELECT CAST(user_id AS text) AS user_id, {epoch_micros("created_at")} AS created_at,
+    {epoch_micros("search_until")} AS search_until, remind,
+    {epoch_micros("ai_offered_at")} AS ai_offered_at FROM halves_ticket"""
+
+_NUDGE = f"""SELECT CAST(id AS text) AS id, CAST(move_id AS text) AS move_id,
+    CAST(user_id AS text) AS user_id, text, status, {epoch_micros("created_at")} AS created_at,
+    attempts, reason, {epoch_micros("delivered_at")} AS delivered_at FROM halves_nudge"""
 
 
 def _profile(row: dict[str, Any]) -> Profile:
@@ -111,6 +126,11 @@ def _case(row: dict[str, Any], seats: list[SeatState]) -> Case:
         season=row["season"],
         recaps=recaps,
         recap_status=row["recap_status"],
+        custom=(
+            template_from(json.loads(row["custom_template"]))
+            if row.get("custom_template")
+            else None
+        ),
     )
 
 
@@ -135,6 +155,8 @@ def _move(row: dict[str, Any]) -> Move:
         attempts=int(row["attempts"]),
         hidden=bool(row["hidden"]),
         delete_after=_time(row["delete_after"]),
+        bridge=dict(json.loads(row["bridge"] or "{}")),
+        decided_at=_time(row["decided_at"]),
     )
 
 
@@ -145,6 +167,30 @@ def _invite(row: dict[str, Any]) -> Invite:
         template_id=row["template_id"],
         created_at=from_epoch_micros(int(row["created_at"])),
         expires_at=from_epoch_micros(int(row["expires_at"])),
+    )
+
+
+def _ticket(row: dict[str, Any]) -> Ticket:
+    return Ticket(
+        user_id=UUID(row["user_id"]),
+        created_at=from_epoch_micros(int(row["created_at"])),
+        until=from_epoch_micros(int(row["search_until"])),
+        remind=bool(row["remind"]),
+        ai_offered_at=_time(row["ai_offered_at"]),
+    )
+
+
+def _nudge(row: dict[str, Any]) -> Nudge:
+    return Nudge(
+        id=UUID(row["id"]),
+        move_id=UUID(row["move_id"]),
+        user_id=UUID(row["user_id"]),
+        text=row["text"],
+        status=row["status"],
+        created_at=from_epoch_micros(int(row["created_at"])),
+        attempts=int(row["attempts"]),
+        reason=row["reason"],
+        delivered_at=_time(row["delivered_at"]),
     )
 
 
@@ -245,10 +291,10 @@ class SqlHalvesRepository:
         }
         self._client.execute(
             """INSERT INTO halves_case (id, template_id, mode, status, created_at, ended_at, season,
-                recaps, recap_status)
+                recaps, recap_status, custom_template)
             VALUES (CAST(:id AS uuid), :template_id, :mode, :status,
                 CAST(:created_at AS timestamptz), CAST(:ended_at AS timestamptz), :season,
-                CAST(:recaps AS jsonb), :recap_status)
+                CAST(:recaps AS jsonb), :recap_status, CAST(:custom AS jsonb))
             ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, ended_at = EXCLUDED.ended_at,
                 recaps = EXCLUDED.recaps, recap_status = EXCLUDED.recap_status""",
             {
@@ -261,6 +307,11 @@ class SqlHalvesRepository:
                 "season": case.season,
                 "recaps": json.dumps(recaps, ensure_ascii=False),
                 "recap_status": case.recap_status,
+                "custom": (
+                    json.dumps(template_document(case.custom), ensure_ascii=False)
+                    if case.custom
+                    else None
+                ),
             },
         )
         for seat in case.seats:
@@ -322,19 +373,21 @@ class SqlHalvesRepository:
         self._client.execute(
             """INSERT INTO halves_move (id, case_id, seat, round, user_id, status, transcript,
                 created_at, audio_key, veil_key, veiled, reasons, delivered_at, reaction, answers,
-                corrections, attempts, hidden, delete_after)
+                corrections, attempts, hidden, delete_after, bridge, decided_at)
             VALUES (CAST(:id AS uuid), CAST(:case_id AS uuid), :seat, :round,
                 CAST(:user_id AS uuid), :status, :transcript, CAST(:created_at AS timestamptz),
                 :audio_key, :veil_key, :veiled, CAST(:reasons AS jsonb),
                 CAST(:delivered_at AS timestamptz), :reaction, CAST(:answers AS jsonb),
-                CAST(:corrections AS jsonb), :attempts, :hidden, CAST(:delete_after AS timestamptz))
+                CAST(:corrections AS jsonb), :attempts, :hidden, CAST(:delete_after AS timestamptz),
+                CAST(:bridge AS jsonb), CAST(:decided_at AS timestamptz))
             ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status,
                 transcript = EXCLUDED.transcript, audio_key = EXCLUDED.audio_key,
                 veil_key = EXCLUDED.veil_key, veiled = EXCLUDED.veiled, reasons = EXCLUDED.reasons,
                 delivered_at = EXCLUDED.delivered_at, reaction = EXCLUDED.reaction,
                 answers = EXCLUDED.answers, corrections = EXCLUDED.corrections,
                 attempts = EXCLUDED.attempts, hidden = EXCLUDED.hidden,
-                delete_after = EXCLUDED.delete_after""",
+                delete_after = EXCLUDED.delete_after, bridge = EXCLUDED.bridge,
+                decided_at = EXCLUDED.decided_at""",
             {
                 "id": str(move.id),
                 "case_id": str(move.case_id),
@@ -355,6 +408,8 @@ class SqlHalvesRepository:
                 "attempts": move.attempts,
                 "hidden": move.hidden,
                 "delete_after": _iso(move.delete_after),
+                "bridge": json.dumps(dict(move.bridge), ensure_ascii=False),
+                "decided_at": _iso(move.decided_at),
             },
         )
 
@@ -397,7 +452,8 @@ class SqlHalvesRepository:
 
     def expired(self, now: dt.datetime, limit: int) -> list[Move]:
         rows = self._client.execute(
-            f"{_MOVE} WHERE delete_after <= CAST(:now AS timestamptz) AND (transcript <> '' "
+            f"{_MOVE} WHERE delete_after <= CAST(:now AS timestamptz) AND status <> 'held' "
+            "AND (transcript <> '' "
             "OR audio_key IS NOT NULL OR veil_key IS NOT NULL) ORDER BY delete_after LIMIT :limit",
             {"now": now.isoformat(), "limit": limit},
         )
@@ -602,3 +658,187 @@ class SqlHalvesRepository:
             {"limit": limit},
         )
         return [_report(row) for row in rows]
+
+    # --- Searches (7.3)
+
+    def ticket(self, user_id: UUID) -> Ticket | None:
+        rows = self._client.execute(
+            f"{_TICKET} WHERE user_id = CAST(:user_id AS uuid)", {"user_id": str(user_id)}
+        )
+        return _ticket(rows[0]) if rows else None
+
+    def save_ticket(self, ticket: Ticket) -> None:
+        self._learner(ticket.user_id)
+        self._client.execute(
+            """INSERT INTO halves_ticket (user_id, created_at, search_until, remind, ai_offered_at)
+            VALUES (CAST(:user_id AS uuid), CAST(:created_at AS timestamptz),
+                CAST(:until AS timestamptz), :remind, CAST(:offered AS timestamptz))
+            ON CONFLICT (user_id) DO UPDATE SET created_at = EXCLUDED.created_at,
+                search_until = EXCLUDED.search_until, remind = EXCLUDED.remind,
+                ai_offered_at = EXCLUDED.ai_offered_at""",
+            {
+                "user_id": str(ticket.user_id),
+                "created_at": ticket.created_at.isoformat(),
+                "until": ticket.until.isoformat(),
+                "remind": ticket.remind,
+                "offered": _iso(ticket.ai_offered_at),
+            },
+        )
+
+    def delete_ticket(self, user_id: UUID) -> None:
+        self._client.execute(
+            "DELETE FROM halves_ticket WHERE user_id = CAST(:user_id AS uuid)",
+            {"user_id": str(user_id)},
+        )
+
+    def tickets(self, limit: int) -> list[Ticket]:
+        rows = self._client.execute(
+            f"{_TICKET} ORDER BY created_at, user_id LIMIT :limit", {"limit": limit}
+        )
+        return [_ticket(row) for row in rows]
+
+    # --- Nudges (7.7, 7.9)
+
+    def add_nudge(self, nudge: Nudge) -> bool:
+        rows = self._client.execute(
+            """INSERT INTO halves_nudge (id, move_id, user_id, text, status, created_at, attempts)
+            VALUES (CAST(:id AS uuid), CAST(:move_id AS uuid), CAST(:user_id AS uuid), :text,
+                :status, CAST(:at AS timestamptz), :attempts)
+            ON CONFLICT (move_id, user_id) DO NOTHING RETURNING CAST(id AS text) AS id""",
+            {
+                "id": str(nudge.id),
+                "move_id": str(nudge.move_id),
+                "user_id": str(nudge.user_id),
+                "text": nudge.text,
+                "status": nudge.status,
+                "at": nudge.created_at.isoformat(),
+                "attempts": nudge.attempts,
+            },
+        )
+        return bool(rows)
+
+    def nudge(self, nudge_id: UUID) -> Nudge | None:
+        rows = self._client.execute(f"{_NUDGE} WHERE id = CAST(:id AS uuid)", {"id": str(nudge_id)})
+        return _nudge(rows[0]) if rows else None
+
+    def save_nudge(self, nudge: Nudge) -> None:
+        self._client.execute(
+            "UPDATE halves_nudge SET status = :status, attempts = :attempts, reason = :reason, "
+            "delivered_at = CAST(:delivered_at AS timestamptz) WHERE id = CAST(:id AS uuid)",
+            {
+                "id": str(nudge.id),
+                "status": nudge.status,
+                "attempts": nudge.attempts,
+                "reason": nudge.reason,
+                "delivered_at": _iso(nudge.delivered_at),
+            },
+        )
+
+    def nudges_of(self, move_id: UUID) -> list[Nudge]:
+        rows = self._client.execute(
+            f"{_NUDGE} WHERE move_id = CAST(:move_id AS uuid) ORDER BY created_at",
+            {"move_id": str(move_id)},
+        )
+        return [_nudge(row) for row in rows]
+
+    def held_nudges(self, limit: int) -> list[Nudge]:
+        rows = self._client.execute(
+            f"{_NUDGE} WHERE status = 'held' ORDER BY created_at DESC LIMIT :limit",
+            {"limit": limit},
+        )
+        return [_nudge(row) for row in rows]
+
+    def stale_nudges(self, before: dt.datetime, limit: int) -> list[Nudge]:
+        rows = self._client.execute(
+            f"{_NUDGE} WHERE status = 'checking' AND created_at < CAST(:before AS timestamptz) "
+            "ORDER BY created_at LIMIT :limit",
+            {"before": before.isoformat(), "limit": limit},
+        )
+        return [_nudge(row) for row in rows]
+
+    # --- Strikes and the owner's numbers (6.15)
+
+    def add_strike(self, strike: Strike) -> None:
+        self._learner(strike.user_id)
+        self._client.execute(
+            """INSERT INTO halves_strike (id, user_id, kind, reason, move_id, at)
+            VALUES (CAST(:id AS uuid), CAST(:user_id AS uuid), :kind, :reason,
+                (SELECT id FROM halves_move WHERE id = CAST(:move_id AS uuid)),
+                CAST(:at AS timestamptz))""",
+            {
+                "id": str(strike.id),
+                "user_id": str(strike.user_id),
+                "kind": strike.kind,
+                "reason": strike.reason,
+                "move_id": str(strike.move_id) if strike.move_id else None,
+                "at": strike.at.isoformat(),
+            },
+        )
+
+    def strikes_of(self, user_id: UUID) -> list[Strike]:
+        rows = self._client.execute(
+            "SELECT CAST(id AS text) AS id, CAST(user_id AS text) AS user_id, kind, reason, "
+            f"CAST(move_id AS text) AS move_id, {epoch_micros('at')} AS at FROM halves_strike "
+            "WHERE user_id = CAST(:user_id AS uuid) ORDER BY at",
+            {"user_id": str(user_id)},
+        )
+        return [
+            Strike(
+                UUID(row["id"]),
+                UUID(row["user_id"]),
+                row["kind"],
+                row["reason"],
+                _uuid(row["move_id"]),
+                from_epoch_micros(int(row["at"])),
+            )
+            for row in rows
+        ]
+
+    def counts(self, since: dt.datetime) -> SafetyCounts:
+        at = {"since": since.isoformat()}
+        moves = self._client.execute(
+            "SELECT count(*) AS moves, count(*) FILTER (WHERE reasons <> CAST('[]' AS jsonb) "
+            "AND status IN ('held', 'removed')) AS held FROM halves_move "
+            "WHERE user_id IS NOT NULL AND created_at >= CAST(:since AS timestamptz)",
+            at,
+        )[0]
+        reports = self._client.execute(
+            "SELECT count(*) AS made FROM halves_report "
+            "WHERE created_at >= CAST(:since AS timestamptz)",
+            at,
+        )[0]
+        cases = self._client.execute(
+            "SELECT count(*) AS made FROM halves_case "
+            "WHERE created_at >= CAST(:since AS timestamptz)",
+            at,
+        )[0]
+        blocks = self._client.execute(
+            "SELECT count(*) AS made FROM halves_block "
+            "WHERE created_at >= CAST(:since AS timestamptz)",
+            at,
+        )[0]
+        hours = self._client.execute(
+            "SELECT CAST(EXTRACT(EPOCH FROM decided_at - created_at) AS double precision) / 3600 "
+            "AS hours FROM halves_move "
+            "WHERE decided_at IS NOT NULL AND created_at >= CAST(:since AS timestamptz) "
+            "UNION ALL SELECT "
+            "CAST(EXTRACT(EPOCH FROM resolved_at - created_at) AS double precision) / 3600 "
+            "AS hours FROM halves_report WHERE resolved_at IS NOT NULL "
+            "AND created_at >= CAST(:since AS timestamptz)",
+            at,
+        )
+        nudges = self._client.execute(
+            "SELECT count(*) AS made, count(*) FILTER (WHERE status = 'dropped') AS dropped "
+            "FROM halves_nudge WHERE created_at >= CAST(:since AS timestamptz)",
+            at,
+        )[0]
+        return SafetyCounts(
+            moves=int(moves["moves"]),
+            held=int(moves["held"]),
+            reports=int(reports["made"]),
+            cases=int(cases["made"]),
+            blocks=int(blocks["made"]),
+            decision_hours=tuple(float(row["hours"]) for row in hours),
+            nudges=int(nudges["made"]),
+            nudges_dropped=int(nudges["dropped"]),
+        )
