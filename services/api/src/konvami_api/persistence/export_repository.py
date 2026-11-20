@@ -57,6 +57,7 @@ EXPORTED: tuple[ExportedTable, ...] = (
             "minute_pack_week",
             "moderation_refusal",
             "onboarding",
+            "own_scenario",
             "penpal_note",
             "penpal_settings",
             "persona",
