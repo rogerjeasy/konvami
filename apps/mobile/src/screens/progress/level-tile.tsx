@@ -1,8 +1,9 @@
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
-import type { HomeLevel, LevelPoint } from '@konvami/api-client';
+import type { HomeLevel, LevelOutlook, LevelPoint } from '@konvami/api-client';
 import { Card } from '@/components/card';
+import { OutlookLine } from '@/components/level-card';
 import { SkillLevels } from '@/components/skill-levels';
 import { Text } from '@/components/text';
 import { Tile, TileChip } from '@/components/tile';
@@ -61,12 +62,16 @@ function LevelHistory({ points }: { points: readonly LevelPoint[] }) {
 export function LevelTile({
   level,
   history = [],
+  outlook = null,
 }: {
   level: HomeLevel;
   history?: readonly LevelPoint[];
+  /** How close the next level is: its step on the path turns butter, "almost there". */
+  outlook?: LevelOutlook | null;
 }) {
   const { t } = useTranslation();
   const reached = PATH.indexOf(level.level as (typeof PATH)[number]);
+  const almost = outlook ? PATH.indexOf(outlook.next as (typeof PATH)[number]) : -1;
   const moved = history.length > 1;
   return (
     <View className="gap-3">
@@ -101,7 +106,9 @@ export function LevelTile({
               <View
                 key={step}
                 style={{ height: size.meterHeight }}
-                className={`flex-1 rounded-pill ${i <= reached ? 'bg-lime' : 'bg-veil-light'}`}
+                className={`flex-1 rounded-pill ${
+                  i <= reached ? 'bg-lime' : i === almost ? 'bg-butter' : 'bg-veil-light'
+                }`}
               />
             ))}
           </View>
@@ -119,8 +126,9 @@ export function LevelTile({
           </View>
         </View>
       </Tile>
-      {level.skills || moved ? (
+      {outlook || level.skills || moved ? (
         <Card className="gap-4 p-4">
+          {outlook ? <OutlookLine outlook={outlook} /> : null}
           {level.skills ? <SkillLevels levels={level.skills} fallback={level.level} /> : null}
           {moved ? <LevelHistory points={history} /> : null}
         </Card>

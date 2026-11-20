@@ -17,11 +17,12 @@ import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { formatPercent } from '@/lib/format';
 import { staggerDelay } from '@/lib/motion';
 import { ROUTES } from '@/lib/routes';
-import { usePracticeServices, useProgress } from '@/practice/services';
+import { useMotivation, usePracticeServices, useProgress } from '@/practice/services';
 import { VocabularyCard } from './vocabulary-card';
 import { LastWeekCard } from './last-week-card';
 import { LevelTile } from './level-tile';
 import { Milestones } from './milestones';
+import { ShareProgress } from './share-progress';
 import { PolishCard } from './polish-card';
 import { PracticeCard } from './practice-card';
 import { ThenVsNowCard } from './then-vs-now-card';
@@ -94,6 +95,8 @@ function CardsCard({ cards }: { cards: Progress['cards'] }) {
 /** Everything that is charted, in reading order; side by side on wide windows. */
 function Charts({ progress }: { progress: Progress }) {
   const { split } = useScreenLayout();
+  const motivation = useMotivation();
+  const outlook = motivation.phase === 'ready' ? motivation.data.outlook : null;
   const { t, i18n } = useTranslation();
   // Mistakes and the share of the talking come from reports: before the first one, neither
   // part has anything to say.
@@ -101,7 +104,12 @@ function Charts({ progress }: { progress: Progress }) {
   // The level leads, as the forest block of v4; the counts and the chart follow it.
   const practice = [
     progress.level ? (
-      <LevelTile key="level" level={progress.level} history={progress.levelHistory} />
+      <LevelTile
+        key="level"
+        level={progress.level}
+        history={progress.levelHistory}
+        outlook={outlook}
+      />
     ) : null,
     progress.lastWeek ? <LastWeekCard key="lastWeek" review={progress.lastWeek} /> : null,
     <PracticeCard key="practice" progress={progress} />,
@@ -133,6 +141,7 @@ function Charts({ progress }: { progress: Progress }) {
     reported ? <PolishCard key="polish" mistakes={progress.mistakes} /> : null,
     progress.cards.total > 0 ? <CardsCard key="cards" cards={progress.cards} /> : null,
     <Milestones key="milestones" milestones={progress.milestones} />,
+    <ShareProgress key="share" progress={progress} />,
     <ThenVsNowCard key="then-vs-now" />,
   ];
   const column = (cards: (React.JSX.Element | null)[], first: number) => (
@@ -164,7 +173,7 @@ function Charts({ progress }: { progress: Progress }) {
 export function ProgressScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { progress: store } = usePracticeServices();
+  const { progress: store, motivation } = usePracticeServices();
   const progress = useProgress();
   const signedIn = status === 'signedIn';
 
@@ -176,7 +185,8 @@ export function ProgressScreen() {
   useFocusEffect(
     useCallback(() => {
       void store.refresh();
-    }, [store]),
+      void motivation.revisit();
+    }, [store, motivation]),
   );
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;

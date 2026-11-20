@@ -10,12 +10,16 @@ import { Pop } from '@/components/motion';
 import { Section } from '@/components/section';
 import { Text } from '@/components/text';
 import { staggerDelay } from '@/lib/motion';
+import { formatDate } from '@/lib/format';
+import { MILESTONE_GLYPH } from '@/screens/quests/celebrations';
 import { useTheme, type ColorToken } from '@/theme';
 
 // Four badges to a row, as on the v4 prototype (a share of the row, before the gaps).
 const BADGE_BASIS = '21%';
 // The glyph inside a badge (pt).
 const BADGE_GLYPH = 28;
+// The calendar day of a stored moment ("2026-10-09T12:00:00Z" → "2026-10-09").
+const DAY_LENGTH = 'YYYY-MM-DD'.length;
 
 /**
  * The colour blocks a reached badge takes, in turn (class names spelled out for Tailwind).
@@ -30,26 +34,21 @@ const BLOCKS: readonly { box: string; ink: ColorToken }[] = [
 ];
 
 /** What a milestone stands for, drawn on its badge. Unknown ids get the award. */
-const GLYPH: Record<string, IconName> = {
-  first_conversation: 'mic',
-  five_conversations: 'message',
-  long_conversation: 'clock',
-  hour_of_talking: 'volume',
-  week_streak: 'flame',
-  hundred_words: 'book',
-  first_card: 'plusCircle',
-  fifty_reviews: 'check',
-};
+const GLYPH: Record<string, IconName> = MILESTONE_GLYPH;
 
 /** One milestone's name and state, as the app and a screen reader say them. */
 function useMilestoneWords(milestone: Milestone) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // A milestone this app version has no name for is shown by its id rather than left out.
   const name = t(`progress.milestones.names.${milestone.id}` as 'progress.milestones.title', {
     defaultValue: milestone.id,
   });
   const state = milestone.reached
-    ? t('progress.milestones.reached')
+    ? milestone.reachedAt
+      ? t('progress.milestones.reachedOn', {
+          date: formatDate(i18n.language, milestone.reachedAt.slice(0, DAY_LENGTH)),
+        })
+      : t('progress.milestones.reached')
     : t('common.stepCounter', { current: milestone.current, total: milestone.target });
   return { name, state, label: t('progress.milestones.label', { name, state }) };
 }
