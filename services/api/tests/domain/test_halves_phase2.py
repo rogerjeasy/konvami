@@ -503,6 +503,31 @@ def test_leaving_deletes_the_learners_nudges_but_keeps_held_ones_hidden() -> Non
     assert [n.status for n in g2.store.nudges.values()] == ["held"]
 
 
+def test_a_decision_made_after_the_learner_left_still_counts_when_they_join_again() -> None:
+    g, move = held_move()
+    g.service.leave(USER)
+    g.service.decide(OTHER_USER, "held", move, "suspend")
+    assert [s.kind for s in g.store.strikes_of(USER)] == ["suspension"]
+    assert g.service.join(
+        USER, native_language="fr", place=None, veil_default=True, voice_consent=True
+    ).suspended
+
+    g2, _, mine = friends_with_a_move()
+    g2.service.nudge(OTHER_USER, mine, "schreib mir: lena@example.com")
+    g2.run_jobs()
+    g2.service.leave(OTHER_USER)
+    held = g2.service.queue(OTHER_USER)
+    assert [item.kind for item in held] == ["nudge"]
+    g2.service.decide(OTHER_USER, "nudge", held[0].id, "remove")
+    assert [s.kind for s in g2.store.strikes_of(OTHER_USER)] == ["strike"]
+    assert (
+        g2.service.join(
+            OTHER_USER, native_language="de", place=None, veil_default=True, voice_consent=True
+        ).strikes
+        == 1
+    )
+
+
 def test_leaving_and_joining_again_lifts_no_suspension() -> None:
     g, move = held_move()
     g.service.decide(OTHER_USER, "held", move, "suspend")

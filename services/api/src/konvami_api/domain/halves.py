@@ -2200,10 +2200,12 @@ class HalvesService:
         reason: str = "held",
         move_id: UUID | None = None,
     ) -> None:
+        # Recorded first and always: the record outlives the profile, so leaving before the owner
+        # decides escapes nothing (`join` reads it back).
+        self._record(user_id, kind, reason, move_id)
         profile = self._repository.profile(user_id)
         if profile is None:
             return
-        self._record(user_id, kind, reason, move_id)
         strikes = profile.strikes + (1 if kind == "strike" else 0)
         suspended = kind == "suspension" or strikes >= STRIKES_TO_SUSPEND or profile.suspended
         self._repository.save_profile(replace(profile, strikes=strikes, suspended=suspended))
