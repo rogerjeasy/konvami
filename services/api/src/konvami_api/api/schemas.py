@@ -37,6 +37,17 @@ from konvami_api.domain.catalog import (
     GoalReason,
     StartingLevel,
 )
+from konvami_api.domain.coach import Action as CoachAction
+from konvami_api.domain.coach import ActionType as CoachActionType
+from konvami_api.domain.coach import CoachView
+from konvami_api.domain.coach import Outcome as CoachOutcome
+from konvami_api.domain.coach import Reason as CoachReason
+from konvami_api.domain.coach import Response as CoachResponse
+from konvami_api.domain.coach import Signal as CoachSignal
+from konvami_api.domain.coach import Suggestion as CoachSuggestion
+from konvami_api.domain.coach import SuggestionStatus as CoachSuggestionStatus
+from konvami_api.domain.coach import Trend as CoachTrend
+from konvami_api.domain.coach import Wording as CoachWording
 from konvami_api.domain.conversations import (
     Activity,
     Conversation,
@@ -3152,3 +3163,159 @@ class CaptionMeaningOut(ApiModel):
     plural: str | None
     unsure: bool
     saved: bool
+
+
+# --- The Coach (spec §6.12, `domain/coach.py`) ----------------------------------------------------
+
+
+class CoachEvidenceOut(ApiModel):
+    """The facts a suggestion or a finding rests on. Each kind fills the fields it has; the app
+    words them in the interface language when the model has not."""
+
+    category: str | None = None
+    topic: str | None = None
+    sound: str | None = None
+    title: str | None = None
+    exam: str | None = None
+    name: str | None = None
+    partner: str | None = None
+    import_id: str | None = Field(default=None, alias="import")
+    call_id: str | None = None
+    level: str | None = None
+    next: str | None = None
+    # How many (mistakes, cards, conversations, …) the kind counts.
+    count: int | None = None
+    out_of: int | None = None
+    conversations: int | None = None
+    needed: int | None = None
+    due: int | None = None
+    days: int | None = None
+    last: int | None = None
+    accuracy: int | None = None
+    uses: int | None = None
+    tries: int | None = None
+    right: int | None = None
+    score: int | None = None
+    share: int | None = None
+    before: int | None = None
+    after: int | None = None
+    # A mistake: what the learner said and how it is right.
+    said: str | None = None
+    corrected: str | None = None
+    # A topic's state (`grammar_map.Mastery`) a week ago and now.
+    was: str | None = None
+    now: str | None = None
+    words: list[str] | None = None
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="ignore")
+
+    @classmethod
+    def of(cls, evidence: Mapping[str, Any]) -> "CoachEvidenceOut":
+        return cls.model_validate(dict(evidence))
+
+
+class CoachActionOut(ApiModel):
+    type: CoachActionType
+    topic: str | None = None
+    sound: str | None = None
+    exam: str | None = None
+    partner_id: UUID | None = None
+    call_id: str | None = None
+    import_id: UUID | None = None
+    count: int | None = None
+
+    @classmethod
+    def of(cls, action: CoachAction) -> "CoachActionOut":
+        return cls(
+            type=action.type,
+            topic=action.topic,
+            sound=action.sound,
+            exam=action.exam,
+            partner_id=action.partner,
+            call_id=action.call_id,
+            import_id=action.import_id,
+            count=action.count,
+        )
+
+
+class CoachSuggestionOut(ApiModel):
+    id: UUID
+    day: dt.date
+    kind: str
+    evidence: CoachEvidenceOut
+    action: CoachActionOut
+    minutes: int
+    # Comes before the week's plan on Today.
+    urgent: bool
+    status: CoachSuggestionStatus
+    # The model's words in the explanation language; None: the app's own template.
+    title: str | None
+    why: str | None
+    outcome: CoachOutcome | None = None
+    acted: bool | None = None
+
+    @classmethod
+    def of(cls, suggestion: CoachSuggestion) -> "CoachSuggestionOut":
+        return cls(
+            id=suggestion.id,
+            day=suggestion.day,
+            kind=suggestion.kind.value,
+            evidence=CoachEvidenceOut.of(suggestion.evidence),
+            action=CoachActionOut.of(suggestion.action),
+            minutes=suggestion.minutes,
+            urgent=suggestion.urgent,
+            status=suggestion.status,
+            title=suggestion.title or None,
+            why=suggestion.why or None,
+            outcome=suggestion.outcome,
+            acted=suggestion.acted,
+        )
+
+
+class CoachFindingOut(ApiModel):
+    """Something that holds the learner back or that went well."""
+
+    kind: str
+    evidence: CoachEvidenceOut
+    trend: CoachTrend | None
+
+    @classmethod
+    def of(cls, signal: CoachSignal) -> "CoachFindingOut":
+        return cls(
+            kind=signal.kind.value,
+            evidence=CoachEvidenceOut.of(signal.evidence),
+            trend=signal.trend,
+        )
+
+
+class CoachOut(ApiModel):
+    """The Coach's day (5.1, 5.26)."""
+
+    day: dt.date
+    # How the suggestions are worded: by the app ("template"), being worded by the model
+    # ("pending": read again shortly) or by it ("model").
+    wording: CoachWording
+    # The first suggestion comes before the week's plan on Today.
+    leads: bool
+    suggestions: list[CoachSuggestionOut]
+    holding_back: list[CoachFindingOut]
+    going_well: list[CoachFindingOut]
+    history: list[CoachSuggestionOut]
+
+    @classmethod
+    def of(cls, view: CoachView) -> "CoachOut":
+        return cls(
+            day=view.brief.day,
+            wording=view.brief.wording,
+            leads=view.leads,
+            suggestions=[CoachSuggestionOut.of(s) for s in view.suggestions],
+            holding_back=[CoachFindingOut.of(s) for s in view.brief.holding_back],
+            going_well=[CoachFindingOut.of(s) for s in view.brief.going_well],
+            history=[CoachSuggestionOut.of(s) for s in view.history],
+        )
+
+
+class CoachFeedbackIn(ApiModel):
+    response: CoachResponse
+    # Why the learner turned it down; only with `dismissed`.
+    reason: CoachReason | None = None

@@ -121,6 +121,13 @@ export type Activity = Schemas['ActivityOut'];
 export type ActivityDay = Schemas['DayOut'];
 /** The Progress screen in one answer. */
 export type Progress = Schemas['ProgressOut'];
+/** The Coach's day (5.1, 5.26): suggestions, what holds the learner back, what went well. */
+export type Coach = Schemas['CoachOut'];
+export type CoachSuggestion = Schemas['CoachSuggestionOut'];
+export type CoachFinding = Schemas['CoachFindingOut'];
+export type CoachEvidence = Schemas['CoachEvidenceOut'];
+export type CoachAction = Schemas['CoachActionOut'];
+export type CoachFeedback = Schemas['CoachFeedbackIn'];
 /** One level on the way, from when it was set and by whom. */
 export type LevelPoint = Schemas['LevelPointOut'];
 export type ProgressWeek = Schemas['WeekOut'];
@@ -380,6 +387,13 @@ export interface ApiClient {
    * weeks follow the learner's calendar.
    */
   getProgress(timeZone?: string): Promise<Progress>;
+  /**
+   * Today's suggestions from the Coach (`timeZone` is the device's: the day is the learner's).
+   * With `wording` "pending" the model is wording them: read again shortly.
+   */
+  getCoach(timeZone?: string): Promise<Coach>;
+  /** The learner's answer to a suggestion. Fails with `not_found`. */
+  answerCoachSuggestion(id: string, feedback: CoachFeedback): Promise<void>;
   /**
    * Has last week's check-in written (`week` is its Monday); answers at once with its status.
    * Fails with `not_found` (not last week), `nothing_to_report`, `consent_required` or
@@ -797,6 +811,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       void (await request('POST', `/v1/voice/calls/${encodeURIComponent(callId)}/end`)),
     getHome: (timeZone) => request('GET', withQuery('/v1/home', { tz: timeZone })),
     getProgress: (timeZone) => request('GET', withQuery('/v1/progress', { tz: timeZone })),
+    getCoach: (timeZone) => request('GET', withQuery('/v1/coach', { tz: timeZone })),
+    answerCoachSuggestion: async (id, feedback) =>
+      void (await request(
+        'POST',
+        `/v1/coach/suggestions/${encodeURIComponent(id)}/feedback`,
+        feedback,
+      )),
     requestWeekReview: (week, timeZone) =>
       request('POST', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
     getWeekReview: (week, timeZone) =>

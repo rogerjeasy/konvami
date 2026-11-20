@@ -305,6 +305,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Coach
+         * @description Today's suggestions from the Coach, with what holds the learner back, what went well
+         *     and earlier suggestions (5.1, 5.26).
+         */
+        get: operations["getCoach"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/coach/suggestions/{suggestion_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer Coach Suggestion
+         * @description The learner's answer: do it, not now, or not for me (with why).
+         */
+        post: operations["answerCoachSuggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/conversations": {
         parameters: {
             query?: never;
@@ -2323,6 +2364,178 @@ export interface components {
             scope?: string | null;
             /** Value */
             value?: unknown;
+        };
+        /** CoachActionOut */
+        CoachActionOut: {
+            /** Callid */
+            callId?: string | null;
+            /** Count */
+            count?: number | null;
+            /** Exam */
+            exam?: string | null;
+            /** Importid */
+            importId?: string | null;
+            /** Partnerid */
+            partnerId?: string | null;
+            /** Sound */
+            sound?: string | null;
+            /** Topic */
+            topic?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "lesson" | "say_it_better" | "review_cards" | "review_conversation" | "sound_drill" | "exam" | "free_talk" | "call_partner" | "import_call";
+        };
+        /**
+         * CoachEvidenceOut
+         * @description The facts a suggestion or a finding rests on. Each kind fills the fields it has; the app
+         *     words them in the interface language when the model has not.
+         */
+        CoachEvidenceOut: {
+            /** Accuracy */
+            accuracy?: number | null;
+            /** After */
+            after?: number | null;
+            /** Before */
+            before?: number | null;
+            /** Callid */
+            callId?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Conversations */
+            conversations?: number | null;
+            /** Corrected */
+            corrected?: string | null;
+            /** Count */
+            count?: number | null;
+            /** Days */
+            days?: number | null;
+            /** Due */
+            due?: number | null;
+            /** Exam */
+            exam?: string | null;
+            /** Import */
+            import?: string | null;
+            /** Last */
+            last?: number | null;
+            /** Level */
+            level?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Needed */
+            needed?: number | null;
+            /** Next */
+            next?: string | null;
+            /** Now */
+            now?: string | null;
+            /** Outof */
+            outOf?: number | null;
+            /** Partner */
+            partner?: string | null;
+            /** Right */
+            right?: number | null;
+            /** Said */
+            said?: string | null;
+            /** Score */
+            score?: number | null;
+            /** Share */
+            share?: number | null;
+            /** Sound */
+            sound?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Topic */
+            topic?: string | null;
+            /** Tries */
+            tries?: number | null;
+            /** Uses */
+            uses?: number | null;
+            /** Was */
+            was?: string | null;
+            /** Words */
+            words?: string[] | null;
+        };
+        /** CoachFeedbackIn */
+        CoachFeedbackIn: {
+            /** Reason */
+            reason?: ("not_interested" | "already_know" | "too_long" | "not_useful") | null;
+            /**
+             * Response
+             * @enum {string}
+             */
+            response: "accepted" | "snoozed" | "dismissed";
+        };
+        /**
+         * CoachFindingOut
+         * @description Something that holds the learner back or that went well.
+         */
+        CoachFindingOut: {
+            evidence: components["schemas"]["CoachEvidenceOut"];
+            /** Kind */
+            kind: string;
+            /** Trend */
+            trend: ("better" | "same" | "worse") | null;
+        };
+        /**
+         * CoachOut
+         * @description The Coach's day (5.1, 5.26).
+         */
+        CoachOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Goingwell */
+            goingWell: components["schemas"]["CoachFindingOut"][];
+            /** History */
+            history: components["schemas"]["CoachSuggestionOut"][];
+            /** Holdingback */
+            holdingBack: components["schemas"]["CoachFindingOut"][];
+            /** Leads */
+            leads: boolean;
+            /** Suggestions */
+            suggestions: components["schemas"]["CoachSuggestionOut"][];
+            /**
+             * Wording
+             * @enum {string}
+             */
+            wording: "template" | "pending" | "model";
+        };
+        /** CoachSuggestionOut */
+        CoachSuggestionOut: {
+            /** Acted */
+            acted?: boolean | null;
+            action: components["schemas"]["CoachActionOut"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            evidence: components["schemas"]["CoachEvidenceOut"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Minutes */
+            minutes: number;
+            /** Outcome */
+            outcome?: ("resolved" | "persists") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "accepted" | "snoozed" | "dismissed";
+            /** Title */
+            title: string | null;
+            /** Urgent */
+            urgent: boolean;
+            /** Why */
+            why: string | null;
         };
         /** ConversationAssessmentIn */
         ConversationAssessmentIn: {
@@ -5875,6 +6088,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getCoach: {
+        parameters: {
+            query?: {
+                tz?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answerCoachSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suggestion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoachFeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

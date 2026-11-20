@@ -433,6 +433,21 @@ describe('api client', () => {
     ]);
   });
 
+  it('reads the Coach’s day and answers a suggestion', async () => {
+    const coach = { day: '2026-11-20', wording: 'template', suggestions: [] };
+    const { fetch, calls } = fakeFetch(json(200, coach), new Response(null, { status: 204 }));
+    const { api } = client(fetch);
+
+    expect(await api.getCoach('Europe/Zurich')).toEqual(coach);
+    await api.answerCoachSuggestion('s/1', { response: 'dismissed', reason: 'too_long' });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/coach?tz=Europe%2FZurich',
+      'POST https://api.example.test/v1/coach/suggestions/s%2F1/feedback',
+    ]);
+    expect(calls[1]?.body).toEqual({ response: 'dismissed', reason: 'too_long' });
+  });
+
   it('asks for, follows and plays last week’s check-in', async () => {
     const review = { status: 'pending', text: null, numbers: { week: '2026-10-05' } };
     const { fetch, calls } = fakeFetch(
