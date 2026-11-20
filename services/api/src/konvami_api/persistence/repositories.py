@@ -1799,6 +1799,7 @@ def _simulation(row: dict[str, Any]) -> Simulation:
             parts=tuple(PartScore(**part) for part in result["parts"]),
             summary=result["summary"],
             pass_share=result["pass_share"],
+            estimate=result.get("estimate"),
             pronunciation=ExamPronunciation(**result["pronunciation"])
             if result.get("pronunciation")
             else None,

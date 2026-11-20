@@ -58,7 +58,7 @@ from konvami_api.domain.director import ExamPace, ExamWeek, Reason, SessionKind,
 from konvami_api.domain.exam_centre import ExamCentre, PhraseBank, Simulation
 from konvami_api.domain.exam_phrases import ExamPhrase, Function, phrases_for
 from konvami_api.domain.exam_phrases import Level as PhraseLevel
-from konvami_api.domain.exams import ExamCard, PartKind, SpeakingExam
+from konvami_api.domain.exams import ExamCard, PartKind, Picture, SpeakingExam
 from konvami_api.domain.exports import DataExport
 from konvami_api.domain.feedback import (
     MAX_MESSAGE_LENGTH,
@@ -1880,7 +1880,7 @@ class ExamCardOut(ApiModel):
     title: str
     prompts: list[str]
 
-    picture: Literal["waiting_room", "bus_stop"] | None = None
+    picture: Picture | None = None
     figure: ExamFigureOut | None = None
 
     @classmethod
@@ -1949,6 +1949,16 @@ class ExamPartOut(ApiModel):
     phrases: list[ExamPhraseOut] = Field(default_factory=list)
 
 
+class ExamScaleOut(ApiModel):
+    """How the test reports a result: a band, points out of a maximum, or a level."""
+
+    kind: Literal["band", "points", "level"]
+    low: float
+    high: float
+    step: float
+    levels: list[str]
+
+
 class SpeakingExamOut(ApiModel):
     """A speaking test the exam centre simulates (spec §6.13)."""
 
@@ -1961,6 +1971,10 @@ class SpeakingExamOut(ApiModel):
     parts: list[ExamPartOut]
     # The share of the points it takes to pass.
     pass_share: float
+    # The language the test is taken in.
+    language: str = "de"
+    # The test's own scale, for the estimate on it; null for a test shown as a share only.
+    scale: ExamScaleOut | None = None
 
     series: str | None = None
     stage: int | None = None
@@ -1983,12 +1997,23 @@ class SpeakingExamOut(ApiModel):
                     kind=p.kind,
                     seconds=p.seconds,
                     phrases=[
-                        ExamPhraseOut.of(phrase) for phrase in phrases_for(p.kind, exam.levels)
+                        ExamPhraseOut.of(phrase)
+                        for phrase in phrases_for(p.kind, exam.levels, exam.language)
                     ],
                 )
                 for p in exam.parts
             ],
             pass_share=exam.pass_share,
+            language=exam.language,
+            scale=ExamScaleOut(
+                kind=exam.scale.kind,
+                low=exam.scale.low,
+                high=exam.scale.high,
+                step=exam.scale.step,
+                levels=list(exam.scale.levels),
+            )
+            if exam.scale
+            else None,
         )
 
 
@@ -2109,6 +2134,8 @@ class SimulationResultOut(ApiModel):
     pass_share: float
     summary: str
     parts: list[PartScoreOut]
+    # An estimate on the test's own scale ("6.5", "15", "B1"); null for a test without one.
+    estimate: str | None = None
 
 
 class SimulationOut(ApiModel):
@@ -2136,6 +2163,7 @@ class SimulationOut(ApiModel):
                 total=result.total,
                 passed=result.passed,
                 pass_share=result.pass_share,
+                estimate=result.estimate,
                 summary=result.summary,
                 parts=[
                     PartScoreOut(
