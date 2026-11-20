@@ -28,6 +28,8 @@ from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
+from konvami_api.domain.motivation import MotivationService
+from konvami_api.domain.motivation_sources import motivation_sources, winback_question
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import PersonaService
@@ -88,6 +90,7 @@ from tests.fakes import (
     InMemoryImportRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
+    InMemoryMotivationRepository,
     InMemoryOnboardingRepository,
     InMemoryPackRepository,
     InMemoryPenPalRepository,
@@ -579,6 +582,50 @@ def services(
         call_seconds=VOICE.max_seconds[CallPurpose.PRACTICE],
         clock=clock,
     )
+    pen_pal = PenPalService(
+        profiles=profiles,
+        personas=personas,
+        conversations=conversations,
+        memories=memories,
+        accounts=directory,
+        repository=InMemoryPenPalRepository(),
+        listener=Listener(
+            profiles=profiles,
+            accounts=directory,
+            transcriber=pen_pal_transcriber,
+            model="gpt-4o-transcribe",
+        ),
+        text_model=text_model,
+        note_model="gpt-6-luna",
+        reply_model="gpt-6.1-sol",
+        speech=speech,
+        speech_model="gpt-4o-mini-tts",
+        files=files,
+        starter=pen_pal_starter,
+        clock=clock,
+        announce=lambda user_id, persona_id, reply: push.pen_pal(user_id, persona_id, reply=reply),
+    )
+    motivation = MotivationService(
+        repository=InMemoryMotivationRepository(),
+        conversations=conversations,
+        sources=motivation_sources(
+            profiles=profiles,
+            levels=levels,
+            director=director,
+            cards=cards,
+            reports=reports,
+            penpal=pen_pal,
+            conversation_review=conversation_review,
+            clock=clock,
+        ),
+        clock=clock,
+    )
+    push.use_motivation(
+        paused=motivation.reminders_paused,
+        winback=winback_question(
+            profiles=profiles, memories=memories, conversations=conversations, clock=clock
+        ),
+    )
     home = HomeService(
         profiles=profiles,
         onboarding=onboarding,
@@ -588,6 +635,7 @@ def services(
         reports=reports,
         cards=cards,
         clock=clock,
+        streak=lambda user_id, tz: motivation.streak(user_id, tz).days,
     )
     progress = ProgressService(
         profiles=profiles,
@@ -598,6 +646,8 @@ def services(
         cards=cards,
         levels=levels,
         clock=clock,
+        streak=motivation.streak,
+        milestones=motivation.milestones,
     )
     # Upload ids in the order they are handed out: ...0001, ...0002, and so on.
     upload_ids = (UUID(f"aaaaaaaa-aaaa-4aaa-8aaa-{number:012d}") for number in range(1, 100))
@@ -747,31 +797,8 @@ def services(
             owners=frozenset({UUID(OWNER)}),
             clock=clock,
         ),
-        pen_pal=PenPalService(
-            profiles=profiles,
-            personas=personas,
-            conversations=conversations,
-            memories=memories,
-            accounts=directory,
-            repository=InMemoryPenPalRepository(),
-            listener=Listener(
-                profiles=profiles,
-                accounts=directory,
-                transcriber=pen_pal_transcriber,
-                model="gpt-4o-transcribe",
-            ),
-            text_model=text_model,
-            note_model="gpt-6-luna",
-            reply_model="gpt-6.1-sol",
-            speech=speech,
-            speech_model="gpt-4o-mini-tts",
-            files=files,
-            starter=pen_pal_starter,
-            clock=clock,
-            announce=lambda user_id, persona_id, reply: push.pen_pal(
-                user_id, persona_id, reply=reply
-            ),
-        ),
+        pen_pal=pen_pal,
+        motivation=motivation,
         retries=RetryService(
             reports=reports,
             repository=InMemoryRetryRepository(),

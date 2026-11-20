@@ -26,6 +26,7 @@ from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.moderation import LIMIT as MODERATION_LIMIT
 from konvami_api.domain.moderation import UNAVAILABLE as MODERATION_UNAVAILABLE
 from konvami_api.domain.moderation import ModerationError
+from konvami_api.domain.motivation import MotivationError
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.penpal import PenPalError
 from konvami_api.domain.personas import PersonaError
@@ -287,6 +288,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ScenarioError)
     async def _scenario_error(_: Request, error: ScenarioError) -> JSONResponse:
         return _response(404, error.code)
+
+    @app.exception_handler(MotivationError)
+    async def _motivation_error(_: Request, error: MotivationError) -> JSONResponse:
+        return _response(404 if error.code == "not_found" else 422, error.code)
 
     @app.exception_handler(MemoriesError)
     async def _memory_error(_: Request, error: MemoriesError) -> JSONResponse:

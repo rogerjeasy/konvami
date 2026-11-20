@@ -72,16 +72,21 @@ def test_a_new_learner_has_an_empty_chart_and_every_milestone_ahead(
         "current": 0,
         "target": 1,
         "reached": False,
+        "reachedAt": None,
     }
     assert [m["id"] for m in progress["milestones"]] == [
         "first_conversation",
         "five_conversations",
         "long_conversation",
+        "first_quest_week",
         "hour_of_talking",
         "week_streak",
+        "streak_repaired",
         "hundred_words",
         "first_card",
+        "level_up",
         "fifty_reviews",
+        "month_streak",
     ]
 
 

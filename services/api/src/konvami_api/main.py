@@ -40,6 +40,8 @@ from konvami_api.domain.levels import LevelService
 from konvami_api.domain.live_speech import LiveSpeech
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.moderation import TextGuard
+from konvami_api.domain.motivation import MotivationService
+from konvami_api.domain.motivation_sources import motivation_sources, winback_question
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import PersonaService
@@ -75,6 +77,7 @@ from konvami_api.persistence.continuation_repository import SqlContinuationRepos
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.export_repository import SqlExportRepository
 from konvami_api.persistence.migrations import migrate_when_awake
+from konvami_api.persistence.motivation_repository import SqlMotivationRepository
 from konvami_api.persistence.pronunciation_repository import SqlPronunciationRepository
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
@@ -530,6 +533,48 @@ def build_backend(
             ),
         ),
     )
+    pen_pal = PenPalService(
+        profiles=profiles,
+        personas=personas,
+        conversations=conversations,
+        memories=memories,
+        accounts=directory,
+        repository=SqlPenPalRepository(sql),
+        listener=listener,
+        text_model=text,
+        # A note is a short text; the answer and the check of its corrections judge the
+        # learner's language, as a report does.
+        note_model=models.week or models.memory,
+        reply_model=models.report,
+        speech=speech,
+        speech_model=models.speech,
+        files=files,
+        starter=LambdaPenPalStarter(clients.functions, worker),
+        clock=_now,
+        announce=lambda user_id, persona_id, reply: push.pen_pal(user_id, persona_id, reply=reply),
+    )
+    motivation = MotivationService(
+        repository=SqlMotivationRepository(sql),
+        conversations=conversations,
+        sources=motivation_sources(
+            profiles=profiles,
+            levels=levels,
+            director=director,
+            cards=cards,
+            reports=reports,
+            penpal=pen_pal,
+            conversation_review=conversation_review,
+            clock=_now,
+        ),
+        clock=_now,
+    )
+    # The nudge (built before motivation) asks it whether a learner paused their reminders.
+    push.use_motivation(
+        paused=motivation.reminders_paused,
+        winback=winback_question(
+            profiles=profiles, memories=memories, conversations=conversations, clock=_now
+        ),
+    )
     home = HomeService(
         profiles=profiles,
         onboarding=onboarding,
@@ -539,6 +584,7 @@ def build_backend(
         reports=reports,
         cards=cards,
         clock=_now,
+        streak=lambda user_id, tz: motivation.streak(user_id, tz).days,
     )
     progress = ProgressService(
         profiles=profiles,
@@ -549,6 +595,8 @@ def build_backend(
         cards=cards,
         levels=levels,
         clock=_now,
+        streak=motivation.streak,
+        milestones=motivation.milestones,
     )
     accounts = AccountService(
         records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
@@ -664,28 +712,8 @@ def build_backend(
             owners=costs.owners,
             clock=_now,
         ),
-        pen_pal=PenPalService(
-            profiles=profiles,
-            personas=personas,
-            conversations=conversations,
-            memories=memories,
-            accounts=directory,
-            repository=SqlPenPalRepository(sql),
-            listener=listener,
-            text_model=text,
-            # A note is a short text; the answer and the check of its corrections judge the
-            # learner's language, as a report does.
-            note_model=models.week or models.memory,
-            reply_model=models.report,
-            speech=speech,
-            speech_model=models.speech,
-            files=files,
-            starter=LambdaPenPalStarter(clients.functions, worker),
-            clock=_now,
-            announce=lambda user_id, persona_id, reply: push.pen_pal(
-                user_id, persona_id, reply=reply
-            ),
-        ),
+        pen_pal=pen_pal,
+        motivation=motivation,
         retries=RetryService(
             reports=reports,
             repository=SqlRetryRepository(sql),
