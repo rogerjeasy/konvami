@@ -11,7 +11,7 @@ import hashlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountDirectory, AccountNotFound
@@ -142,6 +142,8 @@ class VoiceSession:
     # Explicit permission for this exam only; its original audio language is kept with it.
     assessment_consent: bool = False
     assessment_language: str | None = None
+    # The second partner of a two-partner conversation; None for every other call.
+    guest_persona_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -225,6 +227,33 @@ class CallScript(Protocol):
 
     def concluded(self, user_id: UUID, call_id: str, tools: ToolSet, call: "FinishedCall") -> None:
         """The call is over and stored under `call_id`; `tools` are the ones it used."""
+
+
+@runtime_checkable
+class DuoScript(Protocol):
+    """A script that can hold a conversation with two partners (`PracticeScript`)."""
+
+    def prepare_duo(
+        self,
+        user_id: UUID,
+        account: Account,
+        today: dt.date,
+        persona_id: UUID | None,
+        guest_id: UUID,
+    ) -> Briefing: ...
+
+    def duo_tools(self, user_id: UUID, guest_id: UUID) -> ToolSet: ...
+
+    def guest_voice(self, user_id: UUID, persona_id: UUID | None, guest_id: UUID) -> str: ...
+
+
+class GuestVoice(Protocol):
+    """Speaks the second partner's lines (`domain/two_partners.py` `GuestSpeech`)."""
+
+    @property
+    def available(self) -> bool: ...
+
+    def speak(self, user_id: UUID, text: str, voice: str) -> bytes: ...
 
 
 class CallStarter(Protocol):
@@ -339,11 +368,13 @@ class VoiceCallService:
         continuations: Continuations | None = None,
         current_language: Callable[[UUID], str | None] | None = None,
         assessment_provider: Callable[[UUID], str | None] | None = None,
+        guest_speech: GuestVoice | None = None,
     ) -> None:
         """Without a `guard` calls are never switched or stopped for spending; without a
         `meter` they are not metered; without a `checker` no turn is checked live. Without
         `weekly_seconds` (the learner and the week: the seconds the week allows them) every
-        learner has the settings' minutes."""
+        learner has the settings' minutes. Without `guest_speech` no call has a second partner."""
+        self._guest_speech = guest_speech
         self._assessment_provider = assessment_provider
         self._continuations = continuations
         self._language = current_language
@@ -373,13 +404,27 @@ class VoiceCallService:
         practise: str | None = None,
         premium: bool = False,
         assessment_consent: bool = False,
+        guest_persona_id: UUID | None = None,
     ) -> CallStarted:
         """`local_date` is today on the learner's calendar, as their device has it; `scenario`
-        makes a practice call a role-play; `practise` puts a grammar topic first in its plan."""
+        makes a practice call a role-play; `practise` puts a grammar topic first in its plan;
+        `guest_persona_id` brings a second partner into a free practice conversation."""
         model = self._settings.models.get(purpose)
         max_seconds = self._settings.max_seconds.get(purpose)
         script = self._scripts.get(purpose)
         if model is None or max_seconds is None or script is None:
+            raise VoiceError("voice_unavailable")
+        if guest_persona_id is not None and (
+            purpose is not CallPurpose.PRACTICE
+            or not isinstance(script, DuoScript)
+            or self._guest_speech is None
+            or not self._guest_speech.available
+            or self._recordings is None
+            # Free conversation only, in the call's own voice (design note 2026-11-20).
+            or scenario is not None
+            or practise is not None
+            or premium
+        ):
             raise VoiceError("voice_unavailable")
 
         try:
@@ -409,9 +454,13 @@ class VoiceCallService:
         if level is Level.ECONOMY:
             model = self._settings.economy_models.get(purpose, model)
 
-        briefing = script.prepare(
-            user_id, account, _today(now, local_date), persona_id, scenario, practise
-        )
+        today = _today(now, local_date)
+        if guest_persona_id is not None and isinstance(script, DuoScript):
+            briefing = script.prepare_duo(user_id, account, today, persona_id, guest_persona_id)
+            tools = script.duo_tools(user_id, guest_persona_id)
+        else:
+            briefing = script.prepare(user_id, account, today, persona_id, scenario, practise)
+            tools = script.tools(user_id, scenario)
         output: dict[str, Any] = {"voice": briefing.voice or self._settings.voice}
         if briefing.speed is not None:
             output["speed"] = briefing.speed
@@ -419,7 +468,7 @@ class VoiceCallService:
             "type": "realtime",
             "model": model,
             "instructions": briefing.instructions,
-            "tools": script.tools(user_id, scenario).definitions(),
+            "tools": tools.definitions(),
             "tool_choice": "auto",
             "audio": {
                 "input": {
@@ -464,6 +513,7 @@ class VoiceCallService:
                     premium,
                     assessment_consent,
                     briefing.hearing.language if assessment_consent and briefing.hearing else None,
+                    guest_persona_id,
                 ),
                 sdp_offer,
                 session,
@@ -523,7 +573,7 @@ class VoiceCallService:
         session = self._session(call_id)
         if session is None:
             return None
-        tools = self._scripts[session.purpose].tools(session.user_id, session.scenario)
+        tools = self._tools(session)
         maximum = session.max_seconds or self._settings.max_seconds[session.purpose]
         if self._continuations is not None:
             linked = self._continuations.get(call_id)
@@ -546,10 +596,46 @@ class VoiceCallService:
             premium=session.premium,
         )
 
+    def _tools(self, session: VoiceSession) -> ToolSet:
+        """Fresh tools for a call, with the second partner's for a two-partner conversation."""
+        script = self._scripts[session.purpose]
+        if session.guest_persona_id is not None and isinstance(script, DuoScript):
+            return script.duo_tools(session.user_id, session.guest_persona_id)
+        return script.tools(session.user_id, session.scenario)
+
+    def _guest_speaker(self, session: VoiceSession) -> Callable[[Speak], Spoken] | None:
+        """Speaks the second partner's lines of a two-partner conversation, in their voice."""
+        script = self._scripts[session.purpose]
+        guest, speech, recordings = session.guest_persona_id, self._guest_speech, self._recordings
+        if guest is None or speech is None or recordings is None:
+            return None
+        if not isinstance(script, DuoScript):
+            return None
+
+        def speak(turn: Speak) -> Spoken:
+            if turn.role != "guest":
+                raise SpeechError("unexpected speech role")
+            try:
+                voice = script.guest_voice(session.user_id, session.persona_id, guest)
+            except Exception as error:
+                # A partner removed during the call cannot speak any more.
+                raise SpeechError("guest unavailable") from error
+            pcm = speech.speak(session.user_id, turn.text, voice)
+            audio = recordings.keep(
+                session.user_id,
+                self._root(session.call_id),
+                KeepAudio(self._audio_id(session.call_id, turn.item_id), "persona", pcm),
+            )
+            return Spoken(turn.item_id, turn.text, audio, recordings.address(audio))
+
+        return speak
+
     def speaker(self, call_id: str) -> Callable[[Speak], Spoken] | None:
         session = self._session(call_id)
         if session is None:
             return None
+        if session.guest_persona_id is not None:
+            return self._guest_speaker(session)
         candidate = session.purpose is CallPurpose.EXAM
         speech = self._candidate_speech if candidate else self._speech if session.premium else None
         recordings = self._recordings
@@ -785,7 +871,7 @@ class VoiceCallService:
         if session is None:
             return False
         joined = aggregate(tuple(final.segments))
-        tools = self._scripts[session.purpose].tools(session.user_id, session.scenario)
+        tools = self._tools(session)
         self._restore_goals(tools, joined.goals)
         result = FinishedCall(
             final.current.ended_at or self._clock(),

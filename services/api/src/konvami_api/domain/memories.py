@@ -588,7 +588,7 @@ class MemoryService:
             "never_about": list(profile.avoid_topics),
             "forget_now": [forget.about for forget in forgets],
             "transcript": [
-                {"turn": number, "speaker": turn.speaker, "text": turn.text}
+                {"turn": number, "speaker": turn.label, "text": turn.text}
                 for number, turn in enumerate(turns)
             ],
         }

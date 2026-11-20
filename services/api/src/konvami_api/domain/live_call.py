@@ -65,7 +65,8 @@ class Spot:
 class Speak:
     item_id: str
     text: str
-    role: Literal["partner", "candidate"] = "partner"
+    # "guest": the second partner of a two-partner conversation (`domain/two_partners.py`).
+    role: Literal["partner", "candidate", "guest"] = "partner"
 
 
 @dataclass(frozen=True)
@@ -122,6 +123,13 @@ class Turn:
     audio: TurnAudio | None = None
     # The second transcription, made from the audio after the call (spec §9.4); None without it.
     verbatim: str | None = None
+    # Said by the second voice of the call: a second partner, or an exam's other candidate.
+    guest: bool = False
+
+    @property
+    def label(self) -> str:
+        """Who said it, as a model reading the transcript is told."""
+        return "second_partner" if self.guest else self.speaker
 
     @property
     def said(self) -> str:
@@ -260,14 +268,17 @@ class LiveCall:
         # goodbye drain, so the worker cannot hang up while the final sentence is playing.
         if self._finishing:
             self._goodbye_at = elapsed + found.audio.milliseconds / 1000
-        note = "premium_audio: " + json.dumps(
-            {
-                "id": found.item_id,
-                "text": found.text,
-                "url": found.url,
-                "milliseconds": found.audio.milliseconds,
-            }
-        )
+        position = self._items.get(found.item_id)
+        receipt: dict[str, Any] = {
+            "id": found.item_id,
+            "text": found.text,
+            "url": found.url,
+            "milliseconds": found.audio.milliseconds,
+        }
+        if position is not None and self.turns[position].guest:
+            # The app labels the line with the second voice, not the lead's.
+            receipt["speaker"] = "guest"
+        note = "premium_audio: " + json.dumps(receipt)
         return [
             Send(
                 {
@@ -356,12 +367,14 @@ class LiveCall:
         self.outcome = outcome
         return [HangUp()]
 
-    def _say(self, speaker: Speaker, text: object, item_id: object = None) -> bool:
+    def _say(
+        self, speaker: Speaker, text: object, item_id: object = None, *, guest: bool = False
+    ) -> bool:
         if not isinstance(text, str) or not text.strip():
             return False
         if isinstance(item_id, str):
             self._items[item_id] = len(self.turns)
-        self.turns.append(Turn(speaker, text.strip()))
+        self.turns.append(Turn(speaker, text.strip(), guest=guest))
         return True
 
     def _retrieve(self, item_id: object) -> list[Action]:
@@ -465,9 +478,14 @@ class LiveCall:
             actions.append(Send({"type": "conversation.item.create", "item": item}))
             if result.candidate:
                 item_id = f"candidate_{call_id}"
-                self._say("persona", result.candidate, item_id)
+                self._say("persona", result.candidate, item_id, guest=True)
                 self._speaking.add(item_id)
                 actions.append(Speak(item_id, result.candidate, role="candidate"))
+            if result.guest:
+                item_id = f"guest_{call_id}"
+                self._say("persona", result.guest, item_id, guest=True)
+                self._speaking.add(item_id)
+                actions.append(Speak(item_id, result.guest, role="guest"))
         if reply_needed:
             actions.append(Send(_CONTINUE))
         return actions

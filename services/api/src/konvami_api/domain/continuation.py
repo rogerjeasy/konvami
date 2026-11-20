@@ -74,7 +74,7 @@ def continuation_config(original: dict[str, Any], segments: tuple[Segment, ...])
     for turn in reversed(recent):
         if size + len(turn.text) > CONTEXT_CHARACTERS:
             break
-        lines.append({"speaker": turn.speaker, "text": turn.text})
+        lines.append({"speaker": turn.label, "text": turn.text})
         size += len(turn.text)
     result["instructions"] = str(original.get("instructions", "")) + (
         "\nThis is a replacement connection in the SAME practice conversation after an outage. "

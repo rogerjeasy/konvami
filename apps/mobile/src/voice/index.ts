@@ -36,7 +36,11 @@ export const createAppVoiceEngine: VoiceEngineFactory = (
     startCall: (sdpOffer) =>
       api.startVoiceCall(purpose, sdpOffer, {
         personaId,
-        ...(purpose === 'practice' && getPreferences().premiumCalls ? { premium: true } : {}),
+        // A second partner speaks as a clip, so the lead keeps the call's own voice (no premium).
+        ...(options?.guestId ? { guestPersonaId: options.guestId } : {}),
+        ...(purpose === 'practice' && getPreferences().premiumCalls && !options?.guestId
+          ? { premium: true }
+          : {}),
         ...(purpose === 'exam' && options?.assessmentConsent ? { assessmentConsent: true } : {}),
         localDate: toIsoDate(calendarDateOf(new Date())),
         scenario,

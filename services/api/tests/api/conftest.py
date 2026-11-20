@@ -55,6 +55,7 @@ from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.two_partners import GuestSpeech
 from konvami_api.domain.video_avatars import VideoAvatarFace, VideoAvatars, VideoAvatarService
 from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService, VoiceSettings
@@ -66,6 +67,7 @@ from tests.fakes import (
     FakeAccountDirectory,
     FakeEmailProof,
     FakePageFetcher,
+    FakePcmSpeech,
     FakeSpeechModel,
     FakeTranscriber,
     FakeVoiceProvider,
@@ -553,6 +555,7 @@ def services(
         clock=clock,
         recordings=recordings,
         weekly_seconds=plans.weekly_seconds,
+        guest_speech=GuestSpeech(directory, FakePcmSpeech(), "gpt-4o-mini-tts"),
         guard=SpendGuard(
             budget=BUDGET,
             charges=charges,

@@ -42,6 +42,9 @@ const COMPACT_HERO_SHARE = 0.26;
 const RING_GAP = 10;
 const RING_GROWTH = 0.08;
 const RING_WIDTH = 3;
+// With a second partner each portrait takes this share of the single one, so both fit side by
+// side on a 320 pt phone.
+const PAIR_SHARE = 0.6;
 
 const MOOD: Record<ConversationPhase, AvatarMood> = {
   connecting: 'waiting',
@@ -91,6 +94,7 @@ function ListeningRing({ level, diameter }: { level: SharedValue<number>; diamet
 export function CallStage({
   call,
   persona,
+  guest,
   header,
   hint,
   finishedLabel,
@@ -109,6 +113,11 @@ export function CallStage({
   call: VoiceCall;
   /** Who the learner is talking to. */
   persona: { name: string; look: AvatarLook };
+  /**
+   * The call's second voice: a second partner (5.24), drawn beside the first, or an exam's other
+   * candidate, who has no portrait. Every partner line is then labelled with who said it.
+   */
+  guest?: { name: string; look?: AvatarLook };
   /** The row across the top (ending the call, the way out to another mode). */
   header: ReactNode;
   /** Shown under the portrait until someone has said something. */
@@ -187,6 +196,24 @@ export function CallStage({
     available: illustrationWidth,
     windowHeight,
   });
+  const guestLook = guest?.look;
+  const portraitSize = guestLook ? Math.round(avatarSize * PAIR_SHARE) : avatarSize;
+  // The second voice plays as a clip; the phase says that something plays, this says whose.
+  const guestSpeaking =
+    guest !== undefined && phase === 'speaking' && conversation.voiceOf === 'guest';
+  const idleMood: AvatarMood = phase === 'connecting' ? 'waiting' : 'idle';
+  /** A partner's line, labelled with who said it when the call has a second voice. */
+  const partnerLine = (id: string, speaker: string, content: ReactNode) =>
+    guest ? (
+      <View key={id} className="gap-1">
+        <Text variant="labelSmall" tone="muted" className="text-center">
+          {speaker}
+        </Text>
+        {content}
+      </View>
+    ) : (
+      <View key={id}>{content}</View>
+    );
 
   return (
     <HeroLayout
@@ -195,26 +222,39 @@ export function CallStage({
       screenHeader={header}
       hero={
         <View className="items-center gap-4">
-          <View style={{ width: avatarSize, height: avatarSize }}>
-            <ListeningRing level={call.voice} diameter={avatarSize} />
-            {video && !failed ? (
-              <VideoFace feed={video} size={avatarSize} />
-            ) : (
-              <Avatar
-                look={persona.look}
-                size={avatarSize}
-                mood={failed ? 'waiting' : MOOD[phase]}
-                mouth={call.mouth}
-                viseme={call.viseme}
-                expression={face.expression}
-                gesture={face.gesture}
-              />
-            )}
+          <View className="flex-row items-end justify-center gap-4">
+            <View style={{ width: portraitSize, height: portraitSize }}>
+              <ListeningRing level={call.voice} diameter={portraitSize} />
+              {video && !failed ? (
+                <VideoFace feed={video} size={portraitSize} />
+              ) : (
+                <Avatar
+                  look={persona.look}
+                  size={portraitSize}
+                  mood={failed ? 'waiting' : guestSpeaking ? 'idle' : MOOD[phase]}
+                  mouth={call.mouth}
+                  viseme={call.viseme}
+                  expression={face.expression}
+                  gesture={face.gesture}
+                />
+              )}
+            </View>
+            {guestLook ? (
+              <View style={{ width: portraitSize, height: portraitSize }}>
+                <Avatar
+                  look={guestLook}
+                  size={portraitSize}
+                  mood={failed ? 'waiting' : guestSpeaking ? 'speaking' : idleMood}
+                />
+              </View>
+            ) : null}
           </View>
           <View className="items-center gap-1.5">
-            <View className="flex-row items-center gap-2">
-              <Text variant="heading" accessibilityRole="header">
-                {name}
+            <View className="flex-row flex-wrap items-center justify-center gap-2">
+              <Text variant="heading" accessibilityRole="header" className="text-center">
+                {guestLook && guest
+                  ? t('call.together', { first: name, second: guest.name })
+                  : name}
               </Text>
               <Badge label={t('common.aiBadge')} tone="chip" />
             </View>
@@ -229,7 +269,9 @@ export function CallStage({
                   ? t('call.reconnecting')
                   : conversation.finished
                     ? finishedLabel
-                    : t(`call.status.${phase}`, { name })}
+                    : t(`call.status.${phase}`, {
+                        name: guestSpeaking && guest ? guest.name : name,
+                      })}
               </Text>
             )}
             {live && call.muted ? (
@@ -250,20 +292,24 @@ export function CallStage({
             </Text>
           ) : null}
           {lines.map((line) =>
-            line.speaker === 'persona' ? (
-              hiddenPersonaText ? (
-                <View key={line.id} className="gap-1">
-                  <Text tone="muted" className="text-center">
-                    {hiddenPersonaText}
-                  </Text>
-                  <RevealCaption
-                    text={line.text}
-                    hiddenLabel={t('call.revealCaption')}
-                    content={captionContent(line.text)}
-                  />
-                </View>
-              ) : (
-                <View key={line.id}>{captionContent(line.text)}</View>
+            line.speaker !== 'learner' ? (
+              partnerLine(
+                line.id,
+                line.speaker === 'guest' && guest ? guest.name : name,
+                hiddenPersonaText ? (
+                  <View className="gap-1">
+                    <Text tone="muted" className="text-center">
+                      {hiddenPersonaText}
+                    </Text>
+                    <RevealCaption
+                      text={line.text}
+                      hiddenLabel={t('call.revealCaption')}
+                      content={captionContent(line.text)}
+                    />
+                  </View>
+                ) : (
+                  captionContent(line.text)
+                ),
               )
             ) : (
               <View key={line.id} className="gap-2">

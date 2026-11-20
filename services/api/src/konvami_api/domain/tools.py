@@ -20,6 +20,8 @@ class ToolResult:
     silent: bool = False
     # A paired exam's other candidate speaks this through a separate audio voice.
     candidate: str | None = None
+    # The second partner of a two-partner conversation says this in their own voice.
+    guest: str | None = None
 
 
 class ToolSet(Protocol):

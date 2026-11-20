@@ -30,6 +30,8 @@ export interface VoiceCallDetails {
   premium?: boolean;
   /** The partner of a practice call. */
   personaId?: string;
+  /** A second partner who joins a free practice conversation (5.24); `personaId` leads. */
+  guestPersonaId?: string;
   /** Today on the device's calendar ("2026-10-10"), so a persona names the right weekday. */
   localDate?: string;
   /**

@@ -624,6 +624,7 @@ export const fr: Translation = {
     },
   },
   call: {
+    together: '{{first}} et {{second}}',
     reconnecting: 'Reconnexion… reprise de la conversation enregistrée',
     walking: 'Mode marche',
     walkingHint:
@@ -829,6 +830,8 @@ export const fr: Translation = {
     rowLabel: '{{name}}, {{when}}, {{duration}}',
   },
   talk: {
+    together: 'Deux partenaires à la fois',
+    togetherHint: 'Une discussion au café avec deux de tes partenaires',
     title: 'Avec qui veux-tu parler ?',
     body: 'Choisis un partenaire et lance-toi.',
     start: 'Parler',
@@ -846,6 +849,18 @@ export const fr: Translation = {
     importHint: 'Une lettre, une page, un lien ou un menu',
     more: 'D’autres façons de pratiquer',
     partners: 'Tes partenaires',
+  },
+  together: {
+    title: 'Deux partenaires à la fois',
+    body: 'Choisis deux de tes partenaires. Vous vous retrouvez au café, et tous les deux te parlent.',
+    pickHint:
+      'Le premier choisi mène la conversation et te corrige. Le second se joint à vous avec sa propre voix.',
+    leads: 'Mène',
+    joins: 'Se joint',
+    pickTwo: 'Choisis deux partenaires',
+    start: 'Parler avec {{first}} et {{second}}',
+    needTwo: 'Il faut deux partenaires. Ajoutes-en un autre, puis reviens.',
+    callHint: 'Parle aux deux. Dis un prénom pour poser une question à {{first}} ou à {{second}}.',
   },
   conversation: {
     settings: {
@@ -1721,6 +1736,7 @@ export const fr: Translation = {
     start: 'Commencer l’épreuve',
     startHint: 'Environ {{minutes}}. Cela compte dans tes minutes de voix.',
     talk: {
+      otherCandidate: 'Autre candidate',
       hint: 'L’examinatrice commence dans un instant.',
       finished: 'L’épreuve est terminée.',
       end: 'Terminer l’épreuve',

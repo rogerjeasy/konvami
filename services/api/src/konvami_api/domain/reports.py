@@ -557,7 +557,7 @@ def _lines(lines: Sequence[str], most: int) -> tuple[str, ...]:
 def _line(number: int, turn: Turn) -> dict[str, Any]:
     """One turn as the analyst reads it: what was said, and what the live pass heard when that
     was something else."""
-    line: dict[str, Any] = {"turn": number, "speaker": turn.speaker, "text": turn.said}
+    line: dict[str, Any] = {"turn": number, "speaker": turn.label, "text": turn.said}
     if wording(turn.said) != wording(turn.text):
         line["live"] = turn.text
     return line

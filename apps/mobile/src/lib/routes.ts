@@ -80,6 +80,8 @@ export const ROUTES = {
   penPal: '/pen-pal',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
+  /** 5.24 Choose two partners: a conversation with two of the learner's partners at once. */
+  together: '/together',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
   exams: '/exams',
   /** 5.14 Grammar map: every topic of the language learned, and how well the learner uses it. */
@@ -146,11 +148,12 @@ export const partnerRoute = (id: string) =>
 
 /**
  * 5.3 A live conversation with one of the learner's partners; with `scenario`, a role-play; with
- * `practise`, one that practises a grammar topic first.
+ * `practise`, one that practises a grammar topic first; with `guest`, a second partner joins
+ * (5.24) and `personaId` leads.
  */
 export const callRoute = (
   personaId: string,
-  { scenario, practise }: { scenario?: string; practise?: string } = {},
+  { scenario, practise, guest }: { scenario?: string; practise?: string; guest?: string } = {},
 ) =>
   ({
     pathname: '/call/[personaId]',
@@ -158,6 +161,7 @@ export const callRoute = (
       personaId,
       ...(scenario ? { scenario } : {}),
       ...(practise ? { practise } : {}),
+      ...(guest ? { guest } : {}),
     },
   }) as const satisfies Href;
 

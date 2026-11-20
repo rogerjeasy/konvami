@@ -620,6 +620,7 @@ def test_home_adds_up_practice_and_lists_the_latest_conversations(
         {
             "id": "rtc_b",
             "partner": jonas,
+            "guest": None,
             "startedAt": "2026-10-09T11:00:00Z",
             "endedAt": "2026-10-09T11:10:00Z",
             "seconds": 600,
@@ -630,6 +631,7 @@ def test_home_adds_up_practice_and_lists_the_latest_conversations(
         {
             "id": "rtc_a",
             "partner": lena,
+            "guest": None,
             "startedAt": "2026-10-08T12:00:00Z",
             "endedAt": "2026-10-08T12:04:00Z",
             "seconds": 240,
@@ -732,6 +734,7 @@ def test_a_transcript_is_read_with_its_conversation(
         "conversation": {
             "id": "rtc_1",
             "partner": lena,
+            "guest": None,
             "startedAt": "2026-10-09T11:00:00Z",
             "endedAt": "2026-10-09T11:05:00Z",
             "seconds": 300,
@@ -740,8 +743,20 @@ def test_a_transcript_is_read_with_its_conversation(
             "goalsReached": [],
         },
         "turns": [
-            {"speaker": "persona", "text": "Hallo! Wie geht's?", "verbatim": None, "audio": None},
-            {"speaker": "learner", "text": "Gut, danke!", "verbatim": None, "audio": None},
+            {
+                "speaker": "persona",
+                "text": "Hallo! Wie geht's?",
+                "verbatim": None,
+                "audio": None,
+                "guest": False,
+            },
+            {
+                "speaker": "learner",
+                "text": "Gut, danke!",
+                "verbatim": None,
+                "audio": None,
+                "guest": False,
+            },
         ],
     }
 

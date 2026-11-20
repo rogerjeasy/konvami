@@ -180,12 +180,15 @@ function HelpSheet({
 function Call({
   language,
   partner,
+  guest,
   scenario,
   practise,
   onRetry,
 }: {
   language: string;
   partner: Persona;
+  /** A second partner who joins the conversation (5.24); `partner` leads. */
+  guest?: Persona;
   /** The role-play, for one; its goals show once the catalog is read. */
   scenario?: string;
   /** A grammar topic the learner chose to practise (the grammar map's "Practise this"). */
@@ -196,7 +199,13 @@ function Call({
   const { color } = useTheme();
   const { lookupCaption, saveCaptionWord } = usePracticeServices();
   const [selectedWord, setSelectedWord] = useState<CaptionSelection | null>(null);
-  const call = useVoiceCall('practice', partner.id, scenario, practise);
+  const call = useVoiceCall(
+    'practice',
+    partner.id,
+    scenario,
+    practise,
+    guest ? { guestId: guest.id } : undefined,
+  );
   // A vendor's video face while the call is live, where one is offered and picked (6.6).
   const video = useVideoAvatar(partner.id, call.status === 'live');
   const { scenarios } = useScenarios();
@@ -242,8 +251,13 @@ function Call({
         call={call}
         persona={partner}
         video={video}
+        guest={guest}
         onLookupWord={(word, caption) => setSelectedWord({ language, word, caption })}
-        hint={t('conversation.hint', { name: partner.name })}
+        hint={
+          guest
+            ? t('together.callHint', { first: partner.name, second: guest.name })
+            : t('conversation.hint', { name: partner.name })
+        }
         finishedLabel={t('conversation.finished')}
         problem={call.problem && !lost ? withLine(t(problemKey(call.problem)), minutesBack) : null}
         progress={
@@ -367,10 +381,11 @@ function Call({
 export function LiveConversationScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { personaId, scenario, practise } = useLocalSearchParams<{
+  const { personaId, scenario, practise, guest } = useLocalSearchParams<{
     personaId: string;
     scenario?: string;
     practise?: string;
+    guest?: string;
   }>();
   const { home: store } = usePracticeServices();
   const home = useHome();
@@ -402,7 +417,11 @@ export function LiveConversationScreen() {
   }
 
   const partner = home.data.partners.find(({ persona }) => persona.id === personaId)?.persona;
-  if (!partner) {
+  const second = guest
+    ? home.data.partners.find(({ persona }) => persona.id === guest)?.persona
+    : undefined;
+  // A second partner asked for but no longer there is not quietly dropped.
+  if (!partner || (guest && !second) || second?.id === partner.id) {
     return (
       <StepLayout
         header={EMPTY_HEADER}
@@ -417,6 +436,7 @@ export function LiveConversationScreen() {
       key={attempt}
       language={home.data.language}
       partner={partner}
+      guest={second}
       scenario={scenario}
       practise={practise}
       onRetry={() => setAttempt((count) => count + 1)}

@@ -626,6 +626,7 @@ export const de: Translation = {
     },
   },
   call: {
+    together: '{{first}} und {{second}}',
     reconnecting: 'Verbindung wird wiederhergestellt… das gespeicherte Gespräch wird fortgesetzt',
     walking: 'Unterwegs-Modus',
     walkingHint:
@@ -831,6 +832,8 @@ export const de: Translation = {
     rowLabel: '{{name}}, {{when}}, {{duration}}',
   },
   talk: {
+    together: 'Zwei Partner auf einmal',
+    togetherHint: 'Ein Gespräch im Café mit zwei deiner Partner',
     title: 'Mit wem möchtest du sprechen?',
     body: 'Wähle einen Partner und sprich einfach los.',
     start: 'Sprechen',
@@ -848,6 +851,18 @@ export const de: Translation = {
     importHint: 'Ein Brief, eine Seite, ein Link oder eine Speisekarte',
     more: 'Mehr Wege zum Üben',
     partners: 'Deine Partner',
+  },
+  together: {
+    title: 'Zwei Partner auf einmal',
+    body: 'Wähle zwei deiner Partner. Ihr trefft euch im Café, und beide sprechen mit dir.',
+    pickHint:
+      'Wen du zuerst wählst, führt das Gespräch und korrigiert dich. Die zweite Person spricht mit eigener Stimme mit.',
+    leads: 'Führt',
+    joins: 'Ist dabei',
+    pickTwo: 'Wähle zwei Partner',
+    start: 'Mit {{first}} und {{second}} sprechen',
+    needTwo: 'Dafür brauchst du zwei Partner. Füge einen weiteren hinzu und komm dann zurück.',
+    callHint: 'Sprich mit beiden. Nenne einen Namen, um {{first}} oder {{second}} etwas zu fragen.',
   },
   conversation: {
     settings: {
@@ -1719,6 +1734,7 @@ export const de: Translation = {
     start: 'Prüfung beginnen',
     startHint: 'Etwa {{minutes}}. Das zählt zu deinen Sprechminuten.',
     talk: {
+      otherCandidate: 'Andere Kandidatin',
       hint: 'Die Prüferin beginnt gleich.',
       finished: 'Die Prüfung ist zu Ende.',
       end: 'Prüfung beenden',

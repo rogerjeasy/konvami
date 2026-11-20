@@ -300,18 +300,20 @@ _START_SESSION = f"""
     WITH {_ENSURE_USER}
     INSERT INTO voice_session
         (call_id, user_id, purpose, model, started_at, persona_id, scenario,
-         max_seconds, plan, premium, assessment_consent, assessment_language)
+         max_seconds, plan, premium, assessment_consent, assessment_language, guest_persona_id)
     VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
             CAST(:persona_id AS uuid), :scenario, CAST(:max_seconds AS integer),
             CAST(:plan AS jsonb), CAST(:premium AS boolean),
-            CAST(:assessment_consent AS boolean), :assessment_language)
+            CAST(:assessment_consent AS boolean), :assessment_language,
+            CAST(:guest_persona_id AS uuid))
 """
 
 _LOAD_SESSION = f"""
     SELECT call_id, CAST(user_id AS text) AS user_id, purpose, model,
            {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id,
            scenario, max_seconds, CAST(plan AS text) AS plan, premium,
-           assessment_consent, assessment_language
+           assessment_consent, assessment_language,
+           CAST(guest_persona_id AS text) AS guest_persona_id
     FROM voice_session
     WHERE call_id = :call_id
 """
@@ -359,12 +361,13 @@ _FINISH_SESSION = """
     ),
     said AS (
         INSERT INTO voice_turn (call_id, position, speaker, text, audio_key, audio_ms,
-                                verbatim, audio_active_ms, audio_pause_ms, audio_pauses)
+                                verbatim, audio_active_ms, audio_pause_ms, audio_pauses, guest)
         SELECT done.call_id, turn.position, turn.item ->> 'speaker', turn.item ->> 'text',
                turn.item ->> 'audio_key', CAST(turn.item ->> 'audio_ms' AS integer),
                turn.item ->> 'verbatim', CAST(turn.item ->> 'audio_active_ms' AS integer),
                CAST(turn.item ->> 'audio_pause_ms' AS integer),
-               CAST(turn.item ->> 'audio_pauses' AS integer)
+               CAST(turn.item ->> 'audio_pauses' AS integer),
+               COALESCE(CAST(turn.item ->> 'guest' AS boolean), false)
         FROM done,
              jsonb_array_elements(CAST(:turns AS jsonb)) WITH ORDINALITY AS turn (item, position)
         ON CONFLICT (call_id, position) DO NOTHING
@@ -406,6 +409,7 @@ _SECONDS = (
 
 _CONVERSATION = f"""
     SELECT s.call_id, CAST(s.persona_id AS text) AS persona_id,
+           CAST(s.guest_persona_id AS text) AS guest_persona_id,
            {epoch_micros("s.started_at")} AS started_at,
            {epoch_micros("s.ended_at")} AS ended_at,
            CAST({_SECONDS} AS integer) AS seconds,
@@ -422,7 +426,8 @@ _LIST_CONVERSATIONS = f"""
     {_CONVERSATION}
     WHERE {_COUNTED}
       AND (CAST(:before AS timestamptz) IS NULL OR s.started_at < CAST(:before AS timestamptz))
-      AND (CAST(:partner AS uuid) IS NULL OR s.persona_id = CAST(:partner AS uuid))
+      AND (CAST(:partner AS uuid) IS NULL OR s.persona_id = CAST(:partner AS uuid)
+           OR s.guest_persona_id = CAST(:partner AS uuid))
       AND (CAST(:after AS timestamptz) IS NULL OR s.started_at >= CAST(:after AS timestamptz))
       AND (CAST(:through AS timestamptz) IS NULL OR s.started_at <= CAST(:through AS timestamptz))
       AND (CAST(:mode AS text) IS NULL
@@ -444,7 +449,7 @@ _LOAD_CONVERSATION = f"""
 
 _LIST_TURNS = """
     SELECT speaker, text, audio_key, audio_ms, verbatim,
-           audio_active_ms, audio_pause_ms, audio_pauses
+           audio_active_ms, audio_pause_ms, audio_pauses, guest
     FROM voice_turn WHERE call_id = :call_id ORDER BY position
 """
 
@@ -466,13 +471,15 @@ _FORGET_ALL_RECORDINGS = """
       AND t.audio_key IS NOT NULL
 """
 
+# A two-partner conversation counts for both of its partners.
 _PARTNER_HISTORY = f"""
-    SELECT CAST(s.persona_id AS text) AS persona_id,
+    SELECT CAST(p.persona_id AS text) AS persona_id,
            CAST(count(*) AS integer) AS conversations,
            {epoch_micros("max(s.started_at)")} AS last_at
     FROM voice_session s
-    WHERE {_COUNTED} AND s.persona_id IS NOT NULL
-    GROUP BY s.persona_id
+    CROSS JOIN LATERAL (VALUES (s.persona_id), (s.guest_persona_id)) AS p (persona_id)
+    WHERE {_COUNTED} AND p.persona_id IS NOT NULL
+    GROUP BY p.persona_id
 """
 
 # The learner's time zone as the database knows it; a name it does not know counts as UTC.
@@ -1152,6 +1159,9 @@ class SqlVoiceSessionRepository:
                 "premium": session.premium,
                 "assessment_consent": session.assessment_consent,
                 "assessment_language": session.assessment_language,
+                "guest_persona_id": (
+                    str(session.guest_persona_id) if session.guest_persona_id else None
+                ),
             },
         )
 
@@ -1173,6 +1183,7 @@ class SqlVoiceSessionRepository:
             premium=bool(row.get("premium", False)),
             assessment_consent=bool(row.get("assessment_consent", False)),
             assessment_language=row.get("assessment_language"),
+            guest_persona_id=UUID(row["guest_persona_id"]) if row.get("guest_persona_id") else None,
         )
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:
@@ -1220,6 +1231,7 @@ class SqlVoiceSessionRepository:
                 "audio_pauses": turn.audio.pauses if turn.audio else None,
                 # Written during the call by the Live Error Spotter; the pass after it skips it.
                 "verbatim": turn.verbatim,
+                "guest": turn.guest,
             }
             for turn in result.turns
         ]
@@ -1514,6 +1526,7 @@ def _conversation(row: dict[str, Any]) -> Conversation:
         scenario=row["scenario"],
         goals_reached=tuple(json.loads(row["goals_reached"])) if row["goals_reached"] else (),
         review=row["review"],
+        guest_id=UUID(row["guest_persona_id"]) if row.get("guest_persona_id") else None,
     )
 
 
@@ -1566,6 +1579,7 @@ class SqlConversationRepository:
                 if row["audio_key"]
                 else None,
                 verbatim=row["verbatim"],
+                guest=bool(row.get("guest", False)),
             )
             for row in rows
         ]

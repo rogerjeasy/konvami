@@ -413,6 +413,8 @@ class VoiceCallIn(ApiModel):
     sdp: str = Field(min_length=1, max_length=MAX_SDP_LENGTH)
     # The partner to talk to: needed for practice, ignored for the guide's calls.
     persona_id: UUID | None = None
+    # A second partner who joins a free practice conversation (5.24); `persona_id` leads.
+    guest_persona_id: UUID | None = None
     # Today on the learner's calendar, so a persona names the right weekday. Left out, or not
     # a date any time zone has right now, the date in UTC is used.
     local_date: dt.date | None = None
@@ -918,6 +920,9 @@ class ConversationOut(ApiModel):
     id: str
     # Null once the partner has been removed.
     partner: PersonaOut | None
+    # The second partner of a two-partner conversation (5.24); null for one partner, and once
+    # they have been removed.
+    guest: PersonaOut | None
     started_at: dt.datetime
     # Null while the conversation runs and for the moment in which it is being saved.
     ended_at: dt.datetime | None
@@ -930,10 +935,11 @@ class ConversationOut(ApiModel):
 
     @classmethod
     def of(cls, conversation: Conversation) -> "ConversationOut":
-        partner = conversation.partner
+        partner, guest = conversation.partner, conversation.guest
         return cls(
             id=conversation.id,
             partner=PersonaOut.of(partner) if partner else None,
+            guest=PersonaOut.of(guest) if guest else None,
             started_at=conversation.started_at,
             ended_at=conversation.ended_at,
             seconds=conversation.seconds,
@@ -988,6 +994,8 @@ class TurnOut(ApiModel):
     verbatim: str | None
     # Null without a recording.
     audio: TurnAudioOut | None
+    # Said by the second partner of a two-partner conversation (`conversation.guest`).
+    guest: bool
 
 
 class TranscriptOut(ApiModel):
@@ -1005,6 +1013,7 @@ class TranscriptOut(ApiModel):
                     text=turn.text,
                     verbatim=turn.verbatim,
                     audio=TurnAudioOut.of(turn.audio, address) if turn.audio else None,
+                    guest=turn.guest,
                 )
                 for turn in transcript.turns
             ],

@@ -138,6 +138,8 @@ function Test({ next, onRetry }: { next: NextSimulation; onRetry: () => void }) 
         compact
         call={call}
         persona={EXAMINER}
+        // The other candidate of a paired part speaks in a voice of their own (no portrait).
+        guest={{ name: t('exams.talk.otherCandidate') }}
         hint={t('exams.talk.hint')}
         finishedLabel={t('exams.talk.finished')}
         problem={problem}

@@ -498,6 +498,7 @@ def _router(services: Services) -> APIRouter:
             offer.practise,
             premium=offer.premium,
             assessment_consent=offer.assessment_consent,
+            guest_persona_id=offer.guest_persona_id,
         )
         return VoiceCallOut.of(started)
 

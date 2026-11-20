@@ -621,6 +621,7 @@ export const it: Translation = {
     },
   },
   call: {
+    together: '{{first}} e {{second}}',
     reconnecting: 'Riconnessione… ripresa della conversazione salvata',
     walking: 'Modalità passeggiata',
     walkingHint: 'Continua la chiamata a schermo spento. Usa le cuffie; il microfono resta attivo.',
@@ -823,6 +824,8 @@ export const it: Translation = {
     rowLabel: '{{name}}, {{when}}, {{duration}}',
   },
   talk: {
+    together: 'Due partner insieme',
+    togetherHint: 'Una chiacchierata al bar con due dei tuoi partner',
     title: 'Con chi vuoi parlare?',
     body: 'Scegli un partner e inizia a parlare.',
     start: 'Parla',
@@ -840,6 +843,19 @@ export const it: Translation = {
     importHint: 'Una lettera, una pagina, un link o un menu',
     more: 'Altri modi per esercitarti',
     partners: 'I tuoi partner',
+  },
+  together: {
+    title: 'Due partner insieme',
+    body: 'Scegli due dei tuoi partner. Vi incontrate al bar, e tutti e due parlano con te.',
+    pickHint:
+      'Il primo che scegli guida la conversazione e ti corregge. Il secondo si unisce con la sua voce.',
+    leads: 'Guida',
+    joins: 'Si unisce',
+    pickTwo: 'Scegli due partner',
+    start: 'Parla con {{first}} e {{second}}',
+    needTwo: 'Servono due partner. Aggiungine un altro, poi torna qui.',
+    callHint:
+      'Parla con tutti e due. Di’ un nome per chiedere qualcosa a {{first}} o a {{second}}.',
   },
   conversation: {
     settings: {
@@ -1709,6 +1725,7 @@ export const it: Translation = {
     start: 'Inizia la prova',
     startHint: 'Circa {{minutes}}. Conta nei tuoi minuti di voce.',
     talk: {
+      otherCandidate: 'Altra candidata',
       hint: 'L’esaminatrice inizia tra un attimo.',
       finished: 'La prova è finita.',
       end: 'Termina la prova',

@@ -499,3 +499,29 @@ describe('live corrections', () => {
     expect(state).toEqual(INITIAL_CONVERSATION);
   });
 });
+
+describe('two partners in one call (5.24)', () => {
+  it("labels the second partner's line and tracks whose voice is playing", () => {
+    const lead = conversationReducer(INITIAL_CONVERSATION, {
+      type: 'response.output_audio_transcript.done',
+      item_id: 'item_lead',
+      transcript: 'Hallo!',
+    });
+    expect(lead.voiceOf).toBe('persona');
+    const guest = conversationReducer(lead, {
+      type: 'response.output_audio_transcript.done',
+      item_id: 'guest_1',
+      transcript: 'Servus!',
+      guest: true,
+    });
+    expect(guest.captions.map((c) => c.speaker)).toEqual(['persona', 'guest']);
+    expect(guest.voiceOf).toBe('guest');
+    // The lead begins its next reply: its voice is the one heard again.
+    const next = conversationReducer(guest, {
+      type: 'response.output_audio_transcript.delta',
+      item_id: 'item_next',
+      delta: 'Und',
+    });
+    expect(next.voiceOf).toBe('persona');
+  });
+});

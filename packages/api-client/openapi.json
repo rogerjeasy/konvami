@@ -786,6 +786,16 @@
             "title": "Goalsreached",
             "type": "array"
           },
+          "guest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonaOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -828,6 +838,7 @@
         "required": [
           "id",
           "partner",
+          "guest",
           "startedAt",
           "endedAt",
           "seconds",
@@ -7439,6 +7450,10 @@
               }
             ]
           },
+          "guest": {
+            "title": "Guest",
+            "type": "boolean"
+          },
           "speaker": {
             "enum": [
               "learner",
@@ -7467,7 +7482,8 @@
           "speaker",
           "text",
           "verbatim",
-          "audio"
+          "audio",
+          "guest"
         ],
         "title": "TurnOut",
         "type": "object"
@@ -7831,6 +7847,18 @@
             "default": false,
             "title": "Assessmentconsent",
             "type": "boolean"
+          },
+          "guestPersonaId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guestpersonaid"
           },
           "localDate": {
             "anyOf": [

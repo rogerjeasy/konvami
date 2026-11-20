@@ -59,6 +59,13 @@ from konvami_api.domain.scenarios import (
 from konvami_api.domain.speech import verbatim_prompt
 from konvami_api.domain.tools import ToolResult, ToolSet
 from konvami_api.domain.tutor import TutorService
+from konvami_api.domain.two_partners import (
+    SPEAK_PARTNER,
+    distinct_voice,
+    guest_instructions,
+    speak_partner,
+    speak_partner_definition,
+)
 from konvami_api.domain.voice import Briefing, FinishedCall, Hearing, VoiceSessionRepository
 
 END = "end_conversation"
@@ -115,7 +122,10 @@ class PracticeTools:
         goals: tuple[Goal, ...] = (),
         profile_voice: ProfileVoice | None = None,
         memory_voice: MemoryVoice | None = None,
+        guest: Persona | None = None,
     ) -> None:
+        # The second partner of a two-partner conversation, who speaks through `speak_partner`.
+        self._guest = guest
         self._tutor = tutor
         self._user_id = user_id
         self._goals = goals
@@ -192,6 +202,7 @@ class PracticeTools:
             *self._goal_tool(),
             *([self._profile_voice.definition()] if self._profile_voice else []),
             *([self._memory_voice.definition()] if self._memory_voice else []),
+            *([speak_partner_definition(self._guest.name)] if self._guest else []),
         ]
 
     def _goal_tool(self) -> list[dict[str, Any]]:
@@ -232,6 +243,8 @@ class PracticeTools:
             return self._memory_voice.run(arguments)
         if name == SET_EXPRESSION:
             return _expression(arguments)
+        if name == SPEAK_PARTNER and self._guest:
+            return speak_partner(arguments)
         if name == ASK_TUTOR:
             question, about = arguments.get("question"), arguments.get("about")
             if not isinstance(question, str) or not question.strip():
@@ -999,6 +1012,57 @@ class PracticeScript:
             plan=learner.plan,
             hearing=Hearing(learner.plan.language, verbatim_prompt(learner.target)),
         )
+
+    def prepare_duo(
+        self,
+        user_id: UUID,
+        account: Account,
+        today: dt.date,
+        persona_id: UUID | None,
+        guest_id: UUID,
+    ) -> Briefing:
+        """A free conversation with two of the learner's partners: `persona_id` leads and
+        speaks with the call's voice, `guest_id` joins through `speak_partner`. Raises
+        `PersonaError` unless both are the learner's own and differ."""
+        if self._onboarding.status(user_id).stage is not Stage.DONE:
+            raise OnboardingError("wrong_stage")
+        lead, guest = self._pair(user_id, persona_id, guest_id)
+        learner = self._learner(user_id, account, lead, today)
+        met = guest.id in self._conversations.partner_history(user_id)
+        return Briefing(
+            practice_instructions(lead, learner, today)
+            + guest_instructions(lead, guest, met_before=met),
+            voice=lead.voice,
+            speed=teaching_of(lead).speed,
+            plan=learner.plan,
+            hearing=Hearing(learner.plan.language, verbatim_prompt(learner.target)),
+        )
+
+    def duo_tools(self, user_id: UUID, guest_id: UUID) -> PracticeTools:
+        """The lead's tools in a two-partner conversation, with `speak_partner` for the guest.
+        A guest removed since the call began leaves the call without them."""
+        guest = next((p for p in self._personas.partners(user_id) if p.id == guest_id), None)
+        voice = ProfileVoice(self._profiles, user_id, self._live_effect)
+        # The lead is told the learner's memories, so "forget that" works here as in any call.
+        return PracticeTools(
+            self._tutor, user_id, (), voice, MemoryVoice(self._memories, user_id), guest=guest
+        )
+
+    def guest_voice(self, user_id: UUID, persona_id: UUID | None, guest_id: UUID) -> str:
+        """The voice the guest's lines are spoken with: their own, unless it is the lead's.
+        Raises `PersonaError` for a partner the learner no longer has."""
+        lead, guest = self._pair(user_id, persona_id, guest_id)
+        return distinct_voice(lead.voice, guest.voice)
+
+    def _pair(
+        self, user_id: UUID, persona_id: UUID | None, guest_id: UUID
+    ) -> tuple[Persona, Persona]:
+        partners = {p.id: p for p in self._personas.partners(user_id)}
+        lead = partners.get(persona_id) if persona_id else None
+        guest = partners.get(guest_id)
+        if lead is None or guest is None or lead.id == guest.id:
+            raise PersonaError("not_found")
+        return lead, guest
 
     def _learner(
         self,

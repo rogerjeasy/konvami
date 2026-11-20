@@ -418,6 +418,7 @@ class InMemoryConversationRepository:
                     scenario=session.scenario,
                     goals_reached=self._calls.goals.get(session.call_id, ()),
                     review=session.plan.review if session.plan else False,
+                    guest_id=session.guest_persona_id,
                 )
             )
         return sorted(conversations, key=lambda c: c.started_at, reverse=True)
@@ -436,7 +437,7 @@ class InMemoryConversationRepository:
         counted = [
             c
             for c in self._counted(user_id)
-            if (query.partner is None or c.persona_id == query.partner)
+            if (query.partner is None or query.partner in (c.persona_id, c.guest_id))
             and (query.after is None or c.started_at >= query.after)
             and (query.through is None or c.started_at <= query.through)
             and (
@@ -466,13 +467,15 @@ class InMemoryConversationRepository:
         history: dict[UUID, PartnerHistory] = {}
         # Newest first, so the first one seen per partner is the last time they talked.
         for conversation in self._counted(user_id):
-            if conversation.persona_id is None:
-                continue
-            known = history.get(conversation.persona_id)
-            history[conversation.persona_id] = PartnerHistory(
-                conversations=(known.conversations if known else 0) + 1,
-                last_at=known.last_at if known else conversation.started_at,
-            )
+            # A two-partner conversation counts for both partners.
+            for partner in (conversation.persona_id, conversation.guest_id):
+                if partner is None:
+                    continue
+                known = history.get(partner)
+                history[partner] = PartnerHistory(
+                    conversations=(known.conversations if known else 0) + 1,
+                    last_at=known.last_at if known else conversation.started_at,
+                )
         return history
 
     def longest(self, user_id: UUID) -> int:
@@ -561,6 +564,17 @@ class FakeSpeechModel:
             raise self.fail
         self.tasks.append(task)
         return f"mp3:{task.voice}".encode()
+
+
+class FakePcmSpeech:
+    """Speaks one second of PCM per line and records what it was asked to say."""
+
+    def __init__(self) -> None:
+        self.tasks: list[SpeechTask] = []
+
+    def speak_pcm(self, task: SpeechTask) -> bytes:
+        self.tasks.append(task)
+        return b"\x01\x00" * 24000
 
 
 class FakeTranscriber:

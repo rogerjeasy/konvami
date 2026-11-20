@@ -5,6 +5,8 @@ interface Reply {
   text: string;
   url: string;
   milliseconds: number;
+  /** "guest": the call's second voice (a second partner, an exam's other candidate). */
+  speaker?: string;
 }
 export const PREMIUM_AUDIO_NOTE = 'premium_audio: ';
 // A live turn is bounded by the call limit; reject malformed receipts before playing them.
@@ -57,6 +59,7 @@ export function premiumPlayback(clips: ClipPlayer, emit: (event: unknown) => voi
         type: 'response.output_audio_transcript.done',
         item_id: reply.id,
         transcript: reply.text,
+        ...(reply.speaker === 'guest' ? { guest: true } : {}),
       });
       emit({ type: 'output_audio_buffer.started' });
       clips.play(

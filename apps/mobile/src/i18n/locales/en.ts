@@ -612,6 +612,7 @@ export const en = {
     },
   },
   call: {
+    together: '{{first}} and {{second}}',
     reconnecting: 'Reconnecting… continuing from the saved conversation',
     walking: 'Walking mode',
     walkingHint:
@@ -815,6 +816,8 @@ export const en = {
     rowLabel: '{{name}}, {{when}}, {{duration}}',
   },
   talk: {
+    together: 'Two partners at once',
+    togetherHint: 'A café chat with two of your partners',
     title: 'Who do you want to talk to?',
     body: 'Pick a partner and just start speaking.',
     start: 'Talk',
@@ -832,6 +835,18 @@ export const en = {
     importHint: 'A letter, a page, a link or a menu',
     more: 'More ways to practise',
     partners: 'Your partners',
+  },
+  together: {
+    title: 'Two partners at once',
+    body: 'Pick two of your partners. You meet at a café, and both of them talk with you.',
+    pickHint:
+      'The first one you pick leads the conversation and corrects you. The second joins in their own voice.',
+    leads: 'Leads',
+    joins: 'Joins',
+    pickTwo: 'Pick two partners',
+    start: 'Talk with {{first}} and {{second}}',
+    needTwo: 'This needs two partners. Add another one, then come back.',
+    callHint: 'Talk to both of them. Say a name to ask {{first}} or {{second}} something.',
   },
   conversation: {
     settings: {
@@ -1694,6 +1709,7 @@ export const en = {
     start: 'Start the test',
     startHint: 'About {{minutes}}. It uses your voice minutes.',
     talk: {
+      otherCandidate: 'Other candidate',
       hint: 'The examiner begins in a moment.',
       finished: 'The test is over.',
       end: 'End the test',
