@@ -66,6 +66,18 @@ export type HalvesInvite = Schemas['HalvesInviteOut'];
 export type HalvesReaction = Schemas['HalvesReactionIn']['reaction'];
 export type HalvesReportReason = Schemas['HalvesReportIn']['reason'];
 export type HalvesQueueItem = Schemas['HalvesQueueItemOut'];
+// Two Halves phase 2.
+export type HalvesSearch = Schemas['HalvesSearchOut'];
+export type HalvesLook = Schemas['HalvesLookOut'];
+export type HalvesStrands = Schemas['HalvesStrandsOut'];
+export type HalvesStrand = Schemas['HalvesStrandOut'];
+export type HalvesPoint = Schemas['HalvesPointOut'];
+export type HalvesShare = Schemas['HalvesShareOut'];
+export type HalvesStats = Schemas['HalvesStatsOut'];
+export type HalvesNudge = Schemas['HalvesNudgeOut'];
+export type HalvesBridgeStep = Schemas['HalvesBridgeIn']['step'];
+export type HalvesDecision = Schemas['HalvesDecisionIn']['action'];
+export type PlanCase = Schemas['PlanCaseOut'];
 /** A card answered out loud (voice review): what was heard, how close, the rating it points to. */
 export type AnsweredCard = Schemas['AnsweredOut'];
 export type AnswerOutcome = AnsweredCard['outcome'];
@@ -382,10 +394,25 @@ export interface ApiClient {
   /** The owner's Two Halves queue (6.15). */
   getHalvesQueue(): Promise<{ items: HalvesQueueItem[] }>;
   decideHalvesItem(
-    kind: 'held' | 'report',
+    kind: HalvesQueueItem['kind'],
     id: string,
-    action: 'remove' | 'dismiss',
+    action: HalvesDecision,
   ): Promise<void>;
+  /** The owner's Two Halves numbers for the last 30 days (6.15). */
+  getHalvesStats(): Promise<HalvesStats>;
+  /** Looks for a stranger to play with (7.3): a case at once when someone fits. */
+  lookForHalvesPartner(search: { hours: number; remind: boolean }): Promise<HalvesLook>;
+  stopHalvesSearch(): Promise<void>;
+  /** The strand map (7.14). */
+  getHalvesStrands(): Promise<HalvesStrands>;
+  /** What the share card of an ended case shows (7.15). */
+  getHalvesShareCard(caseId: string): Promise<HalvesShare>;
+  /** A case against the AI from one of the learner's course imports (7.17). */
+  startHalvesImportCase(importId: string): Promise<HalvesCase>;
+  /** The Bridge for a move heard in same-language mode (7.7). */
+  bridgeHalvesMove(moveId: string, step: HalvesBridgeStep): Promise<HalvesCase>;
+  /** Suggests a better way to say a move heard (7.7). */
+  nudgeHalvesMove(moveId: string, text: string): Promise<HalvesCase>;
   getCatalog(): Promise<Catalog>;
   getProfile(): Promise<Profile>;
   /** Applies all changes or none. Fails with `invalid_value` and the field for a refused one. */
@@ -933,6 +960,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getHalvesQueue: () => request('GET', '/v1/halves/queue'),
     decideHalvesItem: (kind, id, action) =>
       request('POST', `/v1/halves/queue/${kind}/${encodeURIComponent(id)}`, { action }),
+    getHalvesStats: () => request('GET', '/v1/halves/queue/stats'),
+    lookForHalvesPartner: (search) => request('POST', '/v1/halves/search', search),
+    stopHalvesSearch: () => request('DELETE', '/v1/halves/search'),
+    getHalvesStrands: () => request('GET', '/v1/halves/strands'),
+    getHalvesShareCard: (caseId) => request('GET', `${halvesCase(caseId)}/share`),
+    startHalvesImportCase: (importId) => request('POST', '/v1/halves/cases/import', { importId }),
+    bridgeHalvesMove: (moveId, step) => request('POST', `${halvesMove(moveId)}/bridge`, { step }),
+    nudgeHalvesMove: (moveId, text) => request('POST', `${halvesMove(moveId)}/nudge`, { text }),
     getProfile: () => request('GET', '/v1/profile'),
     updateProfile: (changes) => request('PATCH', '/v1/profile', { changes }),
     getProfileChanges: () => request('GET', '/v1/profile/changes'),

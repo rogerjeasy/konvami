@@ -732,6 +732,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/halves/cases/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Import Case
+         * @description A case against the AI written from one of the learner's course imports (7.17).
+         */
+        post: operations["startHalvesImportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/halves/cases/{case_id}": {
         parameters: {
             query?: never;
@@ -854,6 +874,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/halves/cases/{case_id}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Share Card
+         * @description What the share card of an ended case shows (7.15).
+         */
+        get: operations["getHalvesShareCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/halves/duos/{duo_id}": {
         parameters: {
             query?: never;
@@ -963,6 +1003,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/halves/moves/{move_id}/bridge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bridge
+         * @description The Bridge (7.7, same-language mode): slower, then simpler, then the gist.
+         */
+        post: operations["bridgeHalvesMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/halves/moves/{move_id}/nudge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Nudge
+         * @description Suggests a better way to say a move heard (7.7): checked before the speaker sees it.
+         */
+        post: operations["nudgeHalvesMove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/halves/moves/{move_id}/reaction": {
         parameters: {
             query?: never;
@@ -1065,6 +1145,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/halves/queue/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Stats
+         * @description The owner's numbers for the last 30 days (6.15).
+         */
+        get: operations["getHalvesStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/halves/queue/{kind}/{item_id}": {
         parameters: {
             query?: never;
@@ -1076,6 +1176,47 @@ export interface paths {
         put?: never;
         /** Decide */
         post: operations["decideHalvesItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/halves/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Look
+         * @description Looks for a stranger to play with (7.3): a case at once when someone fits.
+         */
+        post: operations["lookForHalvesPartner"];
+        /** Stop Looking */
+        delete: operations["stopHalvesSearch"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/halves/strands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Strands
+         * @description The strand map (7.14).
+         */
+        get: operations["getHalvesStrands"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3779,6 +3920,14 @@ export interface components {
              */
             id: string;
         };
+        /** HalvesBridgeIn */
+        HalvesBridgeIn: {
+            /**
+             * Step
+             * @enum {string}
+             */
+            step: "slower" | "simpler" | "gist";
+        };
         /**
          * HalvesCaseOut
          * @description A case as one seat sees it (7.4 to 7.9).
@@ -3793,6 +3942,8 @@ export interface components {
             /** Ending */
             ending: string | null;
             final: components["schemas"]["HalvesFinalOut"];
+            /** Fromimport */
+            fromImport: boolean;
             /** Hears */
             hears: string;
             /**
@@ -3813,6 +3964,8 @@ export interface components {
             recordRound: number | null;
             /** Rounds */
             rounds: components["schemas"]["HalvesRoundOut"][];
+            /** Samelanguage */
+            sameLanguage: boolean;
             /**
              * Seat
              * @enum {string}
@@ -3827,6 +3980,10 @@ export interface components {
             templateId: string;
             /** Title */
             title: string;
+            /** Told */
+            told: number;
+            /** Understoodfirst */
+            understoodFirst: number;
             /** Veildefault */
             veilDefault: boolean;
         };
@@ -3874,7 +4031,7 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "remove" | "dismiss";
+            action: "remove" | "dismiss" | "warn" | "suspend";
         };
         /** HalvesDuoOut */
         HalvesDuoOut: {
@@ -3900,6 +4057,14 @@ export interface components {
             question: string;
             /** Solution */
             solution: number | null;
+        };
+        /** HalvesImportCaseIn */
+        HalvesImportCaseIn: {
+            /**
+             * Importid
+             * Format: uuid
+             */
+            importId: string;
         };
         /** HalvesInviteIn */
         HalvesInviteIn: {
@@ -3930,6 +4095,14 @@ export interface components {
             /** Voiceconsent */
             voiceConsent: boolean;
         };
+        /**
+         * HalvesLookOut
+         * @description What looking for a partner gave: a case when someone fitted at once, else the search.
+         */
+        HalvesLookOut: {
+            case: components["schemas"]["HalvesCaseOut"] | null;
+            search: components["schemas"]["HalvesSearchOut"] | null;
+        };
         /** HalvesMineOut */
         HalvesMineOut: {
             /** Corrections */
@@ -3939,6 +4112,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Nudges */
+            nudges: components["schemas"]["HalvesNudgeOut"][];
             /** Reaction */
             reaction: string | null;
             /** Reasons */
@@ -3983,6 +4158,18 @@ export interface components {
             /** Transcript */
             transcript: string;
         };
+        /** HalvesNudgeIn */
+        HalvesNudgeIn: {
+            /** Text */
+            text: string;
+        };
+        /** HalvesNudgeOut */
+        HalvesNudgeOut: {
+            /** By */
+            by: string;
+            /** Text */
+            text: string;
+        };
         /** HalvesOptionIn */
         HalvesOptionIn: {
             /** Option */
@@ -3991,7 +4178,8 @@ export interface components {
         /**
          * HalvesOut
          * @description The hub (7.1): whether Two Halves is open to the learner, their profile, cases, the week's
-         *     case, duos, invite and blocks, and the choices of the join form.
+         *     case, duos, invite and blocks, and the choices of the join form. Phase 2: whether they may
+         *     look for a stranger, their search, and the clues understood at the first try (private).
          */
         HalvesOut: {
             /** Available */
@@ -4010,12 +4198,21 @@ export interface components {
             /** Nativelanguages */
             nativeLanguages: string[];
             profile: components["schemas"]["HalvesProfileOut"] | null;
+            search: components["schemas"]["HalvesSearchOut"] | null;
+            /** Searchhours */
+            searchHours: number[];
             /** Seasonid */
             seasonId: string;
             /** Seasontitle */
             seasonTitle: string;
             /** Seasonweek */
             seasonWeek: string;
+            /** Strangers */
+            strangers: boolean;
+            /** Told */
+            told: number;
+            /** Understoodfirst */
+            understoodFirst: number;
         };
         /** HalvesPartnerOut */
         HalvesPartnerOut: {
@@ -4025,6 +4222,15 @@ export interface components {
             name: string;
             /** Place */
             place: string | null;
+        };
+        /** HalvesPointOut */
+        HalvesPointOut: {
+            /** Label */
+            label: string;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
         };
         /** HalvesProfileChangeIn */
         HalvesProfileChangeIn: {
@@ -4085,7 +4291,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "held" | "report";
+            kind: "held" | "report" | "nudge";
             /**
              * Moveid
              * Format: uuid
@@ -4099,6 +4305,10 @@ export interface components {
             reporter: string | null;
             /** Sender */
             sender: string;
+            /** Strikes */
+            strikes: number;
+            /** Suspended */
+            suspended: boolean;
             /** Transcript */
             transcript: string;
         };
@@ -4153,6 +4363,58 @@ export interface components {
             round: number;
             theirs: components["schemas"]["HalvesTheirsOut"] | null;
         };
+        /** HalvesSearchIn */
+        HalvesSearchIn: {
+            /**
+             * Hours
+             * @default 12
+             */
+            hours: number;
+            /**
+             * Remind
+             * @default true
+             */
+            remind: boolean;
+        };
+        /**
+         * HalvesSearchOut
+         * @description A search for a partner (7.3).
+         */
+        HalvesSearchOut: {
+            /** Offerai */
+            offerAi: boolean;
+            /** Remind */
+            remind: boolean;
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
+        };
+        /**
+         * HalvesShareOut
+         * @description The share card (7.15): no voice, no words of the learner, no name.
+         */
+        HalvesShareOut: {
+            /** Code */
+            code: string | null;
+            /** Codename */
+            codename: string;
+            status: components["schemas"]["CaseStatusOut"];
+            /** Title */
+            title: string;
+            /** Told */
+            told: number;
+            /** Understoodfirst */
+            understoodFirst: number;
+            /** Week */
+            week: string | null;
+        };
         /** HalvesStartIn */
         HalvesStartIn: {
             /**
@@ -4163,10 +4425,63 @@ export interface components {
             /** Templateid */
             templateId?: string | null;
         };
+        /**
+         * HalvesStatsOut
+         * @description The owner's numbers for the last 30 days (6.15).
+         */
+        HalvesStatsOut: {
+            /** Blocksper1000Cases */
+            blocksPer1000Cases: number;
+            /** Cases */
+            cases: number;
+            /** Heldper1000 */
+            heldPer1000: number;
+            /** Mediandecisionhours */
+            medianDecisionHours: number | null;
+            /** Moves */
+            moves: number;
+            /** Nudges */
+            nudges: number;
+            /** Nudgesdropped */
+            nudgesDropped: number;
+            /** Openitems */
+            openItems: number;
+            /** Reportsper1000 */
+            reportsPer1000: number;
+        };
+        /** HalvesStrandOut */
+        HalvesStrandOut: {
+            /** Cases */
+            cases: number;
+            /** Codename */
+            codename: string;
+            /** Duo */
+            duo: boolean;
+            point: components["schemas"]["HalvesPointOut"];
+        };
+        /**
+         * HalvesStrandsOut
+         * @description The strand map (7.14): nothing finer than a city, only what each chose to share.
+         */
+        HalvesStrandsOut: {
+            me: components["schemas"]["HalvesPointOut"] | null;
+            /** Strands */
+            strands: components["schemas"]["HalvesStrandOut"][];
+            /** Unplaced */
+            unplaced: number;
+        };
         /** HalvesTheirsOut */
         HalvesTheirsOut: {
             /** Answers */
             answers: number[];
+            /** Bridge */
+            bridge: boolean;
+            /** Cannudge */
+            canNudge: boolean;
+            /** Caption */
+            caption: string;
+            /** Gist */
+            gist: string | null;
             /** Hidden */
             hidden: boolean;
             /**
@@ -4174,12 +4489,16 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Nudged */
+            nudged: boolean;
             /** Options */
             options: string[];
             /** Question */
             question: string;
             /** Reaction */
             reaction: string | null;
+            /** Simpler */
+            simpler: string | null;
             /** Solution */
             solution: number | null;
         };
@@ -4710,7 +5029,7 @@ export interface components {
             weeks: string[];
         };
         /** @enum {string} */
-        ModeOut: "ai" | "friend" | "duo";
+        ModeOut: "ai" | "friend" | "duo" | "match";
         /**
          * MotivationOut
          * @description Motivation in one answer: the streak, the next level, the week's quests, the milestones,
@@ -5297,6 +5616,13 @@ export interface components {
          * @enum {string}
          */
         PlacementStatus: "not_started" | "in_progress" | "assessing" | "measured" | "inconclusive" | "decided" | "skipped";
+        /** PlanCaseOut */
+        PlanCaseOut: {
+            /** Templateid */
+            templateId: string;
+            /** Title */
+            title: string;
+        };
         /**
          * PlanOut
          * @description The learner's plan (spec §6.21.2): what they have and what it includes.
@@ -6734,6 +7060,7 @@ export interface components {
             /** Doneminutes */
             doneMinutes: number;
             exam: components["schemas"]["ExamWeekOut"] | null;
+            halves: components["schemas"]["PlanCaseOut"] | null;
             /** Minutes */
             minutes: number;
             /** Missed */
@@ -9108,6 +9435,93 @@ export interface operations {
             };
         };
     };
+    startHalvesImportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HalvesImportCaseIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HalvesCaseOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     getHalvesCase: {
         parameters: {
             query?: never;
@@ -9716,6 +10130,91 @@ export interface operations {
             };
         };
     };
+    getHalvesShareCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HalvesShareOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     removeHalvesDuo: {
         parameters: {
             query?: never;
@@ -10246,6 +10745,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HalvesAudioOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    bridgeHalvesMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                move_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HalvesBridgeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HalvesCaseOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    nudgeHalvesMove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                move_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HalvesNudgeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HalvesCaseOut"];
                 };
             };
             /** @description Unauthorized */
@@ -10912,12 +11589,95 @@ export interface operations {
             };
         };
     };
+    getHalvesStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HalvesStatsOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     decideHalvesItem: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                kind: "held" | "report";
+                kind: "held" | "report" | "nudge";
                 item_id: string;
             };
             cookie?: never;
@@ -10934,6 +11694,257 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    lookForHalvesPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HalvesSearchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HalvesLookOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    stopHalvesSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getHalvesStrands: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HalvesStrandsOut"];
+                };
             };
             /** @description Unauthorized */
             401: {

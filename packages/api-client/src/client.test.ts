@@ -885,6 +885,44 @@ describe('api client', () => {
     expect(calls[5]?.body).toEqual({ templateId: null });
   });
 
+  it('plays Two Halves phase 2: looks, bridges, nudges, shares and reads the strand map', async () => {
+    const { fetch, calls } = fakeFetch(
+      json(200, { case: null, search: { offerAi: false } }),
+      new Response(null, { status: 204 }),
+      json(200, { id: 'c/1' }),
+      json(200, { id: 'c/1' }),
+      json(200, { title: 'x' }),
+      json(200, { me: null, strands: [], unplaced: 0 }),
+      json(200, { id: 'c/2' }),
+      json(200, { moves: 0 }),
+    );
+    const { api } = client(fetch);
+
+    await api.lookForHalvesPartner({ hours: 12, remind: true });
+    await api.stopHalvesSearch();
+    await api.bridgeHalvesMove('m/1', 'simpler');
+    await api.nudgeHalvesMove('m/1', 'um 14:20 Uhr');
+    await api.getHalvesShareCard('c/1');
+    await api.getHalvesStrands();
+    await api.startHalvesImportCase('i/1');
+    await api.getHalvesStats();
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/halves/search',
+      'DELETE https://api.example.test/v1/halves/search',
+      'POST https://api.example.test/v1/halves/moves/m%2F1/bridge',
+      'POST https://api.example.test/v1/halves/moves/m%2F1/nudge',
+      'GET https://api.example.test/v1/halves/cases/c%2F1/share',
+      'GET https://api.example.test/v1/halves/strands',
+      'POST https://api.example.test/v1/halves/cases/import',
+      'GET https://api.example.test/v1/halves/queue/stats',
+    ]);
+    expect(calls[0]?.body).toEqual({ hours: 12, remind: true });
+    expect(calls[2]?.body).toEqual({ step: 'simpler' });
+    expect(calls[3]?.body).toEqual({ text: 'um 14:20 Uhr' });
+    expect(calls[6]?.body).toEqual({ importId: 'i/1' });
+  });
+
   it('reads and changes the pen-pal, and sends a voice note', async () => {
     const note = { id: 'n/1', status: 'pending' };
     const { fetch, calls } = fakeFetch(
