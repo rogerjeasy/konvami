@@ -203,13 +203,6 @@ class RadioArchiveOut(ApiModel):
     episodes: list[RadioEpisodeCardOut]
 
 
-class RadioApplauseOut(ApiModel):
-    bravo: int
-    ha_ha: int
-    me_too: int
-    wow: int
-
-
 class RadioSegmentOut(ApiModel):
     index: int
     kind: Literal["host", "call", "ai_call"]
@@ -219,7 +212,8 @@ class RadioSegmentOut(ApiModel):
     text: str
     playable: bool
     mine: bool
-    applause: RadioApplauseOut
+    # How many listeners gave each card, by the card's value.
+    applause: dict[ApplauseCard, int]
     my_applause: ApplauseCard | None
     hidden: bool
 
@@ -252,9 +246,7 @@ class RadioEpisodeOut(ApiModel):
                     text=s.text,
                     playable=s.playable,
                     mine=s.mine,
-                    applause=RadioApplauseOut(
-                        **{card: s.applause.get(card, 0) for card in APPLAUSE}
-                    ),
+                    applause={card: s.applause.get(card, 0) for card in APPLAUSE},
                     my_applause=s.my_applause,  # type: ignore[arg-type]
                     hidden=s.hidden,
                 )

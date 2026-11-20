@@ -59,7 +59,8 @@ type CallStatus = Literal[
 type SegmentKind = Literal["host", "call", "ai_call"]
 type ReportStatus = Literal["open", "removed", "dismissed"]
 
-APPLAUSE: tuple[str, ...] = ("bravo", "ha_ha", "me_too", "wow")
+type ApplauseCard = Literal["bravo", "ha_ha", "me_too", "wow"]
+APPLAUSE: tuple[ApplauseCard, ...] = ("bravo", "ha_ha", "me_too", "wow")
 
 # The consent to let other learners hear one's calls on the show, a record of its own, separate
 # from the AI consent of 2.5 and from Two Halves' voice sharing.

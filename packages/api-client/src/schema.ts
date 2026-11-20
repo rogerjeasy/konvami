@@ -5976,17 +5976,6 @@ export interface components {
         RadioApplauseIn: {
             card: components["schemas"]["ApplauseCard"] | null;
         };
-        /** RadioApplauseOut */
-        RadioApplauseOut: {
-            /** Bravo */
-            bravo: number;
-            /** Haha */
-            haHa: number;
-            /** Metoo */
-            meToo: number;
-            /** Wow */
-            wow: number;
-        };
         /** RadioArchiveOut */
         RadioArchiveOut: {
             /** Episodes */
@@ -6276,7 +6265,10 @@ export interface components {
         RadioSegmentOut: {
             /** Ai */
             ai: boolean;
-            applause: components["schemas"]["RadioApplauseOut"];
+            /** Applause */
+            applause: {
+                [key: string]: number;
+            };
             /** Hidden */
             hidden: boolean;
             /** Index */

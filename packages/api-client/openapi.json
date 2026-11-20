@@ -8444,35 +8444,6 @@
         "title": "RadioApplauseIn",
         "type": "object"
       },
-      "RadioApplauseOut": {
-        "additionalProperties": false,
-        "properties": {
-          "bravo": {
-            "title": "Bravo",
-            "type": "integer"
-          },
-          "haHa": {
-            "title": "Haha",
-            "type": "integer"
-          },
-          "meToo": {
-            "title": "Metoo",
-            "type": "integer"
-          },
-          "wow": {
-            "title": "Wow",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "bravo",
-          "haHa",
-          "meToo",
-          "wow"
-        ],
-        "title": "RadioApplauseOut",
-        "type": "object"
-      },
       "RadioArchiveOut": {
         "additionalProperties": false,
         "properties": {
@@ -9195,7 +9166,14 @@
             "type": "boolean"
           },
           "applause": {
-            "$ref": "#/components/schemas/RadioApplauseOut"
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/ApplauseCard"
+            },
+            "title": "Applause",
+            "type": "object"
           },
           "hidden": {
             "title": "Hidden",
