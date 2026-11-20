@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from konvami_api.domain.costs import Budget, Prices
 from konvami_api.domain.plans import PlanSettings, Tier
 from konvami_api.domain.premium_voices import PremiumVoice, PremiumVoices
+from konvami_api.domain.video_avatars import VideoAvatarFace, VideoAvatars
 from konvami_api.domain.voice import CallPurpose, VoiceSettings
 
 VOICE_VARIABLE = "KONVAMI_VOICE"
@@ -235,4 +236,37 @@ def plan_settings(raw: str | None) -> PlanSettings:
         weekly_minutes=plans.weekly_minutes,
         products=plans.products,
         packs={product: minutes * 60 for product, minutes in plans.pack_minutes.items()},
+    )
+
+
+VIDEO_AVATARS_VARIABLE = "KONVAMI_VIDEO_AVATARS"
+
+
+class _VideoAvatarFace(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: str = Field(pattern=r"^[A-Za-z0-9_.-]{1,128}$")
+    name: str = Field(min_length=1)
+
+
+class _VideoAvatars(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    # The vendor's name in `providers/video_avatar.VENDORS`.
+    vendor: str = ""
+    faces: list[_VideoAvatarFace] = []
+
+
+def video_avatar_settings(raw: str | None) -> VideoAvatars:
+    """The video avatar vendor and its faces from the `KONVAMI_VIDEO_AVATARS` JSON (spec §6.20
+    P2). Without it, none are offered."""
+    if not raw:
+        return VideoAvatars()
+    try:
+        parsed = _VideoAvatars.model_validate(json.loads(raw))
+    except (ValueError, ValidationError) as error:
+        raise RuntimeError(f"{VIDEO_AVATARS_VARIABLE} is not valid") from error
+    return VideoAvatars(
+        vendor=parsed.vendor,
+        faces=tuple(VideoAvatarFace(face.id, face.name) for face in parsed.faces),
     )

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { opacity, size } from '@konvami/design-tokens';
 import { Avatar } from '@/components/avatar/avatar';
 import type { AvatarLook, AvatarMood } from '@/components/avatar/look';
+import { VideoFace } from '@/components/avatar/video-face';
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { CaptionWords } from '@/components/caption-words';
@@ -28,6 +29,7 @@ import { useTheme } from '@/theme';
 import type { ConversationPhase } from '@/voice/conversation';
 import { useAvatarFace } from '@/voice/use-avatar-face';
 import type { VoiceCall } from '@/voice/use-voice-call';
+import type { VideoFeed } from '@/voice/video-avatar';
 
 // The avatar on the design's frame (pt), and the share of a tall window its panel takes.
 const AVATAR_FRAME = 200;
@@ -102,6 +104,7 @@ export function CallStage({
   failedActions,
   compact = false,
   onLookupWord,
+  video = null,
 }: {
   call: VoiceCall;
   /** Who the learner is talking to. */
@@ -140,6 +143,8 @@ export function CallStage({
   /** Keeps the portrait small, so that `progress` has the room (an exam's task card). */
   compact?: boolean;
   onLookupWord?: (word: string, caption: string) => void;
+  /** The partner's video face from a vendor (spec §6.20 P2), shown instead of the portrait. */
+  video?: VideoFeed | null;
 }) {
   const heroShare = compact ? COMPACT_HERO_SHARE : HERO_SHARE;
   const { t } = useTranslation();
@@ -192,15 +197,19 @@ export function CallStage({
         <View className="items-center gap-4">
           <View style={{ width: avatarSize, height: avatarSize }}>
             <ListeningRing level={call.voice} diameter={avatarSize} />
-            <Avatar
-              look={persona.look}
-              size={avatarSize}
-              mood={failed ? 'waiting' : MOOD[phase]}
-              mouth={call.mouth}
-              viseme={call.viseme}
-              expression={face.expression}
-              gesture={face.gesture}
-            />
+            {video && !failed ? (
+              <VideoFace feed={video} size={avatarSize} />
+            ) : (
+              <Avatar
+                look={persona.look}
+                size={avatarSize}
+                mood={failed ? 'waiting' : MOOD[phase]}
+                mouth={call.mouth}
+                viseme={call.viseme}
+                expression={face.expression}
+                gesture={face.gesture}
+              />
+            )}
           </View>
           <View className="items-center gap-1.5">
             <View className="flex-row items-center gap-2">

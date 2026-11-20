@@ -2586,6 +2586,19 @@ export const de: Translation = {
         body: 'Das Porträt ändert sich mit jeder Auswahl.',
         editor: 'Avatar-Editor öffnen',
         editorHint: 'Sieh zu, wie sie lächeln, sprechen und reagieren, während du gestaltest.',
+        video: {
+          title: 'Videogesicht in Gesprächen',
+          body: 'Ein realistisches Gesicht von {{vendor}} kann in deinen Gesprächen für {{name}} sprechen. Überall sonst bleibt das Porträt.',
+          drawn: 'Gezeichnetes Porträt',
+          drawnHint: 'Das Porträt oben, auch in Gesprächen.',
+          notAllowed: 'Videogesichter gibt es mit Pro.',
+          consentTitle: '{{vendor}} für das Gesicht nutzen?',
+          consentBody:
+            'Damit sich das Gesicht bewegt, erhält {{vendor}} während deiner Gespräche, was {{name}} sagt. Deine eigene Stimme wird nie gesendet. Du kannst jederzeit zum Porträt zurück.',
+          agree: 'Zustimmen und dieses Gesicht nutzen',
+          cancel: 'Jetzt nicht',
+          failed: 'Das Gesicht konnte nicht geändert werden. Versuch es noch einmal.',
+        },
       },
       voice: {
         title: 'Wie klingt die Person?',
