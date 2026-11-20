@@ -20,6 +20,8 @@ export interface VoiceCallOptions {
   assessmentConsent?: boolean;
   /** The second partner of a two-partner conversation. */
   guestId?: string;
+  /** A short call the learner accepted from a partner's ring (5.28). */
+  rang?: boolean;
 }
 
 const VoiceContext = createContext<VoiceEngineFactory | null>(null);

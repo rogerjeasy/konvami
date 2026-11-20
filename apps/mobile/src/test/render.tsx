@@ -146,6 +146,7 @@ export async function renderScreen(
                         engine.openedPractise.push(practise);
                         engine.openedAssessments.push(options?.assessmentConsent ?? false);
                         engine.openedGuests.push(options?.guestId);
+                        engine.openedRang.push(options?.rang ?? false);
                         return engine;
                       }}
                     >

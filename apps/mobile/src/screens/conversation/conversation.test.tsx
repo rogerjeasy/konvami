@@ -873,3 +873,24 @@ describe('5.3 Conversation with two partners (5.24)', () => {
     expect(voice.starts).toBe(0);
   });
 });
+
+describe('5.3 Conversation the learner accepted from a ring (5.28)', () => {
+  it('starts a short call with the partner who rang', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ personaId: LENA.id, rang: '1' });
+    const voice = createFakeVoiceEngine();
+    await renderScreen(<LiveConversationScreen />, { api: inApp(), voice, signedIn: true });
+    await waitFor(() => expect(voice.starts).toBe(1));
+
+    expect(voice.openedWith).toEqual([LENA.id]);
+    expect(voice.openedRang).toEqual([true]);
+  });
+
+  it('is an ordinary call without the ring', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ personaId: LENA.id });
+    const voice = createFakeVoiceEngine();
+    await renderScreen(<LiveConversationScreen />, { api: inApp(), voice, signedIn: true });
+    await waitFor(() => expect(voice.starts).toBe(1));
+
+    expect(voice.openedRang).toEqual([false]);
+  });
+});
