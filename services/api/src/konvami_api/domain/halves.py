@@ -589,6 +589,17 @@ def valid_place(place: str | None) -> bool:
     return (kind == "city" and value in CITIES) or (kind == "country" and value in COUNTRIES)
 
 
+def codename_from(rng: random.Random) -> str:
+    """A codename: a word and a number, neutral in the four languages (also the story chain's)."""
+    return f"{rng.choice(_CODE_WORDS)}-{rng.randint(2, 99)}"
+
+
+def invite_code() -> str:
+    """About 49 bits from a cryptographic source: a code is the key to a friend's game. Never
+    the game's own random source, which picks codenames and may be seeded."""
+    return "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+
+
 def understands(native: str, target: str, heard: str) -> bool:
     """Whether a learner with `native` and `target` can follow a move in `heard`."""
     return heard in (native, target)
@@ -838,7 +849,7 @@ class HalvesService:
         return profile
 
     def _codename(self) -> str:
-        return f"{self._rng.choice(_CODE_WORDS)}-{self._rng.randint(2, 99)}"
+        return codename_from(self._rng)
 
     def reroll(self, user_id: UUID) -> Profile:
         profile = self._require(user_id)
@@ -966,8 +977,7 @@ class HalvesService:
         earlier = self._repository.invite_of(user_id)
         if earlier is not None:
             self._repository.delete_invite(earlier.code)
-        # Never `self._rng`: that one picks codenames and cases and may be seeded.
-        code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+        code = invite_code()
         made = Invite(code, user_id, template_id, now, now + INVITE_FOR)
         self._repository.save_invite(made)
         return made

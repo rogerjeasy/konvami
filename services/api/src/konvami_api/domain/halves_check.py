@@ -206,55 +206,32 @@ class ModelBrain:
     # --- The check
 
     def check(self, move: Move, band: Band, language: str) -> tuple[str, ...] | None:
-        user = move.user_id
-        problem = local_problem(move.transcript)
-        if problem is not None:
-            return (_LOCAL_LABELS.get(problem, problem),)
-        if user is None or not self._check_model:
-            return None
-        try:
-            verdict = self._moderator.check([move.transcript], Charge(user, Feature.MODERATION))
-        except ModeratorError:
-            return None
-        if verdict.flagged:
-            return ("unsafe",)
-        task = TextTask(
+        return check_spoken(
+            moderator=self._moderator,
+            text_model=self._text_model,
             model=self._check_model,
+            words=move.transcript,
+            user=move.user_id,
+            band=band,
+            language=self._language_name(language),
             instructions=_CHECK_INSTRUCTIONS,
-            content=json.dumps(
-                {"language": self._language_name(language), "message": move.transcript},
-                ensure_ascii=False,
-            ),
             answer_name="halves_move_check",
-            answer_schema=_CHECK_SCHEMA,
-            charge=Charge(user, Feature.HALVES),
+            feature=Feature.HALVES,
         )
-        try:
-            label = _Checked.model_validate(self._text_model.answer(task)).label
-        except (TextModelError, ValidationError):
-            return None
-        if label in HOLD or (band == "minor" and label == "off_task"):
-            return (label,)
-        return ()
 
     # --- Sounds
 
     def _speak(self, user: UUID | None, voice: str, text: str, key: str) -> str | None:
-        if not self._speech_model or not text.strip():
-            return None
-        try:
-            sound = self._speech.speak(
-                SpeechTask(
-                    self._speech_model,
-                    voice,
-                    text,
-                    Charge(user, Feature.HALVES_AUDIO) if user else None,
-                )
-            )
-        except SpeechError:
-            return None
-        self._files.save(key, sound, SOUND_TYPE)
-        return key
+        return speak_to_file(
+            self._speech,
+            self._speech_model,
+            self._files,
+            user,
+            voice,
+            text,
+            key,
+            Feature.HALVES_AUDIO,
+        )
 
     def veil(self, move: Move) -> str | None:
         if move.user_id is None:
@@ -269,81 +246,18 @@ class ModelBrain:
     # --- Private corrections (7.9)
 
     def correct(self, move: Move, target: str, explanation: str) -> tuple[Correction, ...]:
-        """At most three corrections, each checked a second time (spec §16.1): what the check
-        calls wrong is dropped, what it cannot confirm is a possibility."""
-        user = move.user_id
-        if user is None or not self._review_model:
+        if move.user_id is None:
             return ()
-        target_name, explained_in = self._language_name(target), self._language_name(explanation)
-        task = TextTask(
+        return private_corrections(
+            text_model=self._text_model,
             model=self._review_model,
-            instructions=(
-                f"A learner of {target_name} recorded this short voice message in a game. Find at "
-                f"most {MAX_CORRECTIONS} clear mistakes that matter for being understood or that a "
-                "native speaker would notice. Quote the learner's words exactly as `original`, "
-                f"give `corrected`, and explain each in one sentence in {explained_in}. No style "
-                "preferences, no punctuation or capitals (it is speech). None is a fine answer."
-            ),
-            content=json.dumps({"message": move.transcript}, ensure_ascii=False),
+            words=move.transcript,
+            user=move.user_id,
+            target=self._language_name(target),
+            explained_in=self._language_name(explanation),
+            what="short voice message in a game",
             answer_name="halves_corrections",
-            answer_schema=_CORRECTIONS_SCHEMA,
-            charge=Charge(user, Feature.HALVES),
-        )
-        try:
-            found = _Corrections.model_validate(self._text_model.answer(task)).corrections
-        except (TextModelError, ValidationError):
-            return ()
-        heard = words_in(move.transcript)
-        kept: list[Correction] = []
-        seen: set[tuple[str, ...]] = set()
-        for item in found:
-            original, corrected = _clip(item.original, QUOTE_MAX), _clip(item.corrected, QUOTE_MAX)
-            words = words_in(original)
-            if not words or words in seen or not within(words, heard):
-                continue
-            if words_in(corrected) in ((), words):
-                continue
-            seen.add(words)
-            kept.append(
-                Correction(original, corrected, _clip(item.explanation, EXPLANATION_MAX), True)
-            )
-        kept = kept[:MAX_CORRECTIONS]
-        if not kept:
-            return ()
-        review = TextTask(
-            model=self._review_model,
-            instructions=reviewer_instructions(target_name, explained_in),
-            content=json.dumps(
-                {
-                    "mistakes": [
-                        {
-                            "id": number,
-                            "learner_said": move.transcript,
-                            "original": c.original,
-                            "corrected": c.corrected,
-                            "explanation": c.explanation,
-                        }
-                        for number, c in enumerate(kept)
-                    ],
-                    "rewrites": [],
-                },
-                ensure_ascii=False,
-            ),
-            answer_name="correction_review",
-            answer_schema=REVIEW_SCHEMA,
-            charge=Charge(user, Feature.HALVES),
-        )
-        try:
-            verdicts = {
-                answer.id: answer.verdict
-                for answer in Review.model_validate(self._text_model.answer(review)).mistakes
-            }
-        except (TextModelError, ValidationError):
-            return tuple(Correction(c.original, c.corrected, c.explanation, False) for c in kept)
-        return tuple(
-            Correction(c.original, c.corrected, c.explanation, verdicts.get(n) == "correct")
-            for n, c in enumerate(kept)
-            if verdicts.get(n) != "wrong"
+            feature=Feature.HALVES,
         )
 
     # --- The stand-in
@@ -489,6 +403,164 @@ class ModelBrain:
         return tuple(recap)
 
 
+# --- Shared with the story chain (section 9, `chain_brain.py`) ----------------------------------
+
+
+def check_spoken(
+    *,
+    moderator: Moderator,
+    text_model: TextModel,
+    model: str,
+    words: str,
+    user: UUID | None,
+    band: Band,
+    language: str,
+    instructions: str,
+    answer_name: str,
+    feature: Feature,
+) -> tuple[str, ...] | None:
+    """The check a learner's spoken words pass before another learner hears them, in order:
+    local rules, the moderation provider, then the on-task check by the small text model
+    (`instructions` say what "on task" is in the game). Labels that hold the words, empty to
+    deliver them, None when they could not be checked: never delivered unchecked."""
+    problem = local_problem(words)
+    if problem is not None:
+        return (_LOCAL_LABELS.get(problem, problem),)
+    if user is None or not model:
+        return None
+    try:
+        verdict = moderator.check([words], Charge(user, Feature.MODERATION))
+    except ModeratorError:
+        return None
+    if verdict.flagged:
+        return ("unsafe",)
+    task = TextTask(
+        model=model,
+        instructions=instructions,
+        content=json.dumps({"language": language, "message": words}, ensure_ascii=False),
+        answer_name=answer_name,
+        answer_schema=_CHECK_SCHEMA,
+        charge=Charge(user, feature),
+    )
+    try:
+        label = _Checked.model_validate(text_model.answer(task)).label
+    except (TextModelError, ValidationError):
+        return None
+    if label in HOLD or (band == "minor" and label == "off_task"):
+        return (label,)
+    return ()
+
+
+def speak_to_file(
+    speech: SpeechModel,
+    model: str,
+    files: FileStore,
+    user: UUID | None,
+    voice: str,
+    text: str,
+    key: str,
+    feature: Feature,
+) -> str | None:
+    """Speaks `text` in `voice` and stores it under `key`; None when nothing could be spoken."""
+    if not model or not text.strip():
+        return None
+    try:
+        sound = speech.speak(
+            SpeechTask(model, voice, text, Charge(user, feature) if user else None)
+        )
+    except SpeechError:
+        return None
+    files.save(key, sound, SOUND_TYPE)
+    return key
+
+
+def private_corrections(
+    *,
+    text_model: TextModel,
+    model: str,
+    words: str,
+    user: UUID,
+    target: str,
+    explained_in: str,
+    what: str,
+    answer_name: str,
+    feature: Feature,
+) -> tuple[Correction, ...]:
+    """At most three corrections of what a learner said, only for them, each checked a second
+    time (spec §16.1): what the check calls wrong is dropped, what it cannot confirm is a
+    possibility. `target` and `explained_in` are language names; `what` names the recording."""
+    if not model:
+        return ()
+    task = TextTask(
+        model=model,
+        instructions=(
+            f"A learner of {target} recorded this {what}. Find at most {MAX_CORRECTIONS} clear "
+            "mistakes that matter for being understood or that a native speaker would notice. "
+            "Quote the learner's words exactly as `original`, give `corrected`, and explain each "
+            f"in one sentence in {explained_in}. No style preferences, no punctuation or capitals "
+            "(it is speech). None is a fine answer."
+        ),
+        content=json.dumps({"message": words}, ensure_ascii=False),
+        answer_name=answer_name,
+        answer_schema=_CORRECTIONS_SCHEMA,
+        charge=Charge(user, feature),
+    )
+    try:
+        found = _Corrections.model_validate(text_model.answer(task)).corrections
+    except (TextModelError, ValidationError):
+        return ()
+    heard = words_in(words)
+    kept: list[Correction] = []
+    seen: set[tuple[str, ...]] = set()
+    for item in found:
+        original, corrected = _clip(item.original, QUOTE_MAX), _clip(item.corrected, QUOTE_MAX)
+        quoted = words_in(original)
+        if not quoted or quoted in seen or not within(quoted, heard):
+            continue
+        if words_in(corrected) in ((), quoted):
+            continue
+        seen.add(quoted)
+        kept.append(Correction(original, corrected, _clip(item.explanation, EXPLANATION_MAX), True))
+    kept = kept[:MAX_CORRECTIONS]
+    if not kept:
+        return ()
+    review = TextTask(
+        model=model,
+        instructions=reviewer_instructions(target, explained_in),
+        content=json.dumps(
+            {
+                "mistakes": [
+                    {
+                        "id": number,
+                        "learner_said": words,
+                        "original": c.original,
+                        "corrected": c.corrected,
+                        "explanation": c.explanation,
+                    }
+                    for number, c in enumerate(kept)
+                ],
+                "rewrites": [],
+            },
+            ensure_ascii=False,
+        ),
+        answer_name="correction_review",
+        answer_schema=REVIEW_SCHEMA,
+        charge=Charge(user, feature),
+    )
+    try:
+        verdicts = {
+            answer.id: answer.verdict
+            for answer in Review.model_validate(text_model.answer(review)).mistakes
+        }
+    except (TextModelError, ValidationError):
+        return tuple(Correction(c.original, c.corrected, c.explanation, False) for c in kept)
+    return tuple(
+        Correction(c.original, c.corrected, c.explanation, verdicts.get(n) == "correct")
+        for n, c in enumerate(kept)
+        if verdicts.get(n) != "wrong"
+    )
+
+
 def heard_option(transcript: str, options: Sequence[str]) -> int:
     """The option whose words or numbers the message says most of, or the first."""
     heard = set(words_in(transcript))
@@ -507,4 +579,11 @@ def _keeps_numbers(clue: str, written: str) -> bool:
     return numbers <= set(words_in(written))
 
 
-__all__ = ["HOLD", "ModelBrain", "heard_option"]
+__all__ = [
+    "HOLD",
+    "ModelBrain",
+    "check_spoken",
+    "heard_option",
+    "private_corrections",
+    "speak_to_file",
+]

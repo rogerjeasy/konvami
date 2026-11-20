@@ -396,18 +396,36 @@ class CardService:
     def save_phrase(self, user_id: UUID, phrase: str, meaning: str, explained_in: str) -> Card:
         """Makes a word card of a phrasebook entry (spec §6.7): the phrase, what it means and no
         sentence. Saving what is already a card answers with that card."""
+        return self._save_own(user_id, "word", phrase, meaning, None, explained_in)
+
+    def save_correction(
+        self, user_id: UUID, original: str, corrected: str, explanation: str, explained_in: str
+    ) -> Card:
+        """Makes a correction card of a confirmed correction that is not in a conversation's
+        report: a line of the story chain (9.7). The caller makes sure it was confirmed."""
+        return self._save_own(user_id, "correction", original, corrected, explanation, explained_in)
+
+    def _save_own(
+        self,
+        user_id: UUID,
+        kind: Kind,
+        front: str,
+        back: str,
+        note: str | None,
+        explained_in: str,
+    ) -> Card:
         language = self._language(user_id)
-        key = card_key(phrase)
-        existing = self._repository.by_key(user_id, language, "word", key)
+        key = card_key(front)
+        existing = self._repository.by_key(user_id, language, kind, key)
         if existing is not None:
             return existing
         now = self._clock()
         card = Card(
             id=self._new_id(),
-            kind="word",
-            front=phrase,
-            back=meaning,
-            note=None,
+            kind=kind,
+            front=front,
+            back=back,
+            note=note,
             explained_in=explained_in,
             source_call_id=None,
             created_at=now,
@@ -418,11 +436,11 @@ class CardService:
             lapses=0,
         )
         if self._repository.add(user_id, language, key, card, MAX_CARDS):
-            if self._details is not None:
+            if kind == "word" and self._details is not None:
                 with contextlib.suppress(Exception):
                     self._details.start(user_id)
             return card
-        existing = self._repository.by_key(user_id, language, "word", key)
+        existing = self._repository.by_key(user_id, language, kind, key)
         if existing is None:
             raise CardError("too_many")
         return existing
