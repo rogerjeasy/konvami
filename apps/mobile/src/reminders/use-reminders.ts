@@ -10,6 +10,8 @@ import {
   ROUTES,
   simulationRoute,
   halvesCaseRoute,
+  radioCallRoute,
+  radioEpisodeRoute,
 } from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
 import { usePreferences } from '@/preferences';
@@ -156,6 +158,10 @@ function routeOf(target: OpenTarget) {
       return halvesCaseRoute(target.id);
     case 'halvesHub':
       return ROUTES.halves;
+    case 'radio':
+      return radioEpisodeRoute(target.id);
+    case 'radio_call':
+      return radioCallRoute(target.id);
     default:
       return ROUTES.today;
   }

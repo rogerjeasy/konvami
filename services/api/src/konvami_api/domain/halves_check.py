@@ -38,21 +38,8 @@ from konvami_api.domain.halves import (
     template_of,
 )
 from konvami_api.domain.halves_cases import other_seat, text_in
-from konvami_api.domain.moderation import (
-    CONTACT,
-    INSTRUCTIONS,
-    LINK,
-    Moderator,
-    ModeratorError,
-    local_problem,
-)
-from konvami_api.domain.reports import (
-    REVIEW_SCHEMA,
-    Review,
-    reviewer_instructions,
-    within,
-    words_in,
-)
+from konvami_api.domain.moderation import Moderator
+from konvami_api.domain.reports import words_in
 from konvami_api.domain.speech import SpeechError, SpeechModel, SpeechTask
 from konvami_api.domain.storage import FileStore
 from konvami_api.domain.text import (
@@ -62,48 +49,32 @@ from konvami_api.domain.text import (
     answer_list,
     answer_object,
 )
+from konvami_api.domain.voice_messages import HOLD, MessageChecker, Setting
+from konvami_api.domain.voice_messages import clip as _clip
 
 logger = logging.getLogger(__name__)
 
-type Label = Literal[
-    "on_task",
-    "off_task",
-    "romance",
-    "contact_or_meetup",
-    "personal_probe",
-    "harassment",
-    "self_harm",
-]
-# What holds a move, for every band; the minor band also holds `off_task`.
-HOLD: frozenset[str] = frozenset(
-    {"romance", "contact_or_meetup", "personal_probe", "harassment", "self_harm"}
-)
-# Local rules, as labels of the owner's queue.
-_LOCAL_LABELS = {INSTRUCTIONS: "instructions", CONTACT: "contact_or_meetup", LINK: "link"}
-MAX_CORRECTIONS = 3
-QUOTE_MAX = 300
-EXPLANATION_MAX = 400
 LINE_MAX = 240
 MAX_RECAP_LINES = 6
 REACTION_VALUES = ("got_it", "again_slower", "helped", "bravo")
 
+# Where a move is heard, for the shared check (`voice_messages.py`).
+SETTING = Setting(
+    intro="""You check one voice message in a two-player language game before the other
+player hears it. The two players are strangers or friends playing a small mystery case; each
+tells the other clues about the case. The message is a transcript of speech by a language
+learner, so expect mistakes.""",
+    on_task="""it is about the case, the clues or the game, or polite small talk about the game
+  ("Hello, here is my clue", "Good luck!").""",
+    answer_name="halves_move_check",
+    corrections_name="halves_corrections",
+    what="this short voice message in a game",
+    feature=Feature.HALVES,
+)
+
 
 class _Answer(BaseModel):
     model_config = ConfigDict(extra="ignore")
-
-
-class _Checked(_Answer):
-    label: Label
-
-
-class _Found(_Answer):
-    original: str
-    corrected: str
-    explanation: str
-
-
-class _Corrections(_Answer):
-    corrections: list[_Found]
 
 
 class _Understood(_Answer):
@@ -125,17 +96,6 @@ class _Scene(_Answer):
 
 
 _STRING = {"type": "string"}
-_CHECK_SCHEMA = answer_object(
-    {"label": {"type": "string", "enum": list(get_args(Label.__value__))}}
-)
-_CORRECTIONS_SCHEMA = answer_object(
-    {
-        "corrections": answer_list(
-            answer_object({"original": _STRING, "corrected": _STRING, "explanation": _STRING}),
-            MAX_CORRECTIONS,
-        )
-    }
-)
 _UNDERSTOOD_SCHEMA = answer_object(
     {
         "option": {"type": "integer"},
@@ -178,28 +138,6 @@ _SCENE_SCHEMA = answer_object(
     }
 )
 
-_CHECK_INSTRUCTIONS = """You check one voice message in a two-player language game before the other
-player hears it. The two players are strangers or friends playing a small mystery case; each
-tells the other clues about the case. The message is a transcript of speech by a language
-learner, so expect mistakes.
-
-Label the message with exactly one of:
-- on_task: it is about the case, the clues or the game, or polite small talk about the game
-  ("Hello, here is my clue", "Good luck!"). Mistakes in the language never matter.
-- off_task: it is about something else, but harmless.
-- romance: flirting, compliments on looks, dating or love.
-- contact_or_meetup: asks for or gives a way to contact each other outside the game (a phone
-  number, a social media handle, an email, an app) or proposes to meet in person.
-- personal_probe: asks the other player for personal details (age, school, where exactly they
-  live, photos, their real name).
-- harassment: insults, threats, hate or sexual content.
-- self_harm: says or hints the speaker may hurt themselves.
-Answer as JSON with the label only."""
-
-
-def _clip(text: str, most: int) -> str:
-    return " ".join(text.split())[:most].strip()
-
 
 class ModelBrain:
     """The `Brain` of `HalvesService` on the app's real providers."""
@@ -220,10 +158,16 @@ class ModelBrain:
     ) -> None:
         """Empty model names: no check can be made (every move waits, then fails), the stand-in
         says its clue as written, and nothing is spoken."""
-        self._moderator = moderator
+        self._checker = MessageChecker(
+            moderator=moderator,
+            text_model=text_model,
+            check_model=check_model,
+            review_model=review_model,
+            language_name=language_name,
+        )
         self._text_model = text_model
-        self._check_model = check_model
         self._write_model = write_model
+        # The Nudge Verifier judges a native's phrase with the strong model, as reports do.
         self._review_model = review_model
         self._speech = speech
         self._speech_model = speech_model
@@ -234,36 +178,7 @@ class ModelBrain:
     # --- The check
 
     def check(self, move: Move, band: Band, language: str) -> tuple[str, ...] | None:
-        user = move.user_id
-        problem = local_problem(move.transcript)
-        if problem is not None:
-            return (_LOCAL_LABELS.get(problem, problem),)
-        if user is None or not self._check_model:
-            return None
-        try:
-            verdict = self._moderator.check([move.transcript], Charge(user, Feature.MODERATION))
-        except ModeratorError:
-            return None
-        if verdict.flagged:
-            return ("unsafe",)
-        task = TextTask(
-            model=self._check_model,
-            instructions=_CHECK_INSTRUCTIONS,
-            content=json.dumps(
-                {"language": self._language_name(language), "message": move.transcript},
-                ensure_ascii=False,
-            ),
-            answer_name="halves_move_check",
-            answer_schema=_CHECK_SCHEMA,
-            charge=Charge(user, Feature.HALVES),
-        )
-        try:
-            label = _Checked.model_validate(self._text_model.answer(task)).label
-        except (TextModelError, ValidationError):
-            return None
-        if label in HOLD or (band == "minor" and label == "off_task"):
-            return (label,)
-        return ()
+        return self._checker.check(move.user_id, move.transcript, band, language, SETTING)
 
     # --- Sounds
 
@@ -297,82 +212,8 @@ class ModelBrain:
     # --- Private corrections (7.9)
 
     def correct(self, move: Move, target: str, explanation: str) -> tuple[Correction, ...]:
-        """At most three corrections, each checked a second time (spec §16.1): what the check
-        calls wrong is dropped, what it cannot confirm is a possibility."""
-        user = move.user_id
-        if user is None or not self._review_model:
-            return ()
-        target_name, explained_in = self._language_name(target), self._language_name(explanation)
-        task = TextTask(
-            model=self._review_model,
-            instructions=(
-                f"A learner of {target_name} recorded this short voice message in a game. Find at "
-                f"most {MAX_CORRECTIONS} clear mistakes that matter for being understood or that a "
-                "native speaker would notice. Quote the learner's words exactly as `original`, "
-                f"give `corrected`, and explain each in one sentence in {explained_in}. No style "
-                "preferences, no punctuation or capitals (it is speech). None is a fine answer."
-            ),
-            content=json.dumps({"message": move.transcript}, ensure_ascii=False),
-            answer_name="halves_corrections",
-            answer_schema=_CORRECTIONS_SCHEMA,
-            charge=Charge(user, Feature.HALVES),
-        )
-        try:
-            found = _Corrections.model_validate(self._text_model.answer(task)).corrections
-        except (TextModelError, ValidationError):
-            return ()
-        heard = words_in(move.transcript)
-        kept: list[Correction] = []
-        seen: set[tuple[str, ...]] = set()
-        for item in found:
-            original, corrected = _clip(item.original, QUOTE_MAX), _clip(item.corrected, QUOTE_MAX)
-            words = words_in(original)
-            if not words or words in seen or not within(words, heard):
-                continue
-            if words_in(corrected) in ((), words):
-                continue
-            seen.add(words)
-            kept.append(
-                Correction(original, corrected, _clip(item.explanation, EXPLANATION_MAX), True)
-            )
-        kept = kept[:MAX_CORRECTIONS]
-        if not kept:
-            return ()
-        review = TextTask(
-            model=self._review_model,
-            instructions=reviewer_instructions(target_name, explained_in),
-            content=json.dumps(
-                {
-                    "mistakes": [
-                        {
-                            "id": number,
-                            "learner_said": move.transcript,
-                            "original": c.original,
-                            "corrected": c.corrected,
-                            "explanation": c.explanation,
-                        }
-                        for number, c in enumerate(kept)
-                    ],
-                    "rewrites": [],
-                },
-                ensure_ascii=False,
-            ),
-            answer_name="correction_review",
-            answer_schema=REVIEW_SCHEMA,
-            charge=Charge(user, Feature.HALVES),
-        )
-        try:
-            verdicts = {
-                answer.id: answer.verdict
-                for answer in Review.model_validate(self._text_model.answer(review)).mistakes
-            }
-        except (TextModelError, ValidationError):
-            return tuple(Correction(c.original, c.corrected, c.explanation, False) for c in kept)
-        return tuple(
-            Correction(c.original, c.corrected, c.explanation, verdicts.get(n) == "correct")
-            for n, c in enumerate(kept)
-            if verdicts.get(n) != "wrong"
-        )
+        """At most three corrections, each checked a second time (spec §16.1)."""
+        return self._checker.correct(move.user_id, move.transcript, target, explanation, SETTING)
 
     # --- The stand-in
 
@@ -436,7 +277,7 @@ class ModelBrain:
                 kept = words_in(written) and _keeps_numbers(text, written)
                 # What the model wrote is heard by the learner: it is read like a move first,
                 # and the hand-written clue is said when it cannot be (fails closed).
-                said = written if kept and self._safe([written], user) else text
+                said = written if kept and self._checker.clean(user, [written]) else text
             except (TextModelError, ValidationError):
                 said = text
         folder = f"{FOLDER}/{user}/{case.id}" if user else f"{FOLDER}/cases/{case.id}"
@@ -506,7 +347,7 @@ class ModelBrain:
                     for line in scene[:MAX_RECAP_LINES]
                     if words_in(line.text)
                 ]
-                if written and self._safe([text for _, text in written], user):
+                if written and self._checker.clean(user, [text for _, text in written]):
                     lines = written
             except (TextModelError, ValidationError):
                 logger.warning("halves recap not written; the ending is used")
@@ -520,16 +361,6 @@ class ModelBrain:
         return tuple(recap)
 
     # --- The Bridge (same-language mode, phase 2)
-
-    def _safe(self, texts: Sequence[str], user: UUID) -> bool:
-        """Whether text a model wrote may reach a learner: the local rules and the moderation
-        provider. When the provider cannot say, it may not (fails closed)."""
-        if any(local_problem(text) is not None for text in texts):
-            return False
-        try:
-            return not self._moderator.check(list(texts), Charge(user, Feature.MODERATION)).flagged
-        except ModeratorError:
-            return False
 
     def _line(self, move: Move, listener: UUID, instructions: str, name: str) -> str | None:
         if not self._write_model:
@@ -549,7 +380,7 @@ class ModelBrain:
             return None
         if not words_in(written) or not _keeps_numbers(move.transcript, written):
             return None
-        return written if self._safe([written], listener) else None
+        return written if self._checker.clean(listener, [written]) else None
 
     def simplify(self, move: Move, language: str, listener: UUID) -> str | None:
         """The move again in simpler words of the same language, every number kept. Without a
@@ -588,11 +419,10 @@ class ModelBrain:
         """'' to pass, a reason to drop, None when it could not be judged (fails closed)."""
         if not self._review_model:
             return None
-        try:
-            verdict = self._moderator.check([nudge.text], Charge(nudge.user_id, Feature.MODERATION))
-        except ModeratorError:
+        flagged = self._checker.flagged(nudge.user_id, [nudge.text])
+        if flagged is None:
             return None
-        if verdict.flagged:
+        if flagged:
             return "unsafe"
         task = TextTask(
             model=self._review_model,
@@ -650,4 +480,4 @@ def _keeps_numbers(clue: str, written: str) -> bool:
     return numbers <= set(words_in(written))
 
 
-__all__ = ["HOLD", "ModelBrain", "heard_option"]
+__all__ = ["HOLD", "SETTING", "ModelBrain", "heard_option"]

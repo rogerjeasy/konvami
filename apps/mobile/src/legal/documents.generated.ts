@@ -253,6 +253,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": ", if you join it. A codename Konvami makes up for you, your age group, your agreement to have your calls aired, and whether you veil your voice. For each call: the recording and what you said, written down word for word, the results of the safety check, the private corrections for you, and the applause cards and reports you give. Every call is checked before anyone else hears it; a call the check stops is never aired and is read by the person who runs Konvami."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Why, and on what legal basis"
         },
@@ -311,6 +323,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (the check of every move, reports, blocks): our legitimate interest in protecting the players (GDPR art. 6(1)(f))."
+              }
+            ],
+            [
+              {
+                "text": "To air your calls on Radio Konvami",
+                "bold": true
+              },
+              {
+                "text": ": on the basis of your separate consent when you join (GDPR art. 6(1)(a)); only adults are aired. You can withdraw it at any time in Radio Konvami › Settings, which deletes your calls and takes them out of every show."
+              }
+            ],
+            [
+              {
+                "text": "To keep Radio Konvami safe",
+                "bold": true
+              },
+              {
+                "text": " (the check of every call, reports): our legitimate interest in protecting listeners and callers (GDPR art. 6(1)(f))."
               }
             ]
           ]
@@ -457,6 +487,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Other listeners of Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": " hear the calls that are aired, as a recording or, with the Veil, your exact words in a neutral voice, and see your codename. They never see your name, email or corrections. Calls are checked with OpenAI's moderation and the AI provider above."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "How long data is kept"
         },
@@ -496,6 +538,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "Two Halves moves (the recording and its words) are deleted 30 days after their case ends, and in any case 30 days after they were recorded. Leaving Two Halves or deleting your account deletes them at once; the other player's case then goes on with an AI."
+              }
+            ],
+            [
+              {
+                "text": "Radio Konvami calls (the recording and its words) and shows are deleted 30 days after the show. Withdrawing your agreement or deleting your account deletes your calls at once."
               }
             ]
           ]
@@ -1069,6 +1116,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": ", wenn du mitmachst. Ein Codename, den Konvami für dich erfindet, deine Altersgruppe, deine Zustimmung, dass deine Anrufe gesendet werden, und ob du deine Stimme verschleierst. Für jeden Anruf: die Aufnahme und was du gesagt hast, Wort für Wort aufgeschrieben, die Ergebnisse der Sicherheitsprüfung, die privaten Korrekturen für dich sowie die Applauskarten und Meldungen, die du gibst. Jeder Anruf wird geprüft, bevor ihn jemand anderes hört; ein Anruf, den die Prüfung zurückhält, wird nie gesendet und von der Person gelesen, die Konvami betreibt."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Wozu, und auf welcher Rechtsgrundlage"
         },
@@ -1127,6 +1186,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (Prüfung jedes Zugs, Meldungen, Blockierungen): unser berechtigtes Interesse, die Spielenden zu schützen (Art. 6 Abs. 1 lit. f DSGVO)."
+              }
+            ],
+            [
+              {
+                "text": "Um deine Anrufe bei Radio Konvami zu senden",
+                "bold": true
+              },
+              {
+                "text": ": auf Grundlage deiner eigenen Einwilligung beim Mitmachen (Art. 6 Abs. 1 lit. a DSGVO); gesendet werden nur Erwachsene. Du kannst sie jederzeit unter Radio Konvami › Einstellungen widerrufen; deine Anrufe werden dann gelöscht und aus jeder Sendung genommen."
+              }
+            ],
+            [
+              {
+                "text": "Um Radio Konvami sicher zu halten",
+                "bold": true
+              },
+              {
+                "text": " (die Prüfung jedes Anrufs, Meldungen): unser berechtigtes Interesse am Schutz der Zuhörenden und Anrufenden (Art. 6 Abs. 1 lit. f DSGVO)."
               }
             ]
           ]
@@ -1273,6 +1350,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Andere Zuhörende von Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": " hören die gesendeten Anrufe, als Aufnahme oder, mit dem Schleier, deine genauen Worte in einer neutralen Stimme, und sehen deinen Codenamen. Deinen Namen, deine E-Mail-Adresse oder deine Korrekturen sehen sie nie. Anrufe werden mit der Moderation von OpenAI und dem oben genannten KI-Anbieter geprüft."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Wie lange Daten gespeichert bleiben"
         },
@@ -1312,6 +1401,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "Züge von Zwei Hälften (die Aufnahme und ihre Worte) werden 30 Tage nach dem Ende ihres Falls gelöscht, spätestens aber 30 Tage nach der Aufnahme. Wenn du Zwei Hälften verlässt oder dein Konto löschst, werden sie sofort gelöscht; der Fall der anderen Person geht dann mit einer KI weiter."
+              }
+            ],
+            [
+              {
+                "text": "Anrufe bei Radio Konvami (die Aufnahme und ihre Worte) und Sendungen werden 30 Tage nach der Sendung gelöscht. Wenn du deine Zustimmung widerrufst oder dein Konto löschst, werden deine Anrufe sofort gelöscht."
               }
             ]
           ]
@@ -1900,6 +1994,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": ", si tu y participes. Un nom de code que Konvami invente pour toi, ta tranche d’âge, ton accord pour que tes appels passent à l’antenne, et si tu voiles ta voix. Pour chaque appel : l’enregistrement et ce que tu as dit, transcrit mot à mot, les résultats de la vérification de sécurité, les corrections privées pour toi, ainsi que les applaudissements et signalements que tu donnes. Chaque appel est vérifié avant que quiconque l’entende ; un appel retenu par la vérification ne passe jamais à l’antenne et est lu par la personne qui gère Konvami."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Pourquoi, et sur quelle base légale"
         },
@@ -1958,6 +2064,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (contrôle de chaque coup, signalements, blocages) : notre intérêt légitime à protéger les joueurs (art. 6(1)(f) RGPD)."
+              }
+            ],
+            [
+              {
+                "text": "Pour diffuser tes appels sur Radio Konvami",
+                "bold": true
+              },
+              {
+                "text": " : sur la base de ton consentement distinct lorsque tu participes (art. 6, par. 1, let. a RGPD) ; seuls les adultes passent à l’antenne. Tu peux le retirer à tout moment dans Radio Konvami › Réglages, ce qui supprime tes appels et les retire de chaque émission."
+              }
+            ],
+            [
+              {
+                "text": "Pour garder Radio Konvami sûre",
+                "bold": true
+              },
+              {
+                "text": " (la vérification de chaque appel, les signalements) : notre intérêt légitime à protéger auditeurs et appelants (art. 6, par. 1, let. f RGPD)."
               }
             ]
           ]
@@ -2104,6 +2228,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Les autres auditeurs de Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": " entendent les appels diffusés, en enregistrement ou, avec le voile, tes mots exacts dans une voix neutre, et voient ton nom de code. Ils ne voient jamais ton nom, ton e-mail ni tes corrections. Les appels sont vérifiés avec la modération d’OpenAI et le fournisseur d’IA ci-dessus."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Combien de temps les données sont conservées"
         },
@@ -2143,6 +2279,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "Les coups de Deux moitiés (l’enregistrement et ses mots) sont effacés 30 jours après la fin de leur enquête, et au plus tard 30 jours après l’enregistrement. Quitter Deux moitiés ou supprimer ton compte les efface tout de suite ; l’enquête de l’autre joueur continue alors avec une IA."
+              }
+            ],
+            [
+              {
+                "text": "Les appels de Radio Konvami (l’enregistrement et ses mots) et les émissions sont supprimés 30 jours après l’émission. Retirer ton accord ou supprimer ton compte supprime tes appels aussitôt."
               }
             ]
           ]
@@ -2731,6 +2872,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": ", se partecipi. Un nome in codice che Konvami inventa per te, la tua fascia d’età, il tuo consenso a mandare in onda le tue chiamate e se veli la tua voce. Per ogni chiamata: la registrazione e ciò che hai detto, trascritto parola per parola, i risultati del controllo di sicurezza, le correzioni private per te, e gli applausi e le segnalazioni che dai. Ogni chiamata viene controllata prima che qualcun altro la senta; una chiamata trattenuta dal controllo non va mai in onda e viene letta dalla persona che gestisce Konvami."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Perché, e su quale base giuridica"
         },
@@ -2789,6 +2942,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " (controllo di ogni mossa, segnalazioni, blocchi): il nostro legittimo interesse a proteggere i giocatori (art. 6(1)(f) GDPR)."
+              }
+            ],
+            [
+              {
+                "text": "Per mandare in onda le tue chiamate su Radio Konvami",
+                "bold": true
+              },
+              {
+                "text": ": sulla base del tuo consenso separato quando partecipi (art. 6, par. 1, lett. a GDPR); vanno in onda solo gli adulti. Puoi revocarlo in qualsiasi momento in Radio Konvami › Impostazioni, il che elimina le tue chiamate e le toglie da ogni programma."
+              }
+            ],
+            [
+              {
+                "text": "Per mantenere sicura Radio Konvami",
+                "bold": true
+              },
+              {
+                "text": " (il controllo di ogni chiamata, le segnalazioni): il nostro legittimo interesse a proteggere chi ascolta e chi chiama (art. 6, par. 1, lett. f GDPR)."
               }
             ]
           ]
@@ -2935,6 +3106,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Gli altri ascoltatori di Radio Konvami",
+              "bold": true
+            },
+            {
+              "text": " sentono le chiamate trasmesse, come registrazione o, con il velo, le tue parole esatte in una voce neutra, e vedono il tuo nome in codice. Non vedono mai il tuo nome, la tua e-mail o le tue correzioni. Le chiamate vengono controllate con la moderazione di OpenAI e il fornitore di IA indicato sopra."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Per quanto tempo vengono conservati i dati"
         },
@@ -2974,6 +3157,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "Le mosse di Due metà (la registrazione e le sue parole) vengono cancellate 30 giorni dopo la fine del loro caso, e comunque entro 30 giorni dalla registrazione. Uscire da Due metà o cancellare il tuo account le cancella subito; il caso dell’altro giocatore continua allora con un’IA."
+              }
+            ],
+            [
+              {
+                "text": "Le chiamate di Radio Konvami (la registrazione e le sue parole) e i programmi vengono eliminati 30 giorni dopo il programma. Revocare il consenso o eliminare l’account elimina subito le tue chiamate."
               }
             ]
           ]

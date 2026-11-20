@@ -63,6 +63,9 @@ const FEATURE = {
   halves_listen: 'costs.feature.halves_listen',
   halves: 'costs.feature.halves',
   halves_audio: 'costs.feature.halves_audio',
+  radio_listen: 'costs.feature.radio_listen',
+  radio: 'costs.feature.radio',
+  radio_audio: 'costs.feature.radio_audio',
 } as const;
 
 // Providers go by their own names, which are not translated.

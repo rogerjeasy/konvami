@@ -112,6 +112,23 @@ first language and chosen place are Other Data Types.
   were recorded (the bucket rule `delete-halves-audio`); leaving Two Halves or deleting the account
   deletes them at once.
 
+## Radio Konvami (section 8)
+
+When Radio Konvami is switched on, an adult's calls that pass the check are heard by **every
+listener** of that day's show in the language learned (their voice, or their exact words in a
+neutral voice with the Veil, on by default), at the learner's own request and with a separate
+consent given when joining. A minor's calls are never aired. Nothing new is collected that the
+labels above do not list: Audio Data and Other User Content cover the calls; the codename and the
+applause cards are Other Data Types.
+
+- **App Store:** no new data type. Say in the review notes that every call is checked before it
+  airs, can be reported, that the host's own lines are moderated, and that there are no comments
+  or messages.
+- **Google Play:** a call aired to other users at the learner's direction is the clearest case of
+  "shared" Audio Data in the Data safety form; the owner decides (release checklist I4).
+- **Retention:** calls and shows are deleted 30 days after the show (the bucket rule
+  `delete-radio-audio`); withdrawing the consent or deleting the account deletes the calls at once.
+
 ## Retention, as the policy states it
 
 Kept until the learner deletes the account or the item. Account deletion removes the sign-in and

@@ -27,6 +27,12 @@ variable "halves_expiry_days" {
   default     = 30
 }
 
+variable "radio_expiry_days" {
+  description = "Days after which a Radio Konvami recording or show (radio/) is deleted. S3 counts in whole days."
+  type        = number
+  default     = 30
+}
+
 variable "force_destroy" {
   description = "Let Terraform delete the bucket while it still holds files. Turn on only to tear an environment down."
   type        = bool

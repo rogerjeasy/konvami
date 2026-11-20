@@ -38,6 +38,7 @@ from konvami_api.domain.premium_voices import PremiumError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.profile_questions import QuestionError
 from konvami_api.domain.pronunciation import PronunciationError
+from konvami_api.domain.radio import RadioError
 from konvami_api.domain.real_life import RealLifeError
 from konvami_api.domain.reports import ReportError
 from konvami_api.domain.retries import RetryError
@@ -290,6 +291,12 @@ def install_error_handlers(app: FastAPI) -> None:
         from konvami_api.api.halves import STATUS as HALVES_STATUS
 
         return _response(HALVES_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(RadioError)
+    async def _radio_error(_: Request, error: RadioError) -> JSONResponse:
+        from konvami_api.api.radio import STATUS as RADIO_STATUS
+
+        return _response(RADIO_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(PenPalError)
     async def _pen_pal_error(_: Request, error: PenPalError) -> JSONResponse:

@@ -21,6 +21,8 @@ PLANS_VARIABLE = "KONVAMI_PLANS"
 # Two Halves (section 7): {"enabled": true, "open_to_testers": true, "strangers": false}. Off
 # without it; strangers are matched only with "strangers" (phase 2, after the legal review).
 HALVES_VARIABLE = "KONVAMI_HALVES"
+# Radio Konvami (section 8): {"enabled": true, "open_to_testers": true}. Off without it.
+RADIO_VARIABLE = "KONVAMI_RADIO"
 
 
 class _Voice(BaseModel):
@@ -303,3 +305,16 @@ def halves_settings(raw: str | None) -> HalvesSettings:
     except (ValueError, ValidationError) as error:
         raise RuntimeError(f"{HALVES_VARIABLE} is not valid") from error
     return HalvesSettings(parsed.enabled, parsed.open_to_testers, parsed.strangers)
+
+
+def radio_settings(raw: str | None) -> HalvesSettings:
+    """Radio Konvami's switches from the `KONVAMI_RADIO` JSON, the same two as Two Halves'.
+    Without it, the show is off."""
+    if not raw:
+        return HalvesSettings()
+    try:
+        parsed = _Halves.model_validate(json.loads(raw))
+    except (ValueError, ValidationError) as error:
+        raise RuntimeError(f"{RADIO_VARIABLE} is not valid") from error
+    # Radio has no strangers switch of its own: a show is heard by every listener.
+    return HalvesSettings(parsed.enabled, parsed.open_to_testers)

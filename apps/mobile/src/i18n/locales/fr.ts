@@ -1,6 +1,7 @@
 import { EXAM_ACOUSTICS } from '../exam-acoustics';
 import { HALVES } from '../halves';
 import { HALVES_MORE } from '../halves-more';
+import { RADIO } from '../radio';
 import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
@@ -13,6 +14,7 @@ import type { Translation } from './en';
 export const fr: Translation = {
   examAcoustics: EXAM_ACOUSTICS.fr,
   halves: { ...HALVES.fr, ...HALVES_MORE.fr },
+  radio: RADIO.fr,
   captionLookup: CAPTION_LOOKUP.fr,
   examStages: EXAM_STAGES.fr,
   offlineLibrary: offlineLibrary.fr,
@@ -2569,6 +2571,9 @@ export const fr: Translation = {
       halves_listen: 'Coups de Deux moitiés transcrits',
       halves: 'Deux moitiés : contrôle et textes',
       halves_audio: 'Deux moitiés : sons',
+      radio_listen: 'Radio : appels transcrits',
+      radio: 'Radio : vérifications et textes',
+      radio_audio: 'Radio : sons de l’émission',
     },
   },
   plan: {

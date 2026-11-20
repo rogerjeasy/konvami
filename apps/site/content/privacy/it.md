@@ -45,6 +45,8 @@ Ti chiediamo di non condividere ciò che non vorresti vedere scritto, per esempi
 
 **Due metà**, se partecipi. Un nome in codice che Konvami inventa per te, la tua prima lingua, il luogo che scegli di mostrare (una città da un elenco, un paese o niente), la tua fascia d’età e il tuo consenso a condividere la tua voce. Per ogni caso: le mosse che registri (la registrazione e quello che hai detto, trascritto parola per parola), i risultati del controllo di sicurezza, le correzioni private per te, le tue risposte sul tabellone, le tue reazioni e le tue segnalazioni e blocchi. Ogni mossa viene controllata prima che qualcuno la senta; una mossa fermata dal controllo non viene mai consegnata ed è letta dalla persona che gestisce Konvami.
 
+**Radio Konvami**, se partecipi. Un nome in codice che Konvami inventa per te, la tua fascia d’età, il tuo consenso a mandare in onda le tue chiamate e se veli la tua voce. Per ogni chiamata: la registrazione e ciò che hai detto, trascritto parola per parola, i risultati del controllo di sicurezza, le correzioni private per te, e gli applausi e le segnalazioni che dai. Ogni chiamata viene controllata prima che qualcun altro la senta; una chiamata trattenuta dal controllo non va mai in onda e viene letta dalla persona che gestisce Konvami.
+
 ## Perché, e su quale base giuridica
 
 - **Per fornire Konvami** (account, conversazioni, resoconti, flashcard, risposte del Tutor, note, registrazioni): perché ce lo chiedi, secondo le nostre condizioni d’uso (art. 6, par. 1, lett. b GDPR).
@@ -53,6 +55,8 @@ Ti chiediamo di non condividere ciò che non vorresti vedere scritto, per esempi
 - **Per capire come viene usata l’app e trovare i difetti**: i rapporti di crash sulla base del nostro legittimo interesse a un’app funzionante (GDPR art. 6, par. 1, lett. f); i conteggi d’uso anonimi solo sulla base del tuo consenso (art. 6, par. 1, lett. a), che puoi revocare in qualsiasi momento in Profilo › Privacy e IA.
 - **Perché l’altro giocatore di un caso di Due metà senta le tue mosse**: sulla base del tuo consenso separato quando partecipi (art. 6(1)(a) GDPR). Puoi ritirarlo in qualsiasi momento in Due metà › Impostazioni › Esci, che cancella le tue mosse.
 - **Perché Due metà resti sicuro** (controllo di ogni mossa, segnalazioni, blocchi): il nostro legittimo interesse a proteggere i giocatori (art. 6(1)(f) GDPR).
+- **Per mandare in onda le tue chiamate su Radio Konvami**: sulla base del tuo consenso separato quando partecipi (art. 6, par. 1, lett. a GDPR); vanno in onda solo gli adulti. Puoi revocarlo in qualsiasi momento in Radio Konvami › Impostazioni, il che elimina le tue chiamate e le toglie da ogni programma.
+- **Per mantenere sicura Radio Konvami** (il controllo di ogni chiamata, le segnalazioni): il nostro legittimo interesse a proteggere chi ascolta e chi chiama (art. 6, par. 1, lett. f GDPR).
 
 Konvami non usa la tua voce per identificarti. Il tuo livello, le correzioni e i resoconti sono elaborati dall’IA; ti aiutano a imparare, non hanno effetti giuridici o effetti analoghi significativi su di te, e puoi cambiare il tuo livello in qualsiasi momento.
 
@@ -79,6 +83,8 @@ Comunichiamo dati alle autorità solo quando la legge lo richiede.
 
 **L’altro giocatore di un caso di Due metà** sente le tue mosse, come registrazione o, con «Vela la mia voce», le tue parole esatte lette da una voce neutra. Vede il tuo nome in codice e il luogo che hai scelto di mostrare, mai il tuo nome, la tua email o le tue correzioni. In questa prima fase l’altro giocatore è un’IA, o un amico o un’amica che hai invitato con un codice; gli sconosciuti non vengono messi insieme. Le mosse sono controllate con la moderazione di OpenAI e il fornitore di IA qui sopra.
 
+**Gli altri ascoltatori di Radio Konvami** sentono le chiamate trasmesse, come registrazione o, con il velo, le tue parole esatte in una voce neutra, e vedono il tuo nome in codice. Non vedono mai il tuo nome, la tua e-mail o le tue correzioni. Le chiamate vengono controllate con la moderazione di OpenAI e il fornitore di IA indicato sopra.
+
 ## Per quanto tempo vengono conservati i dati
 
 - Tutto ciò che si trova nel tuo account viene conservato finché non cancelli l’account, tranne ciò che cancelli prima tu stesso (una nota, una flashcard, la tua foto, le tue registrazioni).
@@ -88,6 +94,7 @@ Comunichiamo dati alle autorità solo quando la legge lo richiede.
 - Una foto di cui inizi il caricamento senza mai confermarlo viene cancellata dopo un giorno.
 - OpenAI conserva ciò che riceve fino a 30 giorni (vedi sopra).
 - Le mosse di Due metà (la registrazione e le sue parole) vengono cancellate 30 giorni dopo la fine del loro caso, e comunque entro 30 giorni dalla registrazione. Uscire da Due metà o cancellare il tuo account le cancella subito; il caso dell’altro giocatore continua allora con un’IA.
+- Le chiamate di Radio Konvami (la registrazione e le sue parole) e i programmi vengono eliminati 30 giorni dopo il programma. Revocare il consenso o eliminare l’account elimina subito le tue chiamate.
 
 ## Come sono protetti i tuoi dati
 

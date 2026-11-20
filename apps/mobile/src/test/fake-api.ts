@@ -1,4 +1,5 @@
 import { createFakeHalves, type FakeHalvesControls } from './fake-halves';
+import { createFakeRadio, type FakeRadioControls } from './fake-radio';
 import {
   ApiError,
   type Activity,
@@ -913,7 +914,7 @@ export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
   };
 }
 
-export interface FakeApi extends ApiClient, FakeHalvesControls {
+export interface FakeApi extends ApiClient, FakeHalvesControls, FakeRadioControls {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
   /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
   hearsNextRetry(heard: string): void;
@@ -1818,7 +1819,31 @@ export function createFakeApi(): FakeApi {
 
   // Listed, not spread: a spread would read this object's getters once (`deleted`, …).
   const halves = createFakeHalves(record);
+  const radio = createFakeRadio(record);
   return {
+    radioOpen: radio.radioOpen,
+    radioMinor: radio.radioMinor,
+    radioQueued: radio.radioQueued,
+    radioAired: radio.radioAired,
+    getRadio: radio.getRadio,
+    joinRadio: radio.joinRadio,
+    changeRadio: radio.changeRadio,
+    rerollRadioCodename: radio.rerollRadioCodename,
+    leaveRadio: radio.leaveRadio,
+    getRadioArchive: radio.getRadioArchive,
+    getRadioEpisode: radio.getRadioEpisode,
+    getRadioSegmentAudio: radio.getRadioSegmentAudio,
+    applaudRadioSegment: radio.applaudRadioSegment,
+    reportRadioSegment: radio.reportRadioSegment,
+    sendRadioCall: radio.sendRadioCall,
+    getRadioCall: radio.getRadioCall,
+    getRadioCallAudio: radio.getRadioCallAudio,
+    withdrawRadioCall: radio.withdrawRadioCall,
+    sayRadioCorrectionBetter: radio.sayRadioCorrectionBetter,
+    saveRadioCorrectionCard: radio.saveRadioCorrectionCard,
+    getRadioQueue: radio.getRadioQueue,
+    decideRadioItem: radio.decideRadioItem,
+    pullRadioEpisode: radio.pullRadioEpisode,
     halvesOpen: halves.halvesOpen,
     halvesHeld: halves.halvesHeld,
     halvesStrangers: halves.halvesStrangers,
