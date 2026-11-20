@@ -8,6 +8,8 @@ export type OpenTarget =
   | { open: 'card'; id: string }
   | { open: 'report'; id: string }
   | { open: 'simulation'; id: string }
+  /** A Two Halves case: a clue arrived, or the learner's move was held (7.4). */
+  | { open: 'halves'; id: string }
   | { open: 'today' };
 
 /** What a notification's data says it opens; anything else opens Today. */
@@ -15,7 +17,7 @@ export function openTargetOf(data: Record<string, unknown> | undefined): OpenTar
   const id = typeof data?.id === 'string' ? data.id : null;
   const card = typeof data?.card === 'string' ? data.card : null;
   if (card) return { open: 'card', id: card };
-  if (id && (data?.open === 'report' || data?.open === 'simulation')) {
+  if (id && (data?.open === 'report' || data?.open === 'simulation' || data?.open === 'halves')) {
     return { open: data.open, id };
   }
   return { open: 'today' };

@@ -3,7 +3,13 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Home, PushDevice } from '@konvami/api-client';
 import { useAuthServices, useSession } from '@/auth';
-import { learnCardRoute, reportRoute, ROUTES, simulationRoute } from '@/lib/routes';
+import {
+  learnCardRoute,
+  reportRoute,
+  ROUTES,
+  simulationRoute,
+  halvesCaseRoute,
+} from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
 import { usePreferences } from '@/preferences';
 import type { OpenTarget, ScheduledReminder } from './device';
@@ -98,6 +104,8 @@ function routeOf(target: OpenTarget) {
       return reportRoute(target.id);
     case 'simulation':
       return simulationRoute(target.id);
+    case 'halves':
+      return halvesCaseRoute(target.id);
     default:
       return ROUTES.today;
   }

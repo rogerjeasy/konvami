@@ -1,4 +1,4 @@
-import { importCallRoute, importRoute, letterCallRoute } from './routes';
+import { halvesBriefingRoute, importCallRoute, importRoute, letterCallRoute } from './routes';
 
 // The call's `practise` is at most 40 characters on the server.
 const PRACTISE_MAX = 40;
@@ -25,5 +25,14 @@ describe('routes of the course companion', () => {
   it('keeps `practise` within what the server takes', () => {
     expect(importCallRoute('p1', ID).params.practise?.length).toBeLessThanOrEqual(PRACTISE_MAX);
     expect(letterCallRoute('p1', ID).params.practise?.length).toBeLessThanOrEqual(PRACTISE_MAX);
+  });
+});
+
+describe('routes of Two Halves', () => {
+  it('briefs a case by its 32 hex digits, within what the server takes', () => {
+    const route = halvesBriefingRoute('p1', ID);
+
+    expect(route.params.scenario).toBe('halves:ffffffffffff4fff8fff000000000001');
+    expect(route.params.scenario?.length).toBeLessThanOrEqual(PRACTISE_MAX);
   });
 });
