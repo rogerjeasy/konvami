@@ -42,6 +42,7 @@ from konvami_api.domain.halves_cases import (
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import words_in
+from konvami_api.domain.scenarios import Goal, Scenario
 from konvami_api.domain.spoken import Listener, SpokenError
 from konvami_api.domain.storage import FileStore
 
@@ -165,6 +166,8 @@ STAND_IN_NAMES: Mapping[str, str] = {"de": "Jonas", "en": "Sam", "fr": "Julien",
 STAND_IN_VOICES: tuple[str, ...] = ("ash", "coral", "sage", "verse")
 # The neutral voice of a veiled move: the learner's exact words, not their voice.
 VEIL_VOICE = "alloy"
+# A practice call whose scenario is "halves:<case id>" is the briefing of that case (7.5).
+BRIEFING_PREFIX = "halves:"
 
 
 class HalvesError(Exception):
@@ -1662,4 +1665,39 @@ class HalvesService:
             text_in(found.title, state.speaks),
             text_in(found.setting, state.speaks),
             text_in(clue.says, state.speaks),
+        )
+
+    def briefing_scenario(self, user_id: UUID, scenario_id: str) -> Scenario | None:
+        """The briefing (7.5) as a role-play of the practice call: the learner's own partner
+        rehearses with them the clue they tell next. None for an id that is not a briefing of
+        one of their open cases."""
+        if not scenario_id.startswith(BRIEFING_PREFIX):
+            return None
+        try:
+            case_id = UUID(scenario_id.removeprefix(BRIEFING_PREFIX))
+        except ValueError:
+            return None
+        found = self.briefing(user_id, case_id)
+        if found is None:
+            return None
+        title, setting, clue = found
+        return Scenario(
+            id=scenario_id,
+            level="A1",
+            character=(
+                "yourself, the learner's own partner, as their coach for one move of Two Halves, "
+                "a two-player mystery game"
+            ),
+            situation=(
+                f'The case "{title}": {setting} In a voice message of at most 90 seconds, in the '
+                f"language they are learning, the learner must tell the other player this clue: "
+                f'"{clue}". The other player has not heard it. Help the learner say it clearly in '
+                "their own words: ask them to try, give one gentle tip about one thing to say "
+                "better, and let them try once more. Never tell them other clues or the answer, "
+                "and never invent facts of the case."
+            ),
+            goals=(
+                Goal("said_clue", "told the clue clearly in their own words"),
+                Goal("tried_again", "said it once more after a tip"),
+            ),
         )

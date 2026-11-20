@@ -542,3 +542,25 @@ def test_the_briefing_tells_the_partner_the_clue_to_rehearse() -> None:
     assert briefing is not None
     assert briefing[2] == "Euer Paket ist eine blaue Kiste, zwei Kilo schwer."
     assert g.service.briefing(OTHER_USER, case.id) is None
+
+
+def test_a_briefing_call_rehearses_the_clue_the_learner_tells_next() -> None:
+    g = game()
+    join(g)
+    case = g.service.play_ai(USER, "wrong_parcel")
+    scenario = g.service.briefing_scenario(USER, f"halves:{case.id}")
+    assert scenario is not None
+    assert "Euer Paket ist eine blaue Kiste" in scenario.situation
+    assert [goal.id for goal in scenario.goals] == ["said_clue", "tried_again"]
+    assert g.service.briefing_scenario(USER, "doctor") is None
+    assert g.service.briefing_scenario(USER, "halves:not-a-case") is None
+    assert g.service.briefing_scenario(OTHER_USER, f"halves:{case.id}") is None
+
+    # The practice call finds it as a role-play the language pack does not have.
+    g.world.practice._extra_scenarios = g.service.briefing_scenario
+    partner = g.world.personas.partners(USER)[0]
+    account = g.world.accounts.accounts[USER]
+    briefing = g.world.practice.prepare(
+        USER, account, g.world.clock.now.date(), partner.id, scenario=f"halves:{case.id}"
+    )
+    assert "Euer Paket ist eine blaue Kiste" in briefing.instructions
