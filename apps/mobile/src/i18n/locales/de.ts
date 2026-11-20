@@ -3,6 +3,7 @@ import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
+import { STORIES_TEXT } from '../stories-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
@@ -13,6 +14,8 @@ export const de: Translation = {
   examStages: EXAM_STAGES.de,
   offlineLibrary: offlineLibrary.de,
   vocabulary: VOCABULARY_TEXT.de,
+  stories: STORIES_TEXT.de.stories,
+  drill: STORIES_TEXT.de.drill,
   common: {
     earlier: '{{what}}: früher',
     later: '{{what}}: später',
@@ -1291,6 +1294,10 @@ export const de: Translation = {
 
     importRow: 'Eigenes Material mitbringen',
     importHint: 'Texte, Links und Fotos, mit ihren Wörtern',
+    storiesRow: 'Geschichten',
+    storiesHint: 'Hörfolgen aus deinen Wörtern',
+    drillRow: 'Pendel-Drill',
+    drillHint: 'Zehn Minuten freihändig unterwegs',
     body: 'Wörter und Korrekturen aus deinen Gesprächen – zurück, kurz bevor du sie vergisst.',
     loading: 'Deine Karten werden geladen',
     loadFailed: 'Deine Karten konnten nicht geladen werden.',
@@ -2145,6 +2152,9 @@ export const de: Translation = {
       pen_pal: 'Brieffreund-Nachrichten',
       pen_pal_audio: 'Brieffreund-Töne',
       pen_pal_listen: 'Sprachnachrichten aufgeschrieben',
+      story: 'Geschichten',
+      story_audio: 'Klänge der Geschichten',
+      story_listen: 'Antworten zu Geschichten aufgeschrieben',
     },
   },
   plan: {
