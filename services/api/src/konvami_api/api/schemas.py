@@ -2309,6 +2309,11 @@ class ExamWeekOut(ApiModel):
         )
 
 
+class PlanCaseOut(ApiModel):
+    template_id: str
+    title: str
+
+
 class WeekPlanOut(ApiModel):
     """This week's plan (the Learning Director, spec §6.12), as it stands now."""
 
@@ -2338,6 +2343,8 @@ class WeekPlanOut(ApiModel):
     exam: ExamWeekOut | None
     # The planned days among the next seven, today's included: the app reminds on them.
     upcoming: list[dt.date]
+    # This week's Two Halves case (section 7), while none was started this week; null else.
+    halves: PlanCaseOut | None
 
     @classmethod
     def of(cls, plan: WeekPlan) -> "WeekPlanOut":
@@ -2371,6 +2378,11 @@ class WeekPlanOut(ApiModel):
             missed=list(plan.missed),
             exam=ExamWeekOut.of(plan.exam) if plan.exam else None,
             upcoming=list(plan.upcoming),
+            halves=(
+                PlanCaseOut(template_id=plan.halves.template_id, title=plan.halves.title)
+                if plan.halves
+                else None
+            ),
         )
 
 

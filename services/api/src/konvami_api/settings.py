@@ -18,7 +18,8 @@ COSTS_VARIABLE = "KONVAMI_COSTS"
 PREMIUM_VOICES_VARIABLE = "KONVAMI_PREMIUM_VOICES"
 
 PLANS_VARIABLE = "KONVAMI_PLANS"
-# Two Halves (section 7): {"enabled": true, "open_to_testers": true}. Off without it.
+# Two Halves (section 7): {"enabled": true, "open_to_testers": true, "strangers": false}. Off
+# without it; strangers are matched only with "strangers" (phase 2, after the legal review).
 HALVES_VARIABLE = "KONVAMI_HALVES"
 
 
@@ -276,11 +277,13 @@ def video_avatar_settings(raw: str | None) -> VideoAvatars:
 
 @dataclass(frozen=True)
 class HalvesSettings:
-    """Two Halves (section 7, phase 1). Off until turned on; while it is in the testers' hands
-    (`open_to_testers`) every learner may play, else the owners only."""
+    """Two Halves (section 7). Off until turned on; while it is in the testers' hands
+    (`open_to_testers`) every learner may play, else the owners only. `strangers` (phase 2)
+    lets adults who do not know each other be matched: off until the legal review."""
 
     enabled: bool = False
     open_to_testers: bool = False
+    strangers: bool = False
 
 
 class _Halves(BaseModel):
@@ -288,6 +291,7 @@ class _Halves(BaseModel):
 
     enabled: bool = False
     open_to_testers: bool = False
+    strangers: bool = False
 
 
 def halves_settings(raw: str | None) -> HalvesSettings:
@@ -298,4 +302,4 @@ def halves_settings(raw: str | None) -> HalvesSettings:
         parsed = _Halves.model_validate(json.loads(raw))
     except (ValueError, ValidationError) as error:
         raise RuntimeError(f"{HALVES_VARIABLE} is not valid") from error
-    return HalvesSettings(parsed.enabled, parsed.open_to_testers)
+    return HalvesSettings(parsed.enabled, parsed.open_to_testers, parsed.strangers)

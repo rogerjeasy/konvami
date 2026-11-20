@@ -264,3 +264,8 @@ def test_two_halves_is_off_unless_turned_on() -> None:
     assert on == HalvesSettings(enabled=True, open_to_testers=True)
     with pytest.raises(RuntimeError, match="KONVAMI_HALVES"):
         halves_settings('{"enabled": "yes"}')
+
+
+def test_strangers_are_matched_only_when_turned_on() -> None:
+    assert not halves_settings('{"enabled": true}').strangers
+    assert halves_settings('{"enabled": true, "strangers": true}').strangers

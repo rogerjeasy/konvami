@@ -75,6 +75,30 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "Ton coup dans Deux moitiés n’a pas été envoyé. Ouvre l’enquête pour voir pourquoi.",  # noqa: RUF001
         "it": "La tua mossa in Due metà non è stata inviata. Apri il caso per vedere perché.",
     },
+    "halves_match": {
+        "en": "Someone was found for Two Halves. Your case is ready.",
+        "de": "Jemand für Zwei Hälften wurde gefunden. Dein Fall ist bereit.",
+        "fr": "Quelqu’un a été trouvé pour Deux moitiés. Ton enquête est prête.",  # noqa: RUF001
+        "it": "Abbiamo trovato qualcuno per Due metà. Il tuo caso è pronto.",
+    },
+    "halves_ai_offer": {
+        "en": "Still looking for someone for Two Halves. An AI can play with you now.",
+        "de": "Wir suchen noch jemanden für Zwei Hälften. Eine KI kann jetzt mit dir spielen.",
+        "fr": "On cherche encore quelqu’un pour Deux moitiés. Une IA peut jouer avec toi.",  # noqa: RUF001
+        "it": "Cerchiamo ancora qualcuno per Due metà. Un’IA può giocare con te adesso.",  # noqa: RUF001
+    },
+    "halves_search_over": {
+        "en": "Nobody was free for Two Halves this time. Play with an AI, or look again later.",
+        "de": "Diesmal war niemand für Zwei Hälften frei. Spiel mit einer KI oder such später.",
+        "fr": "Personne n’était libre pour Deux moitiés. Joue avec une IA ou cherche plus tard.",  # noqa: RUF001
+        "it": "Nessuno era libero per Due metà. Gioca con un’IA o cerca più tardi.",  # noqa: RUF001
+    },
+    "halves_warning": {
+        "en": "A message about one of your Two Halves moves. Keep moves about the case.",
+        "de": "Ein Hinweis zu einem deiner Züge bei Zwei Hälften: Bleib beim Fall.",
+        "fr": "Un message sur l’un de tes coups dans Deux moitiés : reste sur l’enquête.",  # noqa: RUF001
+        "it": "Un avviso su una tua mossa in Due metà: resta sul caso.",
+    },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
         "de": "Wir haben lange nicht gesprochen. Hast du fünf Minuten?",
@@ -268,14 +292,13 @@ class PushService:
         )
 
     def halves(self, user_id: UUID, case_id: UUID, kind: str) -> None:
-        """Two Halves: a move arrived in a case (`move`), or the learner's own was held
-        (`held`). Opens the case."""
-        self._send(
-            self._repository.of(user_id),
-            "halves_held" if kind == "held" else "halves_move",
-            APP_NAME,
-            {"open": "halves", "id": str(case_id)},
-        )
+        """Two Halves: a move arrived in a case (`move`), the learner's own was held (`held`),
+        a partner was found (`match`), the search offers an AI (`ai_offer`) or ended
+        (`search_over`), or the owner warned them (`warning`). Opens the case, or the hub when
+        there is no case."""
+        words = f"halves_{kind}" if f"halves_{kind}" in _WORDS else "halves_move"
+        data = {"open": "halves"} if case_id.int == 0 else {"open": "halves", "id": str(case_id)}
+        self._send(self._repository.of(user_id), words, APP_NAME, data)
 
     def nudge(self) -> int:
         """Once an hour: each phone whose reminder hour it is now, of a learner who has not

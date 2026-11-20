@@ -29,7 +29,7 @@ from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Level, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
-from konvami_api.domain.director import DirectorService
+from konvami_api.domain.director import CaseSuggestion, DirectorService
 from konvami_api.domain.exam_acoustics import ExamAcoustics
 from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.exports import DataExportService
@@ -38,6 +38,7 @@ from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.halves import HalvesService
 from konvami_api.domain.halves_check import ModelBrain
+from konvami_api.domain.halves_writer import CaseMaterial, ModelCaseWriter
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -516,6 +517,8 @@ def build_backend(
         allowance=lambda user_id: voice.allowance(user_id),
         call_seconds=voice_config.max_seconds.get(CallPurpose.PRACTICE, 0),
         clock=_now,
+        # Two Halves is built below; the week's case is asked for when a plan is made.
+        halves=lambda user_id, monday: _week_case(halves, user_id, monday),
     )
     voice = VoiceCallService(
         assessment_provider=exams.assessment_provider,
@@ -724,6 +727,16 @@ def build_backend(
         owners=costs.owners,
         clock=_now,
         announce=push.halves,
+        strangers=halves_config.strangers,
+        # A case from a course import is written by the strong model, as the import was.
+        writer=ModelCaseWriter(
+            text_model=text,
+            model=models.report,
+            moderator=OpenAiModerator(openai_key, meter=meter),
+            language_name=CATALOG.english_name,
+            clock=_now,
+        ),
+        material=lambda user_id, import_id: _case_material(course_imports, user_id, import_id),
     )
     services = Services(
         halves=halves,
@@ -1002,11 +1015,36 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
 
 
+def _week_case(halves: HalvesService, user_id: UUID, monday: dt.date) -> CaseSuggestion | None:
+    found = halves.suggestion(user_id, monday)
+    return CaseSuggestion(found.template_id, found.title) if found else None
+
+
+def _case_material(
+    imports: CourseImportService, user_id: UUID, import_id: UUID
+) -> CaseMaterial | None:
+    """One of the learner's own course imports, as the Case Writer reads it (7.17)."""
+    found = next((item for item in imports.imports(user_id) if item.id == import_id), None)
+    if found is None:
+        return None
+    return CaseMaterial(
+        id=found.id,
+        title=found.title,
+        language=found.language,
+        level=found.level,
+        text=found.text,
+        words=tuple((word.word, word.meaning) for word in found.vocabulary),
+    )
+
+
 def _halves_job(backend: Backend, job: str, item_id: UUID) -> None:
-    """Two Halves' jobs (section 7): check a move, play the AI stand-in, write the recap."""
+    """Two Halves' jobs (section 7): check a move, play the AI stand-in, write the recap, and
+    verify a native's nudge (phase 2)."""
     halves = backend.services.halves
     if job == "check":
         halves.check(item_id)
+    elif job == "nudge":
+        halves.check_nudge(item_id)
     elif job == "ai":
         halves.play(item_id)
     elif job == "recap":

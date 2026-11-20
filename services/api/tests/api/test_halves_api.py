@@ -29,6 +29,8 @@ def run(services: Services, starter: RecordingHalvesStarter) -> None:
             services.halves.check(item)
         elif job == "ai":
             services.halves.play(item)
+        elif job == "nudge":
+            services.halves.check_nudge(item)
         else:
             services.halves.write_recap(item)
 
@@ -270,6 +272,10 @@ def test_a_learner_reaches_only_their_own_cases_and_the_moves_sent_to_them(
         ("POST", f"/v1/halves/moves/{theirs}/answer", {"option": 1}),
         ("POST", f"/v1/halves/moves/{theirs}/reaction", {"reaction": "bravo"}),
         ("POST", f"/v1/halves/moves/{theirs}/report", {"reason": "other"}),
+        # Phase 2.
+        ("POST", f"/v1/halves/moves/{theirs}/bridge", {"step": "simpler"}),
+        ("POST", f"/v1/halves/moves/{theirs}/nudge", {"text": "besser so"}),
+        ("GET", f"/v1/halves/cases/{case_id}/share", None),
     ]
     for method, path, body in elsewhere:
         response = call(method, path, body, subject=OTHER_USER)
@@ -285,3 +291,48 @@ def test_a_learner_reaches_only_their_own_cases_and_the_moves_sent_to_them(
     decide = f"/v1/halves/queue/held/{mine.body['id']}"
     assert call("GET", "/v1/halves/queue", subject=OTHER_USER).status == 403
     assert call("POST", decide, {"action": "remove"}, subject=OTHER_USER).status == 403
+    assert call("GET", "/v1/halves/queue/stats", subject=OTHER_USER).status == 403
+
+
+def test_phase_two_over_http(
+    call: Call,
+    services: Services,
+    text_model: ScriptedTextModel,
+    directory: FakeAccountDirectory,
+    halves_transcriber: ScriptedTranscriber,
+    halves_starter: RecordingHalvesStarter,
+) -> None:
+    """Strangers stay closed without the switch; the case shows how well the learner was
+    understood; the strand map, share card and owner's numbers answer."""
+    adults(directory)
+    onboarded(call, text_model)
+    hub = call("PUT", "/v1/halves/profile", JOIN).body
+    assert hub["strangers"] is False
+    assert hub["searchHours"] == [2, 12, 48]
+    refused = call("POST", "/v1/halves/search", {"hours": 12})
+    assert (refused.status, refused.body["error"]["code"]) == (403, "unavailable")
+    assert call("POST", "/v1/halves/search", {"hours": 1}).status == 422
+
+    case_id = call("POST", "/v1/halves/cases", {"templateId": "lost_cello"}).body["id"]
+    run(services, halves_starter)
+    halves_transcriber.answers.append("Ein Schaffner hat um 14 Uhr 20 einen Kasten gesehen")
+    call("POST", f"/v1/halves/cases/{case_id}/moves", {"audio": AUDIO, "format": "m4a"})
+    run(services, halves_starter)
+    case = call("GET", f"/v1/halves/cases/{case_id}").body
+    assert (case["understoodFirst"], case["told"]) == (1, 1)
+    theirs = case["rounds"][0]["theirs"]
+    # Mirror mode against the AI: no Bridge, and nobody nudges the AI.
+    assert (theirs["bridge"], theirs["canNudge"]) == (False, False)
+    assert theirs["caption"]
+    bridge = call("POST", f"/v1/halves/moves/{theirs['id']}/bridge", {"step": "simpler"})
+    assert bridge.status == 409
+    assert call("GET", f"/v1/halves/cases/{case_id}/share").status == 409
+
+    strands = call("GET", "/v1/halves/strands").body
+    assert strands["me"]["label"] == "Lyon"
+    assert strands["strands"] == []
+    missing = call("POST", "/v1/halves/cases/import", {"importId": str(UUID(int=5))})
+    assert missing.status == 404
+    stats = call("GET", "/v1/halves/queue/stats", subject=OWNER).body
+    assert stats["moves"] == 1
+    assert stats["heldPer1000"] == 0.0

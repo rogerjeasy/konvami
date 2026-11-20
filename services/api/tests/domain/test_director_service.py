@@ -3,7 +3,13 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from konvami_api.domain.director import ExamPace, Reason, SessionKind, WeakestPart
+from konvami_api.domain.director import (
+    CaseSuggestion,
+    ExamPace,
+    Reason,
+    SessionKind,
+    WeakestPart,
+)
 from konvami_api.domain.grammar_topics import GERMAN_MAP
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.plan import SessionPlan
@@ -266,3 +272,24 @@ def test_an_exam_without_a_speaking_test_or_already_over_plans_no_simulation() -
         plan = world.director.week(USER, ZURICH)
         assert plan.exam is None
         assert plan.sessions[SessionKind.EXAM] == 0
+
+
+def test_the_week_carries_a_two_halves_case_when_one_is_suggested() -> None:
+    world = a_world()
+    learner(world)
+    asked: list[object] = []
+
+    def suggest(user: object, monday: object) -> CaseSuggestion | None:
+        asked.append(monday)
+        return CaseSuggestion("lost_cello", "Le violoncelle perdu")
+
+    world.director._halves = suggest
+    plan = world.director.week(USER, ZURICH)
+    assert plan.halves == CaseSuggestion("lost_cello", "Le violoncelle perdu")
+    assert asked == [MONDAY.date()]
+
+    def broken(user: object, monday: object) -> CaseSuggestion | None:
+        raise RuntimeError("down")
+
+    world.director._halves = broken
+    assert world.director.week(USER, ZURICH).halves is None

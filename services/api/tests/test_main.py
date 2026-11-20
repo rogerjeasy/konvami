@@ -322,9 +322,9 @@ def test_the_worker_nudges_quiet_learners_when_the_schedule_starts_it(stub: Stub
     """Started by the hourly schedule, it reads the registered phones (here: none) and sends
     nothing. The pen-pals write only where a text model is named, as here they are not. Two
     Halves' tick looks for moves to check again, words past their 30 days, old invites and
-    stand-ins to catch up (here: none)."""
+    stand-ins to catch up, nudges to verify again and searches to end (here: none)."""
     backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
-    for _ in range(5):
+    for _ in range(7):
         stub.add_response("execute_statement", {"formattedRecords": "[]"})
 
     main.run_worker(backend, {"nudges": True})
