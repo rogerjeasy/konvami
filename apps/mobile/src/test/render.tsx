@@ -15,6 +15,7 @@ import { OnboardingProvider } from '@/onboarding/services';
 import { createOnboardingStore } from '@/onboarding/store';
 import { createPracticeServices, PracticeProvider } from '@/practice/services';
 import { HalvesProvider } from '@/halves/services';
+import { RadioProvider } from '@/radio/services';
 import { createOfflineApi } from '@/offline/api';
 import type { OfflineCache } from '@/offline/cache';
 import { createProfileServices, ProfileProvider } from '@/profile/services';
@@ -144,6 +145,7 @@ export async function renderScreen(
         <OnboardingProvider store={onboarding}>
           <PracticeProvider services={practice}>
             <HalvesProvider api={backend}>
+              <RadioProvider api={backend}>
               <ProfileProvider services={profile}>
                 <PlanProvider device={purchases ?? createFakePurchaseDevice(false)}>
                   <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
@@ -173,6 +175,7 @@ export async function renderScreen(
                   </RemindersProvider>
                 </PlanProvider>
               </ProfileProvider>
+              </RadioProvider>
             </HalvesProvider>
           </PracticeProvider>
         </OnboardingProvider>
