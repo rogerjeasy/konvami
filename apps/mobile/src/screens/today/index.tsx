@@ -24,6 +24,7 @@ import { callRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes'
 import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useAccount, useProfileQuestion, useProfileServices } from '@/profile/services';
 import { useReminderSchedule } from '@/reminders/use-reminders';
+import { useWidgetTimeline } from '@/widgets/use-widget';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
 import { isKnownQuestion, ProfileQuestion } from './profile-question';
@@ -97,8 +98,9 @@ function Bento({ home }: { home: Home }) {
 function Day({ home, now }: { home: Home; now: Date }) {
   const { t } = useTranslation();
   const { split } = useScreenLayout();
-  // Today is where the plan is read: the device's reminders follow it from here.
+  // Today is where the plan is read: the device's reminders and widget follow it from here.
   useReminderSchedule(home, now);
+  useWidgetTimeline(home, now);
   const partner =
     home.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ?? home.partners[0];
   // A question about a setting, when the server finds one due (progressive profiling).

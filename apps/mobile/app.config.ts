@@ -113,6 +113,8 @@ const config: ExpoConfig = {
     favicon: './assets/brand/favicon.png',
   },
   plugins: [
+    // The home-screen widget (5.28 design note): adds nothing unless KONVAMI_WIDGETS=1.
+    './plugins/with-konvami-widgets',
     'expo-sharing',
     // Local assessment decoding and the opt-in screen-off conversation service.
     [
