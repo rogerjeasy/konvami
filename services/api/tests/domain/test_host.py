@@ -62,7 +62,24 @@ def test_tool_choices_come_from_the_catalog(tools: HostTools) -> None:
     level = definition(tools, "save_level")["parameters"]["properties"]["level"]
 
     assert language["enum"] == ["de", "en", "fr", "it"]
-    assert exam["type"]["enum"] == ["goethe", "telc", "dtz", "testdaf", "osd", "other", None]
+    assert exam["type"]["enum"] == [
+        "goethe",
+        "telc",
+        "dtz",
+        "testdaf",
+        "osd",
+        "fide",
+        "tcf",
+        "delf_dalf",
+        "tef",
+        "ielts",
+        "cambridge",
+        "toefl",
+        "celi",
+        "cils",
+        "other",
+        None,
+    ]
     assert level["enum"] == ["A0", "A1", "A2", "B1", "B2", "C1", "C2"]
 
 

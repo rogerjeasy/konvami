@@ -49,3 +49,21 @@ imitated, and says Konvami is not affiliated with them. Naming them as a plain d
 is simulated is normally allowed, but it is the likeliest part of the listing to be questioned. If a
 store asks, remove the names and write "German speaking tests (A1 to B2)". **Never put these names in
 the keyword field** (App Store guideline 2.3.7).
+
+Since 2026-11-20 the app also simulates the speaking parts of fide (a programme of the Swiss State
+Secretariat for Migration), TCF, DELF and DALF (France Éducation international), TEF (CCI Paris
+Île-de-France), IELTS (the IELTS Partners), Cambridge English B2 First and C1 Advanced (Cambridge
+University Press & Assessment), TOEFL iBT (ETS), CELI (Università per Stranieri di Perugia) and CILS
+(Università per Stranieri di Siena). The same rules apply to all of them:
+
+- Name an exam only to describe what is practised ("practice for the speaking part of the IELTS
+  test"), never as Konvami's product, in the app name, subtitle, logo or keywords.
+- Every screen that names an exam shows the notice "not affiliated with or endorsed by the
+  organisations behind these exams; exam names are their owners' trademarks; every score is an
+  estimate" (`components/exam-notice.tsx`, `exams.notAffiliated`). Keep it in the store description.
+- Never claim a pass, a band, a level or official status ("fide-approved", "IELTS band 7"): say
+  "estimated, from public descriptions". fide in particular must not look official.
+- Tasks, pictures and rubrics are Konvami's own, written after public descriptions; never copy an
+  exam body's tasks or grids.
+- The owner should check the marks' registrations (EUIPO, WIPO, Swissreg) and have the listing
+  reviewed before naming these exams in a store.

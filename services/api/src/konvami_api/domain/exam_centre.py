@@ -27,6 +27,7 @@ from konvami_api.domain.exams import (
     CRITERIA,
     MAX_MARK,
     ExamCard,
+    ExamScale,
     PartScore,
     Readiness,
     SpeakingExam,
@@ -97,6 +98,8 @@ class SimulationResult:
     summary: str
     pass_share: float
     pronunciation: ExamPronunciation | None = None
+    # An estimate on the test's own scale ("6.5", "15", "B1"); None for a test without one.
+    estimate: str | None = None
 
     @property
     def total(self) -> float:
@@ -280,9 +283,19 @@ def _card_text(card: ExamCard) -> str:
     return text
 
 
+# Who the examiner is in each language learned, and how they address the learner.
+_EXAMINERS: Mapping[str, tuple[str, str]] = {
+    "de": ("Frau Becker", 'address the learner as "Sie"'),
+    "en": ("Ms Carter", "address the learner politely"),
+    "fr": ("Madame Laurent", 'address the learner as "vous"'),
+    "it": ("la dottoressa Bianchi", 'address the learner as "Lei"'),
+}
+
+
 def examiner_instructions(
     exam: SpeakingExam, cards: Sequence[ExamCard], target: str, *, candidate: bool = False
 ) -> str:
+    name, address = _EXAMINERS.get(exam.language, ("the examiner", "address the learner politely"))
     other = (
         "Use speak_candidate for the other candidate's short contributions, with their own "
         "ideas and objections. Never speak their text in your examiner voice. After the tool, "
@@ -300,16 +313,15 @@ def examiner_instructions(
     )
     return f"""# Who you are
 You are the examiner of a simulated speaking test, the {exam.name}, in {target}. Neutral, calm
-and formal: you address the learner as "Sie" and never use first names. If asked your name, you
-are Frau Becker. Speak only {target}.
+and formal: you {address} and never use first names. If asked your name, you are {name}. Speak
+only {target}. This is a practice simulation by Konvami, not the real test: if asked, say so.
 
 # The test
 Run these parts in this order. Before introducing each one, call begin_part with its id; the
 learner then sees its card. Say in one or two sentences what the part asks, then let them do it.
 Keep to each part's time: when it is up, close the part briefly and go on.
 {parts}
-When a part needs another candidate ("plan something together", a discussion, feedback on a
-presentation): {other}
+When a part's task involves the other candidate: {other}
 
 # Rules
 - Do not help: no corrections, no hints, no translations, no teaching, no praise of answers.
@@ -375,30 +387,55 @@ class _Part(_Answer):
 class _Scored(_Answer):
     parts: list[_Part]
     summary: str = Field(min_length=1, max_length=SUMMARY_MAX)
+    # On the test's own scale, for a test that has one; checked by `ExamScale.estimate`.
+    estimate: float | str | None = None
 
 
-def _schema(parts: Sequence[str]) -> dict[str, Any]:
+def _estimate_schema(scale: ExamScale) -> dict[str, Any]:
+    if scale.kind == "level":
+        return {"type": "string", "enum": list(scale.levels)}
+    return {"type": "number", "minimum": scale.low, "maximum": scale.high}
+
+
+def _schema(parts: Sequence[str], scale: ExamScale | None = None) -> dict[str, Any]:
     mark = {"type": "integer", "minimum": 0, "maximum": MAX_MARK}
-    return answer_object(
-        {
-            "parts": answer_list(
-                answer_object(
-                    {
-                        "part": {"type": "string", "enum": list(parts)},
-                        "marks": answer_object(dict.fromkeys(CRITERIA, mark)),
-                        "feedback": {"type": "string"},
-                        "model_answer": {"type": "string"},
-                    }
-                ),
-                len(parts),
+    fields: dict[str, Any] = {
+        "parts": answer_list(
+            answer_object(
+                {
+                    "part": {"type": "string", "enum": list(parts)},
+                    "marks": answer_object(dict.fromkeys(CRITERIA, mark)),
+                    "feedback": {"type": "string"},
+                    "model_answer": {"type": "string"},
+                }
             ),
-            "summary": {"type": "string"},
-        }
+            len(parts),
+        ),
+        "summary": {"type": "string"},
+    }
+    if scale is not None:
+        fields["estimate"] = _estimate_schema(scale)
+    return answer_object(fields)
+
+
+def _scale_note(scale: ExamScale | None) -> str:
+    if scale is None:
+        return ""
+    if scale.kind == "level":
+        levels = ", ".join(scale.levels)
+        return (
+            f" Also give an estimate: the level this performance shows, one of {levels} "
+            '("below_A1" or the lowest one when it shows less than that).'
+        )
+    return (
+        f" Also give an estimate on the test's own scale, from {scale.low:g} to {scale.high:g} "
+        f"in steps of {scale.step:g}, as an experienced examiner of this test would."
     )
 
 
 def _scorer_instructions(exam: SpeakingExam, target: str, explanation: str) -> str:
     level = "/".join(exam.levels)
+    rubric = f"About this test: {exam.rubric}" if exam.rubric else ""
     return f"""You score a simulated speaking test, the {exam.name} ({level}), from what was
 written down of it. The examiner ran its parts in order; find each part in the transcript.
 
@@ -410,6 +447,7 @@ Give every part 0 to {MAX_MARK} points on each criterion, judged at {level}:
 {MAX_MARK} meets the level fully, 2 is just about at it, 0 shows nothing of it. A part the
 learner did not do gets 0 on every criterion. Pronunciation is not judged: the transcript cannot
 show it. Be fair and strict, as an examiner is: this is an estimate the learner relies on.
+{rubric}{_scale_note(exam.scale)}
 
 {familiar_address(explanation)}
 For each part write feedback in {explanation}: two or three sentences, specific, quoting the
@@ -689,7 +727,7 @@ class ExamService:
             ),
             content=json.dumps(content, ensure_ascii=False),
             answer_name="exam_score",
-            answer_schema=_schema([part.id for part in exam.parts]),
+            answer_schema=_schema([part.id for part in exam.parts], exam.scale),
             charge=Charge(user_id, Feature.EXAM_SCORE),
         )
         try:
@@ -729,6 +767,7 @@ class ExamService:
             summary=scored.summary,
             pass_share=exam.pass_share,
             pronunciation=pronunciation,
+            estimate=exam.scale.estimate(scored.estimate) if exam.scale else None,
         )
         self._repository.written(call_id, "ready", result)
         self._announce(user_id, call_id, exam.name)

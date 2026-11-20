@@ -27,7 +27,23 @@ PartKind = Literal[
     "discussion",
     "topic_conversation",
     "picture_experience",
+    # The kinds the English, French, Italian and Swiss tests add (exams_world.py).
+    "interview",
+    "describe_picture",
+    "phone_call",
+    "role_play",
+    "obtain_information",
+    "point_of_view",
+    "persuade",
+    "long_turn",
+    "compare_pictures",
+    "collaborate",
+    "listen_repeat",
 ]
+
+# The drawn scenes a card can show (the app draws them, `exam-visual.tsx`); "waiting_pair" is
+# both, side by side, for tasks that compare two pictures.
+Picture = Literal["waiting_room", "bus_stop", "waiting_pair"]
 
 # How each part is judged, from 0 to 4 points each (spec §6.13 rubric). Pronunciation is left
 # out: a transcript cannot show it.
@@ -58,8 +74,32 @@ class ExamCard:
     prompts: tuple[str, ...]
     # What only the examiner knows (the second candidate's calendar), in English; empty for none.
     examiner: str = ""
-    picture: Literal["waiting_room", "bus_stop"] | None = None
+    picture: Picture | None = None
     figure: ExamFigure | None = None
+
+
+@dataclass(frozen=True)
+class ExamScale:
+    """How an exam reports a result, for an estimate on its own scale beside the shared rubric:
+    a band ("6.5"), points out of a maximum ("15 / 25") or a level ("B1"). Always an estimate."""
+
+    kind: Literal["band", "points", "level"]
+    low: float = 0
+    high: float = 0
+    step: float = 1
+    # For "level": the levels the test can place a learner at, lowest first.
+    levels: tuple[str, ...] = ()
+
+    def estimate(self, value: object) -> str | None:
+        """A scorer's estimate on this scale, kept within it and rounded to its steps; None for
+        an answer that is not one."""
+        if self.kind == "level":
+            return value if isinstance(value, str) and value in self.levels else None
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            return None
+        bounded = min(max(float(value), self.low), self.high)
+        rounded = round(round((bounded - self.low) / self.step) * self.step + self.low, 2)
+        return f"{rounded:g}"
 
 
 @dataclass(frozen=True)
@@ -92,6 +132,13 @@ class SpeakingExam:
     stages: int | None = None
     # A single timed monologue is enough evidence to score one TestDaF task.
     min_learner_turns: int = 3
+    # The language the test is taken in (a language pack's code).
+    language: str = "de"
+    # The test's own scale, for an estimate on it; None shows the share of the points only.
+    scale: ExamScale | None = None
+    # What the scorer weighs for this test, in English, after its public descriptions (never its
+    # official grids).
+    rubric: str = ""
 
     def part(self, part_id: str) -> ExamPart | None:
         return next((part for part in self.parts if part.id == part_id), None)
@@ -99,6 +146,13 @@ class SpeakingExam:
 
 def _card(id: str, title: str, *prompts: str, examiner: str = "") -> ExamCard:
     return ExamCard(id, title, prompts, examiner)
+
+
+def exam_card(
+    id: str, title: str, *prompts: str, examiner: str = "", picture: Picture | None = None
+) -> ExamCard:
+    """A card of a speaking test: its title and prompts in the test's language."""
+    return ExamCard(id, title, prompts, examiner, picture)
 
 
 _PLAN_TOGETHER = (
@@ -897,6 +951,185 @@ GERMAN_EXAMS += (
 )
 
 
+# Goethe C1 and telc B2 and C1, after the public descriptions of their oral parts and
+# simplified to one call like the rest; the cards are our own.
+GERMAN_EXAMS += (
+    SpeakingExam(
+        id="goethe_c1",
+        exam="goethe",
+        levels=("C1",),
+        name="Goethe-Zertifikat C1",
+        prep_seconds=15 * 60,
+        parts=(
+            ExamPart(
+                "teil_1",
+                "talk",
+                "Give a talk",
+                "The learner gives a structured talk of about four minutes on the card's "
+                "topic: describe the options, weigh them, give a recommendation. Then ask one "
+                "probing question.",
+                300,
+                (
+                    _card(
+                        "goethe_c1_1a",
+                        "Wie sollte man in Zukunft wohnen: Wohngemeinschaft, Kleinfamilie oder "
+                        "Mehrgenerationenhaus?",
+                        "Optionen beschreiben",
+                        "Vor- und Nachteile abwägen",
+                        "Eigene Erfahrungen",
+                        "Empfehlung",
+                    ),
+                    _card(
+                        "goethe_c1_1b",
+                        "Wie lernt man am besten weiter nach der Ausbildung: Kurse, online "
+                        "oder im Beruf?",
+                        "Optionen beschreiben",
+                        "Vor- und Nachteile abwägen",
+                        "Eigene Erfahrungen",
+                        "Empfehlung",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "teil_2",
+                "discussion",
+                "Discussion",
+                "Discuss the card's question with the learner as the other candidate at C1: "
+                "argue a different position, ask them to qualify claims, and reach a nuanced "
+                "conclusion together.",
+                240,
+                (
+                    _card(
+                        "goethe_c1_2a",
+                        "Sollten Unternehmen ihren Mitarbeitenden Sabbaticals ermöglichen?",
+                        "Position beziehen",
+                        "Auf Argumente eingehen",
+                        "Gemeinsam abwägen",
+                    ),
+                    _card(
+                        "goethe_c1_2b",
+                        "Sollte Kunst in Museen kostenlos zugänglich sein?",
+                        "Position beziehen",
+                        "Auf Argumente eingehen",
+                        "Gemeinsam abwägen",
+                    ),
+                ),
+            ),
+        ),
+    ),
+    SpeakingExam(
+        id="telc_b2",
+        exam="telc",
+        levels=("B2",),
+        name="telc Deutsch B2",
+        prep_seconds=20 * 60,
+        parts=(
+            ExamPart(
+                "teil_1",
+                "present_topic",
+                "Present a topic and respond",
+                "The learner presents the card's topic for about two minutes; react as the "
+                "other candidate with one question, which they answer.",
+                180,
+                (
+                    _card(
+                        "telc_b2_1a",
+                        "Ein Hobby, das Sie anderen empfehlen",
+                        "Was ist es?",
+                        "Wie sind Sie dazu gekommen?",
+                        "Warum empfehlen Sie es?",
+                    ),
+                    _card(
+                        "telc_b2_1b",
+                        "Ein Buch oder Film, der Sie beeindruckt hat",
+                        "Worum geht es?",
+                        "Was hat Sie beeindruckt?",
+                        "Für wen ist es geeignet?",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "teil_2",
+                "discussion",
+                "Discussion",
+                "Discuss the card's statement with the learner as the other candidate: "
+                "exchange arguments and react to theirs.",
+                180,
+                (
+                    _card(
+                        "telc_b2_2",
+                        "„Jeder sollte ein Jahr lang einen sozialen Dienst leisten.“",
+                        "Ihre Meinung",
+                        "Argumente",
+                        "Auf den Partner eingehen",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "teil_3",
+                "plan_together",
+                "Plan something together",
+                _PLAN_TOGETHER,
+                180,
+                (
+                    _card(
+                        "telc_b2_3",
+                        "Ihr Team möchte einen Ausflug zum Jahresende organisieren.",
+                        "Ziel",
+                        "Termin",
+                        "Budget",
+                        "Programm",
+                    ),
+                ),
+            ),
+        ),
+    ),
+    SpeakingExam(
+        id="telc_c1",
+        exam="telc",
+        levels=("C1",),
+        name="telc Deutsch C1",
+        prep_seconds=20 * 60,
+        parts=(
+            ExamPart(
+                "teil_1",
+                "talk",
+                "Presentation",
+                "The learner gives a structured presentation of about three minutes on the "
+                "card's statement; ask one question that makes them defend it.",
+                270,
+                (
+                    _card(
+                        "telc_c1_1",
+                        "„Digitale Medien verändern, wie wir lernen.“",
+                        "Einleitung",
+                        "Argumente und Beispiele",
+                        "Bewertung und Schluss",
+                    ),
+                ),
+            ),
+            ExamPart(
+                "teil_2",
+                "discussion",
+                "Discussion",
+                "Discuss the card's question with the learner as the other candidate at C1: "
+                "challenge their arguments and look for a conclusion.",
+                240,
+                (
+                    _card(
+                        "telc_c1_2",
+                        "Sollten Hochschulen Studiengebühren erheben?",
+                        "Position beziehen",
+                        "Gegenargumente entkräften",
+                        "Zu einem Ergebnis kommen",
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+
 GERMAN_EXAMS = tuple(
     replace(
         exam,
@@ -964,11 +1197,11 @@ def next_stage(
 
 
 def format_for(exams: Sequence[SpeakingExam], exam: str, level: str | None) -> SpeakingExam | None:
-    """The speaking test of an exam at a level; a test for several levels needs no level."""
-    for found in exams:
-        if found.exam == exam and (level in found.levels or len(found.levels) > 1):
-            return found
-    return None
+    """The speaking test of an exam at a level: the one made for that level, else one that
+    serves several levels (which needs no level)."""
+    tests = [found for found in exams if found.exam == exam]
+    exact = next((found for found in tests if level in found.levels), None)
+    return exact or next((found for found in tests if len(found.levels) > 1), None)
 
 
 def cards_for(exam: SpeakingExam, done_before: int) -> tuple[ExamCard, ...]:

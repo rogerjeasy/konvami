@@ -11,15 +11,22 @@ const SCENE_PEOPLE = [92, 152, 218] as const;
 const RAIN = [30, 64, 110, 146, 188, 226, 276] as const;
 // All current TestDaF chart data are percentages, with a shared honest zero-to-100 scale.
 const PERCENT = 100;
+// The two scenes a comparison shows, as photos A and B.
+const PAIR: readonly (readonly [Scene, string])[] = [
+  ['waiting_room', 'A'],
+  ['bus_stop', 'B'],
+];
 
-type Picture = 'waiting_room' | 'bus_stop';
+type Scene = 'waiting_room' | 'bus_stop';
+/** A scene, or both side by side as photos A and B for tasks that compare them. */
+type Picture = Scene | 'waiting_pair';
 interface Figure {
   title: string;
   labels: readonly string[];
   values: readonly number[];
 }
 
-function Scene({ picture }: { picture: Picture }) {
+function SceneDrawing({ picture }: { picture: Scene }) {
   const { color } = useTheme();
   const { t } = useTranslation();
   const waiting = picture === 'waiting_room';
@@ -113,11 +120,22 @@ export function ExamVisual({
   picture?: Picture | null;
   figure?: Figure | null;
 }) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const percent = new Intl.NumberFormat(i18n.language, { style: 'percent' });
   return (
     <>
-      {picture ? <Scene picture={picture} /> : null}
+      {picture === 'waiting_pair' ? (
+        <View className="gap-3">
+          {PAIR.map(([scene, letter]) => (
+            <View key={scene} className="gap-1">
+              <Text variant="labelSmall">{t('examStages.photo', { letter })}</Text>
+              <SceneDrawing picture={scene} />
+            </View>
+          ))}
+        </View>
+      ) : picture ? (
+        <SceneDrawing picture={picture} />
+      ) : null}
       {figure ? (
         <View className="gap-3">
           <Text variant="label">{figure.title}</Text>

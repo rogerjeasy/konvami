@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { ExamPhrase, ExamPhraseBank, Phrase } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
+import { ExamNotice } from '@/components/exam-notice';
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -232,6 +233,7 @@ export function ExamPhrasesScreen() {
           onRetry={() => setAttempt((count) => count + 1)}
         />
       )}
+      <ExamNotice />
     </StepLayout>
   );
 }

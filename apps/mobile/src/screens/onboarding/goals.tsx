@@ -5,6 +5,7 @@ import { size } from '@konvami/design-tokens';
 import { Card } from '@/components/card';
 import { ChoiceChip } from '@/components/choice-chip';
 import { DateChoice } from '@/components/date-choice';
+import { ExamNotice } from '@/components/exam-notice';
 import { Icon, type IconName } from '@/components/icon';
 import { Reveal } from '@/components/motion';
 import { OptionCard } from '@/components/option-card';
@@ -156,6 +157,7 @@ function GoalsForm({ data, today }: { data: OnboardingData; today: Date }) {
                   ),
                 )}
               </View>
+              <ExamNotice />
             </View>
 
             {examType ? (

@@ -120,7 +120,8 @@ def test_the_catalog_lists_what_can_be_learned_and_chosen(call: Call) -> None:
     ]
     french = next(language for language in body["languages"] if language["code"] == "fr")
     assert french["available"] is True
-    assert french["exams"] == []
+    assert [exam["id"] for exam in french["exams"]] == ["tcf", "delf_dalf", "tef", "fide"]
+    assert {"id": "fide", "name": "fide (Suisse)", "levels": ["A1", "A2", "B1"]} in french["exams"]
     assert french["scenarios"]
     assert body["startingLevels"] == ["A0", "A1", "A2", "B1", "B2", "C1", "C2"]
     assert body["examLevels"] == ["A1", "A2", "B1", "B2", "C1", "C2"]

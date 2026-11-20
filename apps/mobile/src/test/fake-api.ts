@@ -306,6 +306,7 @@ export const FAKE_SPEAKING_EXAMS: SpeakingExam[] = [
     name: 'Goethe-Zertifikat B1',
     prepSeconds: 900,
     passShare: 0.6,
+    language: 'de',
     parts: [
       {
         id: 'teil_1',
@@ -335,6 +336,7 @@ export const FAKE_SPEAKING_EXAMS: SpeakingExam[] = [
     name: 'Deutsch-Test für Zuwanderer',
     prepSeconds: 0,
     passShare: 0.6,
+    language: 'de',
     parts: [
       { id: 'teil_1', kind: 'introduce', seconds: 120 },
       { id: 'teil_2', kind: 'picture_experience', seconds: 180 },

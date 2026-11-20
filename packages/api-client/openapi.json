@@ -1224,7 +1224,8 @@
               {
                 "enum": [
                   "waiting_room",
-                  "bus_stop"
+                  "bus_stop",
+                  "waiting_pair"
                 ],
                 "type": "string"
               },
@@ -1412,7 +1413,18 @@
               "talk",
               "discussion",
               "topic_conversation",
-              "picture_experience"
+              "picture_experience",
+              "interview",
+              "describe_picture",
+              "phone_call",
+              "role_play",
+              "obtain_information",
+              "point_of_view",
+              "persuade",
+              "long_turn",
+              "compare_pictures",
+              "collaborate",
+              "listen_repeat"
             ],
             "title": "Kind",
             "type": "string"
@@ -1563,6 +1575,49 @@
           "assessedSeconds"
         ],
         "title": "ExamPronunciationOut",
+        "type": "object"
+      },
+      "ExamScaleOut": {
+        "additionalProperties": false,
+        "description": "How the test reports a result: a band, points out of a maximum, or a level.",
+        "properties": {
+          "high": {
+            "title": "High",
+            "type": "number"
+          },
+          "kind": {
+            "enum": [
+              "band",
+              "points",
+              "level"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "low": {
+            "title": "Low",
+            "type": "number"
+          },
+          "step": {
+            "title": "Step",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "low",
+          "high",
+          "step",
+          "levels"
+        ],
+        "title": "ExamScaleOut",
         "type": "object"
       },
       "ExamWeekOut": {
@@ -4560,7 +4615,10 @@
               "structure",
               "describe",
               "react",
-              "time"
+              "time",
+              "compare",
+              "speculate",
+              "phone"
             ],
             "title": "Function",
             "type": "string"
@@ -6691,6 +6749,17 @@
       "SimulationResultOut": {
         "additionalProperties": false,
         "properties": {
+          "estimate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimate"
+          },
           "parts": {
             "items": {
               "$ref": "#/components/schemas/PartScoreOut"
@@ -7017,6 +7086,11 @@
             "title": "Id",
             "type": "string"
           },
+          "language": {
+            "default": "de",
+            "title": "Language",
+            "type": "string"
+          },
           "levels": {
             "items": {
               "type": "string"
@@ -7042,6 +7116,16 @@
           "prepSeconds": {
             "title": "Prepseconds",
             "type": "integer"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExamScaleOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "series": {
             "anyOf": [
@@ -8048,7 +8132,18 @@
               "talk",
               "discussion",
               "topic_conversation",
-              "picture_experience"
+              "picture_experience",
+              "interview",
+              "describe_picture",
+              "phone_call",
+              "role_play",
+              "obtain_information",
+              "point_of_view",
+              "persuade",
+              "long_turn",
+              "compare_pictures",
+              "collaborate",
+              "listen_repeat"
             ],
             "title": "Kind",
             "type": "string"

@@ -26,7 +26,8 @@ def test_target_pack_has_grammar_practice_and_native_partners(code: str) -> None
     assert len(pack.starter_personas) == 3
     assert len({person.name for person in pack.starter_personas}) == 3
     assert pack.voice_sample
-    assert pack.speaking_exams == ()
+    assert pack.speaking_exams
+    assert {exam.exam for exam in pack.speaking_exams} <= {exam.id for exam in pack.exams}
 
 
 @pytest.mark.parametrize("code", ["en", "fr", "it"])

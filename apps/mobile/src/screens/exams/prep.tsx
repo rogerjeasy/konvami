@@ -4,6 +4,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { NextSimulation } from '@konvami/api-client';
 import { useSession } from '@/auth';
+import { ExamNotice } from '@/components/exam-notice';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Switch } from '@/components/switch';
@@ -155,6 +156,7 @@ function Prep({ next, header }: { next: NextSimulation; header: React.ReactNode 
           </Text>
         </View>
       </Reveal>
+      <ExamNotice />
     </StepLayout>
   );
 }

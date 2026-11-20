@@ -380,3 +380,50 @@ def test_no_topic_is_off_limits_until_the_learner_names_one(service: ProfileServ
     asked(service, Change("avoid_topics", ["La politique", "mon ex"]))
 
     assert service.get(USER).avoid_topics == ("La politique", "mon ex")
+
+
+@pytest.mark.parametrize(
+    ("language", "exam", "level"),
+    [
+        ("en", "ielts", "B2"),
+        ("en", "cambridge", "C1"),
+        ("fr", "tcf", "B1"),
+        ("fr", "delf_dalf", "B2"),
+        ("it", "cils", "B1"),
+        ("de", "fide", "B1"),
+        ("fr", "fide", "A2"),
+        ("it", "fide", "B1"),
+    ],
+)
+def test_each_language_takes_its_own_exams(
+    service: ProfileService, language: str, exam: str, level: str
+) -> None:
+    asked(
+        service,
+        Change("target_language", language),
+        Change("exam", {"type": exam, "target_level": level, "date": None}),
+    )
+
+    assert service.get(USER).value(language, "exam")["type"] == exam
+
+
+@pytest.mark.parametrize(
+    ("language", "exam", "level"),
+    [
+        ("en", "goethe", "B1"),
+        ("de", "ielts", "B2"),
+        ("fr", "celi", "B1"),
+        ("en", "fide", "B1"),
+        # fide places a learner at A1 to B1 only.
+        ("de", "fide", "B2"),
+    ],
+)
+def test_an_exam_of_another_language_or_level_is_refused(
+    service: ProfileService, language: str, exam: str, level: str
+) -> None:
+    with pytest.raises(ProfileError):
+        asked(
+            service,
+            Change("target_language", language),
+            Change("exam", {"type": exam, "target_level": level, "date": None}),
+        )
