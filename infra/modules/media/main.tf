@@ -19,6 +19,9 @@ locals {
   # Two Halves' moves, stand-in lines and recaps (section 7). The same prefix as in services/api
   # (domain/halves.py, FOLDER).
   halves_prefix = "halves/"
+  # The story chain's lines and its narrator's sounds (section 9). The same prefix as in
+  # services/api (domain/chain.py, FOLDER).
+  chain_prefix = "chain/"
 }
 
 resource "aws_s3_bucket" "media" {
@@ -94,6 +97,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
 
     filter {
       prefix = local.halves_prefix
+    }
+
+    expiration {
+      days = var.halves_expiry_days
+    }
+  }
+
+  # A story-chain line is a learner's voice heard by up to three other learners: the same 30
+  # days at most as a Two Halves move (the API also deletes it 30 days after the story ends).
+  rule {
+    id     = "delete-chain-audio"
+    status = "Enabled"
+
+    filter {
+      prefix = local.chain_prefix
     }
 
     expiration {

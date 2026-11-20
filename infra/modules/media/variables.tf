@@ -22,7 +22,7 @@ variable "export_expiry_days" {
 }
 
 variable "halves_expiry_days" {
-  description = "Days after which a Two Halves recording (halves/) is deleted, whatever its case. S3 counts in whole days."
+  description = "Days after which a Two Halves recording (halves/) or a story-chain line (chain/) is deleted, whatever its game. S3 counts in whole days."
   type        = number
   default     = 30
 }

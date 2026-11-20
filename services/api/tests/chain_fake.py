@@ -159,7 +159,7 @@ class FakeNarrator:
     def veil(self, line: Line) -> str | None:
         if self.veil_fails:
             return None
-        return f"halves/{line.user_id}/chain/{line.story_id}/{line.id}-veil.mp3"
+        return f"chain/{line.user_id}/{line.story_id}/{line.id}-veil.mp3"
 
     def correct(self, line: Line, target: str, explanation: str) -> tuple[Correction, ...]:
         return self.corrections
@@ -169,7 +169,7 @@ class FakeNarrator:
         return f"So far {len(lines)} lines."
 
     def speak_opening(self, story: Story) -> str | None:
-        return f"halves/{story.host}/chain/{story.id}/opening.mp3"
+        return f"chain/stories/{story.id}/opening.mp3"
 
     def go_on(self, story: Story, lines: Sequence[Line], seat: ChainSeat, voice: str) -> Line:
         position = len(lines) + 1
@@ -183,7 +183,7 @@ class FakeNarrator:
             transcript=f"AI line number {position} goes on",
             created_at=self.clock(),
             ai_name=seat.ai_name,
-            audio_key=f"halves/{story.host}/chain/{story.id}/ai-{position}.mp3",
+            audio_key=f"chain/stories/{story.id}/ai-{position}.mp3",
             delivered_at=self.clock(),
         )
 

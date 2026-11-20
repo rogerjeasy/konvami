@@ -90,9 +90,10 @@ RETRIES_PER_DAY = 100
 TICK_SCAN = 200
 QUEUE_LIMIT = 100
 RECAP_MAX = 240
-# Under halves/, so the media bucket's 30-day rule (infra/modules/media) covers the chain too,
-# and under the learner's own folder, so deleting the account deletes their lines.
-FOLDER = "halves"
+# A learner's lines (and their veiled sounds) are under chain/<learner>/, deleted with the
+# account; the narrator's and AI characters' sounds under chain/stories/<story>/. The media
+# bucket deletes anything under chain/ after 30 days (infra/modules/media).
+FOLDER = "chain"
 NARRATOR_VOICE = "fable"
 AI_VOICES: tuple[str, ...] = ("ash", "coral", "sage", "verse")
 
@@ -183,10 +184,18 @@ class Story:
 
     @property
     def payer(self) -> UUID | None:
-        """Whose the narrator's requests are: the host's, else the first learner's still there."""
-        if self.host is not None:
-            return self.host
-        return next((s.user_id for s in self.seats if s.user_id is not None), None)
+        """Whose the narrator's requests are: the host's while they are still in the story,
+        else the first player's still there."""
+        return self.active_host or next(iter(self.players()), None)
+
+    @property
+    def active_host(self) -> UUID | None:
+        """The host while their seat is still theirs: one taken out by a block, or whose account
+        is gone, is host no more."""
+        if self.host is None:
+            return None
+        seat = self.seat_of(self.host)
+        return self.host if seat is not None and not seat.removed else None
 
     def seat_of(self, user_id: UUID) -> ChainSeat | None:
         return next((s for s in self.seats if s.user_id == user_id), None)
@@ -813,7 +822,7 @@ class ChainService:
         """The story's code for its empty seats: the one there is, or a new one."""
         self._require(user_id)
         story, _ = self._story(user_id, story_id)
-        if story.host != user_id or story.status != "open":
+        if story.active_host != user_id or story.status != "open":
             raise ChainError("not_host")
         if not any(s.open for s in story.seats):
             raise ChainError("no_empty_seat")
@@ -855,8 +864,11 @@ class ChainService:
         self._repository.save_story(story)
         if not any(s.open for s in story.seats):
             self._repository.delete_invite(found.code)
-        if story.host is not None:
-            self._announce(story.host, story.id, "invited")
+        # The host is told a friend took a seat; with no host left, the other players are.
+        host = story.active_host
+        for told in [host] if host is not None else story.players():
+            if told != user_id:
+                self._announce(told, story.id, "invited")
         if self._turn_seat(story) == empty.seat:
             self._announce(user_id, story.id, "turn")
         return story
@@ -865,7 +877,7 @@ class ChainService:
         """The host starts without waiting: AI characters take the empty seats."""
         self._require(user_id)
         story, _ = self._story(user_id, story_id)
-        if story.host != user_id or story.status != "open":
+        if story.active_host != user_id or story.status != "open":
             raise ChainError("not_host")
         for seat in story.seats:
             if seat.open:
@@ -934,7 +946,7 @@ class ChainService:
         if len(words_in(said)) < MIN_WORDS:
             raise ChainError("too_short")
         line_id = self._new_id()
-        key = f"{FOLDER}/{user_id}/chain/{story.id}/{line_id}.{audio_format}"
+        key = f"{FOLDER}/{user_id}/{story.id}/{line_id}.{audio_format}"
         self._files.save(key, audio, _AUDIO_TYPES.get(audio_format, "application/octet-stream"))
         line = Line(
             id=line_id,
@@ -1546,7 +1558,7 @@ class ChainService:
             if reaction in counts:
                 counts[reaction] += 1
         profile = self._repository.profile(user_id)
-        host = story.host == user_id
+        host = story.active_host == user_id
         return StoryView(
             id=story.id,
             opening_id=story.opening_id,

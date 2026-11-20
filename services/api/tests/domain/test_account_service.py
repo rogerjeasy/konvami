@@ -163,10 +163,15 @@ def test_deleting_the_account_removes_its_files_its_data_and_its_sign_in() -> No
     # A Two Halves move of theirs, and one of someone else's.
     setup.files.save(f"halves/{USER}/case/move.m4a", b"m4a", "audio/mp4")
     setup.files.save(f"halves/{OTHER_USER}/case/move.m4a", b"m4a", "audio/mp4")
+    # A story-chain line of theirs with its veiled sound, and one of someone else's.
+    setup.files.save(f"chain/{USER}/story/line.m4a", b"m4a", "audio/mp4")
+    setup.files.save(f"chain/{USER}/story/line-veil.mp3", b"mp3", "audio/mpeg")
+    setup.files.save(f"chain/{OTHER_USER}/story/line.m4a", b"m4a", "audio/mp4")
 
     setup.accounts.delete(USER)
 
     assert setup.files.keys() == [
+        f"chain/{OTHER_USER}/story/line.m4a",
         f"halves/{OTHER_USER}/case/move.m4a",
         f"users/{OTHER_USER}/picture/x.jpg",
     ]

@@ -250,6 +250,9 @@ class AccountService:
         self._files.remove_all(export_folder(user_id))
         # Two Halves keeps a learner's moves under halves/<id>/ (domain/halves.py, FOLDER).
         self._files.remove_all(f"halves/{user_id}/")
+        # The story chain keeps a learner's lines, veiled ones too, under chain/<id>/
+        # (domain/chain.py, FOLDER).
+        self._files.remove_all(f"chain/{user_id}/")
         self._records.delete(user_id, self._clock())
         try:
             self._directory.delete(user_id)

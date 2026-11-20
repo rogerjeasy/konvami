@@ -549,3 +549,23 @@ def test_the_age_band_is_read_from_the_sign_up_each_time() -> None:
     story = t.service.start(USER, None, AI_SEATS)
     say(t, story.id, "Ich sehe einen Mann mit einem Hut")
     assert t.narrator.checked[-1][1] == "minor"
+
+
+def test_a_host_taken_out_by_a_block_is_host_no_more() -> None:
+    t = table()
+    join(t, USER, OTHER_USER, THIRD)
+    story = t.service.start(USER, None, [("friend", None), ("friend", None), ("ai", None)])
+    code = t.service.invite(USER, story.id).code
+    t.service.redeem(OTHER_USER, code)
+    t.service.block(OTHER_USER, story.id, 1)
+    blocked = t.store.stories[story.id]
+    assert blocked.active_host is None
+    assert blocked.payer == OTHER_USER
+    t.announced.clear()
+    t.service.redeem(THIRD, code)
+    assert t.announced == [(OTHER_USER, story.id, "invited")]
+    assert not t.service.view(OTHER_USER, story.id).host
+    with pytest.raises(ChainError, match="not_found"):
+        t.service.fill(USER, story.id)
+    with pytest.raises(ChainError, match="not_host"):
+        t.service.fill(OTHER_USER, story.id)

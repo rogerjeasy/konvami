@@ -116,8 +116,8 @@ class ModelNarrator:
     @staticmethod
     def _folder(story: Story) -> str:
         """The narrator's and AI characters' sounds hold nobody's voice: they are the story's,
-        kept with it under halves/ for 30 days at most."""
-        return f"{FOLDER}/chain/{story.id}"
+        kept with it under chain/ for 30 days at most."""
+        return f"{FOLDER}/stories/{story.id}"
 
     def _speak(self, user: UUID | None, voice: str, text: str, key: str) -> str | None:
         return speak_to_file(
@@ -192,7 +192,7 @@ class ModelNarrator:
             line.user_id,
             VEIL_VOICE,
             line.transcript,
-            f"{FOLDER}/{line.user_id}/chain/{line.story_id}/{line.id}-veil.mp3",
+            f"{FOLDER}/{line.user_id}/{line.story_id}/{line.id}-veil.mp3",
         )
 
     def correct(self, line: Line, target: str, explanation: str) -> tuple[Correction, ...]:

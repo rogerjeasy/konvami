@@ -72,7 +72,7 @@ def test_an_ai_line_the_moderator_flags_is_replaced_by_the_hand_written_one() ->
     brain, _, _ = narrator({"text": "Ein grausames Blutbad"}, moderator=FakeModerator("Blutbad"))
     said = brain.go_on(story(), [line("Ich sehe einen Mann")], ChainSeat(2, None, "Lena"), "ash")
     assert said.transcript == FALLBACK_LINES["de"][1]
-    assert said.audio_key == f"halves/chain/{STORY}/ai-2.mp3"
+    assert said.audio_key == f"chain/stories/{STORY}/ai-2.mp3"
 
 
 def test_narration_that_cannot_be_checked_falls_back_to_the_opening_and_ending() -> None:
