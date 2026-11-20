@@ -14,6 +14,7 @@ import { TextButton } from '@/components/text-button';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { staggerDelay } from '@/lib/motion';
 import { useHalvesHub } from '@/halves/services';
+import { useRadioHub } from '@/radio/services';
 import { callRoute, penPalRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
@@ -46,6 +47,8 @@ export function TalkScreen() {
   const signedIn = status === 'signedIn';
   const halves = useHalvesHub(signedIn);
   const halvesOpen = halves.state.phase === 'ready' && halves.state.data.available;
+  const radio = useRadioHub(signedIn);
+  const radioOpen = radio.state.phase === 'ready' && radio.state.data.available;
 
   useEffect(() => {
     if (signedIn) void store.load();
@@ -147,6 +150,19 @@ export function TalkScreen() {
                     title: t('halves.row'),
                     detail: t('halves.rowHint'),
                     onPress: () => router.push(ROUTES.halves),
+                  },
+                ]
+              : []),
+            // Radio Konvami (8.1): the daily call-in show, when it is open.
+            ...(radioOpen
+              ? [
+                  {
+                    key: 'radio',
+                    icon: 'radio' as const,
+                    blob: 'tomato' as const,
+                    title: t('radio.row'),
+                    detail: t('radio.rowHint'),
+                    onPress: () => router.push(ROUTES.radio),
                   },
                 ]
               : []),
