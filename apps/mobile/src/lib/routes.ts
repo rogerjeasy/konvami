@@ -100,6 +100,12 @@ export const ROUTES = {
   halvesSettings: '/halves/settings',
   /** 7.12 Invite a friend, or redeem a friend's code. */
   halvesInvite: '/halves/invite',
+  /** 7.3 Finding a partner: a stranger who speaks the language learned, or an AI. */
+  halvesFind: '/halves/find',
+  /** 7.14 The strand map: the cities of the people the learner played with. */
+  halvesStrands: '/halves/strands',
+  /** 7.17 A case from the learner's own course import. */
+  halvesFromImport: '/halves/from-import',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
   exams: '/exams',
   /** 5.14 Grammar map: every topic of the language learned, and how well the learner uses it. */

@@ -154,6 +154,8 @@ function routeOf(target: OpenTarget) {
       return incomingCallRoute(target.partner, target.ask);
     case 'halves':
       return halvesCaseRoute(target.id);
+    case 'halvesHub':
+      return ROUTES.halves;
     default:
       return ROUTES.today;
   }

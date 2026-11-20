@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { ApiClient, Halves, HalvesCase } from '@konvami/api-client';
+import type { ApiClient, Halves, HalvesCase, HalvesStrands } from '@konvami/api-client';
 import { apiErrorCode } from '@/api/messages';
 
 /** What Two Halves (section 7) asks of the server. */
@@ -30,6 +30,14 @@ export type HalvesApi = Pick<
   | 'reportHalvesMove'
   | 'getHalvesQueue'
   | 'decideHalvesItem'
+  | 'getHalvesStats'
+  | 'lookForHalvesPartner'
+  | 'stopHalvesSearch'
+  | 'getHalvesStrands'
+  | 'getHalvesShareCard'
+  | 'startHalvesImportCase'
+  | 'bridgeHalvesMove'
+  | 'nudgeHalvesMove'
 >;
 
 const HalvesContext = createContext<HalvesApi | null>(null);
@@ -52,7 +60,11 @@ export type Loaded<T> =
 export const POLL_MS = 4000;
 
 /** Reads something once and again on `refresh`; a failure while reading again keeps what is shown. */
-function useLoaded<T>(read: (() => Promise<T>) | null, again: (data: T) => boolean) {
+function useLoaded<T>(
+  read: (() => Promise<T>) | null,
+  again: (data: T) => boolean,
+  every: number = POLL_MS,
+) {
   const [state, setState] = useState<Loaded<T>>({ phase: 'loading' });
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -73,9 +85,9 @@ function useLoaded<T>(read: (() => Promise<T>) | null, again: (data: T) => boole
   const waiting = state.phase === 'ready' && again(state.data);
   useEffect(() => {
     if (!waiting) return;
-    const timer = setTimeout(() => setTick((count) => count + 1), POLL_MS);
+    const timer = setTimeout(() => setTick((count) => count + 1), every);
     return () => clearTimeout(timer);
-  }, [waiting, tick]);
+  }, [waiting, tick, every]);
   const refresh = useCallback(() => setTick((count) => count + 1), []);
   const set = useCallback((data: T) => setState({ phase: 'ready', data }), []);
   return { state, refresh, set };
@@ -86,6 +98,23 @@ export function useHalvesHub(enabled = true) {
   const api = useHalvesApi();
   const read = useCallback(() => api.getHalves(), [api]);
   return useLoaded<Halves>(enabled ? read : null, () => false);
+}
+
+/** The strand map (7.14). */
+export function useHalvesStrands(enabled = true) {
+  const api = useHalvesApi();
+  const read = useCallback(() => api.getHalvesStrands(), [api]);
+  return useLoaded<HalvesStrands>(enabled ? read : null, () => false);
+}
+
+/** While a search runs, the hub is read again this often (ms): a match should show by itself. */
+export const SEARCH_POLL_MS = 15000;
+
+/** Two Halves' hub, read again while the learner is looking for a partner (7.3). */
+export function useHalvesSearch(enabled = true) {
+  const api = useHalvesApi();
+  const read = useCallback(() => api.getHalves(), [api]);
+  return useLoaded<Halves>(enabled ? read : null, (hub) => hub.search !== null, SEARCH_POLL_MS);
 }
 
 /** Whether a case is waiting for the server: a move being checked, the stand-in, the recap. */

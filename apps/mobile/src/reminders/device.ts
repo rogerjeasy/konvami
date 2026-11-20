@@ -14,6 +14,8 @@ export type OpenTarget =
   | { open: 'call'; partner: string; ask?: string }
   /** A Two Halves case: a clue arrived, or the learner's move was held (7.4). */
   | { open: 'halves'; id: string }
+  /** Two Halves' hub: a partner search ended, or the owner wrote about a move (7.1, 7.3). */
+  | { open: 'halvesHub' }
   | { open: 'today' };
 
 /** What a notification's data says it opens; anything else opens Today. */
@@ -29,6 +31,7 @@ export function openTargetOf(data: Record<string, unknown> | undefined): OpenTar
   if (id && (data?.open === 'report' || data?.open === 'simulation' || data?.open === 'halves')) {
     return { open: data.open, id };
   }
+  if (data?.open === 'halves') return { open: 'halvesHub' };
   return { open: 'today' };
 }
 

@@ -195,6 +195,7 @@ export const FAKE_PLAN: WeekPlan = {
   missed: [],
   exam: null,
   upcoming: ['2026-10-10', '2026-10-12', '2026-10-13', '2026-10-15'],
+  halves: null,
 };
 
 /** A saved word, as a word of the day brings it. */
@@ -1820,6 +1821,9 @@ export function createFakeApi(): FakeApi {
   return {
     halvesOpen: halves.halvesOpen,
     halvesHeld: halves.halvesHeld,
+    halvesStrangers: halves.halvesStrangers,
+    halvesMatchNext: halves.halvesMatchNext,
+    halvesSameLanguage: halves.halvesSameLanguage,
     getHalves: halves.getHalves,
     joinHalves: halves.joinHalves,
     changeHalves: halves.changeHalves,
@@ -1845,6 +1849,14 @@ export function createFakeApi(): FakeApi {
     reportHalvesMove: halves.reportHalvesMove,
     getHalvesQueue: halves.getHalvesQueue,
     decideHalvesItem: halves.decideHalvesItem,
+    getHalvesStats: halves.getHalvesStats,
+    lookForHalvesPartner: halves.lookForHalvesPartner,
+    stopHalvesSearch: halves.stopHalvesSearch,
+    getHalvesStrands: halves.getHalvesStrands,
+    getHalvesShareCard: halves.getHalvesShareCard,
+    startHalvesImportCase: halves.startHalvesImportCase,
+    bridgeHalvesMove: halves.bridgeHalvesMove,
+    nudgeHalvesMove: halves.nudgeHalvesMove,
     calls,
     get deleted() {
       return deleted;

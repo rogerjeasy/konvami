@@ -34,6 +34,14 @@ type HalvesMethods = Pick<
   | 'reportHalvesMove'
   | 'getHalvesQueue'
   | 'decideHalvesItem'
+  | 'getHalvesStats'
+  | 'lookForHalvesPartner'
+  | 'stopHalvesSearch'
+  | 'getHalvesStrands'
+  | 'getHalvesShareCard'
+  | 'startHalvesImportCase'
+  | 'bridgeHalvesMove'
+  | 'nudgeHalvesMove'
 >;
 
 export interface FakeHalvesControls {
@@ -41,6 +49,12 @@ export interface FakeHalvesControls {
   halvesOpen(open?: boolean): void;
   /** Puts a held move in the owner's queue. */
   halvesHeld(item: HalvesQueueItem): void;
+  /** Opens matching with strangers (phase 2; off by default, as before the legal review). */
+  halvesStrangers(open?: boolean): void;
+  /** The next search finds someone at once. */
+  halvesMatchNext(found?: boolean): void;
+  /** A same-language case: the Bridge helps, nobody nudges. */
+  halvesSameLanguage(same?: boolean): void;
 }
 
 /** The friend's code `redeemHalvesInvite` accepts. */
@@ -66,6 +80,12 @@ export function fakeHalvesCase(id: string, overrides: Partial<HalvesCase> = {}):
             answers: [],
             solution: null,
             reaction: null,
+            caption: 'Inès a changé de train à Genève, sans violoncelle.',
+            canNudge: false,
+            nudged: false,
+            bridge: false,
+            simpler: null,
+            gist: null,
           }
         : null,
   }));
@@ -97,6 +117,11 @@ export function fakeHalvesCase(id: string, overrides: Partial<HalvesCase> = {}):
     recapStatus: 'none',
     veilDefault: true,
     ending: null,
+    understoodFirst: 0,
+    told: 0,
+    sameLanguage: false,
+    fromImport: false,
+    duo: false,
     ...overrides,
   };
 }
@@ -109,6 +134,10 @@ export function createFakeHalves(
   record: (method: keyof ApiClient, ...args: unknown[]) => Promise<void>,
 ): HalvesMethods & FakeHalvesControls {
   let open = false;
+  let strangers = false;
+  let matchNext = false;
+  let sameLanguage = false;
+  let search: Halves['search'] = null;
   let profile: HalvesProfile | null = null;
   let invite: Halves['invite'] = null;
   let blocks: Halves['blocks'] = [];
@@ -139,6 +168,11 @@ export function createFakeHalves(
     cities: ['Lyon', 'Zürich'],
     countries: ['CH', 'FR'],
     nativeLanguages: ['de', 'en', 'fr', 'it', 'other'],
+    strangers: strangers && profile?.band === 'adult',
+    search,
+    searchHours: [2, 12, 48],
+    understoodFirst: [...cases.values()].reduce((sum, c) => sum + c.understoodFirst, 0),
+    told: [...cases.values()].reduce((sum, c) => sum + c.told, 0),
   });
   const joined = () => {
     if (!open) throw new ApiError('unavailable', 403);
@@ -157,6 +191,22 @@ export function createFakeHalves(
     cases.set(found.id, changed);
     return changed;
   };
+  const startSame = () => {
+    const found = start({ hears: 'de', sameLanguage: true });
+    const changed: HalvesCase = {
+      ...found,
+      rounds: found.rounds.map((r) =>
+        r.theirs
+          ? {
+              ...r,
+              theirs: { ...r.theirs, bridge: true, caption: 'Inès ist in Genf umgestiegen.' },
+            }
+          : r,
+      ),
+    };
+    cases.set(found.id, changed);
+    return changed;
+  };
   const start = (overrides: Partial<HalvesCase> = {}) => {
     joined();
     made += 1;
@@ -171,6 +221,15 @@ export function createFakeHalves(
     },
     halvesHeld(item) {
       queue = [...queue, item];
+    },
+    halvesStrangers(value = true) {
+      strangers = value;
+    },
+    halvesMatchNext(value = true) {
+      matchNext = value;
+    },
+    halvesSameLanguage(value = true) {
+      sameLanguage = value;
     },
     async getHalves() {
       await record('getHalves');
@@ -215,7 +274,8 @@ export function createFakeHalves(
     },
     async startHalvesCase(begin) {
       await record('startHalvesCase', begin);
-      return start();
+      search = null;
+      return sameLanguage ? startSame() : start();
     },
     async createHalvesInvite(templateId) {
       await record('createHalvesInvite', templateId);
@@ -264,6 +324,7 @@ export function createFakeHalves(
         reaction: null,
         understood: null,
         corrections: [],
+        nudges: [],
       };
       cases.set(caseId, {
         ...found,
@@ -288,7 +349,8 @@ export function createFakeHalves(
     },
     async playHalvesAgain(caseId, yes) {
       await record('playHalvesAgain', caseId, yes);
-      const changed = { ...caseOf(caseId), again: yes, askAgain: false };
+      // Stands for the other player having said yes already: a yes makes a duo.
+      const changed = { ...caseOf(caseId), again: yes, askAgain: false, duo: yes };
       cases.set(caseId, changed);
       return changed;
     },
@@ -354,6 +416,121 @@ export function createFakeHalves(
     async decideHalvesItem(kind, id, action) {
       await record('decideHalvesItem', kind, id, action);
       queue = queue.filter((item) => item.id !== id);
+    },
+    async getHalvesStats() {
+      await record('getHalvesStats');
+      return {
+        moves: 412,
+        cases: 96,
+        heldPer1000: 7.3,
+        reportsPer1000: 2.4,
+        blocksPer1000Cases: 10.4,
+        nudges: 38,
+        nudgesDropped: 9,
+        medianDecisionHours: 5.5,
+        openItems: queue.length,
+      };
+    },
+    async lookForHalvesPartner(look) {
+      await record('lookForHalvesPartner', look);
+      const me = joined();
+      if (!strangers) throw new ApiError('unavailable', 403);
+      if (me.band !== 'adult') throw new ApiError('adults_only', 403);
+      if (matchNext) {
+        matchNext = false;
+        search = null;
+        const found = start({
+          mode: 'match',
+          hears: 'fr',
+          partner: { name: 'Orion-12', ai: false, place: 'city:Lyon' },
+        });
+        return { case: found, search: null };
+      }
+      const since = search?.since ?? '2026-11-20T12:00:00Z';
+      search = {
+        since,
+        until: new Date(Date.parse('2026-11-20T12:00:00Z') + look.hours * 3600_000).toISOString(),
+        remind: look.remind,
+        offerAi: false,
+      };
+      return { case: null, search };
+    },
+    async stopHalvesSearch() {
+      await record('stopHalvesSearch');
+      search = null;
+    },
+    async getHalvesStrands() {
+      await record('getHalvesStrands');
+      joined();
+      return {
+        me: { label: 'Lyon', latitude: 45.76, longitude: 4.84 },
+        strands: [
+          {
+            codename: 'Orion-12',
+            point: { label: 'Zürich', latitude: 47.37, longitude: 8.54 },
+            cases: 3,
+            duo: true,
+          },
+          {
+            codename: 'Vega-3',
+            point: { label: 'Berlin', latitude: 52.52, longitude: 13.4 },
+            cases: 1,
+            duo: false,
+          },
+          {
+            codename: 'Mira-40',
+            point: { label: 'Roma', latitude: 41.9, longitude: 12.5 },
+            cases: 1,
+            duo: false,
+          },
+        ],
+        unplaced: 1,
+      };
+    },
+    async getHalvesShareCard(caseId) {
+      await record('getHalvesShareCard', caseId);
+      const found = caseOf(caseId);
+      return {
+        title: found.title,
+        week: null,
+        status: found.status,
+        understoodFirst: found.understoodFirst,
+        told: found.told,
+        code: 'ABC234',
+        codename: joined().codename,
+      };
+    },
+    async startHalvesImportCase(importId) {
+      await record('startHalvesImportCase', importId);
+      if (importId === 'import-short') throw new ApiError('too_few_words', 422);
+      return start({ title: 'Brief vom Vermieter', fromImport: true, hears: 'de' });
+    },
+    async bridgeHalvesMove(moveId, step) {
+      await record('bridgeHalvesMove', moveId, step);
+      return withTheirs(moveId, (found) => ({
+        ...found,
+        rounds: found.rounds.map((r) =>
+          r.theirs?.id === moveId
+            ? {
+                ...r,
+                theirs: {
+                  ...r.theirs,
+                  simpler: step === 'slower' ? r.theirs.simpler : 'Inès war in Genf.',
+                  gist: step === 'gist' ? 'Inès changed trains in Geneva.' : r.theirs.gist,
+                },
+              }
+            : r,
+        ),
+      }));
+    },
+    async nudgeHalvesMove(moveId, text) {
+      await record('nudgeHalvesMove', moveId, text);
+      return withTheirs(moveId, (found) => ({
+        ...found,
+        rounds: found.rounds.map((r) =>
+          r.theirs?.id === moveId ? { ...r, theirs: { ...r.theirs, nudged: true } } : r,
+        ),
+      }));
     },
   };
 }
