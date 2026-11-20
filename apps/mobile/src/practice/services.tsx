@@ -36,6 +36,8 @@ import type {
   SpokenRecording,
   CardSource,
   Progress,
+  Motivation,
+  Celebration,
   Transcript,
   ThenVsNow,
   PenPal,
@@ -104,6 +106,12 @@ export interface PracticeServices {
   followReport: (id: string) => ReportFollower;
   /** What the Progress screen charts. */
   progress: ResourceStore<Progress>;
+  /** The streak, the next level, quests, milestones and moments to celebrate (spec §6.15). */
+  motivation: ResourceStore<Motivation>;
+  /** The app showed a moment: it is not shown again. Never throws (a lost mark shows it again). */
+  celebrate: (moment: Pick<Celebration, 'kind' | 'id'>) => Promise<void>;
+  /** Pauses the reminders and the quiet-week nudge (`null` resumes). Rejects with an `ApiError`. */
+  pauseReminders: (days: number | null) => Promise<string | null>;
   /** Asks for the words of last week's check-in (`week` is its Monday) and follows them. */
   followWeekReview: (week: string) => WeekReviewFollower;
   /** Where last week's check-in plays from, in the partner's voice. Rejects with an `ApiError`. */
@@ -371,6 +379,9 @@ export function createPracticeServices(
     | 'requestWeekReview'
     | 'getWeekReview'
     | 'getWeekReviewAudio'
+    | 'getMotivation'
+    | 'markCelebrated'
+    | 'pauseReminders'
     | 'getExamCentre'
     | 'getNextSimulation'
     | 'getExamPhraseBank'
@@ -401,10 +412,29 @@ export function createPracticeServices(
   const imports = createResourceStore(() => api.getImports(), clock.now);
 
   const penPal = createResourceStore(() => api.getPenPal(), clock.now);
+  const motivation = createResourceStore(() => api.getMotivation(clock.timeZone()), clock.now);
   return {
     ...extensions,
     home,
     progress: createResourceStore(() => api.getProgress(clock.timeZone()), clock.now),
+    motivation,
+    celebrate: async ({ kind, id }) => {
+      // Shown as done at once, so the next moment follows without waiting for the server.
+      await motivation
+        .mutate(
+          () => api.markCelebrated(kind, id),
+          (shown) => ({
+            ...shown,
+            celebrations: shown.celebrations.filter((c) => !(c.kind === kind && c.id === id)),
+          }),
+        )
+        .catch(() => {});
+    },
+    pauseReminders: (days) =>
+      motivation.mutate(
+        () => api.pauseReminders(days),
+        (shown, until) => ({ ...shown, remindersPausedUntil: until }),
+      ),
     followWeekReview: (week) => createWeekReviewFollower(api, week, clock.timeZone()),
     weekSound: async (week) => (await api.getWeekReviewAudio(week)).url,
     exams: createResourceStore(() => api.getExamCentre(), clock.now),
@@ -594,6 +624,7 @@ export function PracticeProvider({
     services.library.reset();
     services.deck.reset();
     services.progress.reset();
+    services.motivation.reset();
     services.exams.reset();
     services.tutor.reset();
     services.phrasebook.reset();
@@ -645,6 +676,20 @@ export function useLibrary(): LibraryState {
 export function useExamCentre(): ResourceState<ExamCentre> {
   const { exams } = usePracticeServices();
   return useSyncExternalStore(exams.subscribe, exams.getState, exams.getState);
+}
+
+/**
+ * Motivation for the screens that show it (Today, Progress, 5.27): loaded on first use, read
+ * again when the screen comes back after a while (`revisit`).
+ */
+export function useMotivation(): ResourceState<Motivation> {
+  const { motivation } = usePracticeServices();
+  const { status } = useSession();
+  const signedIn = status === 'signedIn';
+  useEffect(() => {
+    if (signedIn) void motivation.load();
+  }, [signedIn, motivation]);
+  return useSyncExternalStore(motivation.subscribe, motivation.getState, motivation.getState);
 }
 
 export function useProgress(): ResourceState<Progress> {

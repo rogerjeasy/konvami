@@ -58,14 +58,20 @@ function useReminderWords(home: Home | null) {
 /**
  * Keeps the device's reminders in step with Today: scheduled again for the next seven days
  * whenever the plan, the cards or the learner's choice change, once the phone allows them.
- * Turned off, none is left scheduled.
+ * Turned off, none is left scheduled. While the learner paused reminders (`pausedUntil`, from
+ * Today's welcome back), none falls before the pause ends.
  */
-export function useReminderSchedule(home: Home | null, now: Date) {
+export function useReminderSchedule(
+  home: Home | null,
+  now: Date,
+  pausedUntil: string | null = null,
+) {
   const { t } = useTranslation();
   const device = useReminderDevice();
   const { permission } = useReminderPermission();
   const { reminders: settings } = usePreferences();
   const words = useReminderWords(home);
+  const resumes = pausedUntil ? Date.parse(pausedUntil) : 0;
   const scheduled =
     home && settings && permission === 'granted'
       ? upcomingReminders({
@@ -75,7 +81,9 @@ export function useReminderSchedule(home: Home | null, now: Date) {
           cardsDue: home.cardsDue,
           practisedToday: home.activity.practisedToday,
           settings,
-        }).map(words)
+        })
+          .filter((reminder) => reminder.at.getTime() >= resumes)
+          .map(words)
       : null;
   // Scheduled again only when what the reminders say changes, not on every render: the
   // schedule travels to the effect as its own text.

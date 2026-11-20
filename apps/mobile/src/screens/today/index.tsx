@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,7 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { sessionRoute } from '@/lib/plan';
 import { callRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes';
-import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
+import { useHome, useMotivation, usePenPal, usePracticeServices } from '@/practice/services';
 import { useAccount, useProfileQuestion, useProfileServices } from '@/profile/services';
 import { useReminderSchedule } from '@/reminders/use-reminders';
 import { ExamCard } from './exam-card';
@@ -32,6 +32,12 @@ import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
 import { CardsTile } from './cards-tile';
 import { GoalTile, StreakTile, TopicsTile } from './week-card';
+import { QuestsCard, RecapCard, RepairCard, WelcomeBackCard } from './motivation-cards';
+import { useRecapClosed } from './use-recap-closed';
+import { Celebrations } from '@/screens/quests/celebrations';
+
+// "Pause reminders for a month": the longest pause the server allows.
+const PAUSE_DAYS = 30;
 
 /** The greeting and the day, with the way to the account at the end. */
 function Header({ now }: { now: Date }) {
@@ -66,10 +72,10 @@ function Header({ now }: { now: Date }) {
  * week's goal, the cards waiting and the week's topics. A block with nothing to say is left out,
  * and the one left alone in a row takes its width.
  */
-function Bento({ home }: { home: Home }) {
+function Bento({ home, restDay }: { home: Home; restDay: boolean }) {
   const { compact } = useScreenLayout();
   const tiles = [
-    <StreakTile key="streak" activity={home.activity} />,
+    <StreakTile key="streak" activity={home.activity} restDay={restDay} />,
     <GoalTile key="goal" plan={home.plan} onChangeGoal={() => router.push(ROUTES.accountGoals)} />,
     // Shown only while cards are waiting: a count of zero is nothing to do.
     home.cardsDue > 0 ? (
@@ -94,8 +100,12 @@ function Bento({ home }: { home: Home }) {
 function Day({ home, now }: { home: Home; now: Date }) {
   const { t } = useTranslation();
   const { split } = useScreenLayout();
-  // Today is where the plan is read: the device's reminders follow it from here.
-  useReminderSchedule(home, now);
+  const motivation = useMotivation();
+  const moving = motivation.phase === 'ready' ? motivation.data : null;
+  // Today is where the plan is read: the device's reminders follow it from here (none while the
+  // learner paused them).
+  useReminderSchedule(home, now, moving?.remindersPausedUntil ?? null);
+  const [pauseFailed, setPauseFailed] = useState(false);
   const partner =
     home.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ?? home.partners[0];
   // A question about a setting, when the server finds one due (progressive profiling).
@@ -107,6 +117,18 @@ function Day({ home, now }: { home: Home; now: Date }) {
   const writer = waiting
     ? home.partners.find(({ persona }) => persona.id === waiting.personaId)?.persona
     : undefined;
+  const { pauseReminders } = usePracticeServices();
+  const pause = (days: number | null) => {
+    setPauseFailed(false);
+    void pauseReminders(days).catch(() => setPauseFailed(true));
+  };
+  const recapWeek = moving?.recap?.week ?? null;
+  const recap = useRecapClosed(recapWeek);
+  const welcomeName =
+    home.partners.find(({ persona }) => persona.id === moving?.welcomeBack?.partnerId)?.persona
+      .name ?? partner?.persona.name;
+  const milestoneName = (id: string) =>
+    t(`progress.milestones.names.${id}` as 'progress.milestones.title', { defaultValue: id });
   const asking =
     question.phase === 'ready' &&
     question.data.question !== null &&
@@ -142,15 +164,60 @@ function Day({ home, now }: { home: Home; now: Date }) {
         />
       </ListGroup>
     ) : null,
-    <Bento key="bento" home={home} />,
+    moving?.welcomeBack && partner && welcomeName ? (
+      <WelcomeBackCard
+        key="welcome"
+        welcome={moving.welcomeBack}
+        partnerName={welcomeName}
+        pausedUntil={moving.remindersPausedUntil}
+        onTalk={() => {
+          commitFeedback();
+          router.push(callRoute(moving.welcomeBack?.partnerId ?? partner.persona.id));
+        }}
+        failed={pauseFailed}
+        onPause={() => pause(PAUSE_DAYS)}
+        onResume={() => pause(null)}
+      />
+    ) : null,
+    moving?.streak.repair && partner ? (
+      <RepairCard
+        key="repair"
+        repair={moving.streak.repair}
+        days={moving.streak.days}
+        partnerName={partner.persona.name}
+        onTalk={() => {
+          commitFeedback();
+          router.push(callRoute(partner.persona.id));
+        }}
+      />
+    ) : null,
+    <Bento key="bento" home={home} restDay={moving ? !moving.streak.plannedToday : false} />,
+    moving && moving.quests.quests.length ? (
+      <QuestsCard
+        key="quests"
+        quests={moving.quests.quests}
+        onOpen={() => router.push(ROUTES.quests)}
+      />
+    ) : null,
     // Once there was a first conversation, reminders are worth offering.
     partner && home.activity.conversations > 0 ? (
       <ReminderOffer key="reminders" partnerName={partner.persona.name} />
     ) : null,
   ];
   const about = [
+    moving?.recap && recap.closed === false ? (
+      <RecapCard
+        key="recap"
+        recap={moving.recap}
+        freshStart={moving.freshStart}
+        milestoneName={milestoneName}
+        onClose={recap.close}
+      />
+    ) : null,
     asking ? <ProfileQuestion key="question" /> : null,
-    home.level ? <LevelCard key="level" level={home.level} /> : null,
+    home.level ? (
+      <LevelCard key="level" level={home.level} outlook={moving?.outlook ?? null} />
+    ) : null,
     home.focus.length ? (
       <FocusCard key="focus" focus={home.focus} source={home.focusSource} />
     ) : null,
@@ -207,6 +274,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
     <View className={split ? 'flex-row items-start gap-6' : 'gap-4'}>
       {column(talk, 1)}
       {column(about, 1 + talk.length)}
+      <Celebrations />
     </View>
   );
 }
@@ -219,7 +287,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
 export function TodayScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { home: store, penPal, clock } = usePracticeServices();
+  const { home: store, penPal, clock, motivation } = usePracticeServices();
   const { question } = useProfileServices();
   const home = useHome();
   const signedIn = status === 'signedIn';
@@ -236,7 +304,8 @@ export function TodayScreen() {
       void store.revisit();
       void question.revisit();
       void penPal.revisit();
-    }, [store, question, penPal]),
+      void motivation.revisit();
+    }, [store, question, penPal, motivation]),
   );
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;
@@ -244,7 +313,14 @@ export function TodayScreen() {
   return (
     <TabScreen
       refreshing={home.refreshing}
-      onRefresh={home.phase === 'ready' ? () => void store.refresh() : undefined}
+      onRefresh={
+        home.phase === 'ready'
+          ? () => {
+              void store.refresh();
+              void motivation.refresh();
+            }
+          : undefined
+      }
     >
       <Reveal>
         <Header now={now} />

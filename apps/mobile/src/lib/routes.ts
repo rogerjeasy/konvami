@@ -82,6 +82,8 @@ export const ROUTES = {
   rolePlays: '/role-plays',
   /** 5.24 Choose two partners: a conversation with two of the learner's partners at once. */
   together: '/together',
+  /** 5.27 This week's quests: three small speaking challenges and how far each is. */
+  quests: '/quests',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
   exams: '/exams',
   /** 5.14 Grammar map: every topic of the language learned, and how well the learner uses it. */

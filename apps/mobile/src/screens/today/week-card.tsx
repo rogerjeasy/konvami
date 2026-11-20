@@ -31,7 +31,14 @@ function stateOf(day: Activity['week'][number], today: string): WeekDayState {
  * next. A learner who has not talked yet sees an empty week and what starts a streak, never a
  * number that is not theirs.
  */
-export function StreakTile({ activity }: { activity: Activity }) {
+export function StreakTile({
+  activity,
+  restDay = false,
+}: {
+  activity: Activity;
+  /** Today is not a day of the learner's plan: the streak is safe whatever happens. */
+  restDay?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const { color } = useTheme();
   const initials = weekdayInitials(i18n.language);
@@ -53,9 +60,11 @@ export function StreakTile({ activity }: { activity: Activity }) {
       ? t('today.week.empty')
       : activity.practisedToday
         ? null
-        : activity.streakDays > 0
-          ? t('today.week.keep')
-          : t('today.week.restart');
+        : restDay && activity.streakDays > 0
+          ? t('motivation.streak.restDay')
+          : activity.streakDays > 0
+            ? t('today.week.keep')
+            : t('today.week.restart');
 
   return (
     <Tile color="butter" className="flex-1 gap-3">
