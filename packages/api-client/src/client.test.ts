@@ -885,6 +885,41 @@ describe('api client', () => {
     expect(calls[5]?.body).toEqual({ templateId: null });
   });
 
+  it('plays the story chain: joins, starts a story, sends a line, reacts and reports', async () => {
+    const { fetch, calls } = fakeFetch(
+      json(200, { available: true }),
+      json(200, { id: 's/1' }),
+      json(200, { id: 'l/1', status: 'checking' }),
+      json(200, { id: 's/1' }),
+      json(200, { id: 's/1' }),
+      json(200, { heard: 'x', right: true }),
+      json(200, { id: 'card' }),
+      new Response(null, { status: 204 }),
+    );
+    const { api } = client(fetch);
+
+    await api.joinChain({ veilDefault: true, voiceConsent: true });
+    await api.startChainStory({ openingId: 'night-train', seats: [{ kind: 'ai' }] });
+    await api.sendChainLine('s/1', { audio: 'AAEC', format: 'm4a', veiled: false });
+    await api.reactToChainStory('s/1', 'laughed');
+    await api.reportChainLine('l/1', { reason: 'other' });
+    await api.retryChainLine('l/1', 0, { audio: 'AAEC', format: 'm4a' });
+    await api.saveChainCard('l/1', 0);
+    expect(await api.decideChainItem('held', 'l/1', 'dismiss')).toBeUndefined();
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'PUT https://api.example.test/v1/chain/profile',
+      'POST https://api.example.test/v1/chain/stories',
+      'POST https://api.example.test/v1/chain/stories/s%2F1/lines',
+      'POST https://api.example.test/v1/chain/stories/s%2F1/reaction',
+      'POST https://api.example.test/v1/chain/lines/l%2F1/report',
+      'POST https://api.example.test/v1/chain/lines/l%2F1/corrections/0/retry',
+      'POST https://api.example.test/v1/chain/lines/l%2F1/corrections/0/card',
+      'POST https://api.example.test/v1/chain/queue/held/l%2F1',
+    ]);
+    expect(calls[3]?.body).toEqual({ reaction: 'laughed' });
+  });
+
   it('reads and changes the pen-pal, and sends a voice note', async () => {
     const note = { id: 'n/1', status: 'pending' };
     const { fetch, calls } = fakeFetch(

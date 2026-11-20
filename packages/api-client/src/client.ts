@@ -50,6 +50,26 @@ export type WordDetails = Schemas['WordDetailsOut'];
 export type Retried = Schemas['RetriedOut'];
 /** A sentence recorded on the device: a correction said again, or a card's answer. */
 export type SpokenRecording = Schemas['RecordingIn'];
+// The story chain, Kettengeschichte (section 9).
+export type Chain = Schemas['ChainOut'];
+export type ChainProfile = Schemas['ChainProfileOut'];
+export type ChainJoin = Schemas['ChainJoinIn'];
+export type ChainProfileChange = Partial<Schemas['ChainProfileChangeIn']>;
+export type ChainStorySummary = Schemas['ChainStorySummaryOut'];
+export type ChainStory = Schemas['ChainStoryOut'];
+export type ChainSeat = Schemas['ChainSeatOut'];
+export type ChainSeatChoice = Schemas['ChainSeatIn'];
+export type ChainHeard = Schemas['ChainHeardOut'];
+export type ChainMine = Schemas['ChainMineOut'];
+export type ChainPlayPart = Schemas['ChainPlayOut'];
+export type ChainLine = Schemas['ChainLineOut'];
+export type ChainLineInput = Schemas['ChainLineIn'];
+export type ChainRetryInput = Schemas['ChainRetryIn'];
+export type ChainRetried = Schemas['ChainRetriedOut'];
+export type ChainOpening = Schemas['ChainOpeningOut'];
+export type ChainReaction = Schemas['ChainReactionIn']['reaction'];
+export type ChainReportReason = Schemas['ChainReportIn']['reason'];
+
 // Two Halves (section 7).
 export type Halves = Schemas['HalvesOut'];
 export type HalvesProfile = Schemas['HalvesProfileOut'];
@@ -382,6 +402,45 @@ export interface ApiClient {
   /** The owner's Two Halves queue (6.15). */
   getHalvesQueue(): Promise<{ items: HalvesQueueItem[] }>;
   decideHalvesItem(
+    kind: 'held' | 'report',
+    id: string,
+    action: 'remove' | 'dismiss',
+  ): Promise<void>;
+  /** The story chain's hub (9.1). */
+  getChain(): Promise<Chain>;
+  /** Joins the story chain or changes the join answers (9.2). */
+  joinChain(answers: ChainJoin): Promise<Chain>;
+  changeChain(changes: ChainProfileChange): Promise<Chain>;
+  rerollChainCodename(): Promise<Chain>;
+  /** Deletes the learner's story-chain data (9.8). */
+  leaveChain(): Promise<void>;
+  removeChainBlock(blockId: string): Promise<void>;
+  /** A new story with the learner in the first seat (9.3). */
+  startChainStory(start: {
+    openingId?: string | null;
+    seats: ChainSeatChoice[];
+  }): Promise<ChainStory>;
+  redeemChainInvite(code: string): Promise<ChainStory>;
+  getChainStory(storyId: string): Promise<ChainStory>;
+  createChainInvite(storyId: string): Promise<ChainStory>;
+  fillChainSeats(storyId: string): Promise<ChainStory>;
+  /** Records the learner's line (9.4); checked on the server before anyone hears it. */
+  sendChainLine(storyId: string, line: ChainLineInput): Promise<ChainLine>;
+  reactToChainStory(storyId: string, reaction: ChainReaction): Promise<ChainStory>;
+  leaveChainStory(storyId: string): Promise<ChainStory>;
+  blockChainPlayer(storyId: string, seat: number): Promise<ChainStory>;
+  getChainOpeningAudio(storyId: string): Promise<{ url: string }>;
+  getChainPlayAudio(storyId: string, index: number): Promise<{ url: string }>;
+  getChainLineAudio(lineId: string): Promise<{ url: string }>;
+  reportChainLine(
+    lineId: string,
+    report: { reason: ChainReportReason; note?: string | null },
+  ): Promise<ChainStory>;
+  retryChainLine(lineId: string, index: number, attempt: ChainRetryInput): Promise<ChainRetried>;
+  saveChainCard(lineId: string, index: number): Promise<{ id: string }>;
+  /** The owner's story-chain queue (6.15). */
+  getChainQueue(): Promise<{ items: HalvesQueueItem[] }>;
+  decideChainItem(
     kind: 'held' | 'report',
     id: string,
     action: 'remove' | 'dismiss',
@@ -896,6 +955,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const personaPath = (id: string) => `/v1/personas/${encodeURIComponent(id)}`;
   const personas = async (answer: Promise<Schemas['PersonasOut']>) => (await answer).personas;
 
+  const chainStory = (id: string) => `/v1/chain/stories/${encodeURIComponent(id)}`;
+  const chainLine = (id: string) => `/v1/chain/lines/${encodeURIComponent(id)}`;
   const halvesCase = (id: string) => `/v1/halves/cases/${encodeURIComponent(id)}`;
   const halvesMove = (id: string) => `/v1/halves/moves/${encodeURIComponent(id)}`;
 
@@ -933,6 +994,35 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getHalvesQueue: () => request('GET', '/v1/halves/queue'),
     decideHalvesItem: (kind, id, action) =>
       request('POST', `/v1/halves/queue/${kind}/${encodeURIComponent(id)}`, { action }),
+    getChain: () => request('GET', '/v1/chain'),
+    joinChain: (answers) => request('PUT', '/v1/chain/profile', answers),
+    changeChain: (changes) => request('PATCH', '/v1/chain/profile', changes),
+    rerollChainCodename: () => request('POST', '/v1/chain/profile/codename'),
+    leaveChain: () => request('DELETE', '/v1/chain/profile'),
+    removeChainBlock: (blockId) =>
+      request('DELETE', `/v1/chain/blocks/${encodeURIComponent(blockId)}`),
+    startChainStory: (start) => request('POST', '/v1/chain/stories', start),
+    redeemChainInvite: (code) => request('POST', '/v1/chain/invites/redeem', { code }),
+    getChainStory: (storyId) => request('GET', chainStory(storyId)),
+    createChainInvite: (storyId) => request('POST', `${chainStory(storyId)}/invite`),
+    fillChainSeats: (storyId) => request('POST', `${chainStory(storyId)}/fill`),
+    sendChainLine: (storyId, line) => request('POST', `${chainStory(storyId)}/lines`, line),
+    reactToChainStory: (storyId, reaction) =>
+      request('POST', `${chainStory(storyId)}/reaction`, { reaction }),
+    leaveChainStory: (storyId) => request('POST', `${chainStory(storyId)}/leave`),
+    blockChainPlayer: (storyId, seat) => request('POST', `${chainStory(storyId)}/block`, { seat }),
+    getChainOpeningAudio: (storyId) => request('GET', `${chainStory(storyId)}/opening/audio`),
+    getChainPlayAudio: (storyId, index) =>
+      request('GET', `${chainStory(storyId)}/play/${index}/audio`),
+    getChainLineAudio: (lineId) => request('GET', `${chainLine(lineId)}/audio`),
+    reportChainLine: (lineId, report) => request('POST', `${chainLine(lineId)}/report`, report),
+    retryChainLine: (lineId, index, attempt) =>
+      request('POST', `${chainLine(lineId)}/corrections/${index}/retry`, attempt),
+    saveChainCard: (lineId, index) =>
+      request('POST', `${chainLine(lineId)}/corrections/${index}/card`),
+    getChainQueue: () => request('GET', '/v1/chain/queue'),
+    decideChainItem: (kind, id, action) =>
+      request('POST', `/v1/chain/queue/${kind}/${encodeURIComponent(id)}`, { action }),
     getProfile: () => request('GET', '/v1/profile'),
     updateProfile: (changes) => request('PATCH', '/v1/profile', { changes }),
     getProfileChanges: () => request('GET', '/v1/profile/changes'),
