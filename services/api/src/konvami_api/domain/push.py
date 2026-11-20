@@ -54,6 +54,13 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "A répondu à ton message vocal.",
         "it": "Ha risposto al tuo messaggio vocale.",
     },
+    # After a question the partner remembered to ask (`winback` below).
+    "nudge_ask": {
+        "en": "Got five minutes to tell me?",
+        "de": "Hast du fünf Minuten, um mir davon zu erzählen?",
+        "fr": "Tu as cinq minutes pour me raconter ?",
+        "it": "Hai cinque minuti per raccontarmelo?",
+    },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
         "de": "Wir haben lange nicht gesprochen. Hast du fünf Minuten?",
@@ -147,12 +154,31 @@ class PushService:
         personas: PersonaService,
         conversations: ConversationService,
         clock: Callable[[], dt.datetime],
+        paused: Callable[[UUID], bool] | None = None,
+        winback: Callable[[UUID, UUID | None, str], str | None] | None = None,
     ) -> None:
+        """`paused` tells a learner who paused reminders (motivation's "pause for a month"), who
+        gets no nudge; `winback` finds what the partner would ask about (a follow-up it
+        remembers, in the phone's language), so the nudge is about the learner's life rather
+        than about the app."""
+        self._paused = paused
+        self._winback = winback
         self._repository = repository
         self._sender = sender
         self._personas = personas
         self._conversations = conversations
         self._clock = clock
+
+    def use_motivation(
+        self,
+        *,
+        paused: Callable[[UUID], bool],
+        winback: Callable[[UUID, UUID | None, str], str | None],
+    ) -> None:
+        """For a backend that builds motivation after push (pen-pal notes need push first): the
+        same `paused` and `winback` as the constructor takes."""
+        self._paused = paused
+        self._winback = winback
 
     def register(
         self,
@@ -175,12 +201,23 @@ class PushService:
         self._repository.remove(token, user_id)
 
     def _send(
-        self, devices: Sequence[PushDevice], kind: str, title: str, data: Mapping[str, str]
+        self,
+        devices: Sequence[PushDevice],
+        kind: str,
+        title: str,
+        data: Mapping[str, str],
+        bodies: Mapping[str, str | None] | None = None,
     ) -> None:
+        """`bodies` replaces the usual words, per app language, where it has some."""
         if not devices:
             return
         messages = [
-            PushMessage(device.token, title, _WORDS[kind][device.language], data)
+            PushMessage(
+                device.token,
+                title,
+                (bodies or {}).get(device.language) or _WORDS[kind][device.language],
+                data,
+            )
             for device in devices
         ]
         try:
@@ -225,6 +262,10 @@ class PushService:
             {"open": "pen_pal", "id": str(persona_id)},
         )
 
+    def _winback_line(self, user_id: UUID, partner: UUID | None, language: str) -> str | None:
+        asked = self._winback(user_id, partner, language) if self._winback else None
+        return f"{asked} {_WORDS['nudge_ask'][language]}" if asked else None
+
     def nudge(self) -> int:
         """Once an hour: each phone whose reminder hour it is now, of a learner who has not
         talked for a week and was not nudged in that week, gets one gentle push from the partner
@@ -248,10 +289,20 @@ class PushService:
             quiet_from = (
                 last[0].started_at if last else min(device.registered_at for device in devices)
             )
-            if now - quiet_from < QUIET_FOR:
+            if now - quiet_from < QUIET_FOR or (self._paused and self._paused(user_id)):
                 continue
             partner = last[0].persona_id if last else None
-            self._send(devices, "nudge", self._partner_name(user_id, partner), {"open": "today"})
+            asks = {
+                device.language: self._winback_line(user_id, partner, device.language)
+                for device in devices
+            }
+            self._send(
+                devices,
+                "nudge",
+                self._partner_name(user_id, partner),
+                {"open": "today"},
+                bodies=asks,
+            )
             for device in devices:
                 self._repository.nudged(device.token, now)
             nudged += len(devices)

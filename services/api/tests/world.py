@@ -25,6 +25,8 @@ from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelFit, LevelService
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MemoryService
+from konvami_api.domain.motivation import MotivationService
+from konvami_api.domain.motivation_sources import motivation_sources, winback_question
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import Persona, PersonaService
@@ -97,6 +99,7 @@ from tests.fakes import (
     InMemoryImportRepository,
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
+    InMemoryMotivationRepository,
     InMemoryOnboardingRepository,
     InMemoryPackRepository,
     InMemoryPenPalRepository,
@@ -386,6 +389,14 @@ class World:
             personas=self.personas,
             conversations=self.conversations,
             clock=self.clock,
+            # Motivation is built further down; the nudge asks it only when it runs.
+            paused=lambda user_id: self.motivation.reminders_paused(user_id),
+            winback=winback_question(
+                profiles=self.profiles,
+                memories=self.memories,
+                conversations=self.conversations,
+                clock=self.clock,
+            ),
         )
         self.files = InMemoryFileStore()
         self.speech = FakeSpeechModel()
@@ -606,6 +617,8 @@ class World:
             reports=self.reports,
             cards=self.cards,
             clock=self.clock,
+            # Motivation is built further down; Today asks it only when it opens.
+            streak=lambda user_id, tz: self.motivation.streak(user_id, tz).days,
         )
         self.progress = ProgressService(
             profiles=self.profiles,
@@ -616,6 +629,8 @@ class World:
             cards=self.cards,
             levels=self.levels,
             clock=self.clock,
+            streak=lambda user_id, tz: self.motivation.streak(user_id, tz),
+            milestones=lambda user_id, tz: self.motivation.milestones(user_id, tz),
         )
         self.director = DirectorService(
             profiles=self.profiles,
@@ -666,6 +681,22 @@ class World:
                 model="gpt-4o-mini-tts",
                 files=self.files,
                 premium=self.premium,
+            ),
+            clock=self.clock,
+        )
+        self.motivation_store = InMemoryMotivationRepository()
+        self.motivation = MotivationService(
+            repository=self.motivation_store,
+            conversations=self.conversations,
+            sources=motivation_sources(
+                profiles=self.profiles,
+                levels=self.levels,
+                director=self.director,
+                cards=self.cards,
+                reports=self.reports,
+                penpal=self.penpal,
+                conversation_review=self.conversation_review,
+                clock=self.clock,
             ),
             clock=self.clock,
         )

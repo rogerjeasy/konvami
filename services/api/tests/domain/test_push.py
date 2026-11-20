@@ -1,9 +1,11 @@
 """Push from the server (spec §6.18): reports, scores and a weekly nudge."""
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 import pytest
 
+from konvami_api.domain.memories import Memory
 from konvami_api.domain.push import MAX_PHONES, PushDevice, PushRequestError
 from tests.domain import test_exam_centre as exam_centre
 from tests.domain import test_reports as reports
@@ -190,3 +192,46 @@ def test_a_phone_that_cannot_be_read_does_not_stop_the_nudge() -> None:
 
     assert world.push.nudge() >= 1
     assert PHONE in {message.token for message in world.push_sender.sent}
+
+
+def test_a_learner_who_paused_reminders_is_not_nudged() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.talk(lena, at=NOON)
+    phone(world)
+    world.motivation.pause_reminders(USER, 30)
+
+    world.clock.now = at_zurich(NOON + 7 * DAY, 18)
+
+    assert world.push.nudge() == 0
+
+
+def test_the_nudge_asks_about_what_the_partner_remembers() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.talk(lena, at=NOON)
+    phone(world)
+    world.memory_store.add(
+        USER,
+        "entretien",
+        Memory(
+            id=UUID(int=7),
+            kind="event",
+            text="A un entretien d’embauche.",
+            day=(NOON + 3 * DAY).date(),
+            importance=3,
+            persona_id=None,
+            source_call_id=None,
+            created_at=NOON,
+            updated_at=NOON,
+            ask="Comment s’est passé ton entretien ?",
+        ),
+        100,
+    )
+
+    world.clock.now = at_zurich(NOON + 7 * DAY, 18)
+    assert world.push.nudge() == 1
+
+    assert [m.body for m in world.push_sender.sent] == [
+        "Comment s’est passé ton entretien ? Tu as cinq minutes pour me raconter ?"
+    ]

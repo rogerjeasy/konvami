@@ -5,7 +5,7 @@ or did in it; a section with nothing behind it is left out, never filled in.
 
 import datetime as dt
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 from uuid import UUID
 
@@ -87,7 +87,11 @@ class HomeService:
         reports: ReportService,
         cards: CardService,
         clock: Callable[[], dt.datetime],
+        streak: Callable[[UUID, str | None], int] | None = None,
     ) -> None:
+        """`streak` is motivation's (days that count, rest days and repairs included); without
+        one, the days in a row with a conversation."""
+        self._streak = streak
         self._reports = reports
         self._cards = cards
         self._profiles = profiles
@@ -104,7 +108,9 @@ class HomeService:
         language = profile.target_language or ""
         result = self._placement.view(user_id).result
         activity = self._conversations.activity(user_id, timezone, self._clock())
-        history = self._conversations.partner_history(user_id)
+        if self._streak is not None:
+            activity = replace(activity, streak_days=self._streak(user_id, timezone))
+        history =self._conversations.partner_history(user_id)
         partners = tuple(
             PartnerView(
                 persona=persona,
