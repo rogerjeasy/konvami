@@ -778,7 +778,7 @@ describe('api client', () => {
     );
     const { api } = client(fetch);
 
-    await api.joinHalves({ nativeLanguage: 'fr', voiceConsent: true });
+    await api.joinHalves({ nativeLanguage: 'fr', veilDefault: true, voiceConsent: true });
     await api.startHalvesCase({ season: true });
     await api.sendHalvesMove('c/1', { audio: 'AAEC', format: 'm4a', veiled: true });
     await api.answerHalvesMove('m/1', 2);
