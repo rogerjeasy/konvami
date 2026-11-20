@@ -20,6 +20,7 @@ from konvami_api.domain.accounts import AccountService
 from konvami_api.domain.candidate_speech import CandidateSpeech
 from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
+from konvami_api.domain.card_schedule import CardScheduleService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.continuation import Continuations
@@ -109,6 +110,7 @@ from konvami_api.persistence.repositories import (
     SqlVoiceSessionRepository,
     SqlWeekReviewRepository,
 )
+from konvami_api.persistence.schedule_repository import SqlScheduleRepository
 from konvami_api.persistence.sql import SqlClient
 from konvami_api.persistence.video_avatar_repository import SqlVideoAvatarRepository
 from konvami_api.persistence.vocabulary_repository import SqlVocabularyRepository
@@ -118,6 +120,7 @@ from konvami_api.providers.aws import (
     LambdaClient,
     LambdaDetailsStarter,
     LambdaExamStarter,
+    LambdaFitStarter,
     LambdaPenPalStarter,
     LambdaReportStarter,
     LambdaWeekReviewStarter,
@@ -322,6 +325,11 @@ def build_backend(
         clock=_now,
     )
     card_store = SqlCardRepository(sql)
+    card_schedule = CardScheduleService(
+        repository=SqlScheduleRepository(sql),
+        clock=_now,
+        starter=LambdaFitStarter(clients.functions, worker),
+    )
     cards = CardService(
         profiles=profiles,
         reports=reports,
@@ -329,6 +337,7 @@ def build_backend(
         vocabulary=vocabulary_store,
         clock=_now,
         details=LambdaDetailsStarter(clients.functions, worker),
+        schedule=card_schedule,
     )
     levels = LevelService(
         profiles=profiles,
@@ -608,6 +617,7 @@ def build_backend(
         ),
         premium_voices=premium_voices,
         video_avatars=video_avatars(environment, clients, sql, plans, profiles),
+        card_schedule=card_schedule,
         card_details=CardDetailsService(
             profiles=profiles,
             personas=personas,
@@ -770,7 +780,8 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     time from their recordings, counting the due words the learner used as reviewed, writing
     its report, moving the level if the reports say so, then writing down what it told about
     the learner; and filling in a learner's new word cards with
-    their forms (`card_details`); writing a learner's weekly check-in (`week_review`); scoring
+    their forms (`card_details`); fitting a learner's card schedule to their reviews
+    (`card_schedule`); writing a learner's weekly check-in (`week_review`); scoring
     an exam simulation (`exam`); and, once an hour, nudging learners who have been quiet for a
     week (`nudges`, from the schedule), and the partners' voice notes: the ones due, sent by the
     same hourly run (spec §6.16), and writing a note or an answer that is waiting (`pen_pal`)."""
@@ -793,6 +804,10 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
         return
     if "card_details" in event:
         backend.services.card_details.fill_in(UUID(event["card_details"]))
+        return
+    if "card_schedule" in event:
+        if backend.services.card_schedule is not None:
+            backend.services.card_schedule.fit(UUID(event["card_schedule"]))
         return
     if "report" in event:
         call_id = event["report"]

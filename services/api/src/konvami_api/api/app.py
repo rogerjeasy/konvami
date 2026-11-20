@@ -141,6 +141,7 @@ from konvami_api.api.schemas import (
 from konvami_api.domain.accounts import AccountService, AccountView
 from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
+from konvami_api.domain.card_schedule import CardScheduleService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService, OfflineReview
 from konvami_api.domain.catalog import Catalog
@@ -238,6 +239,8 @@ class Services:
     plans: PlanService
     # Reads the secret RevenueCat's webhook sends (Secrets Manager); empty when not set up.
     store_secret: Callable[[], str]
+    # Fits a learner's card schedule to their reviews (the worker's `card_schedule` job).
+    card_schedule: CardScheduleService | None = None
 
 
 # Documented error responses, so the generated client knows their shape.

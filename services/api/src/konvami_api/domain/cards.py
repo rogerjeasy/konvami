@@ -15,11 +15,12 @@ from typing import TYPE_CHECKING, Literal, Protocol
 from uuid import UUID, uuid4
 
 from konvami_api.domain import fsrs
-from konvami_api.domain.fsrs import Memory, Rating
+from konvami_api.domain.fsrs import DEFAULT_WEIGHTS, Memory, Rating, Weights
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import Report, ReportService, wording
 
 if TYPE_CHECKING:
+    from konvami_api.domain.card_schedule import CardScheduleService
     from konvami_api.domain.vocabulary import VocabularyCounter
 
 # A word or phrase to remember, or a sentence the learner said and how it is right.
@@ -105,6 +106,8 @@ class Deck:
     # Of the whole deck, not of this page.
     total: int
     due: int
+    # Whether the cards are scheduled with the learner's own fitted parameters.
+    tuned: bool = False
 
 
 @dataclass(frozen=True)
@@ -125,10 +128,14 @@ class Queue:
 
 @dataclass(frozen=True)
 class Ahead:
-    """The cards due from now to `OFFLINE_AHEAD`, for the app to review them offline."""
+    """The cards due from now to `OFFLINE_AHEAD`, for the app to review them offline, with the
+    parameters and retention the server schedules them with, so the phone schedules alike."""
 
     cards: tuple[Card, ...]
     language: str
+    # The learner's fitted parameters; None for the published defaults.
+    weights: Weights | None = None
+    retention: float = fsrs.RETENTION
 
 
 @dataclass(frozen=True)
@@ -273,11 +280,21 @@ def card_key(front: str) -> str:
     return wording(front)
 
 
-def _reviewed(card: Card, rating: Rating, now: dt.datetime) -> Card:
-    """The card as a review at `now` leaves it."""
+def _reviewed(
+    card: Card,
+    rating: Rating,
+    now: dt.datetime,
+    weights: Weights = DEFAULT_WEIGHTS,
+    retention: float = fsrs.RETENTION,
+) -> Card:
+    """The card as a review at `now` leaves it, scheduled with the learner's parameters."""
     days = (now - card.reviewed_at).days if card.reviewed_at else 0
-    memory = fsrs.review(card.memory, days, rating)
-    wait = AGAIN_DELAY if rating == "again" else dt.timedelta(days=fsrs.interval_days(memory))
+    memory = fsrs.review(card.memory, days, rating, weights)
+    wait = (
+        AGAIN_DELAY
+        if rating == "again"
+        else dt.timedelta(days=fsrs.interval_days(memory, weights, retention))
+    )
     # Not knowing a new card, or one seen earlier today, is not forgetting it.
     forgotten = rating == "again" and card.memory is not None and days >= 1
     return replace(
@@ -307,8 +324,12 @@ class CardService:
         new_id: Callable[[], UUID] = uuid4,
         details: DetailsStarter | None = None,
         vocabulary: "VocabularyCounter | None" = None,
+        schedule: "CardScheduleService | None" = None,
+        retention: float = fsrs.RETENTION,
     ) -> None:
-        """Without `details`, word cards keep only their word, meaning and sentence."""
+        """Without `details`, word cards keep only their word, meaning and sentence. Without
+        `schedule`, every learner's cards are scheduled with the published parameters.
+        `retention` is the share of cards a learner should still know when one comes back."""
         self._profiles = profiles
         self._reports = reports
         self._repository = repository
@@ -316,6 +337,15 @@ class CardService:
         self._new_id = new_id
         self._details = details
         self._vocabulary = vocabulary
+        self._schedule = schedule
+        self._retention = retention
+
+    def _own_weights(self, user_id: UUID) -> Weights | None:
+        return self._schedule.weights(user_id) if self._schedule else None
+
+    def _weights(self, user_id: UUID) -> Weights:
+        """The parameters the learner's cards are scheduled with."""
+        return self._own_weights(user_id) or DEFAULT_WEIGHTS
 
     def _language(self, user_id: UUID) -> str:
         """The language whose deck the learner sees: the one they are learning now."""
@@ -431,6 +461,7 @@ class CardService:
             next=page[-1].created_at if len(found) > size else None,
             total=total,
             due=due,
+            tuned=self._own_weights(user_id) is not None,
         )
 
     def export(self, user_id: UUID) -> str:
@@ -474,16 +505,23 @@ class CardService:
         )
 
     def queue(self, user_id: UUID, *, limit: int = QUEUE_DEFAULT) -> Queue:
-        """The cards to review now, each with when it would come back for every rating."""
+        """The cards to review now, each with when it would come back for every rating. Opening a
+        review session is also when a learner's long enough log is fitted (weekly at most)."""
         language = self._language(user_id)
         now = self._clock()
         size = min(max(limit, 1), QUEUE_MAX)
         cards = self._repository.due(user_id, language, now, size)
+        if self._schedule is not None:
+            self._schedule.maybe_fit(user_id)
+        weights = self._weights(user_id)
         return Queue(
             cards=tuple(
                 QueueItem(
                     card,
-                    {rating: _reviewed(card, rating, now).due_at - now for rating in fsrs.RATINGS},
+                    {
+                        rating: _reviewed(card, rating, now, weights, self._retention).due_at - now
+                        for rating in fsrs.RATINGS
+                    },
                 )
                 for card in cards
             ),
@@ -541,7 +579,7 @@ class CardService:
             or at < (card.reviewed_at or card.created_at)
         ):
             raise CardError("invalid_review")
-        after = _reviewed(card, rating, at)
+        after = _reviewed(card, rating, at, self._weights(user_id), self._retention)
         if not self._repository.reviewed(user_id, after, rating, card.reviews):
             # Another review of the same card was stored first (a rating tapped twice).
             raise CardError("conflict")
@@ -552,7 +590,12 @@ class CardService:
         language = self._language(user_id)
         horizon = self._clock() + OFFLINE_AHEAD
         cards = self._repository.due(user_id, language, horizon, OFFLINE_MAX)
-        return Ahead(cards=tuple(cards), language=language)
+        return Ahead(
+            cards=tuple(cards),
+            language=language,
+            weights=self._own_weights(user_id),
+            retention=self._retention,
+        )
 
     def sync(self, user_id: UUID, reviews: Sequence[OfflineReview]) -> list[Synced]:
         """Stores the ratings a phone made, perhaps offline, in the order they were given.
@@ -567,12 +610,13 @@ class CardService:
         if len(reviews) > SYNC_MAX or any(r.reviewed_at.tzinfo is None for r in reviews):
             raise CardError("invalid_review")
         results: list[Synced] = []
+        weights = self._weights(user_id)
         # Python's sort is stable: ratings given at the same moment keep the phone's order.
         for item in sorted(reviews, key=lambda r: r.reviewed_at):
-            results.append(self._sync_one(user_id, item))
+            results.append(self._sync_one(user_id, item, weights))
         return results
 
-    def _sync_one(self, user_id: UUID, item: OfflineReview) -> Synced:
+    def _sync_one(self, user_id: UUID, item: OfflineReview, weights: Weights) -> Synced:
         card = self._repository.get(user_id, item.card_id)
         if card is None:
             return Synced(item.client_id, "removed", None)
@@ -582,7 +626,7 @@ class CardService:
             return Synced(item.client_id, "superseded", card)
         now = self._clock()
         at = min(max(item.reviewed_at, card.reviewed_at or card.created_at), now)
-        after = _reviewed(card, item.rating, at)
+        after = _reviewed(card, item.rating, at, weights, self._retention)
         if not self._repository.reviewed(
             user_id, after, item.rating, card.reviews, client_id=item.client_id
         ):
@@ -599,7 +643,7 @@ class CardService:
             return False
         if card.reviewed_at is not None and card.reviewed_at >= started:
             return False
-        after = _reviewed(card, "good", self._clock())
+        after = _reviewed(card, "good", self._clock(), self._weights(user_id), self._retention)
         return self._repository.reviewed(user_id, after, "good", card.reviews)
 
     def remove(self, user_id: UUID, card_id: UUID) -> None:

@@ -842,6 +842,19 @@ class RecordingDetailsStarter:
         self.started.append(user_id)
 
 
+class RecordingFitStarter:
+    """Records the learners whose review log a worker was asked to fit."""
+
+    def __init__(self) -> None:
+        self.started: list[UUID] = []
+        self.fails = False
+
+    def start(self, user_id: UUID) -> None:
+        self.started.append(user_id)
+        if self.fails:
+            raise RuntimeError("the worker could not be started")
+
+
 class InMemoryCardRepository:
     def __init__(self) -> None:
         # When each card was last claimed to be filled in with its forms.
