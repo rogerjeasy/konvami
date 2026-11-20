@@ -1,3 +1,4 @@
+import { ToggleRow } from '@/components/choice-group';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router } from 'expo-router';
@@ -11,7 +12,6 @@ import { Reveal } from '@/components/motion';
 import { PageHero } from '@/components/page-hero';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Switch } from '@/components/switch';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useHalvesApi, useHalvesHub } from '@/halves/services';
@@ -98,10 +98,10 @@ export function HalvesSettingsScreen() {
           </Reveal>
           <Reveal delay={staggerDelay(2)}>
             <View className="gap-1.5">
-              <Switch
+              <ToggleRow
                 label={t('halves.settingsScreen.pause')}
                 value={profile.paused}
-                onValueChange={(paused) => void change(() => api.changeHalves({ paused }))}
+                onChange={(paused) => void change(() => api.changeHalves({ paused }))}
               />
               <Text variant="small" tone="muted">
                 {t('halves.settingsScreen.pauseHint')}
@@ -109,10 +109,10 @@ export function HalvesSettingsScreen() {
             </View>
           </Reveal>
           <Reveal delay={staggerDelay(3)}>
-            <Switch
+            <ToggleRow
               label={t('halves.settingsScreen.veil')}
               value={profile.veilDefault}
-              onValueChange={(veilDefault) => void change(() => api.changeHalves({ veilDefault }))}
+              onChange={(veilDefault) => void change(() => api.changeHalves({ veilDefault }))}
             />
           </Reveal>
           <Reveal delay={staggerDelay(4)}>

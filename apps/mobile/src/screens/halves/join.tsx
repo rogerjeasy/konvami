@@ -7,14 +7,13 @@ import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ChoiceChip } from '@/components/choice-chip';
-import { ChoiceGroup } from '@/components/choice-group';
+import { ChoiceGroup, ToggleRow } from '@/components/choice-group';
 import { LoadState } from '@/components/load-state';
 import { Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { PageHero } from '@/components/page-hero';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Switch } from '@/components/switch';
 import { Text } from '@/components/text';
 import { useHalvesApi, useHalvesHub } from '@/halves/services';
 import { commitFeedback } from '@/lib/haptics';
@@ -182,7 +181,7 @@ export function HalvesJoinScreen() {
           </Reveal>
           <Reveal delay={staggerDelay(3)}>
             <View className="gap-1.5">
-              <Switch label={t('halves.joinScreen.veil')} value={veil} onValueChange={setVeil} />
+              <ToggleRow label={t('halves.joinScreen.veil')} value={veil} onChange={setVeil} />
               <Text variant="small" tone="muted">
                 {t('halves.joinScreen.veilHint')}
               </Text>
@@ -196,10 +195,10 @@ export function HalvesJoinScreen() {
               <Text variant="small" tone="muted">
                 {t('halves.joinScreen.consentHint')}
               </Text>
-              <Switch
+              <ToggleRow
                 label={t('halves.joinScreen.consent')}
                 value={consent}
-                onValueChange={setConsent}
+                onChange={setConsent}
               />
             </Card>
           </Reveal>

@@ -1,3 +1,4 @@
+import { ToggleRow } from '@/components/choice-group';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
@@ -14,7 +15,6 @@ import { PageHero } from '@/components/page-hero';
 import { RecordingNow } from '@/components/recording-now';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Switch } from '@/components/switch';
 import { Text } from '@/components/text';
 import { useHalvesApi, useHalvesCase } from '@/halves/services';
 import { staggerDelay } from '@/lib/motion';
@@ -132,7 +132,7 @@ export function HalvesRecordScreen() {
             <Text tone="muted">{t('halves.record.tip')}</Text>
           </Reveal>
           <Reveal delay={staggerDelay(3)}>
-            <Switch label={t('halves.record.veil')} value={veiled} onValueChange={setVeil} />
+            <ToggleRow label={t('halves.record.veil')} value={veiled} onChange={setVeil} />
           </Reveal>
           {step.kind === 'failed' ? (
             <NoticeBox icon="info" tone="warn">

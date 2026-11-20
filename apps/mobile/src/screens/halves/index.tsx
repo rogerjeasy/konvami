@@ -123,6 +123,14 @@ export function HalvesScreen() {
       actions={
         hub?.available && !profile ? (
           <Button label={t('halves.join')} onPress={() => router.push(ROUTES.halvesJoin)} />
+        ) : hub?.available && profile ? (
+          // The main way to play is pinned, so it stays on screen on a small phone.
+          <Button
+            label={t('halves.playAi')}
+            loading={busy === 'ai'}
+            disabled={busy !== null}
+            onPress={() => void start('ai', () => api.startHalvesCase({}))}
+          />
         ) : undefined
       }
     >
@@ -171,12 +179,6 @@ export function HalvesScreen() {
               <Text variant="section" accessibilityRole="header">
                 {t('halves.start')}
               </Text>
-              <Button
-                label={t('halves.playAi')}
-                loading={busy === 'ai'}
-                disabled={busy !== null}
-                onPress={() => void start('ai', () => api.startHalvesCase({}))}
-              />
               <Text variant="small" tone="muted">
                 {t('halves.playAiHint')}
               </Text>

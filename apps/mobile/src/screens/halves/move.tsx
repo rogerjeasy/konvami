@@ -7,7 +7,7 @@ import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ChoiceChip } from '@/components/choice-chip';
-import { ChoiceGroup } from '@/components/choice-group';
+import { ChoiceGroup, ToggleRow } from '@/components/choice-group';
 import { LoadState } from '@/components/load-state';
 import { Pop, Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
@@ -17,7 +17,6 @@ import { PlayButton } from '@/components/play-button';
 import { ChoiceRow, Sheet } from '@/components/sheet';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
-import { Switch } from '@/components/switch';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { TextField } from '@/components/text-field';
@@ -75,7 +74,7 @@ function ReportSheet({
           maxLength={NOTE_MAX}
           multiline
         />
-        <Switch label={t('halves.report.block')} value={block} onValueChange={setBlock} />
+        <ToggleRow label={t('halves.report.block')} value={block} onChange={setBlock} />
         <Button
           label={t('halves.report.send')}
           disabled={reason === null}
