@@ -41,6 +41,10 @@ describe('the reminders, for the whole app', () => {
       { open: 'simulation', id: 'rtc_2' },
       { pathname: '/exams/simulations/[id]', params: { id: 'rtc_2' } },
     ],
+    [
+      { open: 'call', partner: 'p_1', ask: 'Und, das Interview?' },
+      { pathname: '/incoming-call', params: { partner: 'p_1', ask: 'Und, das Interview?' } },
+    ],
     [{ open: 'today' }, '/today'],
   ] as const)('open what a tapped reminder or push is about', async (target, route) => {
     const device = createFakeReminderDevice('granted');
@@ -91,11 +95,13 @@ describe('the reminders, for the whole app', () => {
     await setReminders(DEFAULT_REMINDERS);
     const device = createFakeReminderDevice('granted');
     device.scheduled = [{ id: 'reminder-2026-10-10', at: new Date(), title: 'Lena', body: '…' }];
+    device.snoozed = [{ id: 'call-p_1', at: new Date(), title: 'Lena', body: '…' }];
     const { auth, api } = await keep(device);
 
     await act(() => auth.session.signOut());
 
     expect(pushCalls(api).at(-1)).toEqual(['removePushDevice', 'ExponentPushToken[fake-phone]']);
     await waitFor(() => expect(device.scheduled).toEqual([]));
+    expect(device.snoozed).toEqual([]);
   });
 });

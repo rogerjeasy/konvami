@@ -3,7 +3,13 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Home, PushDevice } from '@konvami/api-client';
 import { useAuthServices, useSession } from '@/auth';
-import { learnCardRoute, reportRoute, ROUTES, simulationRoute } from '@/lib/routes';
+import {
+  incomingCallRoute,
+  learnCardRoute,
+  reportRoute,
+  ROUTES,
+  simulationRoute,
+} from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
 import { usePreferences } from '@/preferences';
 import type { OpenTarget, ScheduledReminder } from './device';
@@ -12,7 +18,9 @@ import { useReminderDevice, useReminderPermission } from './services';
 
 /**
  * A reminder's words: from the partner Today suggests, in the app's language, never a reproach.
- * The word of the day joins the day's reminder on a line of its own, or comes alone.
+ * The word of the day joins the day's reminder on a line of its own, or comes alone. A ring
+ * (5.28) comes from that partner, with their question when it is about an event; without a
+ * partner to ring, the day keeps a plain reminder.
  */
 function useReminderWords(home: Home | null) {
   const { t } = useTranslation();
@@ -25,6 +33,20 @@ function useReminderWords(home: Home | null) {
     const wordLine = word
       ? t('reminders.word.line', { word: word.front, meaning: word.back })
       : null;
+    if (reminder.kind === 'call' && partner) {
+      return {
+        id: reminder.id,
+        at: reminder.at,
+        title: t('reminders.call.title', { name: partner.persona.name }),
+        body: reminder.ask
+          ? t('reminders.call.about', { ask: reminder.ask })
+          : t('reminders.call.body'),
+        call: {
+          partner: partner.persona.id,
+          ...(reminder.ask ? { ask: reminder.ask } : {}),
+        },
+      };
+    }
     if (reminder.kind === 'word' && word) {
       return {
         id: reminder.id,
@@ -85,7 +107,9 @@ export function useReminderSchedule(home: Home | null, now: Date) {
     const reminders = (JSON.parse(key) as (Omit<ScheduledReminder, 'at'> & { at: string })[]).map(
       (reminder) => ({ ...reminder, at: new Date(reminder.at) }),
     );
-    void device.replace(reminders, t('reminders.channel')).catch(() => {});
+    void device
+      .replace(reminders, t('reminders.channel'), t('reminders.callsChannel'))
+      .catch(() => {});
   }, [device, key, t]);
 }
 
@@ -98,6 +122,8 @@ function routeOf(target: OpenTarget) {
       return reportRoute(target.id);
     case 'simulation':
       return simulationRoute(target.id);
+    case 'call':
+      return incomingCallRoute(target.partner, target.ask);
     default:
       return ROUTES.today;
   }
@@ -110,7 +136,7 @@ function routeOf(target: OpenTarget) {
  * nothing more and reached no more on this device.
  */
 export function ReminderKeeper() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const device = useReminderDevice();
   const { permission } = useReminderPermission();
   const { reminders: settings } = usePreferences();
@@ -122,8 +148,8 @@ export function ReminderKeeper() {
 
   useEffect(() => device.onOpen((target) => router.navigate(routeOf(target))), [device]);
   useEffect(() => {
-    if (status === 'signedOut') void device.replace([], t('reminders.channel')).catch(() => {});
-  }, [device, status, t]);
+    if (status === 'signedOut') void device.clear().catch(() => {});
+  }, [device, status]);
 
   useEffect(() => {
     if (status !== 'signedIn' || permission !== 'granted' || on === null || time === null) return;

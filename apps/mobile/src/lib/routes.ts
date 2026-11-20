@@ -149,11 +149,17 @@ export const partnerRoute = (id: string) =>
 /**
  * 5.3 A live conversation with one of the learner's partners; with `scenario`, a role-play; with
  * `practise`, one that practises a grammar topic first; with `guest`, a second partner joins
- * (5.24) and `personaId` leads.
+ * (5.24) and `personaId` leads; with `rang`, a short call the learner accepted from the
+ * partner's ring (5.28).
  */
 export const callRoute = (
   personaId: string,
-  { scenario, practise, guest }: { scenario?: string; practise?: string; guest?: string } = {},
+  {
+    scenario,
+    practise,
+    guest,
+    rang,
+  }: { scenario?: string; practise?: string; guest?: string; rang?: boolean } = {},
 ) =>
   ({
     pathname: '/call/[personaId]',
@@ -162,7 +168,18 @@ export const callRoute = (
       ...(scenario ? { scenario } : {}),
       ...(practise ? { practise } : {}),
       ...(guest ? { guest } : {}),
+      ...(rang ? { rang: '1' } : {}),
     },
+  }) as const satisfies Href;
+
+/**
+ * 5.28 A partner is calling: the screen a tapped ring opens (`ask` is the partner's question,
+ * when the ring is about an event).
+ */
+export const incomingCallRoute = (personaId: string, ask?: string) =>
+  ({
+    pathname: '/incoming-call',
+    params: { partner: personaId, ...(ask ? { ask } : {}) },
   }) as const satisfies Href;
 
 /**

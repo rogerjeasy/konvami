@@ -18,6 +18,13 @@ export interface ReminderSettings {
   events: boolean;
   /** Whether each day brings one of the learner's saved words (spec §6.18, optional). */
   word: boolean;
+  /**
+   * Whether a partner "rings" on planned days instead of a plain reminder (5.28, opt-in): it
+   * opens a short call about something the partner remembers.
+   */
+  calls: boolean;
+  /** Whether Today already offered partner calls once (answered either way). */
+  callsOffered: boolean;
 }
 
 // Reminders come at the learner's time, never at night: the times they can choose.
@@ -37,6 +44,8 @@ export const DEFAULT_REMINDERS: ReminderSettings = {
   cards: true,
   events: true,
   word: false,
+  calls: false,
+  callsOffered: false,
 };
 
 // How far ahead reminders are scheduled.
@@ -54,7 +63,9 @@ export type ReminderKind =
   // The day after an event: its partner asks how it went.
   | 'followUp'
   // A day with nothing else: only the word of the day.
-  | 'word';
+  | 'word'
+  // With partner calls on, a planned day or an event's day after: a partner rings (5.28).
+  | 'call';
 
 export interface Reminder {
   /** One per day, so a new schedule replaces the old one. */
@@ -63,7 +74,7 @@ export interface Reminder {
   kind: ReminderKind;
   /** Today's planned minutes, for a reminder of today. */
   minutes?: number;
-  /** What the partner asks, for a follow-up. */
+  /** What the partner asks, for a follow-up (and a call on a follow-up's day). */
   ask?: string;
   /** The day's word, when the learner wants one. */
   word?: Card;
@@ -86,6 +97,10 @@ function addDays(date: Date, count: number): Date {
  * first day without practice reminds of waiting cards. The word of the day joins the day's
  * reminder, or comes alone. Today is left out once the learner practised or today's plan is
  * done, and the rest of a week that is done, or out of voice minutes, waits for next week.
+ *
+ * With partner calls on (5.28), a planned day and an event's day after ring instead: still one
+ * contact a day, at the same time, and never on a day without voice minutes. A ring carries no
+ * word of the day: the call is the day's one thing.
  */
 export function upcomingReminders({
   now,
@@ -127,11 +142,20 @@ export function upcomingReminders({
     const ask = asks.get(day);
     const thisWeek = day <= sunday;
     const practice = isToday ? plan.today.length > 0 : planned.has(day);
-    if (ask) {
+    const minutesLeft = !(thisWeek && weekOver);
+    if (ask && settings.calls && minutesLeft) {
+      // A partner rings to ask how the event went: the call is the question.
+      reminders.push({ id, at, kind: 'call', ask });
+    } else if (ask) {
       reminders.push(withWord({ id, at, kind: 'followUp', ask }));
-    } else if (practice && !(thisWeek && weekOver)) {
+    } else if (practice && minutesLeft) {
       const simulation = isToday ? plan.today[0]?.kind === 'exam' : thisWeek && simulationLeft;
       if (simulation) simulationLeft = false;
+      // A simulation is a whole call of its own, so its day keeps a plain reminder.
+      if (settings.calls && !simulation) {
+        reminders.push({ id, at, kind: 'call' });
+        continue;
+      }
       const kind: ReminderKind = simulation ? 'simulation' : isToday ? 'today' : 'practice';
       const minutes = plan.today.reduce((sum, session) => sum + session.minutes, 0);
       reminders.push(withWord(isToday ? { id, at, kind, minutes } : { id, at, kind }));

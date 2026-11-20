@@ -120,7 +120,15 @@ describe('reminders', () => {
     await loadPreferences();
     expect(getPreferences().reminders).toBeNull();
 
-    const chosen = { on: true, time: '07:00', cards: false, events: false, word: true };
+    const chosen = {
+      on: true,
+      time: '07:00',
+      cards: false,
+      events: false,
+      word: true,
+      calls: true,
+      callsOffered: true,
+    };
     await setReminders(chosen);
     await loadPreferences();
 
@@ -137,6 +145,8 @@ describe('reminders', () => {
       cards: false,
       events: true,
       word: false,
+      calls: false,
+      callsOffered: false,
     });
   });
 

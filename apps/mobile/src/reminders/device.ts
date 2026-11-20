@@ -3,11 +3,15 @@
  * the device itself (no push server). The app provides `appReminderDevice`; tests provide a fake.
  */
 
-/** What a tapped reminder or push opens: a word's card, a report, a simulation's score, or Today. */
+/**
+ * What a tapped reminder or push opens: a word's card, a report, a simulation's score, a
+ * partner's ring (5.28, with the partner's question when it is about an event), or Today.
+ */
 export type OpenTarget =
   | { open: 'card'; id: string }
   | { open: 'report'; id: string }
   | { open: 'simulation'; id: string }
+  | { open: 'call'; partner: string; ask?: string }
   | { open: 'today' };
 
 /** What a notification's data says it opens; anything else opens Today. */
@@ -15,6 +19,11 @@ export function openTargetOf(data: Record<string, unknown> | undefined): OpenTar
   const id = typeof data?.id === 'string' ? data.id : null;
   const card = typeof data?.card === 'string' ? data.card : null;
   if (card) return { open: 'card', id: card };
+  if (data?.open === 'call' && typeof data.partner === 'string') {
+    return typeof data.ask === 'string'
+      ? { open: 'call', partner: data.partner, ask: data.ask }
+      : { open: 'call', partner: data.partner };
+  }
   if (id && (data?.open === 'report' || data?.open === 'simulation')) {
     return { open: data.open, id };
   }
@@ -32,6 +41,8 @@ export interface ScheduledReminder {
   body: string;
   /** The card a word of the day opens; without one, a tap opens Today. */
   card?: string;
+  /** A partner's ring (5.28): who rings, and their question when it is about an event. */
+  call?: { partner: string; ask?: string };
 }
 
 export interface ReminderDevice {
@@ -39,10 +50,21 @@ export interface ReminderDevice {
   /** Asks the system, when it still can; otherwise answers as `permission` would. */
   ask(channel: string): Promise<ReminderPermission>;
   /**
-   * Replaces every reminder scheduled before with these. `channel` is what Android's settings
-   * call them.
+   * Replaces every reminder scheduled before with these (a snoozed one stays). `channel` is what
+   * Android's settings call them, `callsChannel` what they call partners' rings (5.28).
    */
-  replace(reminders: readonly ScheduledReminder[], channel: string): Promise<void>;
+  replace(
+    reminders: readonly ScheduledReminder[],
+    channel: string,
+    callsChannel?: string,
+  ): Promise<void>;
+  /**
+   * Schedules one more ring without touching the others ("Remind me in an hour" on 5.28); a
+   * later `replace` keeps it. `callsChannel` is what Android's settings call rings.
+   */
+  snooze(reminder: ScheduledReminder, callsChannel: string): Promise<void>;
+  /** Removes every scheduled reminder, snoozed ones included (signing out). */
+  clear(): Promise<void>;
   /**
    * This phone's address for push from the server, and its platform; `null` where there is none
    * (the web preview, or a build without push credentials).
