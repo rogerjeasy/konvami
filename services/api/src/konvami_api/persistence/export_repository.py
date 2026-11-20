@@ -44,6 +44,7 @@ EXPORTED: tuple[ExportedTable, ...] = (
         ExportedTable(name, f"WHERE t.user_id = {USER}")
         for name in (
             "card",
+            "card_schedule",
             "content_flag",
             "course_import",
             "data_export",

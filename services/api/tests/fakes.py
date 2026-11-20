@@ -3,11 +3,12 @@
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from konvami_api.domain import plans
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
+from konvami_api.domain.card_schedule import FitState
 from konvami_api.domain.cards import Card, CardTotals, WordDetails
 from konvami_api.domain.conversations import (
     ActivityDays,
@@ -31,6 +32,8 @@ from konvami_api.domain.exam_centre import Simulation, SimulationResult
 from konvami_api.domain.exam_centre import Status as ExamStatus
 from konvami_api.domain.feedback import Feedback, FeedbackStatus
 from konvami_api.domain.flags import Flag, FlagStatus
+from konvami_api.domain.fsrs import Rating, Weights
+from konvami_api.domain.fsrs_fit import FitOutcome
 from konvami_api.domain.levels import LevelFit, LevelStep
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import Forget, Memory
@@ -965,6 +968,56 @@ class InMemoryCardRepository:
             remembered=sum(1 for rating in recent if rating != "again"),
             reviews_ever=len(reviews),
         )
+
+
+class InMemoryScheduleRepository:
+    """A learner's fitted card schedule, reading the review log of an `InMemoryCardRepository`."""
+
+    def __init__(self, cards: InMemoryCardRepository) -> None:
+        self._cards = cards
+        # Per learner: when a fit was last started, and the outcome of the last fit.
+        self.attempted: dict[UUID, datetime] = {}
+        self.outcomes: dict[UUID, FitOutcome] = {}
+
+    def weights(self, user_id: UUID) -> Weights | None:
+        outcome = self.outcomes.get(user_id)
+        return outcome.weights if outcome else None
+
+    def _reviewed(self, user_id: UUID) -> list[Card]:
+        return [
+            card
+            for owner, _, _, card in self._cards.cards.values()
+            if owner == user_id and card.reviews > 0
+        ]
+
+    def fit_state(self, user_id: UUID) -> FitState:
+        mine = {card.id for card in self._reviewed(user_id)}
+        reviews = sum(1 for card_id, _, _ in self._cards.reviews if card_id in mine)
+        return FitState(reviews, self.attempted.get(user_id))
+
+    def claim(self, user_id: UUID, at: datetime, retry_before: datetime) -> bool:
+        before = self.attempted.get(user_id)
+        if before is not None and before > retry_before:
+            return False
+        self.attempted[user_id] = at
+        return True
+
+    def review_log(self, user_id: UUID, max_cards: int) -> list[list[tuple[datetime, Rating]]]:
+        newest = sorted(
+            self._reviewed(user_id), key=lambda c: (c.created_at, str(c.id)), reverse=True
+        )[:max_cards]
+        return [
+            [
+                (at, cast(Rating, rating))
+                for card_id, rating, at in self._cards.reviews
+                if card_id == card.id
+            ]
+            for card in reversed(newest)
+        ]
+
+    def store(self, user_id: UUID, outcome: FitOutcome, at: datetime) -> None:
+        self.attempted.setdefault(user_id, at)
+        self.outcomes[user_id] = outcome
 
 
 class InMemoryMemoryRepository:
