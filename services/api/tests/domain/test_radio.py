@@ -159,7 +159,7 @@ def test_an_adult_must_agree_that_others_hear_their_calls() -> None:
     with pytest.raises(RadioError, match="consent_required"):
         s.service.join(USER, veil_default=True, voice_consent=False)
     profile = s.service.join(USER, veil_default=False, voice_consent=True)
-    assert profile.on_air
+    assert profile.agreed
     assert not profile.veil_default
     assert profile.codename
 
@@ -168,7 +168,7 @@ def test_a_minor_joins_without_the_consent_and_is_never_on_air() -> None:
     s = show(minors=(USER,))
     profile = s.service.join(USER, veil_default=True, voice_consent=False)
     assert profile.band == "minor"
-    assert not profile.on_air
+    assert not profile.agreed
 
 
 def test_the_show_is_closed_to_who_may_not_listen_yet() -> None:
@@ -259,6 +259,70 @@ def test_a_held_call_is_never_aired_and_the_caller_is_told() -> None:
     assert (USER, held, "held") in s.announced
     episode = air(s)
     assert all(segment.call_id != held for segment in episode.segments)
+
+
+def test_a_new_call_never_wipes_a_held_one_from_the_owners_queue() -> None:
+    s = show()
+    joined(s)
+    s.brain.labels = [("harassment",)]
+    held = call(s, "Etwas Böses über jemanden sagen.")
+    call(s, "Mein neuer Anruf ist ganz freundlich.")
+    kept = s.store.calls[held]
+    assert kept.status == "held"
+    assert kept.reasons == ("harassment",)
+    assert kept.transcript
+    assert kept.hidden
+    with pytest.raises(RadioError, match="not_found"):
+        s.service.my_call(USER, held)
+    assert [item.id for item in s.service.queue(OTHER_USER)] == [held]
+    s.service.decide(OTHER_USER, "held", held, "remove")
+    assert s.store.strikes(USER) == 1
+
+
+def test_withdrawing_or_leaving_keeps_a_held_call_for_the_owner_and_its_strike_counts() -> None:
+    s = show()
+    joined(s)
+    s.brain.labels = [("romance",)]
+    held = call(s, "Du hast eine schöne Stimme, Liebling.")
+    s.service.withdraw_call(USER, held)
+    assert s.store.calls[held].status == "held"
+    s.service.leave(USER)
+    assert s.store.calls[held].transcript
+    s.service.decide(OTHER_USER, "held", held, "remove")
+    assert s.store.strikes(USER) == 1
+    joined(s)
+    assert s.service.overview(USER).strikes == 1
+
+
+def test_a_stored_adult_band_is_not_trusted_once_the_account_says_minor() -> None:
+    s = show()
+    joined(s)
+    account = s.world.accounts.accounts[USER]
+    s.world.accounts.accounts[USER] = replace(account, age_bracket="16-17")
+    private = call(s, "Ich esse gern Brot mit Butter.")
+    assert not s.store.calls[private].broadcast
+    assert s.store.calls[private].status == "private"
+
+
+def test_a_call_whose_caller_turns_out_a_minor_is_not_aired() -> None:
+    s = show()
+    joined(s)
+    mine = call(s, "Ich esse gern Brot mit Butter.")
+    assert s.store.calls[mine].status == "ready"
+    account = s.world.accounts.accounts[USER]
+    s.world.accounts.accounts[USER] = replace(account, age_bracket="")
+    episode = air(s)
+    assert all(segment.call_id != mine for segment in episode.segments)
+    assert s.store.calls[mine].status == "not_picked"
+
+
+def test_a_band_that_does_not_match_the_stored_one_is_never_on_air() -> None:
+    s = show()
+    joined(s)
+    profile = s.store.profiles[USER]
+    s.store.save_profile(replace(profile, band="minor"))
+    private = call(s, "Ich esse gern Brot mit Butter.")
+    assert s.store.calls[private].status == "private"
 
 
 def test_a_call_that_cannot_be_checked_waits_then_fails_closed() -> None:
@@ -369,6 +433,14 @@ def test_a_written_script_is_used_when_it_has_a_line_for_every_caller() -> None:
     assert texts[-1] == "Tschüss!"
 
 
+def test_without_a_usable_script_the_host_says_her_own_words() -> None:
+    s = show()
+    s.brain.written = None
+    episode = air(s)
+    hosts = [seg.text for seg in episode.segments if seg.kind == "host"]
+    assert hosts[0].startswith("Hallo und willkommen bei Radio Konvami")
+
+
 def test_a_show_without_any_voice_still_airs_with_captions() -> None:
     s = show()
     s.brain.mute = True
@@ -439,7 +511,7 @@ def test_the_owner_removing_a_reported_call_takes_it_off_air_and_strikes_the_cal
     s.service.report(THIRD, episode.id, aired.index, "hate", None)
     report = next(iter(s.store.reports.values()))
     s.service.decide(OTHER_USER, "report", report.id, "remove")
-    assert s.store.profiles[USER].strikes == 1
+    assert s.store.strikes(USER) == 1
     assert s.store.calls[mine].status == "removed"
     view = s.service.episode(THIRD, episode.id)
     assert all(seg.index != aired.index for seg in view.segments)

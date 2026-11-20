@@ -176,13 +176,11 @@ class Profile:
     # 0: not given (a minor, whose calls are never aired, does not need it).
     consent_version: int
     consent_at: dt.datetime | None
-    strikes: int = 0
-    suspended: bool = False
 
     @property
-    def on_air(self) -> bool:
-        """Whether this learner's calls may be aired at all."""
-        return self.band == "adult" and self.consent_version >= VOICE_CONSENT_VERSION
+    def agreed(self) -> bool:
+        """Whether this learner agreed that other learners hear their calls."""
+        return self.consent_version >= VOICE_CONSENT_VERSION
 
 
 @dataclass(frozen=True)
@@ -238,6 +236,13 @@ class Call:
     attempts: int = 0
     aired_at: dt.datetime | None = None
     delete_after: dt.datetime | None = None
+    # Taken back or replaced by its caller while held or failed: no longer shown to them, but
+    # kept, with its reasons, for the owner's queue (6.15) until decided or 30 days old.
+    hidden: bool = False
+
+
+# A held or failed call is never wiped by its caller: the owner still has to decide on it.
+_KEPT_FOR_OWNER: tuple[str, ...] = ("held", "failed")
 
 
 @dataclass(frozen=True)
@@ -329,6 +334,11 @@ class RadioRepository(Protocol):
 
     def note_retry(self, user_id: UUID, day: dt.date, limit: int) -> bool:
         """Counts one more "Say it better" try on `day`, unless the learner reached `limit`."""
+
+    def add_strike(self, user_id: UUID, call_id: UUID | None, at: dt.datetime) -> None:
+        """A confirmed strike. Kept apart from the profile: leaving the show does not clear it."""
+
+    def strikes(self, user_id: UUID) -> int: ...
 
 
 class RadioStarter(Protocol):
@@ -427,6 +437,8 @@ class Overview:
     # The learner's call aired in a show of the last two days (a card on Today).
     aired: EpisodeCard | None
     calls: tuple[CallView, ...]
+    strikes: int = 0
+    suspended: bool = False
 
 
 @dataclass(frozen=True)
@@ -608,9 +620,21 @@ class RadioService:
         profile = self._repository.profile(user_id)
         if profile is None:
             raise RadioError("not_joined")
-        if profile.suspended:
+        if self._suspended(user_id):
             raise RadioError("suspended")
         return profile
+
+    def _suspended(self, user_id: UUID) -> bool:
+        return self._repository.strikes(user_id) >= STRIKES_TO_SUSPEND
+
+    def _on_air(self, user_id: UUID, profile: Profile | None) -> bool:
+        """Whether the learner's calls may be aired now. The age band is worked out again from
+        the account each time, never taken from the stored profile alone: a minor, or a band that
+        no longer matches the stored one, is never on air."""
+        if profile is None or not profile.agreed or self._suspended(user_id):
+            return False
+        band = self._band(user_id)
+        return band == "adult" and profile.band == band
 
     # --- Joining and settings (8.6)
 
@@ -634,8 +658,6 @@ class RadioService:
             consent_at=(current.consent_at if current and current.consent_at else now)
             if agreed
             else None,
-            strikes=current.strikes if current else 0,
-            suspended=current.suspended if current else False,
         )
         self._repository.save_profile(profile)
         return profile
@@ -657,9 +679,9 @@ class RadioService:
     def leave(self, user_id: UUID) -> None:
         """Withdraws the voice-sharing consent and deletes the learner's radio data (8.6): their
         calls' words and sounds (taken out of the shows they aired in), their applause and their
-        profile. Reports they made stay with the owner until decided."""
+        profile. Reports they made, held calls and strikes stay with the owner until decided."""
         for call in self._repository.calls_by(user_id):
-            self._take_out(call, "removed")
+            self._take_back(call)
         self._repository.delete_applause(user_id)
         self._repository.delete_profile(user_id)
 
@@ -672,6 +694,15 @@ class RadioService:
         )
         self._repository.save_call(forgotten)
         return forgotten
+
+    def _take_back(self, call: Call) -> None:
+        """The caller takes a call back: forgotten and out of its show, except a held or failed
+        one, which is only hidden from them and stays for the owner's decision."""
+        if call.status in _KEPT_FOR_OWNER:
+            if not call.hidden:
+                self._repository.save_call(replace(call, hidden=True))
+        elif call.status != "removed":
+            self._take_out(call, "removed")
 
     def _take_out(self, call: Call, status: CallStatus) -> None:
         """Forgets a call and takes it out of the show it aired in."""
@@ -708,7 +739,7 @@ class RadioService:
         warming = not ready and any(e.status == "building" for e in recent)
         if not recent:
             warming = self._pilot(language, now, user_id)
-        calls = self._repository.calls_by(user_id) if profile else []
+        calls = [c for c in self._repository.calls_by(user_id) if not c.hidden] if profile else []
         my_episodes = {c.episode_id for c in calls if c.status == "aired"}
         on_air = self._card(ready[0], my_episodes, language) if ready else None
         aired = next(
@@ -737,6 +768,8 @@ class RadioService:
             ),
             aired=aired,
             calls=tuple(self._call_view(c, language) for c in calls[:10]),
+            strikes=self._repository.strikes(user_id),
+            suspended=self._suspended(user_id),
         )
 
     def _open_show(self, language: str, now: dt.datetime, user_id: UUID) -> Episode:
@@ -933,8 +966,8 @@ class RadioService:
         if len(words_in(said)) < MIN_WORDS:
             raise RadioError("too_short")
         for earlier in self._repository.calls_of(show.id):
-            if earlier.user_id == user_id and earlier.status not in ("removed", "aired"):
-                self._forget(earlier, "removed")
+            if earlier.user_id == user_id and earlier.status != "aired":
+                self._take_back(earlier)
         call_id = self._new_id()
         key = f"{FOLDER}/{user_id}/{show.id}/{call_id}.{audio_format}"
         self._files.save(key, audio, _AUDIO_TYPES.get(audio_format, "application/octet-stream"))
@@ -947,7 +980,7 @@ class RadioService:
             created_at=now,
             audio_key=key,
             veiled=profile.veil_default if veiled is None else veiled,
-            broadcast=profile.on_air,
+            broadcast=self._on_air(user_id, profile),
             delete_after=show.airs_at + KEEP_FOR,
         )
         self._repository.save_call(call)
@@ -957,7 +990,7 @@ class RadioService:
     def _mine(self, user_id: UUID, call_id: UUID) -> Call:
         self._listening(user_id)
         call = self._repository.call(call_id)
-        if call is None or call.user_id != user_id:
+        if call is None or call.user_id != user_id or call.hidden:
             raise RadioError("not_found")
         return call
 
@@ -992,10 +1025,9 @@ class RadioService:
         return self._files.address(call.audio_key, ADDRESS_SECONDS)
 
     def withdraw_call(self, user_id: UUID, call_id: UUID) -> None:
-        """Takes one of the learner's calls back, also out of a show it aired in."""
-        call = self._mine(user_id, call_id)
-        if call.status != "removed":
-            self._take_out(call, "removed")
+        """Takes one of the learner's calls back, also out of a show it aired in. A held or
+        failed call is only hidden from them: the owner still decides on it."""
+        self._take_back(self._mine(user_id, call_id))
 
     def _correction(self, user_id: UUID, call_id: UUID, index: int) -> tuple[Call, Correction]:
         call = self._mine(user_id, call_id)
@@ -1122,7 +1154,7 @@ class RadioService:
                 raise RadioError("not_found")
             self._forget(call, "removed")
             if action == "remove" and call.user_id is not None:
-                self._strike(call.user_id)
+                self._strike(call.user_id, call.id)
             return
         if kind != "report":
             raise RadioError("invalid_value")
@@ -1150,7 +1182,7 @@ class RadioService:
         if call is not None:
             self._take_out(call, "removed")
             if call.user_id is not None:
-                self._strike(call.user_id)
+                self._strike(call.user_id, call.id)
         else:
             self._remove_segments(episode, lambda s: s.index == report.segment)
 
@@ -1163,14 +1195,8 @@ class RadioService:
             raise RadioError("not_found")
         self._repository.save_episode(replace(episode, status="pulled"))
 
-    def _strike(self, user_id: UUID) -> None:
-        profile = self._repository.profile(user_id)
-        if profile is None:
-            return
-        strikes = profile.strikes + 1
-        self._repository.save_profile(
-            replace(profile, strikes=strikes, suspended=strikes >= STRIKES_TO_SUSPEND)
-        )
+    def _strike(self, user_id: UUID, call_id: UUID | None) -> None:
+        self._repository.add_strike(user_id, call_id, self._clock())
 
     # --- The worker
 
@@ -1186,7 +1212,12 @@ class RadioService:
         attempt = replace(call, attempts=call.attempts + 1)
         self._repository.save_call(attempt)
         sender = self._repository.profile(call.user_id)
-        band = sender.band if sender else self._band(call.user_id)
+        # The stricter band of the account's and the stored one.
+        band: Band = (
+            "adult"
+            if self._band(call.user_id) == "adult" and (sender is None or sender.band == "adult")
+            else "minor"
+        )
         found = prompt(episode.prompt_id) or prompt_for(episode.day)
         labels = self._brain.check(
             attempt, band, episode.language, question_in(found, episode.language)
@@ -1198,16 +1229,15 @@ class RadioService:
             self._repository.save_call(replace(attempt, status="held", reasons=labels))
             self._announce(call.user_id, call.id, "held")
             return
-        airable = attempt.broadcast and episode.status == "open"
+        on_air = attempt.broadcast and self._on_air(call.user_id, sender)
+        airable = on_air and episode.status == "open"
         veil_key = None
         if airable and attempt.veiled:
             veil_key = self._brain.veil(attempt)
             if veil_key is None:
                 self._unchecked(attempt)
                 return
-        status: CallStatus = (
-            "ready" if airable else ("not_picked" if attempt.broadcast else "private")
-        )
+        status: CallStatus = "ready" if airable else ("not_picked" if on_air else "private")
         checked = replace(attempt, status=status, veil_key=veil_key)
         self._repository.save_call(checked)
         explanation = self._explanation(call.user_id, episode.language)
@@ -1307,8 +1337,7 @@ class RadioService:
     def _may_air(self, call: Call) -> bool:
         if not call.broadcast or call.user_id is None:
             return False
-        sender = self._repository.profile(call.user_id)
-        if sender is None or sender.suspended or not sender.on_air:
+        if not self._on_air(call.user_id, self._repository.profile(call.user_id)):
             return False
         return bool(call.veil_key if call.veiled else call.audio_key)
 

@@ -22,10 +22,11 @@ def brain(
     *answers: dict[str, object] | Exception,
     models: bool = True,
     files: InMemoryFileStore | None = None,
+    moderator: FakeModerator | None = None,
 ) -> tuple[ModelBrain, ScriptedTextModel]:
     text = ScriptedTextModel(*answers)
     checker = MessageChecker(
-        moderator=FakeModerator(),
+        moderator=moderator or FakeModerator(),
         text_model=text,
         check_model="small" if models else "",
         review_model="strong" if models else "",
@@ -108,3 +109,35 @@ def test_a_veiled_call_is_the_same_words_in_the_neutral_voice() -> None:
 def test_nothing_is_spoken_without_a_speech_model() -> None:
     radio, _ = brain(models=False)
     assert radio.speak(USER, "coral", "Hallo", "radio/shows/x/0.mp3") is None
+
+
+SCRIPT = {"intro": "Hallo!", "after": ["Danke, Nova!"], "outro": "Tschüss!"}
+CALLER = [("Nova", False, "Hallo Mia")]
+
+
+def test_the_hosts_script_is_moderated_before_anyone_hears_it() -> None:
+    moderator = FakeModerator()
+    radio, _ = brain(SCRIPT, moderator=moderator)
+    assert radio.script("?", "de", CALLER, USER) is not None
+    assert moderator.checked == [["Hallo!", "Danke, Nova!", "Tschüss!"]]
+
+
+def test_a_flagged_script_is_not_used() -> None:
+    radio, _ = brain(SCRIPT, moderator=FakeModerator("Nova"))
+    assert radio.script("?", "de", CALLER, USER) is None
+
+
+def test_a_script_that_cannot_be_moderated_is_not_used() -> None:
+    moderator = FakeModerator()
+    moderator.fail = True
+    radio, _ = brain(SCRIPT, moderator=moderator)
+    assert radio.script("?", "de", CALLER, USER) is None
+
+
+def test_an_ai_callers_flagged_or_unchecked_words_are_not_used() -> None:
+    radio, _ = brain({"text": "Ich hasse alle."}, moderator=FakeModerator("hasse"))
+    assert radio.ai_call("?", "de", "Klara", USER) is None
+    moderator = FakeModerator()
+    moderator.fail = True
+    radio, _ = brain({"text": "Ich esse gern Brot."}, moderator=moderator)
+    assert radio.ai_call("?", "de", "Klara", USER) is None

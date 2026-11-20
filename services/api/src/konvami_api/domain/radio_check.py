@@ -224,7 +224,9 @@ class ModelBrain:
             ).text
         except (TextModelError, ValidationError):
             return None
-        return _line(said)
+        line = _line(said)
+        # Every listener hears it: moderated like a call, and dropped when it cannot be.
+        return line if line is not None and self._checker.clean(payer, [line]) else None
 
     def script(
         self,
@@ -268,7 +270,12 @@ class ModelBrain:
             return None
         if any(line is None for line in after):
             return None
-        return Script(intro, tuple(line for line in after if line is not None), outro)
+        lines = tuple(line for line in after if line is not None)
+        # Every listener hears the host: the script is moderated as a whole, and the host's own
+        # words are used when it is flagged or cannot be checked (fails closed).
+        if not self._checker.clean(payer, [intro, *lines, outro]):
+            return None
+        return Script(intro, lines, outro)
 
 
 __all__ = ["SETTING", "ModelBrain"]

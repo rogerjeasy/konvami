@@ -16,7 +16,7 @@ answers None: the message waits and is checked again, never passed on unchecked.
 """
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Literal, get_args
 from uuid import UUID
@@ -194,6 +194,19 @@ class MessageChecker:
         if label in HOLD or (band == "minor" and label == "off_task"):
             return (label,)
         return ()
+
+    def clean(self, user: UUID | None, texts: Sequence[str]) -> bool:
+        """Whether lines a model wrote may be heard by every listener: no local rule broken and
+        nothing the moderation provider flags. Fails closed: no one to charge, or a provider that
+        cannot answer, is not clean."""
+        if any(local_problem(text) is not None for text in texts):
+            return False
+        if user is None:
+            return False
+        try:
+            return not self._moderator.check(list(texts), Charge(user, Feature.MODERATION)).flagged
+        except ModeratorError:
+            return False
 
     def correct(
         self, user: UUID | None, transcript: str, target: str, explanation: str, setting: Setting

@@ -17,6 +17,7 @@ class InMemoryRadioRepository:
         self.cards: dict[tuple[UUID, UUID, int], str] = {}
         self.reports: dict[UUID, Report] = {}
         self.retries: dict[tuple[UUID, dt.date], int] = {}
+        self.strike_log: list[tuple[UUID, UUID | None, dt.datetime]] = []
 
     def profile(self, user_id: UUID) -> Profile | None:
         return self.profiles.get(user_id)
@@ -152,6 +153,12 @@ class InMemoryRadioRepository:
             return False
         self.retries[(user_id, day)] = count + 1
         return True
+
+    def add_strike(self, user_id: UUID, call_id: UUID | None, at: dt.datetime) -> None:
+        self.strike_log.append((user_id, call_id, at))
+
+    def strikes(self, user_id: UUID) -> int:
+        return sum(1 for user, _, _ in self.strike_log if user == user_id)
 
 
 class RecordingRadioStarter:
