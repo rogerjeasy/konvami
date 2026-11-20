@@ -1,3 +1,4 @@
+import { createFakeHalves, type FakeHalvesControls } from './fake-halves';
 import {
   ApiError,
   type Activity,
@@ -911,7 +912,7 @@ export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
   };
 }
 
-export interface FakeApi extends ApiClient {
+export interface FakeApi extends ApiClient, FakeHalvesControls {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
   /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
   hearsNextRetry(heard: string): void;
@@ -1814,7 +1815,36 @@ export function createFakeApi(): FakeApi {
     return added;
   }
 
+  // Listed, not spread: a spread would read this object's getters once (`deleted`, …).
+  const halves = createFakeHalves(record);
   return {
+    halvesOpen: halves.halvesOpen,
+    halvesHeld: halves.halvesHeld,
+    getHalves: halves.getHalves,
+    joinHalves: halves.joinHalves,
+    changeHalves: halves.changeHalves,
+    rerollHalvesCodename: halves.rerollHalvesCodename,
+    leaveHalves: halves.leaveHalves,
+    startHalvesCase: halves.startHalvesCase,
+    createHalvesInvite: halves.createHalvesInvite,
+    cancelHalvesInvite: halves.cancelHalvesInvite,
+    redeemHalvesInvite: halves.redeemHalvesInvite,
+    startHalvesDuoCase: halves.startHalvesDuoCase,
+    removeHalvesDuo: halves.removeHalvesDuo,
+    removeHalvesBlock: halves.removeHalvesBlock,
+    getHalvesCase: halves.getHalvesCase,
+    sendHalvesMove: halves.sendHalvesMove,
+    solveHalvesCase: halves.solveHalvesCase,
+    playHalvesAgain: halves.playHalvesAgain,
+    handOverHalvesSeat: halves.handOverHalvesSeat,
+    blockHalvesPartner: halves.blockHalvesPartner,
+    getHalvesRecapAudio: halves.getHalvesRecapAudio,
+    getHalvesMoveAudio: halves.getHalvesMoveAudio,
+    reactToHalvesMove: halves.reactToHalvesMove,
+    answerHalvesMove: halves.answerHalvesMove,
+    reportHalvesMove: halves.reportHalvesMove,
+    getHalvesQueue: halves.getHalvesQueue,
+    decideHalvesItem: halves.decideHalvesItem,
     calls,
     get deleted() {
       return deleted;

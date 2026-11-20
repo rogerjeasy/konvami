@@ -14,6 +14,7 @@ import { createFakeProfileDevice, type FakeProfileDevice } from '@/test/fake-pro
 import { OnboardingProvider } from '@/onboarding/services';
 import { createOnboardingStore } from '@/onboarding/store';
 import { createPracticeServices, PracticeProvider } from '@/practice/services';
+import { HalvesProvider } from '@/halves/services';
 import { createOfflineApi } from '@/offline/api';
 import type { OfflineCache } from '@/offline/cache';
 import { createProfileServices, ProfileProvider } from '@/profile/services';
@@ -142,35 +143,37 @@ export async function renderScreen(
       <AuthServicesProvider services={services}>
         <OnboardingProvider store={onboarding}>
           <PracticeProvider services={practice}>
-            <ProfileProvider services={profile}>
-              <PlanProvider device={purchases ?? createFakePurchaseDevice(false)}>
-                <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
-                  <RecorderProvider useRecorder={() => sentences}>
-                    <VoiceProvider
-                      createEngine={(purpose, personaId, scenario, practise, options) => {
-                        engine.openedFor.push(purpose);
-                        engine.openedWith.push(personaId);
-                        engine.openedScenarios.push(scenario);
-                        engine.openedPractise.push(practise);
-                        engine.openedAssessments.push(options?.assessmentConsent ?? false);
-                        engine.openedGuests.push(options?.guestId);
-                        engine.openedRang.push(options?.rang ?? false);
-                        return engine;
-                      }}
-                    >
-                      <SignUpDraftProvider initial={draft}>
-                        <AccessDraftProvider initial={access}>
-                          <ExamNotesProvider>
-                            {ui}
-                            <PaywallSheet />
-                          </ExamNotesProvider>
-                        </AccessDraftProvider>
-                      </SignUpDraftProvider>
-                    </VoiceProvider>
-                  </RecorderProvider>
-                </RemindersProvider>
-              </PlanProvider>
-            </ProfileProvider>
+            <HalvesProvider api={backend}>
+              <ProfileProvider services={profile}>
+                <PlanProvider device={purchases ?? createFakePurchaseDevice(false)}>
+                  <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
+                    <RecorderProvider useRecorder={() => sentences}>
+                      <VoiceProvider
+                        createEngine={(purpose, personaId, scenario, practise, options) => {
+                          engine.openedFor.push(purpose);
+                          engine.openedWith.push(personaId);
+                          engine.openedScenarios.push(scenario);
+                          engine.openedPractise.push(practise);
+                          engine.openedAssessments.push(options?.assessmentConsent ?? false);
+                          engine.openedGuests.push(options?.guestId);
+                          engine.openedRang.push(options?.rang ?? false);
+                          return engine;
+                        }}
+                      >
+                        <SignUpDraftProvider initial={draft}>
+                          <AccessDraftProvider initial={access}>
+                            <ExamNotesProvider>
+                              {ui}
+                              <PaywallSheet />
+                            </ExamNotesProvider>
+                          </AccessDraftProvider>
+                        </SignUpDraftProvider>
+                      </VoiceProvider>
+                    </RecorderProvider>
+                  </RemindersProvider>
+                </PlanProvider>
+              </ProfileProvider>
+            </HalvesProvider>
           </PracticeProvider>
         </OnboardingProvider>
       </AuthServicesProvider>

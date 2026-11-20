@@ -60,6 +60,9 @@ const FEATURE = {
   story_audio: 'costs.feature.story_audio',
   story_listen: 'costs.feature.story_listen',
   role_play: 'costs.feature.role_play',
+  halves_listen: 'costs.feature.halves_listen',
+  halves: 'costs.feature.halves',
+  halves_audio: 'costs.feature.halves_audio',
 } as const;
 
 // Providers go by their own names, which are not translated.

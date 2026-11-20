@@ -13,6 +13,7 @@ import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { staggerDelay } from '@/lib/motion';
+import { useHalvesHub } from '@/halves/services';
 import { callRoute, penPalRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
@@ -43,6 +44,8 @@ export function TalkScreen() {
   const posterWidth = Math.min(POSTER_WIDTH, width - PEEK);
   const { color } = useTheme();
   const signedIn = status === 'signedIn';
+  const halves = useHalvesHub(signedIn);
+  const halvesOpen = halves.state.phase === 'ready' && halves.state.data.available;
 
   useEffect(() => {
     if (signedIn) void store.load();
@@ -134,6 +137,19 @@ export function TalkScreen() {
               detail: t('rolePlays.rowHint'),
               onPress: () => router.push(ROUTES.rolePlays),
             },
+            // Two Halves (7.1): a voice mystery with another player, when it is open.
+            ...(halvesOpen
+              ? [
+                  {
+                    key: 'halves',
+                    icon: 'compass' as const,
+                    blob: 'tomato' as const,
+                    title: t('halves.row'),
+                    detail: t('halves.rowHint'),
+                    onPress: () => router.push(ROUTES.halves),
+                  },
+                ]
+              : []),
             // Two of the learner's partners in one conversation (5.24).
             {
               key: 'together',

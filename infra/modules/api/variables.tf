@@ -282,3 +282,17 @@ variable "recording_encoder_layers" {
     error_message = "Lambda supports at most five layers."
   }
 }
+
+variable "halves" {
+  description = <<-EOT
+    Two Halves (section 7, phase 1): a voice mystery for two learners. Off until enabled.
+    open_to_testers: every learner may play while the app is in the testers' hands; off, only
+    the owners (var.costs.owners). Phase 1 never lets a stranger hear a stranger: learners play
+    against a labelled AI or with a friend they invite.
+  EOT
+  type = object({
+    enabled         = optional(bool, false)
+    open_to_testers = optional(bool, false)
+  })
+  default = {}
+}

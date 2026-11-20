@@ -15,7 +15,11 @@ ATTRIBUTES = {
 
 def test_an_account_carries_the_name_the_language_and_the_voice_consent() -> None:
     assert account_from_attributes(ATTRIBUTES) == Account(
-        first_name="Amara", language="fr", voice_consent=True, email="amara.diallo@mail.com"
+        first_name="Amara",
+        language="fr",
+        voice_consent=True,
+        email="amara.diallo@mail.com",
+        age_bracket="25-34",
     )
 
 
@@ -80,3 +84,10 @@ def test_elevenlabs_needs_the_v3_consent_record_that_names_it(
         attributes["custom:ai_consent"] = stored
 
     assert account_from_attributes(attributes).premium_voice_consent is agreed
+
+
+def test_the_age_group_of_the_sign_up_age_check_is_read_from_the_account() -> None:
+    from konvami_api.domain.accounts import account_from_attributes
+
+    assert account_from_attributes({"custom:age_bracket": "16-17"}).age_bracket == "16-17"
+    assert account_from_attributes({}).age_bracket == ""

@@ -92,6 +92,14 @@ export const ROUTES = {
   coach: '/coach',
   /** 5.27 This week's quests: three small speaking challenges and how far each is. */
   quests: '/quests',
+  /** 7.1 Two Halves: a voice mystery for two, split by language. */
+  halves: '/halves',
+  /** 7.2 Join Two Halves. */
+  halvesJoin: '/halves/join',
+  /** 7.11 Two Halves settings. */
+  halvesSettings: '/halves/settings',
+  /** 7.12 Invite a friend, or redeem a friend's code. */
+  halvesInvite: '/halves/invite',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
   exams: '/exams',
   /** 5.14 Grammar map: every topic of the language learned, and how well the learner uses it. */
@@ -330,3 +338,27 @@ export const examTalkRoute = (exam: string) =>
 /** 5.18 One simulation's estimated score. */
 export const simulationRoute = (id: string) =>
   ({ pathname: '/exams/simulations/[id]', params: { id } }) as const satisfies Href;
+
+/** 7.4 One Two Halves case: the board, the rounds, the answer, the recap (7.8). */
+export const halvesCaseRoute = (id: string) =>
+  ({ pathname: '/halves/[id]', params: { id } }) as const satisfies Href;
+
+/** 7.6 Record the next move of a case. */
+export const halvesRecordRoute = (id: string) =>
+  ({ pathname: '/halves/[id]/record', params: { id } }) as const satisfies Href;
+
+/** 7.7 A move the other seat sent: listen, react, act on the clue, report. */
+export const halvesMoveRoute = (id: string, move: string) =>
+  ({ pathname: '/halves/[id]/move/[move]', params: { id, move } }) as const satisfies Href;
+
+/** 7.9 The private report on one of the learner's own moves. */
+export const halvesMineRoute = (id: string, move: string) =>
+  ({ pathname: '/halves/[id]/mine/[move]', params: { id, move } }) as const satisfies Href;
+
+/**
+ * 7.5 The briefing of a case: a practice call in which the learner's own partner rehearses the
+ * next clue with them. The server reads `halves:<case>` in the call's scenario, with the id as 32
+ * hex digits (a scenario is at most 40 characters).
+ */
+export const halvesBriefingRoute = (personaId: string, caseId: string) =>
+  callRoute(personaId, { scenario: `halves:${caseId.replaceAll('-', '')}` });

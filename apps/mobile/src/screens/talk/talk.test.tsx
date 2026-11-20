@@ -57,6 +57,18 @@ describe('5.2 Talk', () => {
     expect(router.push).toHaveBeenCalledWith('/role-plays');
   });
 
+  it('leads to Two Halves only where it is open to the learner', async () => {
+    await open();
+    expect(screen.queryByRole('button', { name: 'Two Halves' })).toBeNull();
+
+    const api = inApp();
+    api.halvesOpen();
+    await open(api);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Two Halves' }));
+
+    expect(router.push).toHaveBeenCalledWith('/halves');
+  });
+
   it('leads to the pen-pal thread, marked while a note waits', async () => {
     const api = inApp();
     api.penPalNotes(FAKE_PERSONAS[0]!.id, [{ text: 'Hallo!' }]);

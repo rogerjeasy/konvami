@@ -43,12 +43,16 @@ Konvami est en phase de test. Certaines fonctions prévues dans la conception de
 
 Merci de ne pas partager ce que tu ne voudrais pas voir écrit, par exemple sur ta santé, tes convictions ou d’autres personnes. Si tu le fais, cela peut apparaître dans les transcriptions, les bilans et les notes. Tu peux supprimer une note à tout moment ; les transcriptions et les bilans sont supprimés avec ton compte.
 
+**Deux moitiés**, si tu y participes. Un nom de code que Konvami invente pour toi, ta première langue, le lieu que tu choisis de montrer (une ville d’une liste, un pays, ou rien), ta tranche d’âge et ton accord pour partager ta voix. Pour chaque enquête : les coups que tu enregistres (l’enregistrement et ce que tu as dit, transcrit mot à mot), les résultats du contrôle de sécurité, les corrections privées pour toi, tes réponses sur le plateau, tes réactions, ainsi que tes signalements et blocages. Chaque coup est vérifié avant que quiconque l’entende ; un coup que le contrôle retient n’est jamais transmis et est lu par la personne qui gère Konvami.
+
 ## Pourquoi, et sur quelle base légale
 
 - **Pour fournir Konvami** (compte, conversations, bilans, cartes, réponses du tuteur, notes, enregistrements) : parce que tu nous le demandes, selon nos conditions d’utilisation (art. 6, par. 1, let. b RGPD).
 - **Pour envoyer tes conversations aux fournisseurs d’IA nommés ci-dessous** : sur la base de ton consentement sur l’écran « Comment Konvami utilise l’IA » (art. 6, par. 1, let. a RGPD). Tu peux le retirer à tout moment en supprimant ton compte ; sans lui, les conversations ne peuvent pas fonctionner.
 - **Pour garder Konvami sûr et abordable** (journaux, protection de la connexion, quota de minutes vocales, plafonds de coûts) : notre intérêt légitime à exploiter un service sûr dans les limites de son budget (art. 6, par. 1, let. f RGPD).
 - **Pour comprendre comment l’app est utilisée et trouver les défauts** : les rapports de plantage sur la base de notre intérêt légitime à une app qui fonctionne (RGPD art. 6, par. 1, let. f) ; les comptages d’usage anonymes uniquement sur la base de ton consentement (art. 6, par. 1, let. a), que tu peux retirer à tout moment dans Profil › Confidentialité et IA.
+- **Pour que l’autre joueur d’une enquête de Deux moitiés entende tes coups** : sur la base de ton consentement distinct quand tu participes (art. 6(1)(a) RGPD). Tu peux le retirer à tout moment dans Deux moitiés › Réglages › Quitter, ce qui efface tes coups.
+- **Pour que Deux moitiés reste sûr** (contrôle de chaque coup, signalements, blocages) : notre intérêt légitime à protéger les joueurs (art. 6(1)(f) RGPD).
 
 Konvami n’utilise pas ta voix pour t’identifier. Ton niveau, tes corrections et tes bilans sont établis par l’IA ; ils t’aident à apprendre, n’ont aucun effet juridique ou similaire significatif sur toi, et tu peux changer ton niveau à tout moment.
 
@@ -73,6 +77,8 @@ Apple et Google distribuent l’app dans leurs stores et traitent tes données e
 
 Nous ne communiquons des données aux autorités que lorsque la loi l’exige.
 
+**L’autre joueur d’une enquête de Deux moitiés** entend tes coups, en enregistrement ou, avec « Voiler ma voix », tes mots exacts lus par une voix neutre. Il voit ton nom de code et le lieu que tu as choisi de montrer, jamais ton nom, ton e-mail ni tes corrections. Dans cette première phase, l’autre joueur est une IA, ou un ou une amie que tu as invité avec un code ; des inconnus ne sont pas mis ensemble. Les coups sont vérifiés avec la modération d’OpenAI et le fournisseur d’IA ci-dessus.
+
 ## Combien de temps les données sont conservées
 
 - Tout ce qui se trouve dans ton compte est conservé jusqu’à ce que tu le supprimes, sauf ce que tu supprimes toi-même avant (une note, une carte, ta photo, tes enregistrements).
@@ -81,6 +87,7 @@ Nous ne communiquons des données aux autorités que lorsque la loi l’exige.
 - Les journaux techniques sont conservés 14 jours.
 - Une photo dont tu commences l’envoi sans jamais le confirmer est supprimée après un jour.
 - OpenAI conserve ce qu’il reçoit jusqu’à 30 jours (voir ci-dessus).
+- Les coups de Deux moitiés (l’enregistrement et ses mots) sont effacés 30 jours après la fin de leur enquête, et au plus tard 30 jours après l’enregistrement. Quitter Deux moitiés ou supprimer ton compte les efface tout de suite ; l’enquête de l’autre joueur continue alors avec une IA.
 
 ## Comment tes données sont protégées
 

@@ -112,6 +112,15 @@ variable "premium_voices" {
   default = {}
 }
 
+variable "halves" {
+  description = "Two Halves (see modules/api). Off until enabled."
+  type = object({
+    enabled         = optional(bool, false)
+    open_to_testers = optional(bool, false)
+  })
+  default = {}
+}
+
 variable "voice" {
   description = <<-EOT
     Voice models and limits for live calls (see modules/api). The spoken setup and the placement

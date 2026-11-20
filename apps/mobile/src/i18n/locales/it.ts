@@ -1,4 +1,5 @@
 import { EXAM_ACOUSTICS } from '../exam-acoustics';
+import { HALVES } from '../halves';
 import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
@@ -10,6 +11,7 @@ import type { Translation } from './en';
 
 export const it: Translation = {
   examAcoustics: EXAM_ACOUSTICS.it,
+  halves: HALVES.it,
   captionLookup: CAPTION_LOOKUP.it,
   examStages: EXAM_STAGES.it,
   offlineLibrary: offlineLibrary.it,
@@ -2548,6 +2550,9 @@ export const it: Translation = {
       story_audio: 'Suoni delle storie',
       story_listen: 'Risposte alle storie trascritte',
       role_play: 'Giochi di ruolo descritti da te',
+      halves_listen: 'Mosse di Due metà trascritte',
+      halves: 'Due metà: controllo e testi',
+      halves_audio: 'Due metà: suoni',
     },
   },
   plan: {

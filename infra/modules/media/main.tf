@@ -16,6 +16,9 @@ locals {
   # Where a learner's copies of their data are written (6.19). The same prefix as in
   # services/api (domain/accounts.py, export_folder).
   export_prefix = "exports/"
+  # Two Halves' moves, stand-in lines and recaps (section 7). The same prefix as in services/api
+  # (domain/halves.py, FOLDER).
+  halves_prefix = "halves/"
 }
 
 resource "aws_s3_bucket" "media" {
@@ -80,6 +83,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
 
     expiration {
       days = var.export_expiry_days
+    }
+  }
+
+  # A Two Halves move is a learner's voice heard by one other learner: kept 30 days at most,
+  # whatever happens to its case (the API also deletes it 30 days after the case ends).
+  rule {
+    id     = "delete-halves-audio"
+    status = "Enabled"
+
+    filter {
+      prefix = local.halves_prefix
+    }
+
+    expiration {
+      days = var.halves_expiry_days
     }
   }
 

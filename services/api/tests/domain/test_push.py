@@ -266,3 +266,25 @@ def test_a_question_about_an_off_limits_topic_is_never_asked() -> None:
     welcome = world.motivation.view(USER, None).welcome_back
     assert welcome is not None
     assert welcome.question is None
+
+
+def test_a_two_halves_clue_or_a_held_move_opens_the_case() -> None:
+    world = World()
+    phone(world)
+    case = "33333333-3333-4333-8333-333333333333"
+
+    world.push.halves(USER, UUID(case), "move")
+    world.push.halves(USER, UUID(case), "held")
+
+    assert [(m.title, m.body, dict(m.data)) for m in world.push_sender.sent] == [
+        (
+            "Konvami",
+            "Un nouvel indice est arrivé dans Deux moitiés.",
+            {"open": "halves", "id": case},
+        ),
+        (
+            "Konvami",
+            "Ton coup dans Deux moitiés n’a pas été envoyé. Ouvre l’enquête pour voir pourquoi.",
+            {"open": "halves", "id": case},
+        ),
+    ]

@@ -119,6 +119,22 @@ class LambdaExamStarter:
         )
 
 
+class LambdaHalvesStarter:
+    """Has the worker check a Two Halves move, play the AI stand-in or write a recap, in an
+    invocation of its own: each is a few requests to a model and a sound."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, job: str, item_id: UUID) -> None:
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"halves": job, "id": str(item_id)}).encode(),
+        )
+
+
 class LambdaPenPalStarter:
     """Has a pen-pal note or answer written by the worker function, in an invocation of its own:
     writing and speaking it takes longer than an API request may."""

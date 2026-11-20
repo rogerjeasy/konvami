@@ -43,12 +43,16 @@ Konvami ist in der Testphase. Einige Funktionen aus dem Entwurf der App sind noc
 
 Bitte teile nichts, was du nicht aufgeschrieben haben möchtest, etwa über deine Gesundheit, deinen Glauben oder andere Menschen. Wenn du es tust, kann es in Transkripten, Berichten und Notizen erscheinen. Eine Notiz kannst du jederzeit löschen; Transkripte und Berichte werden mit deinem Konto gelöscht.
 
+**Zwei Hälften**, wenn du mitmachst. Ein Deckname, den Konvami für dich erfindet, deine Erstsprache, der Ort, den du zeigen willst (eine Stadt aus einer Liste, ein Land oder nichts), deine Altersgruppe und deine Zustimmung, deine Stimme zu teilen. Für jeden Fall: die Züge, die du aufnimmst (die Aufnahme und was du gesagt hast, Wort für Wort aufgeschrieben), die Ergebnisse der Sicherheitsprüfung, die privaten Korrekturen für dich, deine Antworten auf dem Spielbrett, deine Reaktionen sowie deine Meldungen und Blockierungen. Jeder Zug wird geprüft, bevor ihn jemand hört; ein Zug, den die Prüfung aufhält, wird nie zugestellt und von der Person gelesen, die Konvami betreibt.
+
 ## Wozu, und auf welcher Rechtsgrundlage
 
 - **Um Konvami bereitzustellen** (Konto, Gespräche, Berichte, Karten, Antworten des Tutors, Notizen, Aufnahmen): weil du es von uns möchtest, nach unseren Nutzungsbedingungen (Art. 6 Abs. 1 lit. b DSGVO).
 - **Um deine Gespräche an die unten genannten KI-Anbieter zu senden**: auf Grundlage deiner Einwilligung auf dem Bildschirm „So nutzt Konvami KI“ (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie jederzeit widerrufen, indem du dein Konto löschst; ohne sie funktionieren die Gespräche nicht.
 - **Um Konvami sicher und bezahlbar zu halten** (Protokolle, Schutz der Anmeldung, Kontingent an Sprachminuten, Kostengrenzen): unser berechtigtes Interesse, einen sicheren Dienst im Rahmen seines Budgets zu betreiben (Art. 6 Abs. 1 lit. f DSGVO).
 - **Um zu verstehen, wie die App genutzt wird, und um Fehler zu finden**: Absturzberichte auf Grundlage unseres berechtigten Interesses an einer funktionierenden App (Art. 6 Abs. 1 lit. f DSGVO); anonyme Nutzungszahlen nur auf Grundlage deiner Einwilligung (Art. 6 Abs. 1 lit. a), die du jederzeit in Profil › Datenschutz und KI widerrufen kannst.
+- **Damit die andere Person eines Falls von Zwei Hälften deine Züge hört**: auf Grundlage deiner eigenen Einwilligung beim Mitmachen (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie jederzeit unter Zwei Hälften › Einstellungen › Verlassen widerrufen; deine Züge werden dann gelöscht.
+- **Damit Zwei Hälften sicher bleibt** (Prüfung jedes Zugs, Meldungen, Blockierungen): unser berechtigtes Interesse, die Spielenden zu schützen (Art. 6 Abs. 1 lit. f DSGVO).
 
 Konvami nutzt deine Stimme nicht, um dich zu identifizieren. Dein Niveau, deine Korrekturen und Berichte werden von KI ermittelt; sie helfen dir beim Lernen, haben keine rechtliche oder ähnlich erhebliche Wirkung auf dich, und du kannst dein Niveau jederzeit ändern.
 
@@ -73,6 +77,8 @@ Apple und Google verteilen die App über ihre Stores und verarbeiten deine Daten
 
 Behörden geben wir Daten nur heraus, wenn das Gesetz es verlangt.
 
+**Die andere Person eines Falls von Zwei Hälften** hört deine Züge, als Aufnahme oder, mit „Meine Stimme verschleiern“, deine genauen Worte mit einer neutralen Stimme. Sie sieht deinen Decknamen und den Ort, den du zeigen willst, nie deinen Namen, deine E-Mail-Adresse oder deine Korrekturen. In dieser ersten Phase ist die andere Person eine KI oder jemand, den du mit einem Code eingeladen hast; Fremde werden nicht zusammengebracht. Die Züge werden mit der Moderation von OpenAI und dem KI-Anbieter oben geprüft.
+
 ## Wie lange Daten gespeichert bleiben
 
 - Alles in deinem Konto bleibt gespeichert, bis du dein Konto löschst, außer dem, was du vorher selbst löschst (eine Notiz, eine Karte, dein Foto, deine Aufnahmen).
@@ -81,6 +87,7 @@ Behörden geben wir Daten nur heraus, wenn das Gesetz es verlangt.
 - Technische Protokolle werden 14 Tage aufbewahrt.
 - Ein Foto, dessen Hochladen du beginnst, aber nie bestätigst, wird nach einem Tag gelöscht.
 - OpenAI bewahrt, was es erhält, bis zu 30 Tage auf (siehe oben).
+- Züge von Zwei Hälften (die Aufnahme und ihre Worte) werden 30 Tage nach dem Ende ihres Falls gelöscht, spätestens aber 30 Tage nach der Aufnahme. Wenn du Zwei Hälften verlässt oder dein Konto löschst, werden sie sofort gelöscht; der Fall der anderen Person geht dann mit einer KI weiter.
 
 ## Wie deine Daten geschützt sind
 

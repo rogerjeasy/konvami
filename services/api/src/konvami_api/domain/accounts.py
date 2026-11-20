@@ -40,6 +40,9 @@ class Account:
     # The sign-in address; empty when the provider did not give one. Only the learner's own copy
     # of their data shows it (domain/exports.py).
     email: str = ""
+    # The coarse age group of the sign-up age check ("16-17", "18-24", …); empty when unknown.
+    # Two Halves never pairs an adult with someone who is not clearly one (7.x).
+    age_bracket: str = ""
 
 
 class AccountNotFound(Exception):  # noqa: N818 - reads as a fact, like KeyError
@@ -100,6 +103,7 @@ def account_from_attributes(attributes: Mapping[str, str]) -> Account:
         voice_consent=_voice_consent(attributes.get("custom:ai_consent")),
         premium_voice_consent=_premium_voice_consent(attributes.get("custom:ai_consent")),
         email=attributes.get("email", "").strip(),
+        age_bracket=attributes.get("custom:age_bracket", "").strip(),
     )
 
 
@@ -244,6 +248,8 @@ class AccountService:
         self._files.remove_all(upload_folder(user_id))
 
         self._files.remove_all(export_folder(user_id))
+        # Two Halves keeps a learner's moves under halves/<id>/ (domain/halves.py, FOLDER).
+        self._files.remove_all(f"halves/{user_id}/")
         self._records.delete(user_id, self._clock())
         try:
             self._directory.delete(user_id)

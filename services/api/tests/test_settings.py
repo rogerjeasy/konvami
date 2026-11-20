@@ -6,7 +6,9 @@ import pytest
 from konvami_api.domain.costs import Budget
 from konvami_api.domain.voice import CallPurpose
 from konvami_api.settings import (
+    HalvesSettings,
     cost_settings,
+    halves_settings,
     premium_voice_settings,
     text_models,
     video_avatar_settings,
@@ -254,3 +256,11 @@ def test_without_video_avatar_settings_none_are_offered(missing: str | None) -> 
 def test_a_broken_video_avatar_setting_is_named_at_start_up(raw: str) -> None:
     with pytest.raises(RuntimeError, match="KONVAMI_VIDEO_AVATARS"):
         video_avatar_settings(raw)
+
+
+def test_two_halves_is_off_unless_turned_on() -> None:
+    assert halves_settings(None) == HalvesSettings(enabled=False, open_to_testers=False)
+    on = halves_settings('{"enabled": true, "open_to_testers": true}')
+    assert on == HalvesSettings(enabled=True, open_to_testers=True)
+    with pytest.raises(RuntimeError, match="KONVAMI_HALVES"):
+        halves_settings('{"enabled": "yes"}')

@@ -43,12 +43,16 @@ Konvami is in its testing phase. Some features described in the app's design are
 
 Please do not share information you would not want written down, for example about your health, beliefs or other people. If you do, it may appear in transcripts, reports and memories. You can delete a memory at any time; transcripts and reports are deleted with your account.
 
+**Two Halves**, if you join it. A codename Konvami makes up for you, your first language, the place you choose to show (a city from a list, a country, or nothing), your age group, and your agreement to share your voice. For each case: the moves you record (the recording and what you said, written down word for word), the results of the safety check, the private corrections for you, your answers on the board, your reactions, and the reports and blocks you make. Every move is checked before anyone hears it; a move the check stops is never delivered and is read by the person who runs Konvami.
+
 ## Why, and on what legal basis
 
 - **To provide Konvami** (your account, conversations, reports, cards, Tutor answers, memories, recordings): because you asked us to, under our terms of use (GDPR art. 6(1)(b)).
 - **To send your conversations to the AI providers named below**: on the basis of your consent on the screen "How Konvami uses AI" (GDPR art. 6(1)(a)). You can withdraw it at any time by deleting your account; without it, the conversations cannot work.
 - **To keep Konvami secure and affordable** (logs, sign-in protection, voice-minute allowance, cost limits): our legitimate interest in running a safe service within its budget (GDPR art. 6(1)(f)).
 - **To understand how the app is used and to find faults**: crash reports on the basis of our legitimate interest in a working app (GDPR art. 6(1)(f)); anonymous usage counts only on the basis of your consent (art. 6(1)(a)), which you can withdraw at any time in Profile › Privacy and AI.
+- **To let the other player of a Two Halves case hear your moves**: on the basis of your separate consent when you join (GDPR art. 6(1)(a)). You can withdraw it at any time in Two Halves › Settings › Leave, which deletes your moves.
+- **To keep Two Halves safe** (the check of every move, reports, blocks): our legitimate interest in protecting the players (GDPR art. 6(1)(f)).
 
 Konvami does not use your voice to identify you. Your level, corrections and reports are worked out by AI; they help you learn and have no legal or similarly significant effect on you, and you can change your level at any time.
 
@@ -73,6 +77,8 @@ Apple and Google distribute the app through their stores and process your data a
 
 We disclose data to authorities only where the law requires it.
 
+**The other player of a Two Halves case** hears your moves, as a recording or, with “Veil my voice”, your exact words in a neutral voice. They see your codename and the place you chose to show, never your name, email or corrections. In this first phase the other player is an AI, or a friend you invited with a code; strangers are not matched. The moves are checked with OpenAI's moderation and the AI provider above.
+
 ## How long data is kept
 
 - Everything in your account is kept until you delete your account, except what you delete earlier yourself (a memory, a card, your photo, your recordings).
@@ -81,6 +87,7 @@ We disclose data to authorities only where the law requires it.
 - Technical logs are kept for 14 days.
 - A photo you start to upload but never confirm is deleted after one day.
 - OpenAI keeps what it receives for up to 30 days (see above).
+- Two Halves moves (the recording and its words) are deleted 30 days after their case ends, and in any case 30 days after they were recorded. Leaving Two Halves or deleting your account deletes them at once; the other player's case then goes on with an AI.
 
 ## How your data is protected
 

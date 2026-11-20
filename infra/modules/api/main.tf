@@ -41,6 +41,7 @@ locals {
     RECORDING_ALIGNMENT_MODEL       = var.recording_alignment_model
     RECORDING_ENCODER_PATH          = var.recording_encoder_path
     KONVAMI_PREMIUM_VOICES          = jsonencode(var.premium_voices)
+    KONVAMI_HALVES                  = jsonencode(var.halves)
     KONVAMI_CALL_WORKER             = local.call_worker_name
     KONVAMI_MEDIA_BUCKET            = var.media_bucket.name
     KONVAMI_VOICE                   = jsonencode(var.voice)

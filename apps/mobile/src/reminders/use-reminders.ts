@@ -9,6 +9,7 @@ import {
   reportRoute,
   ROUTES,
   simulationRoute,
+  halvesCaseRoute,
 } from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
 import { usePreferences } from '@/preferences';
@@ -151,6 +152,8 @@ function routeOf(target: OpenTarget) {
       return simulationRoute(target.id);
     case 'call':
       return incomingCallRoute(target.partner, target.ask);
+    case 'halves':
+      return halvesCaseRoute(target.id);
     default:
       return ROUTES.today;
   }

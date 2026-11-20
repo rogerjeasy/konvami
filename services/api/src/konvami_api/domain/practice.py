@@ -1048,7 +1048,11 @@ class PracticeScript:
         sessions: VoiceSessionRepository,
         planner: SessionPlanner,
         own_scenarios: OwnScenarios | None = None,
+        extra_scenarios: Callable[[UUID, str], Scenario | None] | None = None,
     ) -> None:
+        """`extra_scenarios` finds a role-play the language pack does not have, made for the
+        learner elsewhere (a Two Halves briefing, 7.5)."""
+        self._extra_scenarios = extra_scenarios
         self._planner = planner
         self._own_scenarios = own_scenarios
         self._tutor = tutor
@@ -1210,6 +1214,9 @@ class PracticeScript:
         language = self._profiles.get(user_id).target_language or ""
         pack = self._profiles.catalog.available_pack(language)
         found = pack.scenario(scenario) if pack else None
+        if found is None and self._extra_scenarios is not None:
+            # A scenario made for this learner elsewhere: a Two Halves briefing (7.5).
+            found = self._extra_scenarios(user_id, scenario)
         if found is None:
             raise ScenarioError("not_found")
         return found

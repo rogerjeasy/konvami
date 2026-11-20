@@ -23,6 +23,7 @@ from konvami_api.domain.exports import ExportError
 from konvami_api.domain.feedback import FeedbackError
 from konvami_api.domain.flags import FlagError
 from konvami_api.domain.grammar_map import GrammarMapError
+from konvami_api.domain.halves import HalvesError
 from konvami_api.domain.memories import MemoriesError
 from konvami_api.domain.moderation import LIMIT as MODERATION_LIMIT
 from konvami_api.domain.moderation import UNAVAILABLE as MODERATION_UNAVAILABLE
@@ -283,6 +284,12 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(FlagError)
     async def _flag_error(_: Request, error: FlagError) -> JSONResponse:
         return _response(_FLAG_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(HalvesError)
+    async def _halves_error(_: Request, error: HalvesError) -> JSONResponse:
+        from konvami_api.api.halves import STATUS as HALVES_STATUS
+
+        return _response(HALVES_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(PenPalError)
     async def _pen_pal_error(_: Request, error: PenPalError) -> JSONResponse:

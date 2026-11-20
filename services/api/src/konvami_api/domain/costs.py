@@ -88,6 +88,12 @@ class Feature(StrEnum):
     # a description said out loud written down.
     ROLE_PLAY = "role_play"
 
+    # Two Halves (7.x): a move written down, the checks, stand-in and recap writing, and the
+    # sounds (a veiled move, the stand-in, the recap).
+    HALVES_LISTEN = "halves_listen"
+    HALVES = "halves"
+    HALVES_AUDIO = "halves_audio"
+
 
 @dataclass(frozen=True)
 class Charge:

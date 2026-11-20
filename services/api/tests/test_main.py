@@ -320,11 +320,26 @@ def test_the_worker_writes_a_story_episode_when_that_is_what_it_is_started_for(
 
 def test_the_worker_nudges_quiet_learners_when_the_schedule_starts_it(stub: Stubber) -> None:
     """Started by the hourly schedule, it reads the registered phones (here: none) and sends
-    nothing. The pen-pals write only where a text model is named, as here they are not."""
+    nothing. The pen-pals write only where a text model is named, as here they are not. Two
+    Halves' tick looks for moves to check again, words past their 30 days, old invites and
+    stand-ins to catch up (here: none)."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    for _ in range(5):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"nudges": True})
+
+    stub.assert_no_pending_responses()
+
+
+def test_the_worker_checks_a_two_halves_move_when_that_is_what_it_is_started_for(
+    stub: Stubber,
+) -> None:
+    """Asked to check a move, it reads the move (here: none) and asks no model."""
     backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
     stub.add_response("execute_statement", {"formattedRecords": "[]"})
 
-    main.run_worker(backend, {"nudges": True})
+    main.run_worker(backend, {"halves": "check", "id": "44444444-4444-4444-8444-444444444444"})
 
     stub.assert_no_pending_responses()
 

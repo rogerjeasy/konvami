@@ -36,6 +36,8 @@ from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
+from konvami_api.domain.halves import HalvesService
+from konvami_api.domain.halves_check import ModelBrain
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -82,6 +84,7 @@ from konvami_api.persistence.coach_repository import SqlCoachRepository
 from konvami_api.persistence.continuation_repository import SqlContinuationRepository
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.export_repository import SqlExportRepository
+from konvami_api.persistence.halves_repository import SqlHalvesRepository
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.motivation_repository import SqlMotivationRepository
 from konvami_api.persistence.pronunciation_repository import SqlPronunciationRepository
@@ -132,6 +135,7 @@ from konvami_api.providers.aws import (
     LambdaDetailsStarter,
     LambdaExamStarter,
     LambdaFitStarter,
+    LambdaHalvesStarter,
     LambdaPenPalStarter,
     LambdaReportStarter,
     LambdaStoryStarter,
@@ -156,12 +160,14 @@ from konvami_api.providers.video_avatar import vendor_for
 from konvami_api.providers.web_page import WebPageFetcher
 from konvami_api.settings import (
     COSTS_VARIABLE,
+    HALVES_VARIABLE,
     PLANS_VARIABLE,
     PREMIUM_VOICES_VARIABLE,
     TEXT_MODELS_VARIABLE,
     VIDEO_AVATARS_VARIABLE,
     VOICE_VARIABLE,
     cost_settings,
+    halves_settings,
     plan_settings,
     premium_voice_settings,
     text_models,
@@ -548,6 +554,11 @@ def build_backend(
                     events=real_life.debrief,
                 ),
                 own_scenarios=real_life.scenario,
+                # A Two Halves briefing (7.5) is a role-play made from the learner's case; the
+                # service is built below, so it is looked up when a call starts.
+                extra_scenarios=lambda user_id, scenario: halves.briefing_scenario(
+                    user_id, scenario
+                ),
             ),
         },
         accounts=directory,
@@ -685,7 +696,37 @@ def build_backend(
         affordable=lambda: guard.level() is Level.NORMAL,
         clock=_now,
     )
+    halves_config = halves_settings(environment.get(HALVES_VARIABLE))
+    halves = HalvesService(
+        profiles=profiles,
+        personas=personas,
+        accounts=directory,
+        repository=SqlHalvesRepository(sql),
+        listener=listener,
+        brain=ModelBrain(
+            moderator=OpenAiModerator(openai_key, meter=meter),
+            text_model=text,
+            # The check, the stand-in and the recap are small jobs; corrections judge the
+            # learner's language, as a report does.
+            check_model=models.memory,
+            write_model=models.week or models.memory,
+            review_model=models.report,
+            speech=speech,
+            speech_model=models.speech,
+            files=files,
+            language_name=CATALOG.english_name,
+            clock=_now,
+        ),
+        files=files,
+        starter=LambdaHalvesStarter(clients.functions, worker),
+        enabled=halves_config.enabled,
+        allowed=lambda user_id: halves_config.open_to_testers or user_id in costs.owners,
+        owners=costs.owners,
+        clock=_now,
+        announce=push.halves,
+    )
     services = Services(
+        halves=halves,
         catalog=CATALOG,
         profiles=profiles,
         questions=ProfileQuestionService(
@@ -901,11 +942,17 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     same hourly run (spec §6.16), and writing a note or an answer that is waiting (`pen_pal`);
     and writing a listening story's episode (`story`, 5.29)."""
     if "nudges" in event:
-        # One failing does not stop the other.
+        # One failing does not stop the others.
         try:
             backend.services.push.nudge()
         finally:
-            backend.services.pen_pal.send_due()
+            try:
+                backend.services.pen_pal.send_due()
+            finally:
+                backend.services.halves.tick()
+        return
+    if "halves" in event:
+        _halves_job(backend, event["halves"], UUID(event["id"]))
         return
     if "pen_pal" in event:
         backend.services.pen_pal.write(UUID(event["pen_pal"]))
@@ -953,6 +1000,17 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
                             services.memories.write(call_id)
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
+
+
+def _halves_job(backend: Backend, job: str, item_id: UUID) -> None:
+    """Two Halves' jobs (section 7): check a move, play the AI stand-in, write the recap."""
+    halves = backend.services.halves
+    if job == "check":
+        halves.check(item_id)
+    elif job == "ai":
+        halves.play(item_id)
+    elif job == "recap":
+        halves.write_recap(item_id)
 
 
 def call_worker_handler(event: dict[str, Any], context: Any) -> None:
