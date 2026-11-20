@@ -3,7 +3,14 @@ parameters, no fuzzing), computed for the same review histories."""
 
 import pytest
 
-from konvami_api.domain.fsrs import Memory, Rating, interval_days, retrievability, review
+from konvami_api.domain.fsrs import (
+    DEFAULT_WEIGHTS,
+    Memory,
+    Rating,
+    interval_days,
+    retrievability,
+    review,
+)
 
 # Each step: days since the review before, the rating, then what the reference implementation
 # gives: stability, difficulty and the next interval in days.
@@ -96,3 +103,16 @@ def test_the_shared_histories_are_what_the_scheduler_gives_now() -> None:
             )
             assert a["stability"] == pytest.approx(b["stability"], abs=1e-9)
             assert a["difficulty"] == pytest.approx(b["difficulty"], abs=1e-9)
+
+
+def test_a_learners_own_parameters_change_when_a_card_comes_back() -> None:
+    own = (1.0, *DEFAULT_WEIGHTS[1:])
+
+    assert review(None, 0, "again", own).stability == 1.0
+    assert review(None, 0, "again").stability == DEFAULT_WEIGHTS[0]
+
+
+def test_a_lower_retention_lets_a_card_wait_longer() -> None:
+    memory = Memory(stability=10.0, difficulty=5.0)
+
+    assert interval_days(memory, retention=0.8) > interval_days(memory) == 10
