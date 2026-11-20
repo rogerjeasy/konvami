@@ -14,6 +14,7 @@ import { successFeedback } from '@/lib/haptics';
 import { diffWords, type DiffPart } from '@/lib/word-diff';
 import { usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
+import type { SentenceRecording } from '@/voice/sentence-recorder';
 import { useSpokenAttempt } from '@/voice/use-spoken-attempt';
 
 /** Why an attempt failed, as the sheet says it; any other reason reads as "unavailable". */
@@ -70,6 +71,7 @@ export function SayItBetterSheet({
   before,
   onClose,
   onRight,
+  attempt,
 }: {
   conversationId: string;
   /** The correction's position in the report; null while the sheet is closed. */
@@ -81,6 +83,14 @@ export function SayItBetterSheet({
   before: { url: string; milliseconds: number } | null;
   onClose: () => void;
   onRight: (index: number) => void;
+  /**
+   * How an attempt is checked when the correction is not a conversation's (a story-chain line,
+   * 9.7); without it, the report's own retry.
+   */
+  attempt?: (
+    index: number,
+    recording: SentenceRecording,
+  ) => Promise<{ heard: string; right: boolean }>;
 }) {
   const { t } = useTranslation();
   const { color } = useTheme();
@@ -89,7 +99,9 @@ export function SayItBetterSheet({
     (recording) => {
       // Recording is offered only while the sheet is open on a correction.
       if (index === null) return Promise.reject(new Error('closed'));
-      return retryCorrection(conversationId, index, recording);
+      return attempt
+        ? attempt(index, recording)
+        : retryCorrection(conversationId, index, recording);
     },
     (result) => {
       if (result.right && index !== null) {

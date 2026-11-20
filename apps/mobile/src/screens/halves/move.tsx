@@ -4,22 +4,20 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { HalvesReaction, HalvesReportReason } from '@konvami/api-client';
 import { useSession } from '@/auth';
-import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ChoiceChip } from '@/components/choice-chip';
-import { ChoiceGroup, ToggleRow } from '@/components/choice-group';
+import { ChoiceGroup } from '@/components/choice-group';
 import { LoadState } from '@/components/load-state';
 import { Pop, Reveal } from '@/components/motion';
 import { NoticeBox } from '@/components/notice-box';
 import { OptionCard } from '@/components/option-card';
 import { PageHero } from '@/components/page-hero';
 import { PlayButton } from '@/components/play-button';
-import { ChoiceRow, Sheet } from '@/components/sheet';
+import { ReportSheet } from '@/components/report-sheet';
 import { HeaderButton } from '@/components/step-header';
 import { StepLayout } from '@/components/step-layout';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
-import { TextField } from '@/components/text-field';
 import { useHalvesApi, useHalvesCase } from '@/halves/services';
 import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
@@ -29,67 +27,6 @@ import { usePracticeServices } from '@/practice/services';
 import { PartnerLine } from './parts';
 
 const REACTIONS: HalvesReaction[] = ['got_it', 'again_slower', 'helped', 'bravo'];
-const REASONS: HalvesReportReason[] = [
-  'harassment',
-  'sexual',
-  'personal',
-  'hate',
-  'off_topic',
-  'other',
-];
-// A report's note is a sentence or two (the server takes 300 characters).
-const NOTE_MAX = 300;
-
-/** 7.10 Report a move: a reason, an optional note for the owner, and blocking at once. */
-function ReportSheet({
-  visible,
-  onSend,
-  onClose,
-}: {
-  visible: boolean;
-  onSend: (reason: HalvesReportReason, note: string, block: boolean) => Promise<void>;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [reason, setReason] = useState<HalvesReportReason | null>(null);
-  const [note, setNote] = useState('');
-  const [block, setBlock] = useState(false);
-  const [sending, setSending] = useState(false);
-  return (
-    <Sheet visible={visible} title={t('halves.report.title')} icon="flag" onClose={onClose}>
-      <View className="gap-3 pt-1">
-        <Text tone="muted">{t('halves.report.body')}</Text>
-        {REASONS.map((one) => (
-          <ChoiceRow
-            key={one}
-            label={t(`halves.report.reason.${one}`)}
-            selected={reason === one}
-            onPress={() => setReason(one)}
-          />
-        ))}
-        <TextField
-          label={t('halves.report.note')}
-          value={note}
-          onChangeText={setNote}
-          maxLength={NOTE_MAX}
-          multiline
-        />
-        <ToggleRow label={t('halves.report.block')} value={block} onChange={setBlock} />
-        <Button
-          label={t('halves.report.send')}
-          disabled={reason === null}
-          loading={sending}
-          onPress={() => {
-            if (!reason) return;
-            setSending(true);
-            void onSend(reason, note.trim(), block).finally(() => setSending(false));
-          }}
-        />
-      </View>
-    </Sheet>
-  );
-}
-
 /**
  * 7.7 A clue the other player sent: play it (the veiled voice when they chose it), react with a
  * template, answer the board's question with what was heard, and report it (7.10).

@@ -51,8 +51,9 @@ export type Loaded<T> =
 // the check takes seconds, and nobody should have to pull to see their move arrive.
 export const POLL_MS = 4000;
 
-/** Reads something once and again on `refresh`; a failure while reading again keeps what is shown. */
-function useLoaded<T>(read: (() => Promise<T>) | null, again: (data: T) => boolean) {
+/** Reads something once and again on `refresh`; a failure while reading again keeps what is shown.
+ * Also the story chain's (`chain/services.tsx`). */
+export function useLoaded<T>(read: (() => Promise<T>) | null, again: (data: T) => boolean) {
   const [state, setState] = useState<Loaded<T>>({ phase: 'loading' });
   const [tick, setTick] = useState(0);
   useEffect(() => {

@@ -5,8 +5,11 @@ import type { HalvesQueueItem } from '@konvami/api-client';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Text } from '@/components/text';
+import { useChainApi } from '@/chain/services';
 import { useHalvesApi } from '@/halves/services';
 import { reasonKey } from '@/screens/halves/parts';
+
+type Decide = (kind: 'held' | 'report', id: string, action: 'remove' | 'dismiss') => Promise<void>;
 
 /**
  * 6.15 Two Halves on the owner's queue: moves the check held and moves a learner reported, with
@@ -15,23 +18,54 @@ import { reasonKey } from '@/screens/halves/parts';
  * accounts or learners: the server refuses them.
  */
 export function HalvesQueue() {
-  const { t } = useTranslation();
   const api = useHalvesApi();
+  return (
+    <SocialQueue
+      titleKey="halves.queue.title"
+      load={api.getHalvesQueue}
+      decide={api.decideHalvesItem}
+    />
+  );
+}
+
+/** 9.11 The story chain on the owner's queue: held and reported lines, the same way. */
+export function ChainQueue() {
+  const api = useChainApi();
+  return (
+    <SocialQueue
+      titleKey="chain.queue.title"
+      load={api.getChainQueue}
+      decide={api.decideChainItem}
+    />
+  );
+}
+
+/** A game's held and reported voice messages, for the owner to remove (a strike) or dismiss. */
+function SocialQueue({
+  titleKey,
+  load,
+  decide: send,
+}: {
+  titleKey: 'halves.queue.title' | 'chain.queue.title';
+  load: () => Promise<{ items: HalvesQueueItem[] }>;
+  decide: Decide;
+}) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<HalvesQueueItem[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const read = useCallback(() => {
-    api.getHalvesQueue().then(
+    load().then(
       ({ items: found }) => setItems(found),
       () => setItems(null),
     );
-  }, [api]);
+  }, [load]);
   useEffect(read, [read]);
 
   async function decide(item: HalvesQueueItem, action: 'remove' | 'dismiss') {
     setBusy(item.id);
     try {
-      await api.decideHalvesItem(item.kind, item.id, action);
+      await send(item.kind, item.id, action);
       setItems((shown) => shown?.filter((one) => one.id !== item.id) ?? null);
     } finally {
       setBusy(null);
@@ -42,7 +76,7 @@ export function HalvesQueue() {
   return (
     <View className="gap-2.5">
       <Text variant="section" accessibilityRole="header">
-        {t('halves.queue.title')}
+        {t(titleKey)}
       </Text>
       {items.length === 0 ? (
         <Text tone="muted">{t('halves.queue.empty')}</Text>
