@@ -4,6 +4,7 @@ import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { ExamCentre, SpeakingExam } from '@konvami/api-client';
 import { useSession } from '@/auth';
+import { ExamNotice } from '@/components/exam-notice';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ListGroup, ListRow } from '@/components/list';
@@ -298,6 +299,7 @@ export function ExamCentreScreen() {
           onRetry={() => void store.reload()}
         />
       )}
+      <ExamNotice />
     </StepLayout>
   );
 }

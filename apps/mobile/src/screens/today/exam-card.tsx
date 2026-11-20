@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
 import type { ExamWeek, HomeExam } from '@konvami/api-client';
 import { Card } from '@/components/card';
+import { ExamNotice } from '@/components/exam-notice';
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
@@ -100,6 +101,7 @@ export function ExamCard({
           </View>
         </View>
       ) : null}
+      <ExamNotice />
     </Card>
   );
 }

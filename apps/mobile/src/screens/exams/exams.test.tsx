@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { createFakeApi, type FakeApi } from '@/test/fake-api';
+import {
+  createFakeApi,
+  FAKE_SIMULATION_RESULT,
+  FAKE_SPEAKING_EXAMS,
+  type FakeApi,
+} from '@/test/fake-api';
 import { createFakeProfileDevice } from '@/test/fake-profile-device';
 import {
   createFakeVoiceEngine,
@@ -193,6 +198,22 @@ describe('5.18 A simulation’s score', () => {
     await waitFor(() =>
       expect(device.played).toEqual(['https://files.test/exams/rtc_1/teil_1.mp3']),
     );
+  });
+
+  it('shows an estimate on the test’s own scale and says it is not affiliated', async () => {
+    const exam = FAKE_SPEAKING_EXAMS[0]!;
+    const before = exam.scale;
+    exam.scale = { kind: 'band', low: 0, high: 9, step: 0.5, levels: [] };
+    try {
+      const api = preparing();
+      api.simulated('rtc_1', { result: { ...FAKE_SIMULATION_RESULT, estimate: '6.5' } });
+      await open(api);
+
+      expect(await screen.findByText('Estimated band: 6.5')).toBeTruthy();
+      expect(screen.getByText(/not affiliated with or endorsed by/)).toBeTruthy();
+    } finally {
+      exam.scale = before;
+    }
   });
 
   it('keeps acoustic estimates separate and reports skipped audio without fabricated prosody', async () => {

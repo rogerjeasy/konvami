@@ -4,6 +4,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { PartScore, Simulation, SpeakingExam } from '@konvami/api-client';
 import { useSession } from '@/auth';
+import { ExamNotice } from '@/components/exam-notice';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Meter } from '@/components/meter';
@@ -17,6 +18,7 @@ import { PageHero } from '@/components/page-hero';
 import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useSound } from '@/hooks/use-sound';
+import { estimateLine, type EstimateLine } from '@/lib/exam-estimate';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { examPrepRoute, ROUTES } from '@/lib/routes';
@@ -107,11 +109,25 @@ function Scored({ simulation, exam }: { simulation: Simulation; exam: SpeakingEx
   const result = simulation.result;
   if (!result) return null;
   const pass = labels.percent(result.passShare);
+  const estimate = estimateLine(exam?.scale, result.estimate, i18n.language);
+  const estimateText = (line: EstimateLine) => {
+    switch (line.key) {
+      case 'estimateBand':
+        return t('exams.result.estimateBand', { value: line.value });
+      case 'estimatePoints':
+        return t('exams.result.estimatePoints', { value: line.value, max: line.max });
+      case 'estimateLevel':
+        return t('exams.result.estimateLevel', { value: line.value });
+      case 'estimateBelow':
+        return t('exams.result.estimateBelow', { level: line.level });
+    }
+  };
   return (
     <View className="gap-4">
       <Reveal delay={staggerDelay(1)}>
         <Card className="gap-3 p-4">
           <Text variant="stat">{labels.percent(result.total)}</Text>
+          {estimate ? <Text variant="label">{estimateText(estimate)}</Text> : null}
           <View className="items-start">
             <Pill
               tone={result.passed ? 'primary' : 'warn'}
@@ -265,6 +281,7 @@ export function SimulationScreen() {
           </Text>
         </View>
       )}
+      <ExamNotice />
     </StepLayout>
   );
 }
