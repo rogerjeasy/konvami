@@ -255,6 +255,8 @@ resource "aws_cloudwatch_log_group" "call_worker" {
 }
 
 resource "aws_lambda_function" "call_worker" {
+  # The worker scores exam simulations; their acoustic assessment converts audio with ffmpeg.
+  layers        = var.recording_encoder_layers
   function_name = local.call_worker_name
   description   = "Follows one live Konvami voice call (tools, time limit), or writes a conversation's report"
   role          = aws_iam_role.api.arn

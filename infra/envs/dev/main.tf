@@ -96,6 +96,16 @@ module "media" {
   cors_allowed_origins = var.web_preview_origins
 }
 
+# ffmpeg for MP3 and M4A exports of recordings (5.6), only when recording_encoder_enabled.
+# Build the zip first: sh infra/scripts/build-encoder-layer.sh
+module "encoder_layer" {
+  source = "../../modules/encoder_layer"
+  count  = var.recording_encoder_enabled ? 1 : 0
+
+  name     = local.name
+  zip_path = "${path.root}/.build/encoder-layer.zip"
+}
+
 # The API: FastAPI on Lambda behind API Gateway, accepting the user pool's access tokens.
 # Build the package first: cd services/api && poetry run python -m tools.build_lambda
 module "api" {
@@ -118,8 +128,8 @@ module "api" {
   azure_speech_secret_arn   = try(module.azure_speech_key[0].arn, "")
   azure_speech_region       = var.azure_speech_enabled ? var.azure_speech_region : ""
   recording_alignment_model = var.recording_alignment_model
-  recording_encoder_path    = var.recording_encoder_path
-  recording_encoder_layers  = var.recording_encoder_layers
+  recording_encoder_path    = var.recording_encoder_enabled ? module.encoder_layer[0].binary_path : var.recording_encoder_path
+  recording_encoder_layers  = concat(var.recording_encoder_layers, module.encoder_layer[*].arn)
   plans = {
     enforce        = var.plans.enforce
     weekly_minutes = var.plans.weekly_minutes

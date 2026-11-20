@@ -380,6 +380,12 @@ variable "recording_alignment_model" {
   default     = ""
 }
 
+variable "recording_encoder_enabled" {
+  description = "Publish the ffmpeg layer (modules/encoder_layer) so recordings export as MP3 and M4A. Build it first: sh infra/scripts/build-encoder-layer.sh"
+  type        = bool
+  default     = false
+}
+
 variable "recording_encoder_path" {
   description = "Absolute deployed ffmpeg executable path; empty disables compressed audio exports."
   type        = string

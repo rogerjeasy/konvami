@@ -38,6 +38,7 @@ cd infra/envs/dev
 cp terraform.tfvars.example terraform.tfvars   # once; gitignored, fill in real values
 terraform init                                 # once per machine
 (cd ../../../services/api && poetry run python -m tools.build_lambda)   # the API package
+sh ../../scripts/build-encoder-layer.sh        # the ffmpeg layer, when recording_encoder_enabled
 terraform plan -out=tfplan                     # read what will change
 terraform apply tfplan                         # apply exactly that plan
 terraform plan -detailed-exitcode              # exit 0 = AWS matches the code (no drift)

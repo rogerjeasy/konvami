@@ -79,3 +79,7 @@ openai_api_key = "sk-..."
 #   enabled         = true
 #   open_to_testers = false
 # }
+
+# MP3 and M4A exports of recordings (5.6): build the ffmpeg layer first
+# (sh infra/scripts/build-encoder-layer.sh), then:
+# recording_encoder_enabled = true
