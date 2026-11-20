@@ -1,5 +1,6 @@
 import { EXAM_ACOUSTICS } from '../exam-acoustics';
 import { HALVES } from '../halves';
+import { HALVES_MORE } from '../halves-more';
 import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
@@ -11,7 +12,7 @@ import type { Translation } from './en';
 
 export const fr: Translation = {
   examAcoustics: EXAM_ACOUSTICS.fr,
-  halves: HALVES.fr,
+  halves: { ...HALVES.fr, ...HALVES_MORE.fr },
   captionLookup: CAPTION_LOOKUP.fr,
   examStages: EXAM_STAGES.fr,
   offlineLibrary: offlineLibrary.fr,
