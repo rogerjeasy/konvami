@@ -51,6 +51,7 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.radio import RadioService
 from konvami_api.domain.real_life import RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -128,6 +129,8 @@ from tests.fakes import (
     text_guard,
 )
 from tests.halves_fake import FakeBrain, InMemoryHalvesRepository, RecordingHalvesStarter
+from tests.radio_fake import FakeBrain as RadioBrain
+from tests.radio_fake import InMemoryRadioRepository, RecordingRadioStarter
 from tests.story_fake import InMemoryStoryRepository, RecordingStoryStarter
 from tests.video_avatars_fake import FakeVideoAvatarVendor, InMemoryVideoAvatarChoices
 from tests.vocabulary_fake import MemoryVocabularyRepository
@@ -374,6 +377,27 @@ def halves_brain(clock: FixedClock) -> FakeBrain:
 
 
 @pytest.fixture
+def radio_transcriber() -> ScriptedTranscriber:
+    """Writes down Radio Konvami calls."""
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
+def radio_starter() -> RecordingRadioStarter:
+    return RecordingRadioStarter()
+
+
+@pytest.fixture
+def radio_brain() -> RadioBrain:
+    return RadioBrain()
+
+
+@pytest.fixture
+def radio_store() -> InMemoryRadioRepository:
+    return InMemoryRadioRepository()
+
+
+@pytest.fixture
 def exam_starter() -> RecordingExamStarter:
     return RecordingExamStarter()
 
@@ -449,6 +473,10 @@ def services(
     halves_transcriber: ScriptedTranscriber,
     halves_starter: RecordingHalvesStarter,
     halves_brain: FakeBrain,
+    radio_transcriber: ScriptedTranscriber,
+    radio_starter: RecordingRadioStarter,
+    radio_brain: RadioBrain,
+    radio_store: InMemoryRadioRepository,
     plan_settings: PlanSettings,
     entitlement_store: InMemoryEntitlementRepository,
 ) -> Services:
@@ -940,6 +968,27 @@ def services(
             allowed=lambda _: True,
             owners=frozenset({UUID(OWNER)}),
             clock=clock,
+        ),
+        radio=RadioService(
+            profiles=profiles,
+            accounts=directory,
+            repository=radio_store,
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=radio_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            brain=radio_brain,
+            files=files,
+            starter=radio_starter,
+            enabled=True,
+            allowed=lambda _: True,
+            owners=frozenset({UUID(OWNER)}),
+            clock=clock,
+            save_card=lambda user, phrase, meaning, explained_in: cards.save_phrase(
+                user, phrase, meaning, explained_in
+            ),
         ),
         retries=retries,
         pronunciation=pronunciation,

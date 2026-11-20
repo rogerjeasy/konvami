@@ -75,6 +75,18 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "Ton coup dans Deux moitiés n’a pas été envoyé. Ouvre l’enquête pour voir pourquoi.",  # noqa: RUF001
         "it": "La tua mossa in Due metà non è stata inviata. Apri il caso per vedere perché.",
     },
+    "radio_aired": {
+        "en": "Your call is on Radio Konvami today. Have a listen!",
+        "de": "Dein Anruf läuft heute bei Radio Konvami. Hör mal rein!",
+        "fr": "Ton appel passe aujourd’hui sur Radio Konvami. Écoute !",  # noqa: RUF001
+        "it": "La tua chiamata va in onda oggi su Radio Konvami. Ascoltala!",
+    },
+    "radio_held": {
+        "en": "Your call to Radio Konvami wasn’t put through. Open it to see why.",  # noqa: RUF001
+        "de": "Dein Anruf bei Radio Konvami wurde nicht durchgestellt. Öffne ihn für den Grund.",
+        "fr": "Ton appel à Radio Konvami n’a pas été transmis. Ouvre-le pour voir pourquoi.",  # noqa: RUF001
+        "it": "La tua chiamata a Radio Konvami non è stata passata. Aprila per vedere perché.",
+    },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
         "de": "Wir haben lange nicht gesprochen. Hast du fünf Minuten?",
@@ -275,6 +287,17 @@ class PushService:
             "halves_held" if kind == "held" else "halves_move",
             APP_NAME,
             {"open": "halves", "id": str(case_id)},
+        )
+
+    def radio(self, user_id: UUID, item_id: UUID, kind: str) -> None:
+        """Radio Konvami: the learner's call aired in a show (`aired`, opens the show), or was
+        held (`held`, opens the call's private report)."""
+        aired = kind == "aired"
+        self._send(
+            self._repository.of(user_id),
+            "radio_aired" if aired else "radio_held",
+            APP_NAME,
+            {"open": "radio" if aired else "radio_call", "id": str(item_id)},
         )
 
     def nudge(self) -> int:

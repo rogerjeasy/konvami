@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 
 from konvami_api.domain.accounts import Account
+from konvami_api.domain.cards import Card
 from konvami_api.domain.halves import Correction
 from konvami_api.domain.radio import (
     AIR_HOUR,
@@ -35,6 +36,21 @@ AUDIO = b"\x00" * 4000
 MINUTE = dt.timedelta(minutes=1)
 # Before the show's hour on 9 October 2026 (the world's clock starts at noon).
 MORNING = dt.datetime(2026, 10, 9, 9, 0, tzinfo=dt.UTC)
+CARD = Card(
+    UUID(int=9),
+    "word",
+    "ich bin gegangen",
+    "",
+    None,
+    "fr",
+    None,
+    MORNING,
+    MORNING,
+    None,
+    None,
+    0,
+    0,
+)
 
 
 @dataclass
@@ -77,6 +93,11 @@ def show(*, allowed: bool = True, minors: tuple[UUID, ...] = ()) -> Show:
     )
     announced: list[tuple[UUID, UUID, str]] = []
     cards: list[tuple[UUID, str, str, str]] = []
+
+    def save(user: UUID, phrase: str, meaning: str, explained_in: str) -> Card:
+        cards.append((user, phrase, meaning, explained_in))
+        return CARD
+
     service = RadioService(
         profiles=world.profiles,
         accounts=world.accounts,
@@ -94,7 +115,7 @@ def show(*, allowed: bool = True, minors: tuple[UUID, ...] = ()) -> Show:
         allowed=lambda _: allowed,
         owners=frozenset({OTHER_USER}),
         clock=world.clock,
-        save_card=lambda *card: cards.append(card),
+        save_card=save,
         announce=lambda user, item, kind: announced.append((user, item, kind)),
         rng=random.Random(3),  # noqa: S311 - codenames and shuffles in a test
     )

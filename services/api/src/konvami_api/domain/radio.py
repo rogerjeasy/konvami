@@ -30,6 +30,7 @@ from typing import Literal, Protocol
 from uuid import UUID, uuid4
 
 from konvami_api.domain.accounts import AccountDirectory, AccountNotFound
+from konvami_api.domain.cards import Card
 from konvami_api.domain.costs import Feature
 from konvami_api.domain.halves import (
     REPORT_REASONS,
@@ -557,7 +558,7 @@ class RadioService:
         allowed: Callable[[UUID], bool],
         owners: frozenset[UUID],
         clock: Callable[[], dt.datetime],
-        save_card: Callable[[UUID, str, str, str], object] | None = None,
+        save_card: Callable[[UUID, str, str, str], Card] | None = None,
         affordable: Callable[[], bool] = lambda: True,
         announce: Callable[[UUID, UUID, str], None] = lambda *_: None,
         new_id: Callable[[], UUID] = uuid4,
@@ -1067,7 +1068,7 @@ class RadioService:
             correction.corrected,
         )
 
-    def save_card(self, user_id: UUID, call_id: UUID, index: int) -> object:
+    def save_card(self, user_id: UUID, call_id: UUID, index: int) -> Card:
         """Makes a card of a confirmed correction: the corrected words, and why."""
         call, correction = self._correction(user_id, call_id, index)
         if not correction.certain:

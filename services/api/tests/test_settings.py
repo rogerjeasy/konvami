@@ -10,6 +10,7 @@ from konvami_api.settings import (
     cost_settings,
     halves_settings,
     premium_voice_settings,
+    radio_settings,
     text_models,
     video_avatar_settings,
     voice_settings,
@@ -264,3 +265,11 @@ def test_two_halves_is_off_unless_turned_on() -> None:
     assert on == HalvesSettings(enabled=True, open_to_testers=True)
     with pytest.raises(RuntimeError, match="KONVAMI_HALVES"):
         halves_settings('{"enabled": "yes"}')
+
+
+def test_radio_konvami_is_off_unless_turned_on() -> None:
+    assert radio_settings(None) == HalvesSettings(enabled=False, open_to_testers=False)
+    on = radio_settings('{"enabled": true, "open_to_testers": false}')
+    assert on == HalvesSettings(enabled=True, open_to_testers=False)
+    with pytest.raises(RuntimeError, match="KONVAMI_RADIO"):
+        radio_settings('{"enabled": "yes"}')
