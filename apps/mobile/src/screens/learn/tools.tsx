@@ -23,9 +23,13 @@ const BLOB: Record<TileColor, { box: string; ink: ColorToken }> = {
 // The blob's side (pt), as on the prototype.
 const BLOB_SIZE = 50;
 
-/** Learn's tools, in the prototype's order: grammar, tutor, phrases, sounds, exams, material. */
+/**
+ * Learn's tools, in the prototype's order (grammar, tutor, phrases, sounds, exams, material),
+ * with the listening stories (5.29) and the commute drill (5.30) after the sounds.
+ */
 const TOOLS: readonly {
-  key: 'grammar' | 'tutor' | 'phrasebook' | 'pronunciation' | 'exams' | 'import';
+  key:
+    'grammar' | 'tutor' | 'phrasebook' | 'pronunciation' | 'stories' | 'drill' | 'exams' | 'import';
   icon: IconName;
   color: TileColor;
   href: Href;
@@ -34,6 +38,8 @@ const TOOLS: readonly {
   { key: 'tutor', icon: 'message', color: 'butter', href: ROUTES.tutor },
   { key: 'phrasebook', icon: 'book', color: 'tomato', href: ROUTES.phrasebook },
   { key: 'pronunciation', icon: 'volume', color: 'pink', href: ROUTES.pronunciation },
+  { key: 'stories', icon: 'play', color: 'pink', href: ROUTES.stories },
+  { key: 'drill', icon: 'compass', color: 'tomato', href: ROUTES.drill },
   { key: 'exams', icon: 'award', color: 'ink', href: ROUTES.exams },
   { key: 'import', icon: 'file', color: 'card', href: ROUTES.import },
 ];
