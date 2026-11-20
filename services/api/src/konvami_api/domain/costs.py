@@ -77,6 +77,11 @@ class Feature(StrEnum):
     PEN_PAL_AUDIO = "pen_pal_audio"
     PEN_PAL_LISTEN = "pen_pal_listen"
 
+    # Listening stories (5.29): an episode's text, its sound, and a spoken answer written down.
+    STORY = "story"
+    STORY_AUDIO = "story_audio"
+    STORY_LISTEN = "story_listen"
+
 
 @dataclass(frozen=True)
 class Charge:
