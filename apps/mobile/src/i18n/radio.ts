@@ -173,7 +173,7 @@ const en = {
     consentBody:
       'Only calls that pass the check are aired, for 30 days at most. There’s no download, but a screen recording can’t be prevented.',
     minor:
-      'Your calls stay private practice: you hear the show and get your own corrections, but your calls are never aired.',
+      'Under 18? Your calls stay private practice: you hear the show and get your own corrections, but your calls are never aired.',
     veil: 'Veil my voice by default',
     veilHint: 'A neutral voice reads your exact words. Listeners don’t hear your own voice.',
     start: 'Join the show',
@@ -400,7 +400,7 @@ const de: RadioStrings = {
     consentBody:
       'Nur geprüfte Anrufe laufen in der Sendung, höchstens 30 Tage lang. Herunterladen geht nicht, eine Bildschirmaufnahme lässt sich aber nicht verhindern.',
     minor:
-      'Deine Anrufe bleiben private Übung: Du hörst die Sendung und bekommst deine eigenen Korrekturen, aber deine Anrufe laufen nie in der Sendung.',
+      'Unter 18? Deine Anrufe bleiben private Übung: Du hörst die Sendung und bekommst deine eigenen Korrekturen, aber deine Anrufe laufen nie in der Sendung.',
     veil: 'Meine Stimme standardmäßig verschleiern',
     veilHint: 'Eine neutrale Stimme liest deine genauen Worte. Man hört nicht deine eigene Stimme.',
     start: 'Mitmachen',
@@ -624,7 +624,7 @@ const fr: RadioStrings = {
     consentBody:
       'Seuls les appels vérifiés passent à l’antenne, 30 jours au maximum. Pas de téléchargement, mais un enregistrement d’écran ne peut pas être empêché.',
     minor:
-      'Tes appels restent un entraînement privé : tu écoutes l’émission et reçois tes corrections, mais tes appels ne passent jamais à l’antenne.',
+      'Moins de 18 ans ? Tes appels restent un entraînement privé : tu écoutes l’émission et reçois tes corrections, mais tes appels ne passent jamais à l’antenne.',
     veil: 'Voiler ma voix par défaut',
     veilHint: 'Une voix neutre lit tes mots exacts. On n’entend pas ta propre voix.',
     start: 'Participer',
@@ -847,7 +847,7 @@ const it: RadioStrings = {
     consentBody:
       'Vanno in onda solo le chiamate controllate, per al massimo 30 giorni. Non si possono scaricare, ma una registrazione dello schermo non si può impedire.',
     minor:
-      'Le tue chiamate restano esercizio privato: ascolti il programma e ricevi le tue correzioni, ma le tue chiamate non vanno mai in onda.',
+      'Meno di 18 anni? Le tue chiamate restano esercizio privato: ascolti il programma e ricevi le tue correzioni, ma le tue chiamate non vanno mai in onda.',
     veil: 'Vela la mia voce di default',
     veilHint: 'Una voce neutra legge le tue parole esatte. Non si sente la tua voce.',
     start: 'Partecipa',
