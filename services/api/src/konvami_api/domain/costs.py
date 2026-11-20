@@ -76,6 +76,8 @@ class Feature(StrEnum):
     PEN_PAL = "pen_pal"
     PEN_PAL_AUDIO = "pen_pal_audio"
     PEN_PAL_LISTEN = "pen_pal_listen"
+    # The Coach's suggestions worded for the learner (spec §6.12, `coach.py`).
+    COACH = "coach"
 
 
 @dataclass(frozen=True)
