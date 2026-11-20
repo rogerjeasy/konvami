@@ -14,6 +14,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from konvami_api.api.auth import CurrentUser, recently_signed_in
 from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
+from konvami_api.api.halves import halves_router
 from konvami_api.api.public import public_router
 from konvami_api.api.schemas import (
     AccountDeletedOut,
@@ -154,6 +155,7 @@ from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService, FeedbackStatus
 from konvami_api.domain.flags import FlagService, FlagStatus
 from konvami_api.domain.grammar_map import GrammarMapService
+from konvami_api.domain.halves import HalvesError, HalvesService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
@@ -229,6 +231,8 @@ class Services:
     pronunciation: PronunciationService
 
     pen_pal: PenPalService
+    # Two Halves (section 7).
+    halves: HalvesService
 
     feedback: FeedbackService
 
@@ -1335,6 +1339,9 @@ def _deletion_router(services: Services) -> APIRouter:
         services.accounts.delete(user)
         return AccountDeletedOut()
 
+    router.include_router(
+        halves_router(lambda: services.halves, lambda move: recorded(move, HalvesError))
+    )
     return router
 
 

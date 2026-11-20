@@ -24,6 +24,7 @@ from konvami_api.domain.exports import DataExportService
 from konvami_api.domain.feedback import FeedbackService
 from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
+from konvami_api.domain.halves import HalvesService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -116,6 +117,7 @@ from tests.fakes import (
     ScriptedTranscriber,
     text_guard,
 )
+from tests.halves_fake import FakeBrain, InMemoryHalvesRepository, RecordingHalvesStarter
 from tests.video_avatars_fake import FakeVideoAvatarVendor, InMemoryVideoAvatarChoices
 from tests.vocabulary_fake import MemoryVocabularyRepository
 
@@ -334,6 +336,22 @@ def pen_pal_starter() -> RecordingPenPalStarter:
 
 
 @pytest.fixture
+def halves_transcriber() -> ScriptedTranscriber:
+    """Writes down Two Halves moves."""
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
+def halves_starter() -> RecordingHalvesStarter:
+    return RecordingHalvesStarter()
+
+
+@pytest.fixture
+def halves_brain(clock: FixedClock) -> FakeBrain:
+    return FakeBrain(clock)
+
+
+@pytest.fixture
 def exam_starter() -> RecordingExamStarter:
     return RecordingExamStarter()
 
@@ -392,6 +410,9 @@ def services(
     exam_starter: RecordingExamStarter,
     pen_pal_transcriber: ScriptedTranscriber,
     pen_pal_starter: RecordingPenPalStarter,
+    halves_transcriber: ScriptedTranscriber,
+    halves_starter: RecordingHalvesStarter,
+    halves_brain: FakeBrain,
     plan_settings: PlanSettings,
     entitlement_store: InMemoryEntitlementRepository,
 ) -> Services:
@@ -771,6 +792,25 @@ def services(
             announce=lambda user_id, persona_id, reply: push.pen_pal(
                 user_id, persona_id, reply=reply
             ),
+        ),
+        halves=HalvesService(
+            profiles=profiles,
+            personas=personas,
+            accounts=directory,
+            repository=InMemoryHalvesRepository(),
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=halves_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            brain=halves_brain,
+            files=files,
+            starter=halves_starter,
+            enabled=True,
+            allowed=lambda _: True,
+            owners=frozenset({UUID(OWNER)}),
+            clock=clock,
         ),
         retries=RetryService(
             reports=reports,
