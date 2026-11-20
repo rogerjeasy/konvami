@@ -292,6 +292,18 @@ def test_the_worker_scores_an_exam_simulation_when_that_is_what_it_is_started_fo
     stub.assert_no_pending_responses()
 
 
+def test_the_worker_writes_a_story_episode_when_that_is_what_it_is_started_for(
+    stub: Stubber,
+) -> None:
+    """Asked to write an episode, it reads it (here: none), and asks no model (5.29)."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"story": "00000000-0000-4000-8000-000000000001"})
+
+    stub.assert_no_pending_responses()
+
+
 def test_the_worker_nudges_quiet_learners_when_the_schedule_starts_it(stub: Stubber) -> None:
     """Started by the hourly schedule, it reads the registered phones (here: none) and sends
     nothing. The pen-pals write only where a text model is named, as here they are not."""

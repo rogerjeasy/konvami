@@ -140,6 +140,9 @@ from konvami_api.domain.reminders import ReminderNotes
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
 from konvami_api.domain.retries import Retried
+from konvami_api.domain.stories import MAX_PER_DAY as MAX_STORIES_PER_DAY
+from konvami_api.domain.stories import EpisodeView, Series, StoryAnswer
+from konvami_api.domain.stories import Status as StoryStatus
 from konvami_api.domain.then_vs_now import ThenVsNow
 from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
 from konvami_api.domain.tutor import Source as TutorSource
@@ -423,7 +426,7 @@ class VoiceCallIn(ApiModel):
     scenario: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
     # A practice call that practises a grammar topic first (a topic id from the grammar map),
     # or "words": a review conversation built around the learner's due words, or
-    # "lesson:<topic>": a guided lesson on that topic.
+    # "lesson:<topic>": a guided lesson on that topic, or "drill": a hands-free drill (5.30).
     practise: str | None = Field(default=None, max_length=MAX_SCENARIO_ID)
 
 
@@ -449,6 +452,10 @@ class CallPlanOut(ApiModel):
     material: str | None
     # The conversation rehearses the reply or phone call a letter asks for.
     rehearse: bool
+    # A hands-free drill (5.30): the words and the learner's corrected sentences are drilled.
+    drill: bool = False
+    # How many of the learner's own corrected sentences a drill brings back.
+    polish: int = 0
 
     @classmethod
     def of(cls, plan: SessionPlan) -> "CallPlanOut":
@@ -460,6 +467,8 @@ class CallPlanOut(ApiModel):
             lesson=plan.lesson is not None,
             material=plan.material.title if plan.material else None,
             rehearse=plan.material.rehearse if plan.material else False,
+            drill=plan.drill is not None,
+            polish=len(plan.drill.polish) if plan.drill else 0,
         )
 
 
@@ -2910,6 +2919,122 @@ class PenPalReplyOut(ApiModel):
 
     heard: PenPalNoteOut
     answer: PenPalNoteOut
+
+
+class StoryIn(ApiModel):
+    """Who tells the next episode: one or two of the learner's partners; empty for the series'
+    own cast."""
+
+    cast: list[UUID] = Field(default_factory=list, max_length=2)
+
+
+class StoryLineOut(ApiModel):
+    # 0 the episode's first character, 1 the second.
+    speaker: int
+    text: str
+    # A short-lived address of the line's sound; null without one.
+    audio_url: str | None
+
+
+class StoryQuestionOut(ApiModel):
+    question: str
+    # The right answer is shown once the question was answered.
+    answer: str
+
+
+class StoryAnswerOut(ApiModel):
+    question: int
+    # What the learner said, word for word.
+    heard: str
+    right: bool
+
+    @classmethod
+    def of(cls, answer: StoryAnswer) -> "StoryAnswerOut":
+        return cls(question=answer.question, heard=answer.heard, right=answer.right)
+
+
+class StoryEpisodeOut(ApiModel):
+    id: UUID
+    number: int
+    status: StoryStatus
+    title: str
+    # The partners who tell it, and their names, in the same order.
+    cast: list[UUID]
+    names: list[str]
+    lines: list[StoryLineOut]
+    questions: list[StoryQuestionOut]
+    # The learner's words the episode uses.
+    words: list[str]
+    listened: bool
+    answers: list[StoryAnswerOut]
+    created_at: dt.datetime
+
+    @classmethod
+    def of(cls, view: EpisodeView) -> "StoryEpisodeOut":
+        episode = view.episode
+        return cls(
+            id=episode.id,
+            number=episode.number,
+            status=episode.status,
+            title=episode.title,
+            cast=list(episode.cast),
+            names=list(view.names),
+            lines=[
+                StoryLineOut(
+                    speaker=line.speaker,
+                    text=line.text,
+                    audio_url=view.addresses[index] if index < len(view.addresses) else None,
+                )
+                for index, line in enumerate(episode.lines)
+            ],
+            questions=[
+                StoryQuestionOut(question=q.question, answer=q.answer) for q in episode.questions
+            ],
+            words=list(episode.words),
+            listened=episode.listened_at is not None,
+            answers=[StoryAnswerOut.of(answer) for answer in episode.answers],
+            created_at=episode.created_at,
+        )
+
+
+class StorySummaryOut(ApiModel):
+    """An episode in the series' list, without its lines."""
+
+    id: UUID
+    number: int
+    status: StoryStatus
+    title: str
+    names: list[str]
+    listened: bool
+    created_at: dt.datetime
+
+
+class StorySeriesOut(ApiModel):
+    # The newest first.
+    episodes: list[StorySummaryOut]
+    left_today: int
+    per_day: int
+    available: bool
+
+    @classmethod
+    def of(cls, series: Series) -> "StorySeriesOut":
+        return cls(
+            episodes=[
+                StorySummaryOut(
+                    id=episode.id,
+                    number=episode.number,
+                    status=episode.status,
+                    title=episode.title,
+                    names=[series.names.get(persona_id, "") for persona_id in episode.cast],
+                    listened=episode.listened_at is not None,
+                    created_at=episode.created_at,
+                )
+                for episode in series.episodes
+            ],
+            left_today=series.left_today,
+            per_day=MAX_STORIES_PER_DAY,
+            available=series.available,
+        )
 
 
 class FlagResolution(ApiModel):

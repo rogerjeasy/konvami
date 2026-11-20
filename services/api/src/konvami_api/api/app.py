@@ -121,6 +121,10 @@ from konvami_api.api.schemas import (
     SoundsOut,
     SoundSummaryOut,
     SpeakingExamOut,
+    StoryAnswerOut,
+    StoryEpisodeOut,
+    StoryIn,
+    StorySeriesOut,
     ThenVsNowOut,
     TranscriptOut,
     TutorCorrectionIn,
@@ -174,6 +178,7 @@ from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
+from konvami_api.domain.stories import StoryError, StoryService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.video_avatars import VideoAvatarService
@@ -229,6 +234,7 @@ class Services:
     pronunciation: PronunciationService
 
     pen_pal: PenPalService
+    stories: StoryService
 
     feedback: FeedbackService
 
@@ -251,6 +257,7 @@ CALL_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409
 RETRY_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 422, 429, 503)}
 ANSWER_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 422, 429, 503)}
 PEN_PAL_REFUSED: Responses = ANSWER_REFUSED
+STORY_REFUSED: Responses = {code: {"model": ErrorBody} for code in (403, 404, 409, 422, 429, 503)}
 LIMITED: Responses = {429: {"model": ErrorBody}}
 UNAVAILABLE: Responses = {503: {"model": ErrorBody}}
 # An IANA time zone name is at most a few dozen characters ("America/Argentina/ComodRivadavia").
@@ -950,6 +957,44 @@ def _router(services: Services) -> APIRouter:
     def retry_pen_pal_note(user: CurrentUser, note_id: UUID) -> PenPalNoteOut:
         """Has a note or an answer that failed written again (three attempts in all)."""
         return PenPalNoteOut.of(services.pen_pal.retry(user, note_id))
+
+    @router.get("/stories", operation_id="getStories")
+    def get_stories(user: CurrentUser) -> StorySeriesOut:
+        """The learner's listening series (5.29): its episodes, the newest first."""
+        return StorySeriesOut.of(services.stories.series(user))
+
+    @router.post("/stories", operation_id="makeStory", responses=STORY_REFUSED)
+    def make_story(user: CurrentUser, wanted: StoryIn) -> StoryEpisodeOut:
+        """Asks for the next episode, told by one or two partners. It is written in the
+        background: the episode is pending until it is ready."""
+        episode = services.stories.make(user, wanted.cast)
+        return StoryEpisodeOut.of(services.stories.episode(user, episode.id))
+
+    @router.get("/stories/{episode_id}", operation_id="getStory", responses=NOT_FOUND)
+    def get_story(user: CurrentUser, episode_id: UUID) -> StoryEpisodeOut:
+        """One episode, with an address to play each line."""
+        return StoryEpisodeOut.of(services.stories.episode(user, episode_id))
+
+    @router.post(
+        "/stories/{episode_id}/listened", operation_id="listenedToStory", responses=NOT_FOUND
+    )
+    def listened_to_story(user: CurrentUser, episode_id: UUID) -> StoryEpisodeOut:
+        """The learner listened to the end: the episode's words count as heard."""
+        return StoryEpisodeOut.of(services.stories.listened(user, episode_id))
+
+    @router.post(
+        "/stories/{episode_id}/answers/{question}",
+        operation_id="answerStoryQuestion",
+        responses=STORY_REFUSED,
+    )
+    def answer_story_question(
+        user: CurrentUser, episode_id: UUID, question: int, recording: RecordingIn
+    ) -> StoryAnswerOut:
+        """A question about the episode answered out loud, written down and checked."""
+        audio, seconds = recorded(recording, StoryError)
+        return StoryAnswerOut.of(
+            services.stories.answer(user, episode_id, question, audio, recording.format, seconds)
+        )
 
     @router.post("/feedback", operation_id="sendFeedback", responses=LIMITED)
     def send_feedback(user: CurrentUser, message: FeedbackIn) -> FeedbackOut:

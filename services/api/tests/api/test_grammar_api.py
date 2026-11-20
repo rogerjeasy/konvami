@@ -167,6 +167,28 @@ def test_a_practice_call_can_be_a_review_of_the_words_due(
     assert response.body["plan"]["focus"] == []
 
 
+def test_a_practice_call_can_be_a_hands_free_drill(
+    call: Call,
+    text_model: ScriptedTextModel,
+    calls: InMemoryVoiceSessionRepository,
+    services: Services,
+) -> None:
+    lena = reported(call, text_model, calls, services)
+
+    response = call(
+        "POST",
+        "/v1/voice/calls",
+        {"purpose": "practice", "sdp": "v=0 offer", "personaId": lena["id"], "practise": "drill"},
+    )
+
+    assert response.status == 200
+    plan = response.body["plan"]
+    assert plan["drill"] is True
+    assert plan["review"] is False
+    assert plan["focus"] == []
+    assert plan["polish"] >= 0
+
+
 def test_a_topic_the_language_does_not_have_cannot_be_practised(
     call: Call, text_model: ScriptedTextModel
 ) -> None:

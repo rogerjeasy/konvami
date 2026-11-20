@@ -518,6 +518,8 @@ def test_a_practice_call_starts_with_the_chosen_partner(
             "lesson": False,
             "material": None,
             "rehearse": False,
+            "drill": False,
+            "polish": 0,
         },
     }
     session = voice_provider.created[0][1]
