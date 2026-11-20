@@ -81,6 +81,19 @@ class ImportMaterial:
 
 
 @dataclass(frozen=True)
+class DebriefMaterial:
+    """Something that happened in the learner's life, to talk over afterwards (a debrief, spec
+    §7 signature feature "rehearse, then debrief"): an event the partners wrote down."""
+
+    # The event memory's id as 32 hex digits.
+    memory_id: str
+    # The memory's words, in the learner's explanation language: untrusted text.
+    text: str
+    # Its day (ISO), when it has one.
+    day: str | None = None
+
+
+@dataclass(frozen=True)
 class SessionPlan:
     # The language practised (an ISO 639-1 code): what the words are in.
     language: str = ""
@@ -94,6 +107,8 @@ class SessionPlan:
     lesson: LessonMaterial | None = None
     # Something the learner imported (spec §6.17): the conversation is about it.
     material: ImportMaterial | None = None
+    # An event of the learner's life that has happened: the conversation talks it over.
+    debrief: DebriefMaterial | None = None
 
     def document(self) -> dict[str, Any]:
         """The plan as JSON, as it is stored with the call."""
@@ -149,6 +164,15 @@ class SessionPlan:
                     "rehearse": self.material.rehearse,
                 }
                 if self.material
+                else None
+            ),
+            "debrief": (
+                {
+                    "memory_id": self.debrief.memory_id,
+                    "text": self.debrief.text,
+                    "day": self.debrief.day,
+                }
+                if self.debrief
                 else None
             ),
         }
@@ -207,6 +231,13 @@ class SessionPlan:
                     rehearse=material.get("rehearse", False),
                 )
                 if (material := document.get("material"))
+                else None
+            ),
+            debrief=(
+                DebriefMaterial(
+                    memory_id=debrief["memory_id"], text=debrief["text"], day=debrief.get("day")
+                )
+                if (debrief := document.get("debrief"))
                 else None
             ),
         )

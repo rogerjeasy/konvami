@@ -47,6 +47,7 @@ from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile
 from konvami_api.domain.profile_questions import QuestionState, QuestionStatus
 from konvami_api.domain.pronunciation import CLEARED_AFTER, ProblemWord
 from konvami_api.domain.push import PushDevice, PushError, PushMessage
+from konvami_api.domain.real_life import OwnScenario
 from konvami_api.domain.reports import (
     Report,
     ReportEntry,
@@ -418,6 +419,14 @@ class InMemoryConversationRepository:
                     scenario=session.scenario,
                     goals_reached=self._calls.goals.get(session.call_id, ()),
                     review=session.plan.review if session.plan else False,
+                    debrief_of=(
+                        UUID(hex=session.plan.debrief.memory_id)
+                        if session.plan and session.plan.debrief
+                        else None
+                    ),
+                    debrief=session.plan.debrief.text
+                    if session.plan and session.plan.debrief
+                    else None,
                     guest_id=session.guest_persona_id,
                 )
             )
@@ -677,6 +686,46 @@ class InMemoryPhraseRepository:
 
     def known(self, user_id: UUID, language: str, keys: Sequence[str]) -> set[str]:
         return {key for key in keys if (user_id, language, key) in self.phrases}
+
+
+class InMemoryOwnScenarioRepository:
+    def __init__(self) -> None:
+        self.scenarios: dict[UUID, tuple[UUID, OwnScenario]] = {}
+
+    def add(self, user_id: UUID, scenario: OwnScenario, limit: int) -> bool:
+        mine = [s for u, s in self.scenarios.values() if u == user_id]
+        if len([s for s in mine if s.language == scenario.language]) >= limit:
+            return False
+        if scenario.memory_id is not None and any(s.memory_id == scenario.memory_id for s in mine):
+            return False
+        self.scenarios[scenario.id] = (user_id, scenario)
+        return True
+
+    def get(self, user_id: UUID, scenario_id: UUID) -> OwnScenario | None:
+        found = self.scenarios.get(scenario_id)
+        return found[1] if found and found[0] == user_id else None
+
+    def listed(self, user_id: UUID, language: str) -> list[OwnScenario]:
+        mine = [s for u, s in self.scenarios.values() if u == user_id and s.language == language]
+        return sorted(mine, key=lambda s: (s.updated_at, str(s.id)), reverse=True)
+
+    def by_memory(self, user_id: UUID, memory_id: UUID) -> OwnScenario | None:
+        return next(
+            (s for u, s in self.scenarios.values() if u == user_id and s.memory_id == memory_id),
+            None,
+        )
+
+    def replace(self, user_id: UUID, scenario: OwnScenario) -> bool:
+        if self.get(user_id, scenario.id) is None:
+            return False
+        self.scenarios[scenario.id] = (user_id, scenario)
+        return True
+
+    def remove(self, user_id: UUID, scenario_id: UUID) -> bool:
+        if self.get(user_id, scenario_id) is None:
+            return False
+        del self.scenarios[scenario_id]
+        return True
 
 
 class InMemoryImportRepository:

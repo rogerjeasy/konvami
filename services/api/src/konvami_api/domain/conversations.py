@@ -46,6 +46,9 @@ class Conversation:
     goals_reached: tuple[str, ...] = ()
     # A review conversation (spec §6.7): one built around the learner's due words.
     review: bool = False
+    # A debrief (`real_life.py`): the event memory it talked over, and its words.
+    debrief_of: UUID | None = None
+    debrief: str | None = None
     # The second partner of a two-partner conversation; None for one with one partner, and
     # once the second partner has been removed.
     guest_id: UUID | None = None
