@@ -81,6 +81,15 @@ class ImportMaterial:
 
 
 @dataclass(frozen=True)
+class DrillMaterial:
+    """A hands-free drill (5.30): rounds of prompt, answer and recast over the plan's words and
+    sentences the learner said that a report corrected, for a learner walking or commuting."""
+
+    # What the learner said and its confirmed correction, from their recent reports.
+    polish: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
 class SessionPlan:
     # The language practised (an ISO 639-1 code): what the words are in.
     language: str = ""
@@ -94,6 +103,8 @@ class SessionPlan:
     lesson: LessonMaterial | None = None
     # Something the learner imported (spec §6.17): the conversation is about it.
     material: ImportMaterial | None = None
+    # A hands-free drill (5.30): the words and corrections are drilled, not talked about.
+    drill: DrillMaterial | None = None
 
     def document(self) -> dict[str, Any]:
         """The plan as JSON, as it is stored with the call."""
@@ -151,6 +162,9 @@ class SessionPlan:
                 if self.material
                 else None
             ),
+            "drill": (
+                {"polish": [list(pair) for pair in self.drill.polish]} if self.drill else None
+            ),
         }
 
     @classmethod
@@ -207,6 +221,13 @@ class SessionPlan:
                     rehearse=material.get("rehearse", False),
                 )
                 if (material := document.get("material"))
+                else None
+            ),
+            drill=(
+                DrillMaterial(
+                    polish=tuple((said, better) for said, better in drill.get("polish", []))
+                )
+                if (drill := document.get("drill")) is not None
                 else None
             ),
         )
