@@ -200,6 +200,12 @@ class InMemoryHalvesRepository:
     def held_nudges(self, limit: int) -> list[Nudge]:
         return [n for n in self.nudges.values() if n.status == "held"][:limit]
 
+    def delete_nudges_by(self, user_id: UUID) -> None:
+        for key in [
+            k for k, n in self.nudges.items() if n.user_id == user_id and n.status != "held"
+        ]:
+            del self.nudges[key]
+
     def stale_nudges(self, before: dt.datetime, limit: int) -> list[Nudge]:
         return [
             n for n in self.nudges.values() if n.status == "checking" and n.created_at < before

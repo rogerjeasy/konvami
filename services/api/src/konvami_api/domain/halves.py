@@ -591,6 +591,9 @@ class HalvesRepository(Protocol):
 
     def held_nudges(self, limit: int) -> list[Nudge]: ...
 
+    def delete_nudges_by(self, user_id: UUID) -> None:
+        """Deletes the nudges the learner wrote, except held ones: the owner decides those."""
+
     def stale_nudges(self, before: dt.datetime, limit: int) -> list[Nudge]:
         """Nudges still being checked that were made before `before`."""
 
@@ -946,6 +949,55 @@ def heard_first(case: Case, moves: Sequence[Move], seat: Seat) -> tuple[int, int
     return understood, told
 
 
+# A nudge is a rewording: at least this share of its words were in the move.
+NUDGE_OVERLAP = 0.5
+_LINKISH = ("@", "http", "www", ".com", ".ch", ".de", ".fr", ".it", "://")
+# Words that name a way to reach someone outside the game.
+_SOCIAL = frozenset(
+    {
+        "insta",
+        "instagram",
+        "snap",
+        "snapchat",
+        "tiktok",
+        "whatsapp",
+        "telegram",
+        "signal",
+        "discord",
+    }
+)
+
+
+def rewording_problem(text: str, transcript: str, language: str) -> str | None:
+    """Why a nudge is not a close rewording of the move, or None. Checked in code before the
+    verifier may pass it, so a model's verdict alone never lets a stranger's text through:
+    enough words of the move, and no new digits, names, handles, links or contact details."""
+    if local_problem(text) is not None:
+        return "contact"
+    plain = text.casefold()
+    if any(mark in plain for mark in _LINKISH):
+        return "contact"
+    said = set(words_in(transcript))
+    words = words_in(text)
+    if any(word in _SOCIAL for word in words):
+        return "contact"
+    if not words:
+        return "not_rewording"
+    if sum(1 for word in words if word in said) / len(words) < NUDGE_OVERLAP:
+        return "not_rewording"
+    # Every digit of a nudge was in the move: a new number is a phone, an age or an address.
+    digits_said = {w for w in said if any(ch.isdigit() for ch in w)}
+    if any(any(ch.isdigit() for ch in w) and w not in digits_said for w in words):
+        return "new_detail"
+    # A new capitalised word is a name, except in German, where every noun has a capital.
+    if language != "de":
+        for raw in text.split()[1:]:
+            word = "".join(ch for ch in raw if ch.isalpha())
+            if word[:1].isupper() and word.casefold() not in said:
+                return "new_detail"
+    return None
+
+
 def same_language(case: Case) -> bool:
     return case.seats[0].speaks == case.seats[1].speaks
 
@@ -1193,6 +1245,10 @@ class HalvesService:
             raise HalvesError("invalid_value")
         current = self._repository.profile(user_id)
         now = self._clock()
+        # The owner's record outlives the profile: leaving and joining again lifts nothing.
+        record = self._repository.strikes_of(user_id)
+        strikes = sum(1 for s in record if s.kind == "strike")
+        suspended = strikes >= STRIKES_TO_SUSPEND or any(s.kind == "suspension" for s in record)
         profile = Profile(
             user_id=user_id,
             codename=current.codename if current else self._codename(),
@@ -1203,8 +1259,8 @@ class HalvesService:
             paused=current.paused if current else False,
             consent_version=VOICE_CONSENT_VERSION,
             consent_at=current.consent_at if current else now,
-            strikes=current.strikes if current else 0,
-            suspended=current.suspended if current else False,
+            strikes=max(current.strikes if current else 0, strikes),
+            suspended=(current.suspended if current else False) or suspended,
         )
         self._repository.save_profile(profile)
         return profile
@@ -1265,6 +1321,7 @@ class HalvesService:
         for duo in self._repository.duos_of(user_id):
             self._repository.remove_duo(user_id, duo.other(user_id))
         self._repository.delete_ticket(user_id)
+        self._repository.delete_nudges_by(user_id)
         self._repository.delete_profile(user_id)
 
     def _forget(self, move: Move, status: MoveStatus) -> None:
@@ -1273,7 +1330,13 @@ class HalvesService:
                 self._files.remove(key)
         self._repository.save_move(
             replace(
-                move, status=status, transcript="", audio_key=None, veil_key=None, corrections=()
+                move,
+                status=status,
+                transcript="",
+                audio_key=None,
+                veil_key=None,
+                corrections=(),
+                bridge={},
             )
         )
 
@@ -1845,8 +1908,14 @@ class HalvesService:
         if problem is not None:
             self._repository.save_nudge(replace(attempt, status="held", reason=problem))
             return
+        language = case.seat(move.seat).speaks
+        off = rewording_problem(nudge.text, move.transcript, language)
+        if off is not None:
+            # Not a close rewording: the owner sees it, the speaker never does.
+            self._repository.save_nudge(replace(attempt, status="held", reason=off))
+            return
         self._repository.save_nudge(attempt)
-        verdict = self._brain.verify_nudge(attempt, move, case.seat(move.seat).speaks)
+        verdict = self._brain.verify_nudge(attempt, move, language)
         if verdict is None:
             if attempt.attempts >= NUDGE_ATTEMPTS:
                 self._repository.save_nudge(
@@ -1942,7 +2011,7 @@ class HalvesService:
         if text is not None and len(text) > REPORT_NOTE_MAX:
             raise HalvesError("invalid_value")
         move, case, _ = self._theirs(user_id, move_id)
-        self._repository.save_move(replace(move, hidden=True))
+        self._repository.save_move(replace(move, hidden=True, bridge={}))
         if move.user_id is not None:
             self._repository.add_report(
                 Report(self._new_id(), user_id, move.id, reason, text, "open", self._clock())
@@ -2427,6 +2496,8 @@ class HalvesService:
             if theirs_move is not None:
                 their_clue = found.clue(theirs_move.seat, round_number)
                 settled = _settled(theirs_move, their_clue.answer)
+                # Words derived from a move go when the move's words go.
+                shown_bridge = bridged and not theirs_move.hidden and bool(theirs_move.transcript)
                 theirs = TheirsView(
                     id=theirs_move.id,
                     hidden=theirs_move.hidden,
@@ -2441,8 +2512,8 @@ class HalvesService:
                         n.user_id == user_id for n in self._repository.nudges_of(theirs_move.id)
                     ),
                     bridge=bridged,
-                    simpler=theirs_move.bridge.get("simpler") if bridged else None,
-                    gist=theirs_move.bridge.get("gist") if bridged else None,
+                    simpler=theirs_move.bridge.get("simpler") if shown_bridge else None,
+                    gist=theirs_move.bridge.get("gist") if shown_bridge else None,
                 )
             # A clue is shown for the round being played and the ones before.
             shown = round_number <= (record_round or ROUNDS) or mine is not None
@@ -2496,9 +2567,10 @@ class HalvesService:
     def _passed_nudges(self, move_id: UUID) -> tuple[NudgeView, ...]:
         views: list[NudgeView] = []
         for nudge in self._repository.nudges_of(move_id):
-            if nudge.status == "passed":
-                known = self._repository.profile(nudge.user_id)
-                views.append(NudgeView(nudge.text, known.codename if known else ""))
+            known = self._repository.profile(nudge.user_id)
+            # A nudge whose author left Two Halves is not shown any more.
+            if nudge.status == "passed" and known is not None:
+                views.append(NudgeView(nudge.text, known.codename))
         return tuple(views)
 
     # --- The briefing (7.5)

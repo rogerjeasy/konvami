@@ -244,6 +244,19 @@ def test_a_nudge_is_kept_once_a_move_and_found_by_state(store: HalvesRepository)
     assert store.stale_nudges(NOON + timedelta(minutes=6), 10) == []
 
 
+def test_leaving_deletes_a_learners_nudges_but_not_held_ones(store: HalvesRepository) -> None:
+    store.save_case(case())
+    store.save_move(move())
+    store.save_move(move(id=CASE))
+    passed = Nudge(MOVE, MOVE, OTHER, "um 14:20 Uhr", "passed", NOON)
+    held = Nudge(USER, CASE, OTHER, "lena@example.com", "held", NOON)
+    store.add_nudge(passed)
+    store.add_nudge(held)
+    store.delete_nudges_by(OTHER)
+    assert store.nudges_of(MOVE) == []
+    assert store.held_nudges(10) == [held]
+
+
 def test_strikes_and_the_owners_numbers(store: HalvesRepository) -> None:
     store.save_profile(profile())
     store.save_case(case())

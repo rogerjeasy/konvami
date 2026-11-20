@@ -748,6 +748,12 @@ class SqlHalvesRepository:
         )
         return [_nudge(row) for row in rows]
 
+    def delete_nudges_by(self, user_id: UUID) -> None:
+        self._client.execute(
+            "DELETE FROM halves_nudge WHERE user_id = CAST(:user_id AS uuid) AND status <> 'held'",
+            {"user_id": str(user_id)},
+        )
+
     def stale_nudges(self, before: dt.datetime, limit: int) -> list[Nudge]:
         rows = self._client.execute(
             f"{_NUDGE} WHERE status = 'checking' AND created_at < CAST(:before AS timestamptz) "

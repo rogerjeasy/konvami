@@ -14,6 +14,7 @@ from konvami_api.domain.halves import (
     IMPORT_CASES_PER_DAY,
     HalvesError,
     Move,
+    rewording_problem,
 )
 from konvami_api.domain.halves_cases import template
 from konvami_api.domain.halves_writer import CaseMaterial
@@ -421,3 +422,94 @@ def test_cases_from_imports_are_limited_a_day() -> None:
         g.store.save_case(replace(found, status="solved"))
     with pytest.raises(HalvesError, match="limit"):
         g.service.play_import(USER, IMPORT)
+
+
+# --- Security review (2026-11-20) ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "language", "problem"),
+    [
+        ("um 14:20 Uhr", "de", None),
+        ("Ein Schaffner sah um 14 Uhr 20 den Kasten", "de", None),
+        ("Treffen wir uns heute Abend?", "de", "not_rewording"),
+        ("um 14 Uhr 20, ruf 0791234567", "de", "new_detail"),
+        ("um 14 Uhr 20 insta lena_99", "de", "contact"),
+        ("um 14 Uhr 20 www.lena.ch", "de", "contact"),
+        ("Le contrôleur a vu Marc à 14 h 20", "fr", "new_detail"),
+    ],
+)
+def test_a_nudge_must_be_a_close_rewording_in_code(
+    text: str, language: str, problem: str | None
+) -> None:
+    said = (
+        "Ein Schaffner hat um 14 Uhr 20 einen Kasten gesehen"
+        if language == "de"
+        else "Le contrôleur a vu une housse à 14 h 20"
+    )
+    assert rewording_problem(text, said, language) == problem
+
+
+def test_a_nudge_the_verifier_would_pass_is_held_unless_it_rewords_the_move() -> None:
+    g, case_id, mine = friends_with_a_move()
+    g.brain.verdicts = [""]
+    g.service.nudge(OTHER_USER, mine, "Wollen wir uns treffen?")
+    g.run_jobs()
+    assert g.service.view(USER, case_id).rounds[0].mine.nudges == ()  # type: ignore[union-attr]
+    assert [item.kind for item in g.service.queue(OTHER_USER)] == ["nudge"]
+
+
+def test_the_bridge_goes_with_a_report_and_with_the_moves_words() -> None:
+    g, case_id, move_id = same_language_ai()
+    g.service.bridge(USER, move_id, "simpler")
+    stored = g.store.moves[move_id]
+    # The move's words went (removed, or past its 30 days): what was derived from them is not shown.
+    g.store.save_move(replace(stored, transcript=""))
+    theirs = g.service.view(USER, case_id).rounds[0].theirs
+    assert theirs is not None
+    assert theirs.simpler is None
+    g.store.save_move(stored)
+    g.service._forget(stored, "removed")
+    assert g.store.moves[move_id].bridge == {}
+
+
+def test_a_reported_move_loses_its_bridge() -> None:
+    g = strangers()
+    join(g, OTHER_USER, native="en")
+    learns(g, OTHER_USER, "de")
+    g.service.look(USER, 12)
+    case = g.service.look(OTHER_USER, 12)
+    case_id = case.id  # type: ignore[union-attr]
+    theirs = say(g, case_id, CELLO, OTHER_USER)
+    g.service.bridge(USER, theirs, "simpler")
+    assert g.store.moves[theirs].bridge
+    g.service.report(USER, theirs, "other", None)
+    assert g.store.moves[theirs].bridge == {}
+
+
+def test_leaving_deletes_the_learners_nudges_but_keeps_held_ones_hidden() -> None:
+    g, case_id, mine = friends_with_a_move()
+    g.service.nudge(OTHER_USER, mine, "um 14:20 Uhr")
+    g.run_jobs()
+    assert g.service.view(USER, case_id).rounds[0].mine.nudges  # type: ignore[union-attr]
+    g.service.leave(OTHER_USER)
+    assert g.store.nudges == {}
+    assert g.service.view(USER, case_id).rounds[0].mine.nudges == ()  # type: ignore[union-attr]
+
+    g2, _, mine2 = friends_with_a_move()
+    g2.service.nudge(OTHER_USER, mine2, "schreib mir: lena@example.com")
+    g2.run_jobs()
+    g2.service.leave(OTHER_USER)
+    assert [n.status for n in g2.store.nudges.values()] == ["held"]
+
+
+def test_leaving_and_joining_again_lifts_no_suspension() -> None:
+    g, move = held_move()
+    g.service.decide(OTHER_USER, "held", move, "suspend")
+    g.service.leave(USER)
+    profile = g.service.join(
+        USER, native_language="fr", place=None, veil_default=True, voice_consent=True
+    )
+    assert profile.suspended
+    with pytest.raises(HalvesError, match="suspended"):
+        g.service.play_ai(USER)
