@@ -666,6 +666,12 @@ export const it: Translation = {
   },
   reminders: {
     channel: 'Promemoria di pratica',
+    callsChannel: 'Chiamate dei tuoi partner',
+    call: {
+      title: '{{name}} ti sta chiamando',
+      body: 'Hai 3 minuti per parlare? Tocca per rispondere.',
+      about: '{{ask}} Tocca per rispondere: circa 3 minuti.',
+    },
     word: {
       title: 'La parola del giorno',
       line: 'Parola del giorno: {{word}} ({{meaning}})',
@@ -677,6 +683,18 @@ export const it: Translation = {
       simulation: 'La tua simulazione del {{name}} è prevista questa settimana. Quando vuoi.',
       cards: 'Le tue carte ti aspettano, prima che tu le dimentichi.',
     },
+  },
+  incomingCall: {
+    calling: '{{name}} ti sta chiamando',
+    short: 'Una chiamata breve, circa 3 minuti',
+    about: 'Argomento: {{ask}}',
+    accept: 'Rispondi',
+    decline: 'Non ora',
+    later: 'Ricordamelo tra un’ora',
+    laterDone: '{{name}} ti richiamerà alle {{time}}.',
+    laterFailed: 'Non ha funzionato. Riprova da Oggi.',
+    notFound: 'Questo partner non è più nella tua lista.',
+    back: 'Torna a Oggi',
   },
   today: {
     question: {
@@ -701,6 +719,12 @@ export const it: Translation = {
           daily: '5 giorni, 90 minuti a settimana',
         },
       },
+    },
+    calls: {
+      title: 'Vuoi che il tuo partner ti chiami?',
+      body: 'Nei giorni di pratica {{name}} può chiamarti alle {{time}} per 3 minuti di chiacchiere su qualcosa che gli hai raccontato. Sostituisce il promemoria del giorno: al massimo una volta al giorno, mai di notte.',
+      yes: 'Sì, chiamami',
+      no: 'Non ora',
     },
     reminders: {
       title: 'Un promemoria nei giorni di pratica?',
@@ -2317,6 +2341,9 @@ export const it: Translation = {
       goals: 'I tuoi obiettivi',
     },
     reminders: {
+      calls: 'Il mio partner mi chiama',
+      callsHint:
+        'Nei giorni previsti un partner ti chiama all’ora del promemoria per una breve chiacchierata su qualcosa che ricorda, al posto del promemoria del giorno. È una notifica di Konvami, non una telefonata, e la modalità Full immersion o Non disturbare decide sempre se appare.',
       title: 'Promemoria',
       body: 'Un breve messaggio nei giorni in cui hai previsto di esercitarti, all’ora che scegli. Al massimo uno al giorno, mai di notte.',
       on: 'Ricordamelo nei giorni di pratica',
