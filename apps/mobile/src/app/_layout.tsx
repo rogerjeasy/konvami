@@ -1,4 +1,5 @@
 import { api } from '@/api';
+import { ChainProvider } from '@/chain/services';
 import { HalvesProvider } from '@/halves/services';
 import '../../global.css';
 import '@/i18n';
@@ -86,28 +87,30 @@ function RootLayout() {
         <OnboardingProvider store={onboardingStore}>
           <PracticeProvider services={practiceServices}>
             <HalvesProvider api={api}>
-              <ProfileProvider services={profileServices}>
-                <PlanProvider device={appPurchaseDevice}>
-                  <RemindersProvider device={appReminderDevice}>
-                    <RecorderProvider useRecorder={useAppSentenceRecorder}>
-                      <VoiceProvider createEngine={createAppVoiceEngine}>
-                        <VideoAvatarProvider avatars={appVideoAvatars}>
-                          <SignUpDraftProvider>
-                            <AccessDraftProvider>
-                              <ExamNotesProvider>
-                                <StatusBar style="auto" />
-                                <ReminderKeeper />
-                                <RootStack />
-                                <PaywallSheet />
-                              </ExamNotesProvider>
-                            </AccessDraftProvider>
-                          </SignUpDraftProvider>
-                        </VideoAvatarProvider>
-                      </VoiceProvider>
-                    </RecorderProvider>
-                  </RemindersProvider>
-                </PlanProvider>
-              </ProfileProvider>
+              <ChainProvider api={api}>
+                <ProfileProvider services={profileServices}>
+                  <PlanProvider device={appPurchaseDevice}>
+                    <RemindersProvider device={appReminderDevice}>
+                      <RecorderProvider useRecorder={useAppSentenceRecorder}>
+                        <VoiceProvider createEngine={createAppVoiceEngine}>
+                          <VideoAvatarProvider avatars={appVideoAvatars}>
+                            <SignUpDraftProvider>
+                              <AccessDraftProvider>
+                                <ExamNotesProvider>
+                                  <StatusBar style="auto" />
+                                  <ReminderKeeper />
+                                  <RootStack />
+                                  <PaywallSheet />
+                                </ExamNotesProvider>
+                              </AccessDraftProvider>
+                            </SignUpDraftProvider>
+                          </VideoAvatarProvider>
+                        </VoiceProvider>
+                      </RecorderProvider>
+                    </RemindersProvider>
+                  </PlanProvider>
+                </ProfileProvider>
+              </ChainProvider>
             </HalvesProvider>
           </PracticeProvider>
         </OnboardingProvider>

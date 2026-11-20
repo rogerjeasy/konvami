@@ -1,3 +1,4 @@
+import { createFakeChain, type FakeChainControls } from './fake-chain';
 import { createFakeHalves, type FakeHalvesControls } from './fake-halves';
 import {
   ApiError,
@@ -912,7 +913,7 @@ export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
   };
 }
 
-export interface FakeApi extends ApiClient, FakeHalvesControls {
+export interface FakeApi extends ApiClient, FakeHalvesControls, FakeChainControls {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
   /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
   hearsNextRetry(heard: string): void;
@@ -1817,7 +1818,33 @@ export function createFakeApi(): FakeApi {
 
   // Listed, not spread: a spread would read this object's getters once (`deleted`, …).
   const halves = createFakeHalves(record);
+  const chain = createFakeChain(record);
   return {
+    getChain: chain.getChain,
+    joinChain: chain.joinChain,
+    changeChain: chain.changeChain,
+    rerollChainCodename: chain.rerollChainCodename,
+    leaveChain: chain.leaveChain,
+    removeChainBlock: chain.removeChainBlock,
+    startChainStory: chain.startChainStory,
+    redeemChainInvite: chain.redeemChainInvite,
+    getChainStory: chain.getChainStory,
+    createChainInvite: chain.createChainInvite,
+    fillChainSeats: chain.fillChainSeats,
+    sendChainLine: chain.sendChainLine,
+    reactToChainStory: chain.reactToChainStory,
+    leaveChainStory: chain.leaveChainStory,
+    blockChainPlayer: chain.blockChainPlayer,
+    getChainOpeningAudio: chain.getChainOpeningAudio,
+    getChainPlayAudio: chain.getChainPlayAudio,
+    getChainLineAudio: chain.getChainLineAudio,
+    reportChainLine: chain.reportChainLine,
+    retryChainLine: chain.retryChainLine,
+    saveChainCard: chain.saveChainCard,
+    getChainQueue: chain.getChainQueue,
+    decideChainItem: chain.decideChainItem,
+    chainOpen: chain.chainOpen,
+    chainFinish: chain.chainFinish,
     halvesOpen: halves.halvesOpen,
     halvesHeld: halves.halvesHeld,
     getHalves: halves.getHalves,

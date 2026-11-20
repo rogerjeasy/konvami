@@ -14,6 +14,7 @@ import { createFakeProfileDevice, type FakeProfileDevice } from '@/test/fake-pro
 import { OnboardingProvider } from '@/onboarding/services';
 import { createOnboardingStore } from '@/onboarding/store';
 import { createPracticeServices, PracticeProvider } from '@/practice/services';
+import { ChainProvider } from '@/chain/services';
 import { HalvesProvider } from '@/halves/services';
 import { createOfflineApi } from '@/offline/api';
 import type { OfflineCache } from '@/offline/cache';
@@ -144,35 +145,37 @@ export async function renderScreen(
         <OnboardingProvider store={onboarding}>
           <PracticeProvider services={practice}>
             <HalvesProvider api={backend}>
-              <ProfileProvider services={profile}>
-                <PlanProvider device={purchases ?? createFakePurchaseDevice(false)}>
-                  <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
-                    <RecorderProvider useRecorder={() => sentences}>
-                      <VoiceProvider
-                        createEngine={(purpose, personaId, scenario, practise, options) => {
-                          engine.openedFor.push(purpose);
-                          engine.openedWith.push(personaId);
-                          engine.openedScenarios.push(scenario);
-                          engine.openedPractise.push(practise);
-                          engine.openedAssessments.push(options?.assessmentConsent ?? false);
-                          engine.openedGuests.push(options?.guestId);
-                          engine.openedRang.push(options?.rang ?? false);
-                          return engine;
-                        }}
-                      >
-                        <SignUpDraftProvider initial={draft}>
-                          <AccessDraftProvider initial={access}>
-                            <ExamNotesProvider>
-                              {ui}
-                              <PaywallSheet />
-                            </ExamNotesProvider>
-                          </AccessDraftProvider>
-                        </SignUpDraftProvider>
-                      </VoiceProvider>
-                    </RecorderProvider>
-                  </RemindersProvider>
-                </PlanProvider>
-              </ProfileProvider>
+              <ChainProvider api={backend}>
+                <ProfileProvider services={profile}>
+                  <PlanProvider device={purchases ?? createFakePurchaseDevice(false)}>
+                    <RemindersProvider device={reminders ?? createFakeReminderDevice()}>
+                      <RecorderProvider useRecorder={() => sentences}>
+                        <VoiceProvider
+                          createEngine={(purpose, personaId, scenario, practise, options) => {
+                            engine.openedFor.push(purpose);
+                            engine.openedWith.push(personaId);
+                            engine.openedScenarios.push(scenario);
+                            engine.openedPractise.push(practise);
+                            engine.openedAssessments.push(options?.assessmentConsent ?? false);
+                            engine.openedGuests.push(options?.guestId);
+                            engine.openedRang.push(options?.rang ?? false);
+                            return engine;
+                          }}
+                        >
+                          <SignUpDraftProvider initial={draft}>
+                            <AccessDraftProvider initial={access}>
+                              <ExamNotesProvider>
+                                {ui}
+                                <PaywallSheet />
+                              </ExamNotesProvider>
+                            </AccessDraftProvider>
+                          </SignUpDraftProvider>
+                        </VoiceProvider>
+                      </RecorderProvider>
+                    </RemindersProvider>
+                  </PlanProvider>
+                </ProfileProvider>
+              </ChainProvider>
             </HalvesProvider>
           </PracticeProvider>
         </OnboardingProvider>

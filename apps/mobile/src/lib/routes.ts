@@ -92,6 +92,16 @@ export const ROUTES = {
   coach: '/coach',
   /** 5.27 This week's quests: three small speaking challenges and how far each is. */
   quests: '/quests',
+  /** 9.1 Story chain: an audio story four learners build line by line. */
+  chain: '/chain',
+  /** 9.2 Join the story chain. */
+  chainJoin: '/chain/join',
+  /** 9.3 Start a story: its opening and who sits in the other three seats. */
+  chainNew: '/chain/new',
+  /** 9.8 Story chain settings. */
+  chainSettings: '/chain/settings',
+  /** 9.9 Take a seat in a friend's story with their code. */
+  chainRedeem: '/chain/redeem',
   /** 7.1 Two Halves: a voice mystery for two, split by language. */
   halves: '/halves',
   /** 7.2 Join Two Halves. */
@@ -338,6 +348,26 @@ export const examTalkRoute = (exam: string) =>
 /** 5.18 One simulation's estimated score. */
 export const simulationRoute = (id: string) =>
   ({ pathname: '/exams/simulations/[id]', params: { id } }) as const satisfies Href;
+
+/** 9.5 One story as the learner's seat knows it: the seats, the line before, their own lines. */
+export const chainStoryRoute = (id: string) =>
+  ({ pathname: '/chain/[id]', params: { id } }) as const satisfies Href;
+
+/** 9.4 The learner's turn: hear the line before, record theirs. */
+export const chainTurnRoute = (id: string) =>
+  ({ pathname: '/chain/[id]/turn', params: { id } }) as const satisfies Href;
+
+/** 9.6 The finished story as a radio play. */
+export const chainPlayRoute = (id: string) =>
+  ({ pathname: '/chain/[id]/play', params: { id } }) as const satisfies Href;
+
+/** 9.7 The private notes on the learner's own lines. */
+export const chainMineRoute = (id: string) =>
+  ({ pathname: '/chain/[id]/mine', params: { id } }) as const satisfies Href;
+
+/** 9.9 The code for a story's empty seats, to give to friends. */
+export const chainInviteRoute = (id: string) =>
+  ({ pathname: '/chain/[id]/invite', params: { id } }) as const satisfies Href;
 
 /** 7.4 One Two Halves case: the board, the rounds, the answer, the recap (7.8). */
 export const halvesCaseRoute = (id: string) =>

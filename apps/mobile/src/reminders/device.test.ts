@@ -8,6 +8,10 @@ describe('what a tapped notification opens', () => {
       open: 'halves',
       id: 'case_1',
     });
+    expect(openTargetOf({ open: 'chain', id: 'story_1' })).toEqual({
+      open: 'chain',
+      id: 'story_1',
+    });
     expect(openTargetOf({ open: 'simulation', id: 'rtc_2' })).toEqual({
       open: 'simulation',
       id: 'rtc_2',
@@ -18,7 +22,10 @@ describe('what a tapped notification opens', () => {
   });
 
   it('opens a partner’s ring with who rings and their question', () => {
-    expect(openTargetOf({ open: 'call', partner: 'p_1' })).toEqual({ open: 'call', partner: 'p_1' });
+    expect(openTargetOf({ open: 'call', partner: 'p_1' })).toEqual({
+      open: 'call',
+      partner: 'p_1',
+    });
     expect(openTargetOf({ open: 'call', partner: 'p_1', ask: 'Und, das Interview?' })).toEqual({
       open: 'call',
       partner: 'p_1',

@@ -9,6 +9,7 @@ import {
   reportRoute,
   ROUTES,
   simulationRoute,
+  chainStoryRoute,
   halvesCaseRoute,
 } from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
@@ -154,6 +155,8 @@ function routeOf(target: OpenTarget) {
       return incomingCallRoute(target.partner, target.ask);
     case 'halves':
       return halvesCaseRoute(target.id);
+    case 'chain':
+      return chainStoryRoute(target.id);
     default:
       return ROUTES.today;
   }
