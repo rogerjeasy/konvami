@@ -22,10 +22,11 @@ from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.coach_facts import CoachFacts, coach_service
 from konvami_api.domain.continuation import Continuations
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
-from konvami_api.domain.costs import CostService, Meter, SpendGuard
+from konvami_api.domain.costs import CostService, Level, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_acoustics import ExamAcoustics
@@ -71,6 +72,7 @@ from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
+from konvami_api.persistence.coach_repository import SqlCoachRepository
 from konvami_api.persistence.continuation_repository import SqlContinuationRepository
 from konvami_api.persistence.data_api import DataApiClient, RdsData
 from konvami_api.persistence.export_repository import SqlExportRepository
@@ -116,6 +118,7 @@ from konvami_api.providers.audio_encoding import FfmpegEncoder
 from konvami_api.providers.aws import (
     LambdaCallStarter,
     LambdaClient,
+    LambdaCoachStarter,
     LambdaDetailsStarter,
     LambdaExamStarter,
     LambdaPenPalStarter,
@@ -504,7 +507,11 @@ def build_backend(
                     profiles=profiles,
                     reports=reports,
                     cards=cards,
-                    week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
+                    # The Coach's focus of the day first (a mistake that keeps coming back, a
+                    # weak topic), else the week's next topic.
+                    week_topic=lambda user_id, today: (
+                        coach.focus_topic(user_id, today) or director.topic_for_call(user_id, today)
+                    ),
                     imports=course_imports.material,
                 ),
             ),
@@ -552,6 +559,51 @@ def build_backend(
     )
     accounts = AccountService(
         records=SqlAccountRepository(sql), files=files, directory=directory, clock=_now
+    )
+    retries = RetryService(
+        reports=reports,
+        repository=SqlRetryRepository(sql),
+        listener=listener,
+        clock=_now,
+    )
+    pronunciation = PronunciationService(
+        conversations=conversations,
+        sessions=sessions,
+        profiles=profiles,
+        personas=personas,
+        listener=listener,
+        repository=SqlPronunciationRepository(sql),
+        sounds=sounds,
+        clock=_now,
+        assessor=assessor,
+    )
+    coach_facts = CoachFacts(
+        profiles=profiles,
+        onboarding=onboarding,
+        conversations=conversations,
+        reports=reports,
+        retries=retries,
+        cards=cards,
+        grammar=grammar,
+        pronunciation=pronunciation,
+        levels=levels,
+        exams=exams,
+        personas=personas,
+        imports=course_imports,
+        director=director,
+    )
+    coach = coach_service(
+        profiles=profiles,
+        facts=coach_facts,
+        reports=reports,
+        accounts=directory,
+        repository=SqlCoachRepository(sql),
+        starter=LambdaCoachStarter(clients.functions, worker),
+        text_model=text,
+        # Wording a few suggestions is a small-model job, like the weekly check-in.
+        model=models.week or models.memory,
+        affordable=lambda: guard.level() is Level.NORMAL,
+        clock=_now,
     )
     services = Services(
         catalog=CATALOG,
@@ -686,23 +738,9 @@ def build_backend(
                 user_id, persona_id, reply=reply
             ),
         ),
-        retries=RetryService(
-            reports=reports,
-            repository=SqlRetryRepository(sql),
-            listener=listener,
-            clock=_now,
-        ),
-        pronunciation=PronunciationService(
-            conversations=conversations,
-            sessions=sessions,
-            profiles=profiles,
-            personas=personas,
-            listener=listener,
-            repository=SqlPronunciationRepository(sql),
-            sounds=sounds,
-            clock=_now,
-            assessor=assessor,
-        ),
+        retries=retries,
+        pronunciation=pronunciation,
+        coach=coach,
         conversation_review=conversation_review,
         voice_review=VoiceReviewService(
             profiles=profiles,
@@ -786,6 +824,10 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
         return
     if "exam" in event:
         backend.services.exams.score(event["exam"])
+        return
+    if "coach" in event:
+        day = dt.date.fromisoformat(event["day"])
+        backend.services.coach.phrase(UUID(event["coach"]), day)
         return
     if "week_review" in event:
         week = dt.date.fromisoformat(event["week"])

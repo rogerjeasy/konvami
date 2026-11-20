@@ -280,6 +280,20 @@ def test_the_worker_writes_a_weekly_check_in_when_that_is_what_it_is_started_for
     stub.assert_no_pending_responses()
 
 
+def test_the_worker_words_the_coachs_suggestions_when_that_is_what_it_is_started_for(
+    stub: Stubber,
+) -> None:
+    """Asked to word a learner's suggestions, it reads their profile and the day's brief (here:
+    none is waiting), and asks no model."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    for _ in range(2):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"coach": USER, "day": "2026-11-20"})
+
+    stub.assert_no_pending_responses()
+
+
 def test_the_worker_scores_an_exam_simulation_when_that_is_what_it_is_started_for(
     stub: Stubber,
 ) -> None:
