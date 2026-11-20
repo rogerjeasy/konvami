@@ -3,6 +3,7 @@ import {
   type Activity,
   type ApiClient,
   type Card,
+  type Coach,
   type Catalog,
   type Conversation,
   type Costs,
@@ -866,6 +867,8 @@ export interface FakeApi extends ApiClient {
   hearsNextAnswer(heard: string | ApiError): void;
   /** Changes the plan `getPlan` answers (the learner bought something, or plans are not enforced). */
   hasPlan(changes: Partial<Plan>): void;
+  /** What the Coach finds for today (5.1, 5.26); by default nothing yet. */
+  coaches(changes: Partial<Coach>): void;
   /** Every call so far, as `[method, ...arguments]`, in order. */
   readonly calls: readonly unknown[][];
   /** Stores answers directly, as if they had been given earlier. */
@@ -1067,6 +1070,16 @@ export function createFakeApi(): FakeApi {
   const practice: { conversation: Conversation; turns: TranscriptTurn[] }[] = [];
   /** The learner's flashcards, in the order they were made. */
   let cards: Card[] = [];
+  /** The Coach's day as the server would find it; answered suggestions leave it. */
+  let coach: Coach = {
+    day: '2026-10-06',
+    wording: 'template',
+    leads: false,
+    suggestions: [],
+    holdingBack: [],
+    goingWell: [],
+    history: [],
+  };
   /** Every review of a card that still exists: how it was rated. */
   let reviewLog: { id: string; rating: Rating }[] = [];
   /** Where each conversation's report stands; a conversation not in here has none. */
@@ -1669,6 +1682,9 @@ export function createFakeApi(): FakeApi {
     hasPlan(changes) {
       subscription = { ...subscription, ...changes };
     },
+    coaches(changes) {
+      coach = { ...coach, ...changes };
+    },
     planned(changes) {
       planChanges = { ...planChanges, ...changes };
     },
@@ -1896,6 +1912,24 @@ export function createFakeApi(): FakeApi {
     async getProgress(timeZone) {
       await record('getProgress', timeZone);
       return progress();
+    },
+    async getCoach(timeZone) {
+      await record('getCoach', timeZone);
+      const suggestions = coach.suggestions.filter(
+        ({ status }) => status === 'open' || status === 'accepted',
+      );
+      return { ...coach, suggestions, leads: coach.leads && suggestions[0]?.status === 'open' };
+    },
+    async answerCoachSuggestion(id, feedback) {
+      await record('answerCoachSuggestion', id, feedback);
+      const found = coach.suggestions.find((suggestion) => suggestion.id === id);
+      if (!found) throw new ApiError('not_found', 404);
+      coach = {
+        ...coach,
+        suggestions: coach.suggestions.map((suggestion) =>
+          suggestion.id === id ? { ...suggestion, status: feedback.response } : suggestion,
+        ),
+      };
     },
     async getExamCentre(): Promise<ExamCentre> {
       await record('getExamCentre');

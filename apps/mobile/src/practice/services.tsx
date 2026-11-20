@@ -36,6 +36,8 @@ import type {
   SpokenRecording,
   CardSource,
   Progress,
+  Coach,
+  CoachFeedback,
   Transcript,
   ThenVsNow,
   PenPal,
@@ -215,6 +217,13 @@ export interface PracticeServices {
   tutor: ResourceStore<{ questions: TutorQuestion[] }>;
   /** The pen-pal settings and a line per partner (5.21, Today's card, Talk's row). */
   penPal: ResourceStore<PenPal>;
+  /** The Coach's day: suggestions, what holds the learner back, what went well (5.1, 5.26). */
+  coach: ResourceStore<Coach>;
+  /**
+   * The learner's answer to a suggestion; an answer other than "do it" takes it off the day.
+   * Rejects with an `ApiError` (`not_found`, …).
+   */
+  answerCoach: (id: string, feedback: CoachFeedback) => Promise<void>;
   /** One partner's thread of voice notes. Rejects with an `ApiError` (`not_found`, …). */
   readPenPalThread: (personaId: string) => Promise<PenPalThread>;
   /** Changes pen-pal settings and shows them. Rejects with an `ApiError` (`invalid_value`, …). */
@@ -322,6 +331,8 @@ export function createPracticeServices(
     | 'removeCard'
     | 'getTutorQuestions'
     | 'getPenPal'
+    | 'getCoach'
+    | 'answerCoachSuggestion'
     | 'updatePenPalSettings'
     | 'getPenPalThread'
     | 'openPenPalThread'
@@ -401,6 +412,7 @@ export function createPracticeServices(
   const imports = createResourceStore(() => api.getImports(), clock.now);
 
   const penPal = createResourceStore(() => api.getPenPal(), clock.now);
+  const coach = createResourceStore(() => api.getCoach(clock.timeZone()), clock.now);
   return {
     ...extensions,
     home,
@@ -524,6 +536,21 @@ export function createPracticeServices(
     },
     tutor,
     penPal,
+    coach,
+    answerCoach: (id, feedback) =>
+      coach.mutate(
+        () => api.answerCoachSuggestion(id, feedback),
+        (shown) => ({
+          ...shown,
+          suggestions: shown.suggestions.flatMap((suggestion) =>
+            suggestion.id !== id
+              ? [suggestion]
+              : feedback.response === 'accepted'
+                ? [{ ...suggestion, status: 'accepted' as const }]
+                : [],
+          ),
+        }),
+      ),
     readPenPalThread: (personaId) => api.getPenPalThread(personaId),
     changePenPal: (changes) =>
       penPal.mutate(
@@ -574,6 +601,11 @@ export function createPracticeServices(
   };
 }
 
+// While the Coach's words are being written (a small model, a few seconds), Today and 5.26 read
+// the day again this often, this many times at most.
+const COACH_WORDING_POLL_MS = 4000;
+const COACH_WORDING_TRIES = 4;
+
 const PracticeContext = createContext<PracticeServices | null>(null);
 
 /**
@@ -602,6 +634,7 @@ export function PracticeProvider({
     services.imports.reset();
 
     services.penPal.reset();
+    services.coach.reset();
     services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
@@ -832,6 +865,32 @@ export function useImports(): ResourceState<CourseImports> {
  * The pen-pal settings and a line per partner; re-renders when they change. Reads them when
  * first asked and again when the app comes back after a while, so a new note shows.
  */
+/**
+ * The Coach's day. While the model is still wording it, it is read again a few times, a few
+ * seconds apart: the app's own words show meanwhile.
+ */
+export function useCoach(): ResourceState<Coach> {
+  const { coach } = usePracticeServices();
+  const { status } = useSession();
+  const signedIn = status === 'signedIn';
+  useEffect(() => {
+    if (signedIn) void coach.load();
+  }, [signedIn, coach]);
+  const state = useSyncExternalStore(coach.subscribe, coach.getState, coach.getState);
+  const pending = state.phase === 'ready' && state.data.wording === 'pending';
+  useEffect(() => {
+    if (!pending) return;
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      void coach.refresh();
+      if (tries >= COACH_WORDING_TRIES) clearInterval(timer);
+    }, COACH_WORDING_POLL_MS);
+    return () => clearInterval(timer);
+  }, [pending, coach]);
+  return state;
+}
+
 export function usePenPal(): ResourceState<PenPal> {
   const { penPal } = usePracticeServices();
   const { status } = useSession();
