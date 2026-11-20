@@ -1,0 +1,2889 @@
+{
+  "weights": [
+    0.2438, 1.0345, 2.6525, 6.6365, 7.3753, 0.6667, 3.4723, 0.0008, 2.153, 0.1333, 0.9154, 1.1868,
+    0.0706, 0.2103, 1.8955, 0.4811, 2.1538, 0.434, 0.1049, 0.0526, 0.3
+  ],
+  "retention": 0.85,
+  "histories": [
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 30,
+        "rating": "easy",
+        "stability": 278.8000631158304,
+        "difficulty": 1.0,
+        "interval": 476
+      },
+      {
+        "days": 2,
+        "rating": "hard",
+        "stability": 283.3129400467712,
+        "difficulty": 4.469510563966811,
+        "interval": 484
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 709.3960592466685,
+        "difficulty": 6.59874065436723,
+        "interval": 1212
+      },
+      {
+        "days": 5,
+        "rating": "again",
+        "stability": 3.098753415278692,
+        "difficulty": 9.216637770606102,
+        "interval": 5
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 5.872297766035417,
+        "difficulty": 9.512040932599664,
+        "interval": 10
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 7.00053944916744,
+        "difficulty": 9.505219703820394,
+        "interval": 12
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 9.39862976252487,
+        "difficulty": 9.30766490958787,
+        "interval": 16
+      },
+      {
+        "days": 3,
+        "rating": "good",
+        "stability": 12.908361461291085,
+        "difficulty": 9.30100718162701,
+        "interval": 22
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 14.090756102959649,
+        "difficulty": 9.294354779848518,
+        "interval": 24
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.09594041336304406,
+        "difficulty": 9.393844789156143,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 0.11358480926353236,
+        "difficulty": 9.387118117291628,
+        "interval": 1
+      },
+      {
+        "days": 30,
+        "rating": "easy",
+        "stability": 4.654678034334462,
+        "difficulty": 9.144129351929136,
+        "interval": 8
+      },
+      {
+        "days": 3,
+        "rating": "good",
+        "stability": 8.63254652449587,
+        "difficulty": 9.137602452414402,
+        "interval": 15
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 14.83225588875043,
+        "difficulty": 9.131080774419281,
+        "interval": 25
+      },
+      {
+        "days": 3,
+        "rating": "again",
+        "stability": 0.8371087360380078,
+        "difficulty": 9.794505315633744,
+        "interval": 1
+      },
+      {
+        "days": 2000,
+        "rating": "hard",
+        "stability": 6.08681782887021,
+        "difficulty": 9.866676822144818,
+        "interval": 10
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 7.24601088487152,
+        "difficulty": 9.910968297988376,
+        "interval": 12
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 15.081558320835324,
+        "difficulty": 9.86950598697548,
+        "interval": 26
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 23.748191215662747,
+        "difficulty": 6.358359851372144,
+        "interval": 41
+      },
+      {
+        "days": 3,
+        "rating": "again",
+        "stability": 1.0333991682849304,
+        "difficulty": 9.161784055104532,
+        "interval": 2
+      },
+      {
+        "days": 30,
+        "rating": "good",
+        "stability": 11.422087430887592,
+        "difficulty": 9.155243031827258,
+        "interval": 20
+      },
+      {
+        "days": 8,
+        "rating": "easy",
+        "stability": 31.372380696644147,
+        "difficulty": 8.823051350158634,
+        "interval": 54
+      },
+      {
+        "days": 8,
+        "rating": "easy",
+        "stability": 53.73524861234459,
+        "difficulty": 8.36306471062235,
+        "interval": 92
+      },
+      {
+        "days": 2,
+        "rating": "easy",
+        "stability": 60.327631368470065,
+        "difficulty": 7.726120078267132,
+        "interval": 103
+      },
+      {
+        "days": 90,
+        "rating": "good",
+        "stability": 190.84241935620872,
+        "difficulty": 7.7207275861713285,
+        "interval": 326
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 233.86604405234024,
+        "difficulty": 6.836674280463061,
+        "interval": 400
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 233.86604405234024,
+        "difficulty": 6.8319933450055,
+        "interval": 400
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 1.430134066929911,
+        "difficulty": 8.382016476561477,
+        "interval": 2
+      },
+      {
+        "days": 2000,
+        "rating": "again",
+        "stability": 1.0552518768659913,
+        "difficulty": 9.623572531588112,
+        "interval": 2
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 2.193012529254053,
+        "difficulty": 9.616662077529652,
+        "interval": 4
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 4.279802520645584,
+        "difficulty": 9.609757151834438,
+        "interval": 7
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 6.493445993034705,
+        "difficulty": 9.753297328912218,
+        "interval": 11
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 2.5854930602457795,
+        "difficulty": 9.936492069298176,
+        "interval": 4
+      },
+      {
+        "days": 2000,
+        "rating": "easy",
+        "stability": 53.169256745186814,
+        "difficulty": 9.904848815953356,
+        "interval": 91
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 1.3395727073823938,
+        "difficulty": 9.971075372334086,
+        "interval": 2
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.2555656261352647,
+        "difficulty": 9.986187946371171,
+        "interval": 1
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 365,
+        "rating": "again",
+        "stability": 0.7316926722962946,
+        "difficulty": 9.177561732360283,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.3267904502047681,
+        "difficulty": 9.805112041342984,
+        "interval": 1
+      },
+      {
+        "days": 2,
+        "rating": "easy",
+        "stability": 3.163457701802686,
+        "difficulty": 9.722926567756977,
+        "interval": 5
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 4.184825046908769,
+        "difficulty": 9.715936630469582,
+        "interval": 7
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 4.184825046908769,
+        "difficulty": 9.708952285132016,
+        "interval": 7
+      },
+      {
+        "days": 13,
+        "rating": "again",
+        "stability": 0.6365128901290171,
+        "difficulty": 9.926372748682239,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.14396145660971613,
+        "difficulty": 9.975987027789406,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 0.16683779122520193,
+        "difficulty": 9.968794642133984,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 0.16683779122520193,
+        "difficulty": 9.973637752678961,
+        "interval": 1
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 13,
+        "rating": "again",
+        "stability": 0.37447527581386386,
+        "difficulty": 9.177561732360283,
+        "interval": 1
+      },
+      {
+        "days": 8,
+        "rating": "easy",
+        "stability": 8.72029621725357,
+        "difficulty": 8.853956109740317,
+        "interval": 15
+      },
+      {
+        "days": 90,
+        "rating": "good",
+        "stability": 61.33095767655027,
+        "difficulty": 8.847661348819335,
+        "interval": 105
+      },
+      {
+        "days": 13,
+        "rating": "easy",
+        "stability": 94.47312239424299,
+        "difficulty": 8.39714223636311,
+        "interval": 161
+      },
+      {
+        "days": 13,
+        "rating": "good",
+        "stability": 112.30895584343403,
+        "difficulty": 8.39121292654083,
+        "interval": 192
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 121.19626585005236,
+        "difficulty": 7.765096982156614,
+        "interval": 207
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 41.371574175716454,
+        "difficulty": 9.4827945409507,
+        "interval": 71
+      },
+      {
+        "days": 13,
+        "rating": "again",
+        "stability": 1.3008695695298411,
+        "difficulty": 9.874764665161308,
+        "interval": 2
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 1.3427557174669944,
+        "difficulty": 9.86765325739599,
+        "interval": 2
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 8,
+        "rating": "hard",
+        "stability": 30.526601586006674,
+        "difficulty": 4.469510563966811,
+        "interval": 52
+      },
+      {
+        "days": 90,
+        "rating": "good",
+        "stability": 267.1961029377923,
+        "difficulty": 4.466723359482447,
+        "interval": 457
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 2.3952681635409263,
+        "difficulty": 8.730121922914115,
+        "interval": 4
+      },
+      {
+        "days": 30,
+        "rating": "good",
+        "stability": 22.126573464932342,
+        "difficulty": 8.723926229342593,
+        "interval": 38
+      },
+      {
+        "days": 8,
+        "rating": "easy",
+        "stability": 46.11539549371301,
+        "difficulty": 8.225805911760304,
+        "interval": 79
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 49.39754738836392,
+        "difficulty": 8.220013670997705,
+        "interval": 84
+      },
+      {
+        "days": 2,
+        "rating": "easy",
+        "stability": 56.42108479112553,
+        "difficulty": 7.528036951475438,
+        "interval": 96
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 73.71763078101763,
+        "difficulty": 6.569855084152499,
+        "interval": 126
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 85.96303216767717,
+        "difficulty": 6.5653876040519865,
+        "interval": 147
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 10.239874078537111,
+        "difficulty": 4.469510563966811,
+        "interval": 17
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.7404001576788836,
+        "difficulty": 8.730757949252013,
+        "interval": 1
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 19.347454783695333,
+        "difficulty": 8.724561746859422,
+        "interval": 33
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 54.90849093596252,
+        "difficulty": 9.210055088426849,
+        "interval": 94
+      },
+      {
+        "days": 90,
+        "rating": "again",
+        "stability": 1.7793394908310833,
+        "difficulty": 9.812526865185648,
+        "interval": 3
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 2.7883735865028347,
+        "difficulty": 9.733193892588858,
+        "interval": 5
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 3.2799937009620272,
+        "difficulty": 9.82905015278452,
+        "interval": 6
+      },
+      {
+        "days": 13,
+        "rating": "good",
+        "stability": 10.701605568045858,
+        "difficulty": 9.821975316629102,
+        "interval": 18
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 12.505987732995035,
+        "difficulty": 9.746277186566795,
+        "interval": 21
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 23.748191215662747,
+        "difficulty": 6.358359851372144,
+        "interval": 41
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 177.55145774231246,
+        "difficulty": 7.757922811281195,
+        "interval": 303
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 240.84226448711024,
+        "difficulty": 8.616831153742357,
+        "interval": 412
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 253.08064049762015,
+        "difficulty": 8.07751109688478,
+        "interval": 432
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 83.10972519822778,
+        "difficulty": 9.554085903465715,
+        "interval": 142
+      },
+      {
+        "days": 13,
+        "rating": "good",
+        "stability": 93.14947665104174,
+        "difficulty": 9.547231038709752,
+        "interval": 159
+      },
+      {
+        "days": 90,
+        "rating": "easy",
+        "stability": 220.86251745383464,
+        "difficulty": 9.365838108450404,
+        "interval": 377
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 220.86251745383464,
+        "difficulty": 9.359133841930454,
+        "interval": 377
+      },
+      {
+        "days": 90,
+        "rating": "again",
+        "stability": 2.3397800502446886,
+        "difficulty": 9.846545902605131,
+        "interval": 4
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 7.80035458444779,
+        "interval": 2
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 5.616432352159896,
+        "difficulty": 7.794902704747042,
+        "interval": 10
+      },
+      {
+        "days": 90,
+        "rating": "easy",
+        "stability": 144.06738042775368,
+        "difficulty": 6.939384749790476,
+        "interval": 246
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 148.54686258934834,
+        "difficulty": 5.7547469310868,
+        "interval": 254
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 151.22260320140626,
+        "difficulty": 5.75093153750874,
+        "interval": 258
+      },
+      {
+        "days": 90,
+        "rating": "easy",
+        "stability": 612.3795829056706,
+        "difficulty": 4.109092841804371,
+        "interval": 1046
+      },
+      {
+        "days": 90,
+        "rating": "good",
+        "stability": 866.6988603563502,
+        "difficulty": 4.1065939714977375,
+        "interval": 1481
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 884.0532717103658,
+        "difficulty": 6.376019635150261,
+        "interval": 1511
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 895.6643277165598,
+        "difficulty": 7.768760577103512,
+        "interval": 1530
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 7.80035458444779,
+        "interval": 2
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.19888126179570786,
+        "difficulty": 9.490840152169442,
+        "interval": 1
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 0.11804128433612592,
+        "difficulty": 9.87660063402126,
+        "interval": 1
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 0.0802975919580262,
+        "difficulty": 9.964629276323784,
+        "interval": 1
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 0.6404868416786886,
+        "difficulty": 9.971081477937298,
+        "interval": 1
+      },
+      {
+        "days": 90,
+        "rating": "easy",
+        "stability": 12.453846345946197,
+        "difficulty": 9.95274485526276,
+        "interval": 21
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 17.02969567862977,
+        "difficulty": 9.927354088696486,
+        "interval": 29
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 0.9335630974967811,
+        "difficulty": 9.976210964748102,
+        "interval": 2
+      },
+      {
+        "days": 8,
+        "rating": "good",
+        "stability": 4.25584907390759,
+        "difficulty": 9.969018399943113,
+        "interval": 7
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.09594041336304406,
+        "difficulty": 9.393844789156143,
+        "interval": 1
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 0.8858424512323275,
+        "difficulty": 9.620792443560765,
+        "interval": 2
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 1.4400623421097312,
+        "difficulty": 9.467698766872127,
+        "interval": 2
+      },
+      {
+        "days": 13,
+        "rating": "easy",
+        "stability": 17.420335645155113,
+        "difficulty": 9.255709575810718,
+        "interval": 30
+      },
+      {
+        "days": 3,
+        "rating": "good",
+        "stability": 20.8514094032114,
+        "difficulty": 9.24909341211688,
+        "interval": 36
+      },
+      {
+        "days": 90,
+        "rating": "again",
+        "stability": 1.5360048406465225,
+        "difficulty": 9.821435218409658,
+        "interval": 3
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 8.89623710139679,
+        "difficulty": 9.74552931123249,
+        "interval": 15
+      },
+      {
+        "days": 8,
+        "rating": "good",
+        "stability": 15.190222747569575,
+        "difficulty": 9.738521291750313,
+        "interval": 26
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 15.604535191818648,
+        "difficulty": 9.832319564532664,
+        "interval": 27
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 2.3207491633409743,
+        "difficulty": 8.382016476561477,
+        "interval": 4
+      },
+      {
+        "days": 13,
+        "rating": "again",
+        "stability": 0.5224138742659497,
+        "difficulty": 9.623572531588112,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "again",
+        "stability": 0.4409759624665717,
+        "difficulty": 9.906889509371371,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 11.734858542137937,
+        "difficulty": 9.863858078334628,
+        "interval": 20
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 16.723882490782362,
+        "difficulty": 9.804272349825105,
+        "interval": 29
+      },
+      {
+        "days": 5,
+        "rating": "again",
+        "stability": 0.8963498850431093,
+        "difficulty": 9.948124318046839,
+        "interval": 2
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 0.9435158457222768,
+        "difficulty": 9.940954222559212,
+        "interval": 2
+      },
+      {
+        "days": 30,
+        "rating": "hard",
+        "stability": 3.6770904890523264,
+        "difficulty": 9.956552155735224,
+        "interval": 6
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 33.89819131338354,
+        "difficulty": 9.949375317977445,
+        "interval": 58
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 21.267259380232083,
+        "difficulty": 7.80035458444779,
+        "interval": 36
+      },
+      {
+        "days": 2,
+        "rating": "hard",
+        "stability": 23.264927204898967,
+        "difficulty": 8.642871428458243,
+        "interval": 40
+      },
+      {
+        "days": 30,
+        "rating": "hard",
+        "stability": 40.90046211704319,
+        "difficulty": 9.159921941163761,
+        "interval": 70
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 54.35094094241234,
+        "difficulty": 8.829530247437404,
+        "interval": 93
+      },
+      {
+        "days": 8,
+        "rating": "easy",
+        "stability": 75.52949073881231,
+        "difficulty": 8.372036055636748,
+        "interval": 129
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 78.68486646492782,
+        "difficulty": 7.738542721798014,
+        "interval": 134
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 78.68486646492782,
+        "difficulty": 7.733140291587386,
+        "interval": 134
+      },
+      {
+        "days": 365,
+        "rating": "again",
+        "stability": 2.6254408350397433,
+        "difficulty": 9.47550218153175,
+        "interval": 4
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.366605422047677,
+        "difficulty": 9.873100584652725,
+        "interval": 1
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 78.63152290593743,
+        "difficulty": 1.0,
+        "interval": 134
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 78.63152290593743,
+        "difficulty": 1.0,
+        "interval": 134
+      },
+      {
+        "days": 90,
+        "rating": "good",
+        "stability": 484.2891096586546,
+        "difficulty": 1.0,
+        "interval": 828
+      },
+      {
+        "days": 90,
+        "rating": "easy",
+        "stability": 1297.9443491655318,
+        "difficulty": 1.0,
+        "interval": 2218
+      },
+      {
+        "days": 8,
+        "rating": "good",
+        "stability": 1328.5169966141818,
+        "difficulty": 1.0,
+        "interval": 2270
+      },
+      {
+        "days": 3,
+        "rating": "again",
+        "stability": 4.2017660970681385,
+        "difficulty": 7.93903272396681,
+        "interval": 7
+      },
+      {
+        "days": 365,
+        "rating": "good",
+        "stability": 80.54922481037553,
+        "difficulty": 7.933469901754447,
+        "interval": 138
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 91.44466343326897,
+        "difficulty": 7.131259088669862,
+        "interval": 156
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 1064.337704566171,
+        "difficulty": 7.126342485365736,
+        "interval": 1819
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 2.6525,
+        "difficulty": 4.581379185693283,
+        "interval": 5
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 23.052961278354466,
+        "difficulty": 4.578502486311539,
+        "interval": 39
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 49.48861562953919,
+        "difficulty": 2.4856274478307423,
+        "interval": 85
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 54.50285659947304,
+        "difficulty": 2.484427349839288,
+        "interval": 93
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 54.50285659947304,
+        "difficulty": 5.3804999735731736,
+        "interval": 93
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 1.410866270716429,
+        "difficulty": 8.93864124640745,
+        "interval": 2
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 5.087962103455719,
+        "difficulty": 8.523122324566096,
+        "interval": 9
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 16.499504704102797,
+        "difficulty": 7.947752250392451,
+        "interval": 28
+      },
+      {
+        "days": 3,
+        "rating": "good",
+        "stability": 22.53515393250681,
+        "difficulty": 7.9421824525589475,
+        "interval": 39
+      },
+      {
+        "days": 90,
+        "rating": "easy",
+        "stability": 245.3921218572319,
+        "difficulty": 7.143323379221091,
+        "interval": 419
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 22.71821859970587,
+        "difficulty": 4.469510563966811,
+        "interval": 39
+      },
+      {
+        "days": 30,
+        "rating": "good",
+        "stability": 124.11892395497993,
+        "difficulty": 4.466723359482447,
+        "interval": 212
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 141.06464674177536,
+        "difficulty": 4.463938384761671,
+        "interval": 241
+      },
+      {
+        "days": 90,
+        "rating": "good",
+        "stability": 408.09280795393965,
+        "difficulty": 4.461155638020672,
+        "interval": 697
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 528.8280079088114,
+        "difficulty": 6.59361325688577,
+        "interval": 904
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 2750.290825848415,
+        "difficulty": 6.589126770247072,
+        "interval": 4699
+      },
+      {
+        "days": 2000,
+        "rating": "hard",
+        "stability": 4026.7108718439117,
+        "difficulty": 7.899543901195302,
+        "interval": 6880
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 4813.4536817648695,
+        "difficulty": 7.084281672162261,
+        "interval": 8225
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 2.6525,
+        "difficulty": 4.581379185693283,
+        "interval": 5
+      },
+      {
+        "days": 2,
+        "rating": "hard",
+        "stability": 7.317809485914129,
+        "difficulty": 6.667394152075361,
+        "interval": 13
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 7.317809485914129,
+        "difficulty": 7.947576400711635,
+        "interval": 13
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 40.66976577243368,
+        "difficulty": 8.733221094606536,
+        "interval": 69
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 1.2200888209901277,
+        "difficulty": 9.703715695938365,
+        "interval": 2
+      },
+      {
+        "days": 30,
+        "rating": "again",
+        "stability": 0.49225459876716393,
+        "difficulty": 9.92517778481554,
+        "interval": 1
+      },
+      {
+        "days": 8,
+        "rating": "easy",
+        "stability": 6.1514855366710774,
+        "difficulty": 9.889181898371968,
+        "interval": 11
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 7.774697168608861,
+        "difficulty": 9.88205895682008,
+        "interval": 13
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 8.598276294283092,
+        "difficulty": 9.874941713621434,
+        "interval": 15
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 16.66556568043508,
+        "difficulty": 9.819619886897117,
+        "interval": 28
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 2.6525,
+        "difficulty": 4.581379185693283,
+        "interval": 5
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 46.59101350131985,
+        "difficulty": 2.4896108205477163,
+        "interval": 80
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 1.401584212586926,
+        "difficulty": 8.27895457771007,
+        "interval": 2
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 16.479487524906737,
+        "difficulty": 8.936587065903765,
+        "interval": 28
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 19.673166111020027,
+        "difficulty": 9.340174504670909,
+        "interval": 34
+      },
+      {
+        "days": 2000,
+        "rating": "hard",
+        "stability": 97.91501952975834,
+        "difficulty": 9.587855122120343,
+        "interval": 167
+      },
+      {
+        "days": 2000,
+        "rating": "hard",
+        "stability": 275.0334941380588,
+        "difficulty": 9.739856107204341,
+        "interval": 470
+      },
+      {
+        "days": 30,
+        "rating": "easy",
+        "stability": 312.4750148582089,
+        "difficulty": 9.632566515080587,
+        "interval": 534
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 101.48277951273134,
+        "difficulty": 9.908941892113983,
+        "interval": 173
+      },
+      {
+        "days": 30,
+        "rating": "again",
+        "stability": 1.7755786784989163,
+        "difficulty": 9.972009392157814,
+        "interval": 3
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 2,
+        "rating": "hard",
+        "stability": 4.184683071472092,
+        "difficulty": 7.80035458444779,
+        "interval": 7
+      },
+      {
+        "days": 3,
+        "rating": "good",
+        "stability": 11.052365093073385,
+        "difficulty": 7.794902704747042,
+        "interval": 19
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 4.279310690733885,
+        "difficulty": 9.489596060069209,
+        "interval": 7
+      },
+      {
+        "days": 365,
+        "rating": "again",
+        "stability": 1.4853462471620118,
+        "difficulty": 9.87631673833045,
+        "interval": 3
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.2442440008495852,
+        "difficulty": 9.96456449272517,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "good",
+        "stability": 3.3661642094805693,
+        "difficulty": 9.9573812450978,
+        "interval": 6
+      },
+      {
+        "days": 90,
+        "rating": "again",
+        "stability": 0.9982757524467072,
+        "difficulty": 9.983063013971819,
+        "interval": 2
+      },
+      {
+        "days": 30,
+        "rating": "easy",
+        "stability": 13.135794698434061,
+        "difficulty": 9.969335717710965,
+        "interval": 22
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 14.677512770643391,
+        "difficulty": 9.950327496778907,
+        "interval": 25
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 21.267259380232083,
+        "difficulty": 7.80035458444779,
+        "interval": 36
+      },
+      {
+        "days": 30,
+        "rating": "easy",
+        "stability": 127.76621801764757,
+        "difficulty": 6.946933981035842,
+        "interval": 218
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 1.8434288764309579,
+        "difficulty": 9.296093773093185,
+        "interval": 3
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 10.657579174785694,
+        "difficulty": 9.560802885687652,
+        "interval": 18
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 10.657579174785694,
+        "difficulty": 9.723254216314215,
+        "interval": 18
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 15.30044467866187,
+        "difficulty": 9.822950197928462,
+        "interval": 26
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 15.686694092723263,
+        "difficulty": 9.884133376371464,
+        "interval": 27
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 20.46214789223513,
+        "difficulty": 9.832347604939,
+        "interval": 35
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 20.46214789223513,
+        "difficulty": 9.889900541915328,
+        "interval": 35
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 90,
+        "rating": "again",
+        "stability": 0.5893009644693094,
+        "difficulty": 9.177561732360283,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2662084020683769,
+        "difficulty": 9.805112041342984,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 0.46101053539563863,
+        "difficulty": 9.722926567756977,
+        "interval": 1
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 2.170924767558326,
+        "difficulty": 9.822749120815628,
+        "interval": 4
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 3.3666115934837944,
+        "difficulty": 9.747348675129155,
+        "interval": 6
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.4151851263775961,
+        "difficulty": 9.935134615798697,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 0.8049749968229772,
+        "difficulty": 9.95298067739546,
+        "interval": 1
+      },
+      {
+        "days": 2000,
+        "rating": "hard",
+        "stability": 5.223204677029467,
+        "difficulty": 9.963932761456427,
+        "interval": 9
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 9.993134358076471,
+        "difficulty": 9.942846009949967,
+        "interval": 17
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.6554245018237027,
+        "difficulty": 7.93903272396681,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 3.1207245376794575,
+        "difficulty": 7.933469901754447,
+        "interval": 5
+      },
+      {
+        "days": 13,
+        "rating": "easy",
+        "stability": 44.45010192608257,
+        "difficulty": 7.131259088669862,
+        "interval": 76
+      },
+      {
+        "days": 30,
+        "rating": "hard",
+        "stability": 73.82183402508299,
+        "difficulty": 8.232249170161126,
+        "interval": 126
+      },
+      {
+        "days": 3,
+        "rating": "again",
+        "stability": 1.5261754837336912,
+        "difficulty": 9.589396369788332,
+        "interval": 3
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 8.005493134114618,
+        "difficulty": 9.740801967103293,
+        "interval": 14
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 13.690100518861982,
+        "difficulty": 9.633876249611582,
+        "interval": 23
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 14.634295088108246,
+        "difficulty": 9.626957552578702,
+        "interval": 25
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 16.77729069134969,
+        "difficulty": 9.763853172497763,
+        "interval": 29
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 4.81230573273255,
+        "difficulty": 6.423147436535296,
+        "interval": 8
+      },
+      {
+        "days": 5,
+        "rating": "again",
+        "stability": 0.5667780897291474,
+        "difficulty": 9.1765682629959,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 5.677036341748709,
+        "difficulty": 9.487450374439314,
+        "interval": 10
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 20.34843803968688,
+        "difficulty": 9.678237960771295,
+        "interval": 35
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 21.579872997752133,
+        "difficulty": 9.795323832741797,
+        "interval": 37
+      },
+      {
+        "days": 3,
+        "rating": "good",
+        "stability": 23.898572281303725,
+        "difficulty": 9.788275977642414,
+        "interval": 41
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 159.2353358854604,
+        "difficulty": 9.78123376082711,
+        "interval": 272
+      },
+      {
+        "days": 30,
+        "rating": "hard",
+        "stability": 167.79459379171672,
+        "difficulty": 9.858532101637502,
+        "interval": 287
+      },
+      {
+        "days": 2000,
+        "rating": "easy",
+        "stability": 1000.0539442501625,
+        "difficulty": 9.796897456778856,
+        "interval": 1709
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 2.6525,
+        "difficulty": 4.581379185693283,
+        "interval": 5
+      },
+      {
+        "days": 2000,
+        "rating": "again",
+        "stability": 1.586919976601705,
+        "difficulty": 8.756285817839183,
+        "interval": 3
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.2563509565426799,
+        "difficulty": 9.708978952199105,
+        "interval": 1
+      },
+      {
+        "days": 2,
+        "rating": "hard",
+        "stability": 0.8846821315843744,
+        "difficulty": 9.814189503489892,
+        "interval": 2
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 2.312405224137844,
+        "difficulty": 9.87875695976529,
+        "interval": 4
+      },
+      {
+        "days": 30,
+        "rating": "hard",
+        "stability": 6.926927213908743,
+        "difficulty": 9.918381848702078,
+        "interval": 12
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.5692397552859148,
+        "difficulty": 9.974163543764677,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 0.6136753029763571,
+        "difficulty": 9.966972616896475,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.1406075574173387,
+        "difficulty": 9.985251717784099,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 0.2518135899207062,
+        "difficulty": 9.972366421268903,
+        "interval": 1
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 2.6525,
+        "difficulty": 4.581379185693283,
+        "interval": 5
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 58.86468043371457,
+        "difficulty": 6.667394152075361,
+        "interval": 101
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 74.86895516964654,
+        "difficulty": 5.378120880729386,
+        "interval": 128
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 26.213067149697665,
+        "difficulty": 8.938098349136208,
+        "interval": 45
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 34.584460762827035,
+        "difficulty": 8.522370573377874,
+        "interval": 59
+      },
+      {
+        "days": 2,
+        "rating": "hard",
+        "stability": 36.045355198716585,
+        "difficulty": 9.085970863100822,
+        "interval": 62
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 48.21862169586843,
+        "difficulty": 8.727130007559666,
+        "interval": 82
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 63.52335836322217,
+        "difficulty": 8.230242191345898,
+        "interval": 109
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 200.20936118630516,
+        "difficulty": 8.906692394332792,
+        "interval": 342
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 964.8661043972601,
+        "difficulty": 8.900355444384136,
+        "interval": 1649
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 16.825027056412857,
+        "difficulty": 4.469510563966811,
+        "interval": 29
+      },
+      {
+        "days": 2,
+        "rating": "easy",
+        "stability": 35.56002546982149,
+        "difficulty": 2.334706064597664,
+        "interval": 61
+      },
+      {
+        "days": 8,
+        "rating": "good",
+        "stability": 76.44955685893862,
+        "difficulty": 2.333626703712796,
+        "interval": 131
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 98.30264538452616,
+        "difficulty": 1.0,
+        "interval": 168
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 1.9439088031109462,
+        "difficulty": 7.93903272396681,
+        "interval": 3
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 6.54696263664496,
+        "difficulty": 7.933469901754447,
+        "interval": 11
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 9.67333423311436,
+        "difficulty": 8.724563970929845,
+        "interval": 17
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 13.303819954923657,
+        "difficulty": 9.21005645333339,
+        "interval": 23
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 209.43215184565892,
+        "difficulty": 8.898951629881001,
+        "interval": 358
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.0791811064646135,
+        "difficulty": 9.393844789156143,
+        "interval": 1
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 0.5876691742285789,
+        "difficulty": 9.620792443560765,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "good",
+        "stability": 8.848793785262234,
+        "difficulty": 9.613884213572726,
+        "interval": 15
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 13.459679859338227,
+        "difficulty": 9.606981510168678,
+        "interval": 23
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 13.923801679139656,
+        "difficulty": 9.751593924456188,
+        "interval": 24
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 13.923801679139656,
+        "difficulty": 9.744581053283433,
+        "interval": 24
+      },
+      {
+        "days": 30,
+        "rating": "good",
+        "stability": 32.44720237875443,
+        "difficulty": 9.737573792407616,
+        "interval": 55
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 36.27077978602701,
+        "difficulty": 9.7305721373405,
+        "interval": 62
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 1.1599730181815147,
+        "difficulty": 9.931306292490452,
+        "interval": 2
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 12.24758235872558,
+        "difficulty": 7.3701881639668105,
+        "interval": 21
+      },
+      {
+        "days": 2000,
+        "rating": "again",
+        "stability": 2.9130204637062818,
+        "difficulty": 9.392678293346323,
+        "interval": 5
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 4.205861332410528,
+        "difficulty": 9.385952554678456,
+        "interval": 7
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.2993528548920805,
+        "difficulty": 9.142515394508802,
+        "interval": 11
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 12.508310319886865,
+        "difficulty": 9.135989786160005,
+        "interval": 21
+      },
+      {
+        "days": 8,
+        "rating": "hard",
+        "stability": 17.005188396052393,
+        "difficulty": 9.462547463118355,
+        "interval": 29
+      },
+      {
+        "days": 2000,
+        "rating": "hard",
+        "stability": 82.5938385119681,
+        "difficulty": 9.662955105410125,
+        "interval": 141
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 1.5626381417914406,
+        "difficulty": 9.91587641878026,
+        "interval": 3
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 2.4592467890641974,
+        "difficulty": 9.908732121612045,
+        "interval": 4
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 30,
+        "rating": "hard",
+        "stability": 4.178780087314991,
+        "difficulty": 8.382016476561477,
+        "interval": 7
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 6.882211261872687,
+        "difficulty": 8.999835899467575,
+        "interval": 12
+      },
+      {
+        "days": 2000,
+        "rating": "easy",
+        "stability": 206.78876347068143,
+        "difficulty": 8.607858711333286,
+        "interval": 353
+      },
+      {
+        "days": 8,
+        "rating": "good",
+        "stability": 216.06629492045911,
+        "difficulty": 8.60176082833103,
+        "interval": 369
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 216.06629492045911,
+        "difficulty": 8.595667823635175,
+        "interval": 369
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 221.87957387573184,
+        "difficulty": 8.589579693343076,
+        "interval": 379
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 224.39120434434972,
+        "difficulty": 8.039775932570747,
+        "interval": 383
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 2.1812725313724197,
+        "difficulty": 9.545474924793972,
+        "interval": 4
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.332784248698281,
+        "difficulty": 9.889068020088276,
+        "interval": 1
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 2.6525,
+        "difficulty": 4.581379185693283,
+        "interval": 5
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 46.59101350131985,
+        "difficulty": 2.4896108205477163,
+        "interval": 80
+      },
+      {
+        "days": 365,
+        "rating": "again",
+        "stability": 2.729084920618426,
+        "difficulty": 8.27895457771007,
+        "interval": 5
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 10.625517729833973,
+        "difficulty": 8.936587065903765,
+        "interval": 18
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 0.7977497851179944,
+        "difficulty": 9.750122809123965,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 1.8190985296626798,
+        "difficulty": 9.743111114843476,
+        "interval": 3
+      },
+      {
+        "days": 365,
+        "rating": "again",
+        "stability": 0.9943937471690959,
+        "difficulty": 9.934167625409135,
+        "interval": 2
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 1.8740058984320347,
+        "difficulty": 9.927008695275617,
+        "interval": 3
+      },
+      {
+        "days": 90,
+        "rating": "again",
+        "stability": 0.7823774047719461,
+        "difficulty": 9.97613214767033,
+        "interval": 1
+      },
+      {
+        "days": 90,
+        "rating": "hard",
+        "stability": 3.79982843726451,
+        "difficulty": 9.978140761760049,
+        "interval": 6
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 3,
+        "rating": "again",
+        "stability": 0.2509588465866557,
+        "difficulty": 9.177561732360283,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 12.343049395917697,
+        "difficulty": 8.853956109740317,
+        "interval": 21
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 12.343049395917697,
+        "difficulty": 8.847661348819335,
+        "interval": 21
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 4.751360535167008,
+        "difficulty": 9.72983039839505,
+        "interval": 8
+      },
+      {
+        "days": 2000,
+        "rating": "easy",
+        "stability": 101.00842905357946,
+        "difficulty": 9.618683891406839,
+        "interval": 173
+      },
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 101.00842905357946,
+        "difficulty": 9.758775647008184,
+        "interval": 173
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 105.29434791212394,
+        "difficulty": 9.65876444843108,
+        "interval": 180
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 106.32339479447566,
+        "difficulty": 9.783372986166722,
+        "interval": 182
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 134.36430631163265,
+        "difficulty": 9.692824444528023,
+        "interval": 230
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 9.541935747253772,
+        "difficulty": 6.358359851372144,
+        "interval": 16
+      },
+      {
+        "days": 2,
+        "rating": "hard",
+        "stability": 12.690971996492804,
+        "difficulty": 7.757922811281195,
+        "interval": 22
+      },
+      {
+        "days": 1,
+        "rating": "good",
+        "stability": 14.951741590685389,
+        "difficulty": 7.75250487699898,
+        "interval": 26
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 394.50857421388474,
+        "difficulty": 6.880676373314862,
+        "interval": 674
+      },
+      {
+        "days": 13,
+        "rating": "good",
+        "stability": 418.3570862384542,
+        "difficulty": 6.87596023618302,
+        "interval": 715
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 1640.7924826071214,
+        "difficulty": 5.666922850929308,
+        "interval": 2804
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 3.9327853738065937,
+        "difficulty": 9.004001536546573,
+        "interval": 7
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 4.687979774313257,
+        "difficulty": 9.38154659931499,
+        "interval": 8
+      },
+      {
+        "days": 2000,
+        "rating": "easy",
+        "stability": 126.1020558035195,
+        "difficulty": 9.136414457268572,
+        "interval": 215
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 2000,
+        "rating": "good",
+        "stability": 12.24758235872558,
+        "difficulty": 7.3701881639668105,
+        "interval": 21
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 24.152744767078577,
+        "difficulty": 7.365080417402448,
+        "interval": 41
+      },
+      {
+        "days": 13,
+        "rating": "good",
+        "stability": 51.78733064999024,
+        "difficulty": 7.359976757035335,
+        "interval": 88
+      },
+      {
+        "days": 13,
+        "rating": "easy",
+        "stability": 108.66797482449145,
+        "difficulty": 6.337141719109743,
+        "interval": 186
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 113.61526904308154,
+        "difficulty": 6.332860409701266,
+        "interval": 194
+      },
+      {
+        "days": 365,
+        "rating": "again",
+        "stability": 2.7365357269391906,
+        "difficulty": 9.15596520808582,
+        "interval": 5
+      },
+      {
+        "days": 365,
+        "rating": "good",
+        "stability": 37.04386156498285,
+        "difficulty": 9.149428839886163,
+        "interval": 63
+      },
+      {
+        "days": 2000,
+        "rating": "hard",
+        "stability": 169.16718510325546,
+        "difficulty": 9.47079497730016,
+        "interval": 289
+      },
+      {
+        "days": 3,
+        "rating": "easy",
+        "stability": 174.10936034299482,
+        "difficulty": 9.259996906013976,
+        "interval": 298
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 2.6525,
+        "difficulty": 4.581379185693283,
+        "interval": 5
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 4.0703042672275265,
+        "difficulty": 2.4896108205477163,
+        "interval": 7
+      },
+      {
+        "days": 5,
+        "rating": "easy",
+        "stability": 64.57250836744315,
+        "difficulty": 1.0,
+        "interval": 110
+      },
+      {
+        "days": 5,
+        "rating": "again",
+        "stability": 1.7042934246730408,
+        "difficulty": 7.93903272396681,
+        "interval": 3
+      },
+      {
+        "days": 8,
+        "rating": "easy",
+        "stability": 27.921980611048458,
+        "difficulty": 7.138961942284226,
+        "interval": 48
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 1.13289686598471,
+        "difficulty": 9.339913608219039,
+        "interval": 2
+      },
+      {
+        "days": 5,
+        "rating": "hard",
+        "stability": 3.2828080193419633,
+        "difficulty": 9.587695010610217,
+        "interval": 6
+      },
+      {
+        "days": 3,
+        "rating": "hard",
+        "stability": 4.7393260885279425,
+        "difficulty": 9.739757847164807,
+        "interval": 8
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 6.610844523641402,
+        "difficulty": 9.732754444853885,
+        "interval": 11
+      },
+      {
+        "days": 30,
+        "rating": "good",
+        "stability": 22.60714842731335,
+        "difficulty": 9.725756645264813,
+        "interval": 39
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 2.8520023380176296,
+        "difficulty": 7.80035458444779,
+        "interval": 5
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 12.253438206489395,
+        "difficulty": 8.642871428458243,
+        "interval": 21
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 13.04744796867455,
+        "difficulty": 9.159921941163761,
+        "interval": 22
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 0.8557193213259547,
+        "difficulty": 9.801086727858111,
+        "interval": 1
+      },
+      {
+        "days": 30,
+        "rating": "easy",
+        "stability": 13.944152034977085,
+        "difficulty": 9.71735270626326,
+        "interval": 24
+      },
+      {
+        "days": 8,
+        "rating": "good",
+        "stability": 20.35918575275495,
+        "difficulty": 9.710367228065058,
+        "interval": 35
+      },
+      {
+        "days": 30,
+        "rating": "easy",
+        "stability": 63.1349469715544,
+        "difficulty": 9.591733191528249,
+        "interval": 108
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 22.30385681479485,
+        "difficulty": 9.899623928760773,
+        "interval": 38
+      },
+      {
+        "days": 13,
+        "rating": "again",
+        "stability": 1.0694506421343333,
+        "difficulty": 9.969883078806406,
+        "interval": 2
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 0.2438,
+        "difficulty": 7.3753,
+        "interval": 1
+      },
+      {
+        "days": 30,
+        "rating": "good",
+        "stability": 8.422931339253775,
+        "difficulty": 7.3701881639668105,
+        "interval": 14
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 0.745192468204718,
+        "difficulty": 9.392678293346323,
+        "interval": 1
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 6.299027981940262,
+        "difficulty": 9.62007656795445,
+        "interval": 11
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 6.299027981940262,
+        "difficulty": 9.613168910666896,
+        "interval": 11
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 8.32218360212142,
+        "difficulty": 9.606266779505173,
+        "interval": 14
+      },
+      {
+        "days": 5,
+        "rating": "good",
+        "stability": 12.966266354772438,
+        "difficulty": 9.59937017004838,
+        "interval": 22
+      },
+      {
+        "days": 5,
+        "rating": "again",
+        "stability": 0.8150527741189282,
+        "difficulty": 9.901366649651191,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "hard",
+        "stability": 1.2475041453522755,
+        "difficulty": 9.932257359714972,
+        "interval": 2
+      },
+      {
+        "days": 8,
+        "rating": "hard",
+        "stability": 3.100897880512712,
+        "difficulty": 9.951214912421323,
+        "interval": 5
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 2,
+        "rating": "again",
+        "stability": 0.2285830388202474,
+        "difficulty": 9.177561732360283,
+        "interval": 1
+      },
+      {
+        "days": 13,
+        "rating": "easy",
+        "stability": 7.397782634722291,
+        "difficulty": 8.853956109740317,
+        "interval": 13
+      },
+      {
+        "days": 2000,
+        "rating": "easy",
+        "stability": 233.61886487222685,
+        "difficulty": 8.405858607309492,
+        "interval": 399
+      },
+      {
+        "days": 365,
+        "rating": "easy",
+        "stability": 980.1042010974709,
+        "difficulty": 7.785376892377902,
+        "interval": 1675
+      },
+      {
+        "days": 13,
+        "rating": "hard",
+        "stability": 988.0685298875003,
+        "difficulty": 8.633679655713358,
+        "interval": 1688
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 3.3284380793857937,
+        "difficulty": 9.681000829769227,
+        "interval": 6
+      },
+      {
+        "days": 3,
+        "rating": "good",
+        "stability": 6.156607865989775,
+        "difficulty": 9.674044433072222,
+        "interval": 11
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 6.156607865989775,
+        "difficulty": 9.667093601492574,
+        "interval": 11
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 8.104238397132587,
+        "difficulty": 9.66014833057819,
+        "interval": 14
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 6.6365,
+        "difficulty": 1.0,
+        "interval": 11
+      },
+      {
+        "days": 365,
+        "rating": "hard",
+        "stability": 168.19864183555134,
+        "difficulty": 4.469510563966811,
+        "interval": 287
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 56.43500434603487,
+        "difficulty": 8.730757949252013,
+        "interval": 96
+      },
+      {
+        "days": 13,
+        "rating": "easy",
+        "stability": 91.63649179465204,
+        "difficulty": 8.23526581114009,
+        "interval": 157
+      },
+      {
+        "days": 0,
+        "rating": "easy",
+        "stability": 116.71304772861681,
+        "difficulty": 7.549156627484757,
+        "interval": 199
+      },
+      {
+        "days": 30,
+        "rating": "again",
+        "stability": 1.8808953659180447,
+        "difficulty": 9.433518015400862,
+        "interval": 3
+      },
+      {
+        "days": 90,
+        "rating": "easy",
+        "stability": 38.61291018283337,
+        "difficulty": 9.208379405087854,
+        "interval": 66
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 13.998282196162783,
+        "difficulty": 9.8121444824995,
+        "interval": 24
+      },
+      {
+        "days": 8,
+        "rating": "again",
+        "stability": 0.8727393627178615,
+        "difficulty": 9.949920699957255,
+        "interval": 1
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 0.9199537355900679,
+        "difficulty": 9.9427491673641,
+        "interval": 2
+      }
+    ],
+    [
+      {
+        "days": 0,
+        "rating": "hard",
+        "stability": 1.0345,
+        "difficulty": 6.4275010333952025,
+        "interval": 2
+      },
+      {
+        "days": 2000,
+        "rating": "again",
+        "stability": 0.865780429806336,
+        "difficulty": 9.177561732360283,
+        "interval": 1
+      },
+      {
+        "days": 30,
+        "rating": "hard",
+        "stability": 5.34044874612374,
+        "difficulty": 9.488060064142095,
+        "interval": 9
+      },
+      {
+        "days": 2,
+        "rating": "good",
+        "stability": 7.5704242472584315,
+        "difficulty": 9.481258020057592,
+        "interval": 13
+      },
+      {
+        "days": 0,
+        "rating": "good",
+        "stability": 7.5704242472584315,
+        "difficulty": 9.474461417608355,
+        "interval": 13
+      },
+      {
+        "days": 90,
+        "rating": "good",
+        "stability": 42.74707151555405,
+        "difficulty": 9.467670252441078,
+        "interval": 73
+      },
+      {
+        "days": 0,
+        "rating": "again",
+        "stability": 15.41434353258445,
+        "difficulty": 9.871313377002132,
+        "interval": 26
+      },
+      {
+        "days": 5,
+        "rating": "again",
+        "stability": 0.868786046648867,
+        "difficulty": 9.963422750308823,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "again",
+        "stability": 0.17525084535354754,
+        "difficulty": 9.984441655709917,
+        "interval": 1
+      },
+      {
+        "days": 1,
+        "rating": "easy",
+        "stability": 1.5278943565272372,
+        "difficulty": 9.971244726320231,
+        "interval": 3
+      }
+    ]
+  ]
+}

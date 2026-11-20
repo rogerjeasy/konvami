@@ -105,6 +105,28 @@ def test_the_shared_histories_are_what_the_scheduler_gives_now() -> None:
             assert a["difficulty"] == pytest.approx(b["difficulty"], abs=1e-9)
 
 
+def test_the_shared_histories_with_fitted_parameters_are_what_the_scheduler_gives_now() -> None:
+    """The same for a learner's own parameters and another retention, which the app receives
+    with its offline cards (`fsrs_fitted_cases.json`)."""
+    import json
+
+    from tests.domain.fsrs_cases import FITTED_FIXTURE, fitted_cases
+
+    stored = json.loads(FITTED_FIXTURE.read_text())
+    fresh = fitted_cases()
+    assert stored["weights"] == pytest.approx(fresh["weights"])
+    assert stored["retention"] == fresh["retention"]
+    for kept, now in zip(stored["histories"], fresh["histories"], strict=True):
+        for a, b in zip(kept, now, strict=True):
+            assert (a["days"], a["rating"], a["interval"]) == (
+                b["days"],
+                b["rating"],
+                b["interval"],
+            )
+            assert a["stability"] == pytest.approx(b["stability"], abs=1e-9)
+            assert a["difficulty"] == pytest.approx(b["difficulty"], abs=1e-9)
+
+
 def test_a_learners_own_parameters_change_when_a_card_comes_back() -> None:
     own = (1.0, *DEFAULT_WEIGHTS[1:])
 

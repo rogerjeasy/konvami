@@ -9,7 +9,13 @@ import {
 import { randomUuid } from '@/lib/random-id';
 import type { OfflineCache } from './cache';
 import type { LibraryMedia } from './library';
-import { intervalDays, reviewMemory, type CardMemory } from './scheduler';
+import {
+  DEFAULT_RETENTION,
+  intervalDays,
+  reviewMemory,
+  scheduleWeights,
+  type CardMemory,
+} from './scheduler';
 
 const DAY_MS = 86_400_000;
 // A card that was not known comes back this soon (the server's AGAIN_DELAY).
@@ -35,6 +41,9 @@ interface ReviewState {
   cards: Record<string, StoredCard>;
   pending: ReviewEvent[];
   language: string;
+  /** The learner's own FSRS parameters from the server; null (or absent) for the defaults. */
+  weights?: number[] | null;
+  retention?: number;
 }
 /** Where each card's sound was saved on the phone, in the order they were first played. */
 type SoundFiles = Record<string, string>;
@@ -44,20 +53,29 @@ export type OfflineReviewQueue = ReviewQueue & { offline?: true };
 const empty = (): ReviewState => ({ cards: {}, pending: [], language: '' });
 const networkFailure = (error: unknown) => error instanceof ApiError && error.code === 'network';
 
-function reviewed(card: StoredCard, rating: Rating, at: number): StoredCard {
+function reviewed(
+  card: StoredCard,
+  rating: Rating,
+  at: number,
+  schedule: Pick<ReviewState, 'weights' | 'retention'>,
+): StoredCard {
   // Old cache entries cannot reconstruct stability. Only new cards or cards delivered with
   // memory from the server can be scheduled offline without inventing their history.
   if (card.reviews > 0 && !card.memory) throw new ApiError('offline_refresh_required');
   const days = card.reviewedAt
     ? Math.max(0, Math.floor((at - Date.parse(card.reviewedAt)) / DAY_MS))
     : 0;
-  const memory = reviewMemory(card.memory ?? null, days, rating);
+  const weights = scheduleWeights(schedule.weights);
+  const memory = reviewMemory(card.memory ?? null, days, rating, weights);
   return {
     ...card,
     memory,
     reviewedAt: new Date(at).toISOString(),
     dueAt: new Date(
-      at + (rating === 'again' ? AGAIN_MS : intervalDays(memory) * DAY_MS),
+      at +
+        (rating === 'again'
+          ? AGAIN_MS
+          : intervalDays(memory, weights, schedule.retention ?? DEFAULT_RETENTION) * DAY_MS),
     ).toISOString(),
     reviews: card.reviews + 1,
     lapses: card.lapses + (rating === 'again' && card.memory && days >= 1 ? 1 : 0),
@@ -178,7 +196,11 @@ export function createOfflineApi<
   async function keepAhead(owner: string | null, data: ReviewState, queue: ReviewQueue) {
     let ahead: Card[];
     try {
-      ahead = (await api.getCardsAhead()).cards;
+      const answer = await api.getCardsAhead();
+      ahead = answer.cards;
+      // Offline ratings are scheduled as the server schedules this learner's cards.
+      data.weights = answer.weights ?? null;
+      data.retention = answer.retention;
     } catch {
       // Reviewing goes on; the cards stay as they were.
       return;
@@ -210,7 +232,7 @@ export function createOfflineApi<
         dueIn: Object.fromEntries(
           RATINGS.map((rating) => [
             rating,
-            (Date.parse(reviewed(card, rating, at).dueAt) - at) / 1000,
+            (Date.parse(reviewed(card, rating, at, data).dueAt) - at) / 1000,
           ]),
         ) as ReviewQueue['cards'][number]['dueIn'],
       })),
@@ -311,7 +333,7 @@ export function createOfflineApi<
         const before = data.cards[id];
         if (!before) return api.reviewCard(id, rating);
         const at = Math.max(now(), Date.parse(before.reviewedAt ?? before.createdAt));
-        const after = reviewed(before, rating, at);
+        const after = reviewed(before, rating, at, data);
         const event: ReviewEvent = {
           clientId: randomUuid(),
           cardId: id,

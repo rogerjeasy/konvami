@@ -2,6 +2,7 @@ import { ApiError } from '@konvami/api-client';
 import { createFakeApi } from '@/test/fake-api';
 import { createOfflineCache, type OfflineDisk } from './cache';
 import { createOfflineApi } from './api';
+import { DEFAULT_WEIGHTS } from './scheduler';
 
 async function setup() {
   const files = new Map<string, string>();
@@ -138,6 +139,23 @@ describe('offline learning API', () => {
     const later = await offline.getDueCards();
     expect(later.offline).toBe(true);
     expect(later.cards.map((item) => item.card.id)).toContain(card.id);
+  });
+  it('schedules offline with the learner’s own parameters when the server has fitted them', async () => {
+    const { api, offline } = await setup();
+    const ahead = api.getCardsAhead.bind(api);
+    // A learner whose new cards rated "good" stay ten days instead of the published 2.3.
+    const own = [...DEFAULT_WEIGHTS];
+    own[2] = 10;
+    api.getCardsAhead = async () => ({ ...(await ahead()), weights: own, retention: 0.9 });
+    const online = await offline.getDueCards();
+    const fresh = online.cards.find((item) => item.card.reviews === 0)!.card;
+    api.getDueCards = jest.fn().mockRejectedValue(new ApiError('network'));
+
+    const queue = await offline.getDueCards();
+
+    const item = queue.cards.find((candidate) => candidate.card.id === fresh.id)!;
+    expect(queue.offline).toBe(true);
+    expect(item.dueIn.good).toBe(10 * 86_400);
   });
   it('says a queue read from the phone is offline, and one from the server is not', async () => {
     const { api, offline } = await setup();
