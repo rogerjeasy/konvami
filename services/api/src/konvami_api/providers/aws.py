@@ -85,6 +85,23 @@ class LambdaDetailsStarter:
         )
 
 
+class LambdaFitStarter:
+    """Has a learner's review log fitted (their own card schedule) by the worker function, in an
+    invocation of its own: a fit takes longer than an API request may."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, user_id: UUID) -> None:
+        # The worker reads only this learner's own log.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"card_schedule": str(user_id)}).encode(),
+        )
+
+
 class LambdaExamStarter:
     """Has an exam simulation scored by the worker function, in an invocation of its own: the
     scoring takes longer than an API request may, and must not hold up the end of the call."""

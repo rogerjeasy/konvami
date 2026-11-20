@@ -148,7 +148,15 @@ export function LearnScreen() {
             />
           </Reveal>
           <Reveal delay={staggerDelay(2)}>
-            <DeckStats total={total} due={deck.summary?.due ?? 0} />
+            <View className="gap-2">
+              <DeckStats total={total} due={deck.summary?.due ?? 0} />
+              {/* Once the learner's reviews were fitted (spec §6.7): said once, quietly. */}
+              {deck.summary?.tuned ? (
+                <Text variant="small" tone="subtle">
+                  {t('learn.tuned')}
+                </Text>
+              ) : null}
+            </View>
           </Reveal>
           <LearnTools first={3} columns={columns} />
           <Reveal delay={staggerDelay(9)}>

@@ -2105,6 +2105,7 @@ export function createFakeApi(): FakeApi {
         cards: page,
         next: older.length > limit ? (page.at(-1)?.createdAt ?? null) : null,
         ...deckSummary(),
+        scheduleTuned: false,
       };
     },
     async getDueCards(limit = QUEUE_DEFAULT) {
@@ -2134,6 +2135,9 @@ export function createFakeApi(): FakeApi {
           .filter((card) => Date.parse(card.dueAt) <= horizon)
           .sort((a, b) => a.dueAt.localeCompare(b.dueAt)),
         language: 'de',
+        // A learner without a fit of their own: the published parameters.
+        weights: null,
+        retention: 0.9,
       };
     },
     async syncCardReviews(sent) {

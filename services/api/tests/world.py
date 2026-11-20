@@ -8,6 +8,7 @@ from uuid import UUID
 
 from konvami_api.domain.accounts import Account, AccountService
 from konvami_api.domain.card_details import CardDetailsService
+from konvami_api.domain.card_schedule import CardScheduleService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
 from konvami_api.domain.conversation_review import ConversationReview
@@ -111,12 +112,14 @@ from tests.fakes import (
     InMemoryRecordingRepository,
     InMemoryReportRepository,
     InMemoryRetryRepository,
+    InMemoryScheduleRepository,
     InMemoryTutorRepository,
     InMemoryVoiceSessionRepository,
     InMemoryWeekReviewRepository,
     RecordingCallStarter,
     RecordingDetailsStarter,
     RecordingExamStarter,
+    RecordingFitStarter,
     RecordingNotifier,
     RecordingPenPalStarter,
     RecordingPushSender,
@@ -299,6 +302,11 @@ class World:
         # Card ids in the order they are handed out: ...0001, ...0002, and so on.
         card_ids = (UUID(f"cccccccc-cccc-4ccc-8ccc-{number:012d}") for number in range(1, 10_000))
         self.card_details_starter = RecordingDetailsStarter()
+        self.schedule_store = InMemoryScheduleRepository(self.card_store)
+        self.fit_starter = RecordingFitStarter()
+        self.card_schedule = CardScheduleService(
+            repository=self.schedule_store, clock=self.clock, starter=self.fit_starter
+        )
         self.cards = CardService(
             profiles=self.profiles,
             reports=self.reports,
@@ -307,6 +315,7 @@ class World:
             clock=self.clock,
             new_id=lambda: next(card_ids),
             details=self.card_details_starter,
+            schedule=self.card_schedule,
         )
         self.grammar = GrammarMapService(profiles=self.profiles, reports=self.reports)
         self.feedback = FeedbackService(

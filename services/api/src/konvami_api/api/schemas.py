@@ -1470,6 +1470,8 @@ class DeckOut(DeckSummaryOut):
     cards: list[CardOut]
     # Pass as `before` to read the next page; null on the last one.
     next: dt.datetime | None
+    # Whether the cards are scheduled with the learner's own fitted parameters (5.7 says so).
+    schedule_tuned: bool = False
 
     @classmethod
     def of(cls, deck: Deck) -> "DeckOut":
@@ -1478,6 +1480,7 @@ class DeckOut(DeckSummaryOut):
             next=deck.next,
             total=deck.total,
             due=deck.due,
+            schedule_tuned=deck.tuned,
         )
 
 
@@ -1523,10 +1526,19 @@ class CardsAheadOut(ApiModel):
     cards: list[CardOut]
     # The language the cards are in (ISO 639-1).
     language: str
+    # The 21 FSRS parameters the server schedules this learner's cards with; null for the
+    # published defaults. The phone schedules offline reviews with the same, and `retention`.
+    weights: list[float] | None = None
+    retention: float = 0.9
 
     @classmethod
     def of(cls, ahead: Ahead) -> "CardsAheadOut":
-        return cls(cards=[CardOut.of(card) for card in ahead.cards], language=ahead.language)
+        return cls(
+            cards=[CardOut.of(card) for card in ahead.cards],
+            language=ahead.language,
+            weights=list(ahead.weights) if ahead.weights else None,
+            retention=ahead.retention,
+        )
 
 
 class OfflineReviewIn(ApiModel):

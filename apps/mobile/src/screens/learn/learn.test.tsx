@@ -54,6 +54,19 @@ describe('5.7 Learn', () => {
 
   const removed = (api: FakeApi) => api.calls.filter(([method]) => method === 'removeCard');
 
+  it('says quietly that the schedule is tuned once the learner’s reviews were fitted', async () => {
+    const tuned = /Your schedule is tuned to you/;
+    const api = await learning();
+    await open(api);
+    expect(screen.queryByText(tuned)).toBeNull();
+
+    const getCards = api.getCards.bind(api);
+    api.getCards = async (page) => ({ ...(await getCards(page)), scheduleTuned: true });
+    await open(api);
+
+    expect(screen.getByText(tuned)).toBeTruthy();
+  });
+
   it('tells a learner without cards where cards come from, and shows none made up', async () => {
     await open(inApp());
 

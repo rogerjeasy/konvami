@@ -1278,6 +1278,7 @@ export const en = {
   learn: {
     title: 'Learn',
     headline: 'Your words, your grammar.',
+    tuned: 'Your schedule is tuned to you: cards come back when you would just about forget them.',
     stats: {
       total: 'cards',
       due: 'to review',

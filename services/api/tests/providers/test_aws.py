@@ -13,6 +13,7 @@ from konvami_api.providers.aws import (
     LambdaCallStarter,
     LambdaDetailsStarter,
     LambdaExamStarter,
+    LambdaFitStarter,
     LambdaReportStarter,
     LambdaWeekReviewStarter,
     SnsNotifier,
@@ -87,6 +88,20 @@ def test_new_cards_are_handed_to_the_worker_to_be_filled_in(functions: Stubber) 
     )
 
     LambdaDetailsStarter(functions.client, "kv-dev-call-worker").start(USER)
+
+
+def test_a_learners_review_log_is_handed_to_the_worker_to_be_fitted(functions: Stubber) -> None:
+    functions.add_response(
+        "invoke",
+        {"StatusCode": 202},
+        {
+            "FunctionName": "kv-dev-call-worker",
+            "InvocationType": "Event",
+            "Payload": json.dumps({"card_schedule": str(USER)}).encode(),
+        },
+    )
+
+    LambdaFitStarter(functions.client, "kv-dev-call-worker").start(USER)
 
 
 def test_a_weekly_check_in_is_handed_to_the_worker_to_be_written(functions: Stubber) -> None:

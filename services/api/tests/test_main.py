@@ -337,17 +337,24 @@ def test_the_deck_is_read_from_the_database(stub: Stubber) -> None:
         "parameters": ANY,
         "formatRecordsAs": "JSON",
     }
-    # The learner's language, their cards, and how many there are.
+    # The learner's language, their cards, how many there are, and their own schedule (none).
     stub.add_response("execute_statement", {"formattedRecords": "[]"}, statement)
     stub.add_response("execute_statement", {"formattedRecords": "[]"}, statement)
     stub.add_response(
         "execute_statement", {"formattedRecords": '[{"total": 0, "due": 0}]'}, statement
     )
+    stub.add_response("execute_statement", {"formattedRecords": "[]"}, statement)
 
     result = invoke(stub, "GET", "/v1/cards")
 
     assert result["statusCode"] == 200
-    assert json.loads(result["body"]) == {"cards": [], "next": None, "total": 0, "due": 0}
+    assert json.loads(result["body"]) == {
+        "cards": [],
+        "next": None,
+        "total": 0,
+        "due": 0,
+        "scheduleTuned": False,
+    }
     stub.assert_no_pending_responses()
 
 
@@ -425,4 +432,18 @@ def test_what_partners_know_is_read_from_the_database(stub: Stubber) -> None:
 
     assert result["statusCode"] == 200
     assert json.loads(result["body"]) == {"enabled": True, "avoidTopics": [], "memories": []}
+    stub.assert_no_pending_responses()
+
+
+def test_the_worker_fits_a_learners_card_schedule_when_that_is_what_it_is_started_for(
+    stub: Stubber,
+) -> None:
+    """Asked to fit a learner's card schedule, it reads their review log (here: empty) and
+    keeps the outcome, which leaves them on the published parameters."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    for _ in range(2):
+        stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"card_schedule": USER})
+
     stub.assert_no_pending_responses()
