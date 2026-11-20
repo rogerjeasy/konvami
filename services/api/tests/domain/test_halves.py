@@ -494,7 +494,8 @@ def test_two_yes_make_a_duo_who_can_start_again_at_once() -> None:
     g.store.save_case(replace(case, status="solved"))
     g.service.again(USER, case_id, True)
     assert g.store.duos_of(USER) == []
-    g.service.again(OTHER_USER, case_id, True)
+    assert not g.service.view(USER, case_id).duo
+    assert g.service.again(OTHER_USER, case_id, True).duo
     duo = g.store.duos_of(USER)[0]
     assert g.service.overview(USER).duos[0].codename == g.store.profiles[OTHER_USER].codename
     again = g.service.play_duo(USER, duo.id)

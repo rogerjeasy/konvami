@@ -3939,6 +3939,8 @@ export interface components {
             askAgain: boolean;
             /** Canhandover */
             canHandOver: boolean;
+            /** Duo */
+            duo: boolean;
             /** Ending */
             ending: string | null;
             final: components["schemas"]["HalvesFinalOut"];

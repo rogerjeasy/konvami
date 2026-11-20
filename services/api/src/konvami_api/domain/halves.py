@@ -807,6 +807,8 @@ class CaseView:
     same_language: bool = False
     # The case was written from the learner's course import (7.17).
     from_import: bool = False
+    # The two are a duo (both said "play again"), so 7.8 can celebrate it.
+    duo: bool = False
 
 
 @dataclass(frozen=True)
@@ -2564,6 +2566,8 @@ class HalvesService:
             told=told,
             same_language=bridged,
             from_import=case.custom is not None,
+            duo=other.user_id is not None
+            and any(d.other(user_id) == other.user_id for d in self._repository.duos_of(user_id)),
         )
 
     def _passed_nudges(self, move_id: UUID) -> tuple[NudgeView, ...]:

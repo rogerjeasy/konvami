@@ -3016,6 +3016,10 @@
             "title": "Canhandover",
             "type": "boolean"
           },
+          "duo": {
+            "title": "Duo",
+            "type": "boolean"
+          },
           "ending": {
             "anyOf": [
               {
@@ -3152,7 +3156,8 @@
           "understoodFirst",
           "told",
           "sameLanguage",
-          "fromImport"
+          "fromImport",
+          "duo"
         ],
         "title": "HalvesCaseOut",
         "type": "object"

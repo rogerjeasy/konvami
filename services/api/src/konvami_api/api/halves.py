@@ -382,6 +382,7 @@ class HalvesCaseOut(ApiModel):
     told: int
     same_language: bool
     from_import: bool
+    duo: bool
 
     @classmethod
     def of(cls, view: CaseView) -> "HalvesCaseOut":
@@ -471,6 +472,7 @@ class HalvesCaseOut(ApiModel):
             told=view.told,
             same_language=view.same_language,
             from_import=view.from_import,
+            duo=view.duo,
         )
 
 
