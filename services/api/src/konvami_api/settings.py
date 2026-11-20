@@ -20,6 +20,8 @@ PREMIUM_VOICES_VARIABLE = "KONVAMI_PREMIUM_VOICES"
 PLANS_VARIABLE = "KONVAMI_PLANS"
 # Two Halves (section 7): {"enabled": true, "open_to_testers": true}. Off without it.
 HALVES_VARIABLE = "KONVAMI_HALVES"
+# The story chain (section 9): {"enabled": true, "open_to_testers": true}. Off without it.
+CHAIN_VARIABLE = "KONVAMI_CHAIN"
 
 
 class _Voice(BaseModel):
@@ -298,4 +300,16 @@ def halves_settings(raw: str | None) -> HalvesSettings:
         parsed = _Halves.model_validate(json.loads(raw))
     except (ValueError, ValidationError) as error:
         raise RuntimeError(f"{HALVES_VARIABLE} is not valid") from error
+    return HalvesSettings(parsed.enabled, parsed.open_to_testers)
+
+
+def chain_settings(raw: str | None) -> HalvesSettings:
+    """The story chain's switches from the `KONVAMI_CHAIN` JSON, the same shape as Two Halves'.
+    Without it, the story chain is off."""
+    if not raw:
+        return HalvesSettings()
+    try:
+        parsed = _Halves.model_validate(json.loads(raw))
+    except (ValueError, ValidationError) as error:
+        raise RuntimeError(f"{CHAIN_VARIABLE} is not valid") from error
     return HalvesSettings(parsed.enabled, parsed.open_to_testers)

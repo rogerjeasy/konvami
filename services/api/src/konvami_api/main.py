@@ -23,6 +23,8 @@ from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.card_schedule import CardScheduleService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.chain import ChainService
+from konvami_api.domain.chain_brain import ModelNarrator
 from konvami_api.domain.coach_facts import CoachFacts, coach_service
 from konvami_api.domain.continuation import Continuations
 from konvami_api.domain.conversation_review import ConversationReview
@@ -80,6 +82,7 @@ from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
+from konvami_api.persistence.chain_repository import SqlChainRepository
 from konvami_api.persistence.coach_repository import SqlCoachRepository
 from konvami_api.persistence.continuation_repository import SqlContinuationRepository
 from konvami_api.persistence.data_api import DataApiClient, RdsData
@@ -130,6 +133,7 @@ from konvami_api.persistence.vocabulary_repository import SqlVocabularyRepositor
 from konvami_api.providers.audio_encoding import FfmpegEncoder
 from konvami_api.providers.aws import (
     LambdaCallStarter,
+    LambdaChainStarter,
     LambdaClient,
     LambdaCoachStarter,
     LambdaDetailsStarter,
@@ -159,6 +163,7 @@ from konvami_api.providers.s3_store import S3, S3FileStore, s3_client
 from konvami_api.providers.video_avatar import vendor_for
 from konvami_api.providers.web_page import WebPageFetcher
 from konvami_api.settings import (
+    CHAIN_VARIABLE,
     COSTS_VARIABLE,
     HALVES_VARIABLE,
     PLANS_VARIABLE,
@@ -166,6 +171,7 @@ from konvami_api.settings import (
     TEXT_MODELS_VARIABLE,
     VIDEO_AVATARS_VARIABLE,
     VOICE_VARIABLE,
+    chain_settings,
     cost_settings,
     halves_settings,
     plan_settings,
@@ -697,11 +703,12 @@ def build_backend(
         clock=_now,
     )
     halves_config = halves_settings(environment.get(HALVES_VARIABLE))
+    halves_store = SqlHalvesRepository(sql)
     halves = HalvesService(
         profiles=profiles,
         personas=personas,
         accounts=directory,
-        repository=SqlHalvesRepository(sql),
+        repository=halves_store,
         listener=listener,
         brain=ModelBrain(
             moderator=OpenAiModerator(openai_key, meter=meter),
@@ -725,8 +732,40 @@ def build_backend(
         clock=_now,
         announce=push.halves,
     )
+    chain_config = chain_settings(environment.get(CHAIN_VARIABLE))
+    chain = ChainService(
+        profiles=profiles,
+        accounts=directory,
+        repository=SqlChainRepository(sql),
+        # Duos, blocks and the cap on wrong codes are Two Halves' own.
+        social=halves_store,
+        listener=listener,
+        narrator=ModelNarrator(
+            moderator=OpenAiModerator(openai_key, meter=meter),
+            text_model=text,
+            # As Two Halves: the check and the narrator are small jobs, corrections judge the
+            # learner's language as a report does.
+            check_model=models.memory,
+            write_model=models.week or models.memory,
+            review_model=models.report,
+            speech=speech,
+            speech_model=models.speech,
+            files=files,
+            language_name=CATALOG.english_name,
+            clock=_now,
+        ),
+        files=files,
+        cards=cards,
+        starter=LambdaChainStarter(clients.functions, worker),
+        enabled=chain_config.enabled,
+        allowed=lambda user_id: chain_config.open_to_testers or user_id in costs.owners,
+        owners=costs.owners,
+        clock=_now,
+        announce=push.chain,
+    )
     services = Services(
         halves=halves,
+        chain=chain,
         catalog=CATALOG,
         profiles=profiles,
         questions=ProfileQuestionService(
@@ -949,10 +988,16 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
             try:
                 backend.services.pen_pal.send_due()
             finally:
-                backend.services.halves.tick()
+                try:
+                    backend.services.halves.tick()
+                finally:
+                    backend.services.chain.tick()
         return
     if "halves" in event:
         _halves_job(backend, event["halves"], UUID(event["id"]))
+        return
+    if "chain" in event:
+        _chain_job(backend, event["chain"], UUID(event["id"]))
         return
     if "pen_pal" in event:
         backend.services.pen_pal.write(UUID(event["pen_pal"]))
@@ -1000,6 +1045,20 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
                             services.memories.write(call_id)
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
+
+
+def _chain_job(backend: Backend, job: str, item_id: UUID) -> None:
+    """The story chain's jobs (section 9): check a line, the AI characters' lines, the
+    narrator's opening and the radio play."""
+    chain = backend.services.chain
+    if job == "check":
+        chain.check(item_id)
+    elif job == "ai":
+        chain.play_ai(item_id)
+    elif job == "opening":
+        chain.speak_opening(item_id)
+    elif job == "play":
+        chain.make_play(item_id)
 
 
 def _halves_job(backend: Backend, job: str, item_id: UUID) -> None:

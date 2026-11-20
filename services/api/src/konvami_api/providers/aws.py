@@ -119,6 +119,22 @@ class LambdaExamStarter:
         )
 
 
+class LambdaChainStarter:
+    """Has the worker check a story-chain line, say the AI characters' lines, read the opening
+    or make the radio play, in an invocation of its own."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, job: str, item_id: UUID) -> None:
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"chain": job, "id": str(item_id)}).encode(),
+        )
+
+
 class LambdaHalvesStarter:
     """Has the worker check a Two Halves move, play the AI stand-in or write a recap, in an
     invocation of its own: each is a few requests to a model and a sound."""

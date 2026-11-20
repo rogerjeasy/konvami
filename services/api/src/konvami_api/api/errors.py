@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException
 from konvami_api.domain.accounts import AccountError
 from konvami_api.domain.caption_lookup import CaptionLookupError
 from konvami_api.domain.cards import CardError
+from konvami_api.domain.chain import ChainError
 from konvami_api.domain.coach import CoachError
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import CostError
@@ -284,6 +285,12 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(FlagError)
     async def _flag_error(_: Request, error: FlagError) -> JSONResponse:
         return _response(_FLAG_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(ChainError)
+    async def _chain_error(_: Request, error: ChainError) -> JSONResponse:
+        from konvami_api.api.chain import STATUS as CHAIN_STATUS
+
+        return _response(CHAIN_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(HalvesError)
     async def _halves_error(_: Request, error: HalvesError) -> JSONResponse:

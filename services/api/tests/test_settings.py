@@ -7,6 +7,7 @@ from konvami_api.domain.costs import Budget
 from konvami_api.domain.voice import CallPurpose
 from konvami_api.settings import (
     HalvesSettings,
+    chain_settings,
     cost_settings,
     halves_settings,
     premium_voice_settings,
@@ -264,3 +265,10 @@ def test_two_halves_is_off_unless_turned_on() -> None:
     assert on == HalvesSettings(enabled=True, open_to_testers=True)
     with pytest.raises(RuntimeError, match="KONVAMI_HALVES"):
         halves_settings('{"enabled": "yes"}')
+
+
+def test_the_story_chain_is_off_unless_turned_on() -> None:
+    assert chain_settings(None) == HalvesSettings(enabled=False, open_to_testers=False)
+    assert chain_settings('{"enabled": true}') == HalvesSettings(enabled=True)
+    with pytest.raises(RuntimeError, match="KONVAMI_CHAIN"):
+        chain_settings('{"enabled": "yes"}')

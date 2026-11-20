@@ -75,6 +75,30 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "Ton coup dans Deux moitiés n’a pas été envoyé. Ouvre l’enquête pour voir pourquoi.",  # noqa: RUF001
         "it": "La tua mossa in Due metà non è stata inviata. Apri il caso per vedere perché.",
     },
+    "chain_turn": {
+        "en": "It’s your turn in the story chain.",  # noqa: RUF001
+        "de": "Du bist dran in der Kettengeschichte.",
+        "fr": "C’est ton tour dans l’histoire à la chaîne.",  # noqa: RUF001
+        "it": "Tocca a te nella storia a catena.",
+    },
+    "chain_held": {
+        "en": "Your line in the story chain wasn’t sent. Open the story to see why.",  # noqa: RUF001
+        "de": "Dein Satz in der Kettengeschichte wurde nicht gesendet. Öffne sie für den Grund.",
+        "fr": "Ta phrase de l’histoire à la chaîne n’est pas partie. Ouvre-la pour voir pourquoi.",  # noqa: RUF001
+        "it": "La tua frase nella storia a catena non è stata inviata. Aprila per vedere perché.",
+    },
+    "chain_invited": {
+        "en": "A friend’s story chain has a seat for you.",  # noqa: RUF001
+        "de": "In einer Kettengeschichte ist ein Platz für dich frei.",
+        "fr": "Une histoire à la chaîne t’attend.",  # noqa: RUF001
+        "it": "Una storia a catena ha un posto per te.",
+    },
+    "chain_ready": {
+        "en": "Your story chain is ready to hear as a radio play.",
+        "de": "Eure Kettengeschichte ist fertig: Hör sie dir als Hörspiel an.",
+        "fr": "Votre histoire à la chaîne est prête à écouter.",
+        "it": "La vostra storia a catena è pronta da ascoltare.",
+    },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
         "de": "Wir haben lange nicht gesprochen. Hast du fünf Minuten?",
@@ -265,6 +289,14 @@ class PushService:
             "pen_pal_reply" if reply else "pen_pal",
             self._partner_name(user_id, persona_id),
             {"open": "pen_pal", "id": str(persona_id)},
+        )
+
+    def chain(self, user_id: UUID, story_id: UUID, kind: str) -> None:
+        """The story chain: the learner's turn (`turn`), their line held (`held`), a seat given
+        (`invited`) or the radio play ready (`ready`). Opens the story."""
+        words = f"chain_{kind}" if kind in ("turn", "held", "invited", "ready") else "chain_turn"
+        self._send(
+            self._repository.of(user_id), words, APP_NAME, {"open": "chain", "id": str(story_id)}
         )
 
     def halves(self, user_id: UUID, case_id: UUID, kind: str) -> None:

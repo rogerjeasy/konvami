@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from konvami_api.api.auth import CurrentUser, recently_signed_in
+from konvami_api.api.chain import chain_router
 from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
 from konvami_api.api.halves import halves_router
 from konvami_api.api.public import public_router
@@ -164,6 +165,7 @@ from konvami_api.domain.card_schedule import CardScheduleService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService, OfflineReview
 from konvami_api.domain.catalog import Catalog
+from konvami_api.domain.chain import ChainError, ChainService
 from konvami_api.domain.coach import CoachService
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationQuery, ConversationService
@@ -262,6 +264,7 @@ class Services:
     stories: StoryService
     # Two Halves (section 7).
     halves: HalvesService
+    chain: ChainService
 
     feedback: FeedbackService
 
@@ -1514,6 +1517,10 @@ def _router(services: Services) -> APIRouter:
     # as every other route.
     router.include_router(
         halves_router(lambda: services.halves, lambda move: recorded(move, HalvesError))
+    )
+    # The story chain (section 9): under /v1/chain, behind the same guard.
+    router.include_router(
+        chain_router(lambda: services.chain, lambda line: recorded(line, ChainError))
     )
     return router
 

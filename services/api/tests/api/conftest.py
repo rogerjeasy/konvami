@@ -14,6 +14,7 @@ from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.chain import ChainService
 from konvami_api.domain.coach_facts import CoachFacts, coach_service
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
@@ -70,6 +71,7 @@ from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.web_deletion import WebDeletionService
 from konvami_api.domain.week_review import WeekReviewService
+from tests.chain_fake import FakeNarrator, InMemoryChainRepository, RecordingChainStarter
 from tests.fakes import (
     FakeAccountDirectory,
     FakeEmailProof,
@@ -359,6 +361,22 @@ def halves_transcriber() -> ScriptedTranscriber:
 
 
 @pytest.fixture
+def chain_transcriber() -> ScriptedTranscriber:
+    """Writes down story-chain lines."""
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
+def chain_starter() -> RecordingChainStarter:
+    return RecordingChainStarter()
+
+
+@pytest.fixture
+def chain_narrator(clock: FixedClock) -> FakeNarrator:
+    return FakeNarrator(clock)
+
+
+@pytest.fixture
 def story_starter() -> RecordingStoryStarter:
     return RecordingStoryStarter()
 
@@ -449,6 +467,9 @@ def services(
     halves_transcriber: ScriptedTranscriber,
     halves_starter: RecordingHalvesStarter,
     halves_brain: FakeBrain,
+    chain_transcriber: ScriptedTranscriber,
+    chain_starter: RecordingChainStarter,
+    chain_narrator: FakeNarrator,
     plan_settings: PlanSettings,
     entitlement_store: InMemoryEntitlementRepository,
 ) -> Services:
@@ -752,6 +773,8 @@ def services(
         sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
         clock=clock,
     )
+    # Duos, blocks and the cap on wrong codes are shared by Two Halves and the story chain.
+    halves_store = InMemoryHalvesRepository()
     return Services(
         vocabulary=VocabularyService(
             profiles=profiles,
@@ -926,7 +949,7 @@ def services(
             profiles=profiles,
             personas=personas,
             accounts=directory,
-            repository=InMemoryHalvesRepository(),
+            repository=halves_store,
             listener=Listener(
                 profiles=profiles,
                 accounts=directory,
@@ -936,6 +959,26 @@ def services(
             brain=halves_brain,
             files=files,
             starter=halves_starter,
+            enabled=True,
+            allowed=lambda _: True,
+            owners=frozenset({UUID(OWNER)}),
+            clock=clock,
+        ),
+        chain=ChainService(
+            profiles=profiles,
+            accounts=directory,
+            repository=InMemoryChainRepository(),
+            social=halves_store,
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=chain_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            narrator=chain_narrator,
+            files=files,
+            cards=cards,
+            starter=chain_starter,
             enabled=True,
             allowed=lambda _: True,
             owners=frozenset({UUID(OWNER)}),
