@@ -287,12 +287,14 @@ variable "halves" {
   description = <<-EOT
     Two Halves (section 7, phase 1): a voice mystery for two learners. Off until enabled.
     open_to_testers: every learner may play while the app is in the testers' hands; off, only
-    the owners (var.costs.owners). Phase 1 never lets a stranger hear a stranger: learners play
-    against a labelled AI or with a friend they invite.
+    the owners (var.costs.owners). Learners play against a labelled AI, with a friend they
+    invite or with a duo. strangers: phase 2's matching of adult strangers; keep it off until the
+    legal review (docs/research/2026-11-20-social-concept.md section 3.12).
   EOT
   type = object({
     enabled         = optional(bool, false)
     open_to_testers = optional(bool, false)
+    strangers       = optional(bool, false)
   })
   default = {}
 }
@@ -303,6 +305,19 @@ variable "radio" {
     open_to_testers: every learner may listen and call in while the app is in the testers' hands;
     off, only the owners (var.costs.owners). Only adults who agreed are ever aired, every call is
     checked first, and the Veil is on by default.
+  EOT
+  type = object({
+    enabled         = optional(bool, false)
+    open_to_testers = optional(bool, false)
+  })
+  default = {}
+}
+
+variable "chain" {
+  description = <<-EOT
+    The story chain, Kettengeschichte (section 9): four seats tell a story line by line. Off
+    until enabled. open_to_testers: every learner may play; off, only the owners
+    (var.costs.owners). Seats are AI characters, invited friends or duos, never strangers.
   EOT
   type = object({
     enabled         = optional(bool, false)

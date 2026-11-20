@@ -43,6 +43,7 @@ locals {
     KONVAMI_PREMIUM_VOICES          = jsonencode(var.premium_voices)
     KONVAMI_HALVES                  = jsonencode(var.halves)
     KONVAMI_RADIO                   = jsonencode(var.radio)
+    KONVAMI_CHAIN                   = jsonencode(var.chain)
     KONVAMI_CALL_WORKER             = local.call_worker_name
     KONVAMI_MEDIA_BUCKET            = var.media_bucket.name
     KONVAMI_VOICE                   = jsonencode(var.voice)

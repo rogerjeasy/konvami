@@ -114,6 +114,7 @@ module "api" {
   premium_voices            = var.premium_voices
   halves                    = var.halves
   radio                     = var.radio
+  chain                     = var.chain
   azure_speech_secret_arn   = try(module.azure_speech_key[0].arn, "")
   azure_speech_region       = var.azure_speech_enabled ? var.azure_speech_region : ""
   recording_alignment_model = var.recording_alignment_model

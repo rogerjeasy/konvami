@@ -113,7 +113,17 @@ variable "premium_voices" {
 }
 
 variable "halves" {
-  description = "Two Halves (see modules/api). Off until enabled."
+  description = "Two Halves (see modules/api). Off until enabled; strangers off until the legal review."
+  type = object({
+    enabled         = optional(bool, false)
+    open_to_testers = optional(bool, false)
+    strangers       = optional(bool, false)
+  })
+  default = {}
+}
+
+variable "radio" {
+  description = "Radio Konvami (see modules/api). Off until enabled."
   type = object({
     enabled         = optional(bool, false)
     open_to_testers = optional(bool, false)
@@ -121,8 +131,8 @@ variable "halves" {
   default = {}
 }
 
-variable "radio" {
-  description = "Radio Konvami (see modules/api). Off until enabled."
+variable "chain" {
+  description = "The story chain (see modules/api). Off until enabled."
   type = object({
     enabled         = optional(bool, false)
     open_to_testers = optional(bool, false)

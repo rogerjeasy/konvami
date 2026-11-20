@@ -64,11 +64,18 @@ openai_api_key = "sk-..."
 # halves = {
 #   enabled         = true
 #   open_to_testers = false
+#   strangers       = false # phase 2 matching of strangers: only after the legal review
 # }
 
 # Radio Konvami (section 8): off until enabled. Turn it on for the owners first, then for every
 # tester with open_to_testers.
 # radio = {
+#   enabled         = true
+#   open_to_testers = false
+# }
+
+# The story chain, Kettengeschichte (section 9): off until enabled, owners first, then testers.
+# chain = {
 #   enabled         = true
 #   open_to_testers = false
 # }
