@@ -1,13 +1,15 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { size } from '@konvami/design-tokens';
-import type { ExamWeek, PlanSession, WeekPlan } from '@konvami/api-client';
+import type { ExamWeek, PlanCase, PlanSession, WeekPlan } from '@konvami/api-client';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
 import { useTileInk } from '@/components/tile';
 import { useExamLabels } from '@/hooks/use-exam-labels';
 import { useScenarioTitle, useTopicLabels } from '@/hooks/use-labels';
 import { missedDays } from '@/lib/plan';
+import { ROUTES } from '@/lib/routes';
 import { useTheme } from '@/theme';
 
 // Stands between the parts of the plan's heading ("Today · 15 min · 6 cards").
@@ -76,6 +78,38 @@ function SessionRow({ session, exam }: { session: PlanSession; exam: ExamWeek | 
 }
 
 /**
+ * The week's Two Halves case, while none was started this week (section 7): one row, never more
+ * than one a week, and a move is not counted as speaking minutes. Opens Two Halves.
+ */
+function HalvesRow({ suggestion }: { suggestion: PlanCase }) {
+  const { t } = useTranslation();
+  const { color } = useTheme();
+  const tile = useTileInk();
+  const body = t('halves.week.body', { title: suggestion.title });
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${t('halves.week.title')}. ${body}`}
+      accessibilityHint={t('halves.week.action')}
+      onPress={() => router.push(ROUTES.halves)}
+      className="min-h-tap flex-row items-start gap-2.5"
+    >
+      <View className="pt-0.5" aria-hidden>
+        <Icon name="compass" color={tile ? color[tile.ink] : color.primaryText} size={size.icon} />
+      </View>
+      <View className="flex-1 gap-0.5">
+        <Text variant="label" tone={tile?.tone ?? 'fg'}>
+          {t('halves.week.title')}
+        </Text>
+        <Text variant="small" tone={tile?.tone ?? 'muted'}>
+          {body}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/**
  * Today's part of the week's plan (spec §6.12 "daily card"): the conversations left for today
  * with what each works on, the cards waiting, and why today looks as it does when the plan
  * changed (days missed, voice minutes running short, the day or the week already done).
@@ -92,7 +126,7 @@ export function PlanBlock({ plan }: { plan: WeekPlan }) {
     plan.reason === 'on_track'
       ? null
       : t(`today.plan.reasons.${plan.reason}`, { days: missedDays(i18n.language, plan.missed) });
-  if (!heading.length && !reason) return null;
+  if (!heading.length && !reason && !plan.halves) return null;
   return (
     <View className={`gap-3 border-t pt-4 ${tile ? 'border-veil' : 'border-border'}`}>
       {heading.length ? (
@@ -107,6 +141,7 @@ export function PlanBlock({ plan }: { plan: WeekPlan }) {
           ))}
         </View>
       ) : null}
+      {plan.halves ? <HalvesRow suggestion={plan.halves} /> : null}
       {reason ? (
         <Text variant="small" tone={tile?.tone ?? 'muted'}>
           {reason}

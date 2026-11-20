@@ -26,6 +26,7 @@ import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { halvesCaseRoute, ROUTES } from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
+import { BridgePanel, Captions, NudgeSheet } from './move-help';
 import { PartnerLine } from './parts';
 
 const REACTIONS: HalvesReaction[] = ['got_it', 'again_slower', 'helped', 'bravo'];
@@ -39,6 +40,10 @@ const REASONS: HalvesReportReason[] = [
 ];
 // A report's note is a sentence or two (the server takes 300 characters).
 const NOTE_MAX = 300;
+// The Bridge's slower replay plays the move at this rate (the device's playback rate).
+const SLOWER_RATE = 0.75;
+// The longest a move plays (ms): the app stops recording at 90 seconds.
+const MOVE_MS = 90_000;
 
 /** 7.10 Report a move: a reason, an optional note for the owner, and blocking at once. */
 function ReportSheet({
@@ -104,6 +109,7 @@ export function HalvesMoveScreen() {
   const { state, refresh, set } = useHalvesCase(signedIn ? (id ?? null) : null);
   const [playing, setPlaying] = useState<'idle' | 'loading' | 'playing'>('idle');
   const [reporting, setReporting] = useState(false);
+  const [nudging, setNudging] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => () => clips.stop(), [clips]);
@@ -113,22 +119,33 @@ export function HalvesMoveScreen() {
   const round = found?.rounds.find((r) => r.theirs?.id === move);
   const theirs = round?.theirs ?? null;
 
-  async function play() {
+  async function play(rate = 1) {
     if (!move) return;
     commitFeedback();
     if (playing === 'playing') {
       clips.stop();
       setPlaying('idle');
-      return;
+      if (rate === 1) return;
     }
     setPlaying('loading');
     try {
       const { url } = await api.getHalvesMoveAudio(move);
       setPlaying('playing');
-      clips.play(url, () => setPlaying('idle'));
+      clips.play(url, () => setPlaying('idle'), MOVE_MS, rate);
     } catch {
       setPlaying('idle');
     }
+  }
+
+  async function bridge(step: 'simpler' | 'gist') {
+    if (!move) return;
+    set(await api.bridgeHalvesMove(move, step));
+  }
+
+  async function nudge(text: string) {
+    if (!move) return;
+    set(await api.nudgeHalvesMove(move, text));
+    setNudging(false);
   }
 
   async function react(reaction: HalvesReaction) {
@@ -214,7 +231,17 @@ export function HalvesMoveScreen() {
                   />
                   <Text variant="labelMedium">{t('halves.move.play')}</Text>
                 </View>
+                <Captions text={theirs.caption} />
               </Reveal>
+              {theirs.bridge ? (
+                <Reveal delay={staggerDelay(3)}>
+                  <BridgePanel
+                    theirs={theirs}
+                    onSlower={() => void play(SLOWER_RATE)}
+                    onStep={bridge}
+                  />
+                </Reveal>
+              ) : null}
               <Reveal delay={staggerDelay(3)}>
                 <ChoiceGroup label={t('halves.move.react')} chips>
                   {REACTIONS.map((reaction) => (
@@ -259,6 +286,27 @@ export function HalvesMoveScreen() {
               </Reveal>
             </>
           )}
+          {theirs.canNudge && !theirs.hidden ? (
+            <Reveal delay={staggerDelay(5)}>
+              {theirs.nudged ? (
+                <Text variant="small" tone="muted">
+                  {t('halves.nudge.done')}
+                </Text>
+              ) : (
+                <TextButton
+                  tone="primary"
+                  label={t('halves.nudge.action')}
+                  onPress={() => setNudging(true)}
+                />
+              )}
+            </Reveal>
+          ) : null}
+          <NudgeSheet
+            visible={nudging}
+            name={found.partner.name}
+            onSend={nudge}
+            onClose={() => setNudging(false)}
+          />
           <ReportSheet visible={reporting} onSend={report} onClose={() => setReporting(false)} />
         </>
       )}

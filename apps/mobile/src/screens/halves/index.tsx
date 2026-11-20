@@ -22,7 +22,11 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { halvesCaseRoute, ROUTES } from '@/lib/routes';
+import { HalvesMotif } from './halves-motif';
 import { failureKey } from './parts';
+
+// The small drawing of the two halves on the hub's search card (pt).
+const SEARCH_MOTIF = 64;
 
 function CaseRow({ found }: { found: HalvesCaseSummary }) {
   const { t } = useTranslation();
@@ -155,8 +159,34 @@ export function HalvesScreen() {
       ) : (
         <>
           <Reveal delay={staggerDelay(1)}>
-            <Text tone="muted">{t('halves.playingAs', { codename: profile.codename })}</Text>
+            <View className="gap-1">
+              <Text tone="muted">{t('halves.playingAs', { codename: profile.codename })}</Text>
+              {hub.told > 0 ? (
+                <Text variant="small" accessibilityHint={t('halves.heard.private')}>
+                  {t('halves.heard.hub', { understood: hub.understoodFirst, told: hub.told })}
+                </Text>
+              ) : null}
+            </View>
           </Reveal>
+          {hub.search ? (
+            <Reveal delay={staggerDelay(1)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('halves.find.looking')}
+                onPress={() => router.push(ROUTES.halvesFind)}
+              >
+                <Card className="min-h-tap flex-row items-center gap-3 p-4">
+                  <HalvesMotif size={SEARCH_MOTIF} />
+                  <View className="flex-1 gap-0.5">
+                    <Text variant="labelMedium">{t('halves.find.looking')}</Text>
+                    <Text variant="small" tone="muted">
+                      {hub.search.offerAi ? t('halves.find.offer') : t('halves.find.lookingBody')}
+                    </Text>
+                  </View>
+                </Card>
+              </Pressable>
+            </Reveal>
+          ) : null}
           {failure ? (
             <NoticeBox icon="info" tone="warn">
               {failure}
@@ -182,6 +212,15 @@ export function HalvesScreen() {
               <Text variant="small" tone="muted">
                 {t('halves.playAiHint')}
               </Text>
+              {hub.strangers && !hub.search ? (
+                <OptionCard
+                  role="radio"
+                  selected={false}
+                  label={t('halves.find.hub')}
+                  description={t('halves.find.hubHint')}
+                  onPress={() => router.push(ROUTES.halvesFind)}
+                />
+              ) : null}
               <OptionCard
                 role="radio"
                 selected={false}
@@ -189,6 +228,13 @@ export function HalvesScreen() {
                 description={t('halves.seasonHint')}
                 disabled={busy !== null}
                 onPress={() => void start('season', () => api.startHalvesCase({ season: true }))}
+              />
+              <OptionCard
+                role="radio"
+                selected={false}
+                label={t('halves.fromImport.row')}
+                description={t('halves.fromImport.rowHint')}
+                onPress={() => router.push(ROUTES.halvesFromImport)}
               />
               {profile.band === 'adult' ? (
                 <OptionCard
@@ -205,8 +251,17 @@ export function HalvesScreen() {
               )}
             </View>
           </Reveal>
+          <Reveal delay={staggerDelay(4)}>
+            <OptionCard
+              role="radio"
+              selected={false}
+              label={t('halves.strands.row')}
+              description={t('halves.strands.rowHint')}
+              onPress={() => router.push(ROUTES.halvesStrands)}
+            />
+          </Reveal>
           {hub.duos.length > 0 ? (
-            <Reveal delay={staggerDelay(4)}>
+            <Reveal delay={staggerDelay(5)}>
               <View className="gap-2.5">
                 <Text variant="section" accessibilityRole="header">
                   {t('halves.duos')}

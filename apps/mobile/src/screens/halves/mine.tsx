@@ -69,7 +69,24 @@ export function HalvesMineScreen() {
               <Text variant="langLine">{mine.transcript}</Text>
             </Card>
           </Reveal>
-          <Reveal delay={staggerDelay(2)}>
+          {mine.nudges.length > 0 ? (
+            <Reveal delay={staggerDelay(2)}>
+              <View className="gap-2.5">
+                <Text variant="section" accessibilityRole="header">
+                  {t('halves.natives.title')}
+                </Text>
+                {mine.nudges.map((nudge) => (
+                  <Card key={`${nudge.by}-${nudge.text}`} className="gap-1 p-4">
+                    <Text variant="langLine">{nudge.text}</Text>
+                    <Text variant="small" tone="muted">
+                      {t('halves.natives.by', { name: nudge.by })}
+                    </Text>
+                  </Card>
+                ))}
+              </View>
+            </Reveal>
+          ) : null}
+          <Reveal delay={staggerDelay(3)}>
             <View className="gap-2.5">
               <Text variant="section" accessibilityRole="header">
                 {t('halves.mine.corrections')}
