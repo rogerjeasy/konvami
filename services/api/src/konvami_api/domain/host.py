@@ -262,7 +262,22 @@ class HostTools:
 
 
 def _exam_order(exam_id: str) -> int:
-    known = ["goethe", "telc", "dtz", "testdaf", "osd"]
+    known = [
+        "goethe",
+        "telc",
+        "dtz",
+        "testdaf",
+        "osd",
+        "fide",
+        "tcf",
+        "delf_dalf",
+        "tef",
+        "ielts",
+        "cambridge",
+        "toefl",
+        "celi",
+        "cils",
+    ]
     return known.index(exam_id) if exam_id in known else len(known)
 
 

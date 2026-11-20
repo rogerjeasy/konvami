@@ -11,20 +11,24 @@ from konvami_api.domain.exams import GERMAN_EXAMS, SpeakingExam
 from konvami_api.domain.grammar import GERMAN_NOTES, GrammarNote
 from konvami_api.domain.grammar_topics import GERMAN_MAP, GrammarTopic
 from konvami_api.domain.language_packs import (
+    english_exams,
     english_grammar,
     english_personas,
     english_sounds,
     english_words,
+    french_exams,
     french_grammar,
     french_personas,
     french_sounds,
     french_words,
+    italian_exams,
     italian_grammar,
     italian_personas,
     italian_sounds,
     italian_words,
 )
 from konvami_api.domain.language_packs.scenarios import scenarios_for
+from konvami_api.domain.language_packs.swiss_exams import fide_exams
 from konvami_api.domain.persona_parts import PersonaTemplate
 from konvami_api.domain.pronunciation_sounds import GERMAN_SOUNDS, ProblemSound
 from konvami_api.domain.scenarios import GERMAN_SCENARIOS, Scenario
@@ -46,6 +50,8 @@ EXPLANATION_USAGES: tuple[ExplanationUsage, ...] = get_args(ExplanationUsage)
 
 # An exam the pack does not list. Any level is possible, so none is checked.
 OTHER_EXAM = "other"
+# The levels the fide test places a learner at (Switzerland, spec §6.13).
+FIDE_LEVELS: tuple[CefrLevel, ...] = ("A1", "A2", "B1")
 
 
 @dataclass(frozen=True)
@@ -154,7 +160,7 @@ GERMAN = LanguagePack(
     grammar=GERMAN_NOTES,
     grammar_map=GERMAN_MAP,
     word_rules=GERMAN_WORD_RULES,
-    speaking_exams=GERMAN_EXAMS,
+    speaking_exams=(*GERMAN_EXAMS, *fide_exams("de")),
     pronunciation=GERMAN_SOUNDS,
     scenarios=GERMAN_SCENARIOS,
     exams=(
@@ -163,6 +169,7 @@ GERMAN = LanguagePack(
         ExamFormat("dtz", "Deutsch-Test für Zuwanderer", ("A2", "B1")),
         ExamFormat("testdaf", "TestDaF", ("B2", "C1")),
         ExamFormat("osd", "ÖSD", CEFR_LEVELS),
+        ExamFormat("fide", "fide (Schweiz)", FIDE_LEVELS),
     ),
     starter_personas=(
         PersonaTemplate(
@@ -313,6 +320,12 @@ CATALOG = Catalog(
             starter_personas=english_personas.PARTNERS,
             persona_templates=english_personas.PARTNERS,
             voice_sample=english_personas.SAMPLE,
+            speaking_exams=english_exams.ENGLISH_EXAMS,
+            exams=(
+                ExamFormat("ielts", "IELTS", ("A2", "B1", "B2", "C1", "C2")),
+                ExamFormat("cambridge", "Cambridge English", CEFR_LEVELS),
+                ExamFormat("toefl", "TOEFL iBT", ("A2", "B1", "B2", "C1", "C2")),
+            ),
         ),
         LanguagePack(
             code="fr",
@@ -326,6 +339,13 @@ CATALOG = Catalog(
             starter_personas=french_personas.PARTNERS,
             persona_templates=french_personas.PARTNERS,
             voice_sample=french_personas.SAMPLE,
+            speaking_exams=(*french_exams.FRENCH_EXAMS, *fide_exams("fr")),
+            exams=(
+                ExamFormat("tcf", "TCF", CEFR_LEVELS),
+                ExamFormat("delf_dalf", "DELF / DALF", CEFR_LEVELS),
+                ExamFormat("tef", "TEF", CEFR_LEVELS),
+                ExamFormat("fide", "fide (Suisse)", FIDE_LEVELS),
+            ),
         ),
         LanguagePack(
             code="it",
@@ -339,6 +359,12 @@ CATALOG = Catalog(
             starter_personas=italian_personas.PARTNERS,
             persona_templates=italian_personas.PARTNERS,
             voice_sample=italian_personas.SAMPLE,
+            speaking_exams=(*italian_exams.ITALIAN_EXAMS, *fide_exams("it")),
+            exams=(
+                ExamFormat("celi", "CELI", CEFR_LEVELS),
+                ExamFormat("cils", "CILS", CEFR_LEVELS),
+                ExamFormat("fide", "fide (Svizzera)", FIDE_LEVELS),
+            ),
         ),
     ),
     explanation_languages=tuple(
