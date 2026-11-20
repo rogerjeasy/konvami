@@ -672,6 +672,7 @@ export const it: Translation = {
       alone: '{{word}}: {{meaning}}. Tocca per ascoltarla.',
     },
     body: {
+      coach: 'Il tuo coach ti propone: {{title}}',
       today: 'Hai {{minutes}}? Il piano di oggi è pronto.',
       practice: 'Hai qualche minuto? Il tuo piano di oggi è pronto.',
       simulation: 'La tua simulazione del {{name}} è prevista questa settimana. Quando vuoi.',
@@ -1927,6 +1928,150 @@ export const it: Translation = {
     combo_other: '{{count}} di fila',
     back: 'Torna a Impara',
   },
+  coach: {
+    title: 'Il tuo coach',
+    body: 'Cosa ti aiuterebbe di più adesso, e perché. Legge le tue conversazioni, carte, suoni e obiettivi.',
+    todayTitle: 'Il tuo coach ti propone',
+    all: 'Vedi tutto',
+    loading: 'Caricamento del tuo coach',
+    loadFailed: 'Non è stato possibile caricare il tuo coach.',
+    writing: 'Il tuo coach lo sta mettendo in parole…',
+    empty:
+      'Per ora niente da proporre. Fai una conversazione e il tuo coach troverà cosa ti aiuta di più.',
+    minutes_one: '{{count}} min',
+    minutes_other: '{{count}} min',
+    start: 'Inizia',
+    started: 'Iniziato',
+    notNow: 'Non ora',
+    notForMe: 'Non fa per me',
+    unavailable: 'Non si può più avviare da qui.',
+    answerFailed: 'Non è stato possibile salvare la tua risposta. Riprova.',
+    noted: 'Capito. Il tuo coach proporrà meno cose così.',
+    urgent: 'Prima del piano di oggi',
+    reasons: {
+      title: 'Perché non questa?',
+      body: 'Il tuo coach impara dalla tua risposta.',
+      not_interested: 'Non mi interessa',
+      already_know: 'Lo so già',
+      too_long: 'Ci vuole troppo',
+      not_useful: 'Non mi aiuta',
+      cancel: 'Annulla',
+    },
+    sections: {
+      today: 'Oggi',
+      holdingBack: 'Cosa ti frena',
+      goingWell: 'Cosa va bene',
+      history: 'Suggerimenti precedenti',
+      holdingBackEmpty: 'Niente salta all’occhio. Continua così.',
+      goingWellEmpty: 'I tuoi successi appariranno qui mentre ti eserciti.',
+    },
+    trend: {
+      better: 'In miglioramento',
+      same: 'Più o meno uguale',
+      worse: 'Da curare',
+    },
+    outcome: {
+      resolved: 'Ora va meglio',
+      persists: 'Ancora da curare',
+      acted: 'Fatto',
+      dismissed: 'Saltato',
+      snoozed: 'Rimandato',
+      open: 'Non iniziato',
+      accepted: 'Iniziato',
+    },
+    kind: {
+      recurring_mistake: {
+        title: 'Una breve lezione: {{topic}}',
+        titleNoTopic: 'Dillo meglio: {{category}}',
+        why: 'Hai detto «{{said}}» (giusto: «{{corrected}}»). È tornato in {{conversations}} delle tue ultime {{outOf}} conversazioni.',
+      },
+      say_it_better: {
+        title: 'Ripeti le tue correzioni',
+        why_one:
+          '{{count}} correzione della tua ultima conversazione aspetta di essere detta bene.',
+        why_other:
+          '{{count}} correzioni della tua ultima conversazione aspettano di essere dette bene.',
+      },
+      weak_topic: {
+        title: 'Esercitati: {{topic}}',
+        why: 'Finora {{accuracy}}% giusto su {{uses}} usi. Una breve lezione aiuta a fissarlo.',
+      },
+      cards_overdue: {
+        title_one: 'Ripassa {{count}} carta',
+        title_other: 'Ripassa {{count}} carte',
+        why_one: '{{due}} carte aspettano, la più vecchia da {{count}} giorno.',
+        why_other: '{{due}} carte aspettano, la più vecchia da {{count}} giorni.',
+      },
+      cards_lapsing: {
+        title: 'Usa le parole difficili in una conversazione',
+        why: '{{words}} continuano a sfuggirti. Dirle ad alta voce le fissa.',
+      },
+      review_due: {
+        title: 'Parla delle tue {{count}} parole da ripassare',
+        why: 'Una conversazione costruita sulle parole da ripassare oggi.',
+      },
+      problem_sound: {
+        title: 'Esercita il suono {{sound}}',
+        why: 'Finora {{right}} esercizi giusti su {{tries}}.',
+        whyScore: 'Il tuo punteggio recente è {{score}} su 100.',
+      },
+      exam_near: {
+        title: 'Simula l’orale del {{name}}',
+        why_one: 'Il tuo esame è tra {{count}} giorno. Una simulazione mostra cosa rifinire.',
+        why_other: 'Il tuo esame è tra {{count}} giorni. Una simulazione mostra cosa rifinire.',
+        whyNoDate: 'Una simulazione mostra a che punto sei.',
+      },
+      level_close: {
+        title: 'Continua verso il livello {{next}}',
+        why: '{{count}} delle tue conversazioni recenti erano sopra il livello {{level}}. Ancora {{needed}} così e sali di livello.',
+      },
+      long_gap: {
+        title: 'Una conversazione breve e facile per ripartire',
+        why_one:
+          'È passato {{count}} giorno. Cinque minuti facili sono il modo migliore per ripartire.',
+        why_other:
+          'Sono passati {{count}} giorni. Cinque minuti facili sono il modo migliore per ripartire.',
+      },
+      streak_at_risk: {
+        title: 'Continua la tua serie di {{count}} giorni',
+        why: 'Bastano pochi minuti oggi.',
+      },
+      partner_unvisited: {
+        title: 'Parla di nuovo con {{name}}',
+        why_one: 'Non parlate da {{count}} giorno.',
+        why_other: 'Non parlate da {{count}} giorni.',
+        whyNever: 'Non hai ancora parlato con {{name}}. Una voce nuova porta parole nuove.',
+      },
+      import_waiting: {
+        title: 'Parla di «{{title}}»',
+        why: 'Parlarne rende tue le sue parole.',
+      },
+    },
+    finding: {
+      recurring_mistake:
+        '{{category}} è tornato in {{conversations}} delle tue ultime {{outOf}} conversazioni',
+      say_it_better: 'Correzioni dell’ultima conversazione non ancora ripetute',
+      weak_topic: '{{topic}}: {{accuracy}}% giusto finora',
+      cards_overdue: '{{due}} carte in attesa',
+      cards_lapsing: 'Parole che ti sfuggono: {{words}}',
+      review_due: '{{count}} parole salvate da ripassare',
+      problem_sound: 'Il suono {{sound}} è ancora difficile',
+      exam_near: 'Il tuo orale del {{name}} si avvicina',
+      level_close: 'Vicino al livello {{next}}',
+      long_gap: 'Qualche giorno senza esercizio',
+      streak_at_risk: 'Oggi continueresti la tua serie',
+      partner_unvisited: 'Non parli con {{name}} da un po’',
+      import_waiting: '«{{title}}» aspetta che tu ne parli',
+      plan_missed_one: '{{count}} giorno previsto saltato questa settimana',
+      plan_missed_other: '{{count}} giorni previsti saltati questa settimana',
+      topic_improved: '{{topic}}: ora {{now}}',
+      fewer_mistakes: 'Meno errori: {{count}} questa settimana, {{before}} la settimana prima',
+      pace_up: 'Parli più velocemente: {{after}} parole al minuto, prima {{before}}',
+      level_up: 'Hai raggiunto il livello {{level}}',
+      streak_best: 'La tua serie più lunga: {{count}} giorni',
+      cards_remembered: 'Questa settimana hai ricordato il {{share}}% di {{count}} carte',
+    },
+  },
   progress: {
     fluency: {
       title: 'Ritmo delle registrazioni',
@@ -2136,6 +2281,7 @@ export const it: Translation = {
       pen_pal: 'Messaggi dell’amico di penna',
       pen_pal_audio: 'Suoni dell’amico di penna',
       pen_pal_listen: 'Messaggi vocali trascritti',
+      coach: 'Suggerimenti del coach',
     },
   },
   plan: {
