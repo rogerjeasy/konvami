@@ -69,10 +69,7 @@ function remindersOf(text: string | null): ReminderSettings | null {
   try {
     const value: unknown = text ? JSON.parse(text) : null;
     if (typeof value !== 'object' || value === null) return null;
-    const { on, time, cards, events, word, calls, callsOffered } = value as Record<
-      string,
-      unknown
-    >;
+    const { on, time, cards, events, word, calls, callsOffered } = value as Record<string, unknown>;
     if (typeof on !== 'boolean' || typeof cards !== 'boolean') return null;
     if (typeof time !== 'string' || !REMINDER_TIMES.includes(time)) return null;
     return {
