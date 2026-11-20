@@ -1105,3 +1105,107 @@ def season_case(iso_year: int, iso_week: int) -> CaseTemplate:
     """The case of the week (the same for every pair, like a daily puzzle): it turns through the
     library one week at a time."""
     return CASES[(iso_year * 53 + iso_week) % len(CASES)]
+
+
+# --- Cases written for one learner (phase 2, design note 2026-11-20-two-halves-phase2-design.md)
+#
+# A case the Case Writer made from a learner's course import (5.23) is kept on the case itself,
+# not in this library: it belongs to that case alone. These turn it into JSON and back.
+
+
+def _text_document(text: Text) -> str | dict[str, str]:
+    return text if isinstance(text, str) else dict(text)
+
+
+def _text_from(value: object) -> Text:
+    if isinstance(value, str) and value.strip():
+        return value
+    if isinstance(value, dict) and value and all(isinstance(v, str) for v in value.values()):
+        if not str(value.get("en", "")).strip():
+            raise ValueError("a text needs English")
+        return {str(k): str(v) for k, v in value.items()}
+    raise ValueError("not a text")
+
+
+def _written(value: object) -> Mapping[str, str]:
+    text = _text_from(value)
+    return {"en": text} if isinstance(text, str) else text
+
+
+def _options(value: object) -> tuple[Text, ...]:
+    if not isinstance(value, list):
+        raise ValueError("no options")
+    return tuple(_text_from(option) for option in value)
+
+
+def _index(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("not an index")
+    return value
+
+
+def template_document(case: CaseTemplate) -> dict[str, object]:
+    return {
+        "id": case.id,
+        "title": dict(case.title),
+        "setting": dict(case.setting),
+        "question": dict(case.question),
+        "options": [_text_document(o) for o in case.options],
+        "answer": case.answer,
+        "ending": dict(case.ending),
+        "clues": [
+            {
+                "seat": c.seat,
+                "round": c.round,
+                "says": dict(c.says),
+                "asks": dict(c.asks),
+                "options": [_text_document(o) for o in c.options],
+                "answer": c.answer,
+            }
+            for c in case.clues
+        ],
+    }
+
+
+def template_from(document: Mapping[str, object]) -> CaseTemplate:
+    """A case kept as JSON. Raises `ValueError` for one that is not complete: one clue for each
+    seat in each round, at least two options everywhere, and every answer one of its options."""
+    raw_clues = document.get("clues")
+    if not isinstance(raw_clues, list):
+        raise ValueError("no clues")
+    clues: list[Clue] = []
+    for raw in raw_clues:
+        if not isinstance(raw, dict):
+            raise ValueError("not a clue")
+        options = _options(raw.get("options"))
+        answer = _index(raw.get("answer"))
+        seat = raw.get("seat")
+        if seat not in ("A", "B") or not 0 <= answer < len(options) or len(options) < 2:
+            raise ValueError("not a clue")
+        clues.append(
+            Clue(
+                "A" if seat == "A" else "B",
+                _index(raw.get("round")),
+                _written(raw.get("says")),
+                _written(raw.get("asks")),
+                options,
+                answer,
+            )
+        )
+    for seat in ("A", "B"):
+        if sorted(c.round for c in clues if c.seat == seat) != list(range(1, ROUNDS + 1)):
+            raise ValueError("a seat needs one clue a round")
+    options = _options(document.get("options"))
+    answer = _index(document.get("answer"))
+    if not 0 <= answer < len(options) or len(options) < 2:
+        raise ValueError("no answer")
+    return CaseTemplate(
+        id=str(document.get("id", "")),
+        title=_written(document.get("title")),
+        setting=_written(document.get("setting")),
+        clues=tuple(clues),
+        question=_written(document.get("question")),
+        options=options,
+        answer=answer,
+        ending=_written(document.get("ending")),
+    )
