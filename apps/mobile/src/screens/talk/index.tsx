@@ -13,6 +13,7 @@ import { Text } from '@/components/text';
 import { TextButton } from '@/components/text-button';
 import { useScreenLayout } from '@/hooks/use-screen-layout';
 import { staggerDelay } from '@/lib/motion';
+import { useChainHub } from '@/chain/services';
 import { useHalvesHub } from '@/halves/services';
 import { callRoute, penPalRoute, ROUTES } from '@/lib/routes';
 import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
@@ -46,6 +47,8 @@ export function TalkScreen() {
   const signedIn = status === 'signedIn';
   const halves = useHalvesHub(signedIn);
   const halvesOpen = halves.state.phase === 'ready' && halves.state.data.available;
+  const chain = useChainHub(signedIn);
+  const chainOpen = chain.state.phase === 'ready' && chain.state.data.available;
 
   useEffect(() => {
     if (signedIn) void store.load();
@@ -147,6 +150,19 @@ export function TalkScreen() {
                     title: t('halves.row'),
                     detail: t('halves.rowHint'),
                     onPress: () => router.push(ROUTES.halves),
+                  },
+                ]
+              : []),
+            // The story chain (9.1): a story told line by line, when it is open.
+            ...(chainOpen
+              ? [
+                  {
+                    key: 'chain',
+                    icon: 'book' as const,
+                    blob: 'pink' as const,
+                    title: t('chain.row'),
+                    detail: t('chain.rowHint'),
+                    onPress: () => router.push(ROUTES.chain),
                   },
                 ]
               : []),

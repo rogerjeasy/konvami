@@ -20,7 +20,8 @@ import { dayPart } from '@/lib/greeting';
 import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { sessionRoute } from '@/lib/plan';
-import { callRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes';
+import { useChainHub } from '@/chain/services';
+import { callRoute, chainTurnRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes';
 import {
   useCoach,
   useHome,
@@ -133,6 +134,12 @@ function Day({ home, now }: { home: Home; now: Date }) {
   const writer = waiting
     ? home.partners.find(({ persona }) => persona.id === waiting.personaId)?.persona
     : undefined;
+  // 9.12 A story of the story chain waiting for the learner's line.
+  const chain = useChainHub();
+  const chainTurn =
+    chain.state.phase === 'ready' && chain.state.data.available
+      ? chain.state.data.stories.find((story) => story.next === 'record')
+      : undefined;
   // An event of the learner's life to rehearse, or to talk over (spec §7).
   const lifeOffer = useRealLifeOffer(home.partners, now);
   const { pauseReminders } = usePracticeServices();
@@ -184,6 +191,16 @@ function Day({ home, now }: { home: Home; now: Date }) {
           title={t('penPal.today.title', { name: writer.name })}
           detail={t('penPal.today.body')}
           onPress={() => router.push(penPalRoute(writer.id))}
+        />
+      </ListGroup>
+    ) : null,
+    chainTurn ? (
+      <ListGroup key="chain">
+        <ListRow
+          icon="book"
+          title={t('chain.today.title')}
+          detail={t('chain.today.body', { title: chainTurn.title })}
+          onPress={() => router.push(chainTurnRoute(chainTurn.id))}
         />
       </ListGroup>
     ) : null,
