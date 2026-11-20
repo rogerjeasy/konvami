@@ -1071,6 +1071,44 @@ def test_each_partners_history_counts_only_conversations_that_count(partners: Pr
     assert partners.conversations.partner_history(OTHER_USER) == {}
 
 
+def test_a_two_partner_conversation_keeps_its_second_partner_and_their_lines(
+    partners: Practice,
+) -> None:
+    from konvami_api.domain.conversations import ConversationQuery
+
+    partners.calls.started(
+        VoiceSession(
+            "rtc_duo",
+            USER,
+            CallPurpose.PRACTICE,
+            "m",
+            NOON,
+            persona_id=LENA.id,
+            guest_persona_id=JONAS.id,
+        )
+    )
+    turns = (
+        Turn("persona", "Hallo zusammen!"),
+        Turn("persona", "Ich nehme einen Kaffee.", guest=True),
+        Turn("learner", "Ich auch."),
+    )
+    partners.calls.finish("rtc_duo", FinishedCall(NOON + HOUR, "closed", USAGE, turns))
+
+    stored = partners.calls.get("rtc_duo")
+    assert stored is not None
+    assert stored.guest_persona_id == JONAS.id
+    assert [t.guest for t in partners.conversations.turns("rtc_duo")] == [False, True, False]
+    duo = partners.conversations.get(USER, "rtc_duo")
+    assert duo is not None
+    assert duo.guest_id == JONAS.id
+    # The conversation is found under either partner and counts for both.
+    for partner in (LENA.id, JONAS.id):
+        found = partners.conversations.listed(USER, 5, None, ConversationQuery(partner=partner))
+        assert [c.id for c in found] == ["rtc_duo"]
+    history = partners.conversations.partner_history(USER)
+    assert {pid: h.conversations for pid, h in history.items()} == {LENA.id: 1, JONAS.id: 1}
+
+
 def test_practice_is_added_up_per_day_of_the_learners_calendar(partners: Practice) -> None:
     late = datetime(2026, 10, 8, 23, 30, tzinfo=UTC)
     talked(partners, "rtc_late", at=late, minutes=10)
