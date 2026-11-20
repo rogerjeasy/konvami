@@ -167,6 +167,21 @@ def _user_folder(user_id: UUID) -> str:
     return f"users/{user_id}/"
 
 
+def user_folders(user_id: UUID) -> tuple[str, ...]:
+    """Every folder of the media bucket that holds one learner's files, all deleted with the
+    account: their own (pictures, recordings, pen-pal notes, stories), unconfirmed uploads, data
+    archives, Two Halves moves (`domain/halves.py`, FOLDER) and Radio Konvami calls, veiled sound
+    included (`domain/radio.py`, FOLDER). A feature that keeps a learner's files elsewhere must add
+    its folder here."""
+    return (
+        _user_folder(user_id),
+        upload_folder(user_id),
+        export_folder(user_id),
+        f"halves/{user_id}/",
+        f"radio/{user_id}/",
+    )
+
+
 def export_folder(user_id: UUID) -> str:
     """Where a learner's archives of their data are kept (domain/exports.py). The bucket deletes
     what is in it after a day; deleting the account deletes it at once."""
@@ -244,12 +259,8 @@ class AccountService:
         Files first, then the database, the sign-in last: if a step fails the learner can still
         sign in and ask again, and every step can be repeated.
         """
-        self._files.remove_all(_user_folder(user_id))
-        self._files.remove_all(upload_folder(user_id))
-
-        self._files.remove_all(export_folder(user_id))
-        # Two Halves keeps a learner's moves under halves/<id>/ (domain/halves.py, FOLDER).
-        self._files.remove_all(f"halves/{user_id}/")
+        for folder in user_folders(user_id):
+            self._files.remove_all(folder)
         self._records.delete(user_id, self._clock())
         try:
             self._directory.delete(user_id)
