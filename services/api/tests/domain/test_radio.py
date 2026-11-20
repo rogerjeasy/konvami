@@ -94,7 +94,7 @@ def show(*, allowed: bool = True, minors: tuple[UUID, ...] = ()) -> Show:
         allowed=lambda _: allowed,
         owners=frozenset({OTHER_USER}),
         clock=world.clock,
-        save_card=lambda *card: cards.append(card) or "card",
+        save_card=lambda *card: cards.append(card),
         announce=lambda user, item, kind: announced.append((user, item, kind)),
         rng=random.Random(3),  # noqa: S311 - codenames and shuffles in a test
     )

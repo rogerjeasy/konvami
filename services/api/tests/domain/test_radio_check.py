@@ -111,7 +111,7 @@ def test_nothing_is_spoken_without_a_speech_model() -> None:
     assert radio.speak(USER, "coral", "Hallo", "radio/shows/x/0.mp3") is None
 
 
-SCRIPT = {"intro": "Hallo!", "after": ["Danke, Nova!"], "outro": "Tschüss!"}
+SCRIPT: dict[str, object] = {"intro": "Hallo!", "after": ["Danke, Nova!"], "outro": "Tschüss!"}
 CALLER = [("Nova", False, "Hallo Mia")]
 
 
