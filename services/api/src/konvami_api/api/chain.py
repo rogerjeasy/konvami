@@ -57,10 +57,10 @@ REFUSED: dict[int | str, dict[str, Any]] = {
     code: {"model": ErrorBody} for code in sorted(set(STATUS.values()) | {503})
 }
 
-type ModeOut = Literal["solo", "friends"]
-type StatusOut = Literal["open", "finishing", "done"]
-type LineStatusOut = Literal["checking", "delivered", "held", "failed", "removed"]
-type ReactionOut = Literal["laughed", "surprised", "loved", "encore"]
+type ChainModeOut = Literal["solo", "friends"]
+type ChainStatusOut = Literal["open", "finishing", "done"]
+type ChainLineStatusOut = Literal["checking", "delivered", "held", "failed", "removed"]
+type ChainReactionOut = Literal["laughed", "surprised", "loved", "encore"]
 
 
 class ChainProfileOut(ApiModel):
@@ -110,8 +110,8 @@ class ChainStorySummaryOut(ApiModel):
     opening_id: str
     genre: str
     title: str
-    mode: ModeOut
-    status: StatusOut
+    mode: ChainModeOut
+    status: ChainStatusOut
     next: Literal["record", "wait", "listen", "done"]
     position: int
     seats: list[ChainSeatOut]
@@ -220,7 +220,7 @@ class ChainRetryIn(ApiModel):
 
 
 class ChainReactionIn(ApiModel):
-    reaction: ReactionOut
+    reaction: ChainReactionOut
 
 
 class ChainBlockIn(ApiModel):
@@ -264,7 +264,7 @@ class ChainHeardOut(ApiModel):
 class ChainMineOut(ApiModel):
     id: UUID
     position: int
-    status: LineStatusOut
+    status: ChainLineStatusOut
     transcript: str
     reasons: list[str]
     veiled: bool
@@ -293,8 +293,8 @@ class ChainStoryOut(ApiModel):
     genre: str
     title: str
     language: str
-    mode: ModeOut
-    status: StatusOut
+    mode: ChainModeOut
+    status: ChainStatusOut
     my_seat: int
     host: bool
     position: int
@@ -306,7 +306,7 @@ class ChainStoryOut(ApiModel):
     play: list[ChainPlayOut]
     play_status: Literal["none", "pending", "ready", "failed"]
     reactions: dict[str, int]
-    my_reaction: ReactionOut | None
+    my_reaction: ChainReactionOut | None
     veil_default: bool
     invite_code: str | None
     invite_expires_at: dt.datetime | None
@@ -381,7 +381,7 @@ class ChainStoryOut(ApiModel):
 class ChainLineOut(ApiModel):
     id: UUID
     position: int
-    status: LineStatusOut
+    status: ChainLineStatusOut
     transcript: str
 
     @classmethod

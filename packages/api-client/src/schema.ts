@@ -3603,10 +3603,12 @@ export interface components {
             id: string;
             /** Position */
             position: number;
-            status: components["schemas"]["LineStatusOut"];
+            status: components["schemas"]["ChainLineStatusOut"];
             /** Transcript */
             transcript: string;
         };
+        /** @enum {string} */
+        ChainLineStatusOut: "checking" | "delivered" | "held" | "failed" | "removed";
         /** ChainMineOut */
         ChainMineOut: {
             before: components["schemas"]["ChainHeardOut"] | null;
@@ -3621,12 +3623,14 @@ export interface components {
             position: number;
             /** Reasons */
             reasons: string[];
-            status: components["schemas"]["LineStatusOut"];
+            status: components["schemas"]["ChainLineStatusOut"];
             /** Transcript */
             transcript: string;
             /** Veiled */
             veiled: boolean;
         };
+        /** @enum {string} */
+        ChainModeOut: "solo" | "friends";
         /** ChainOpeningOut */
         ChainOpeningOut: {
             /** Genre */
@@ -3711,8 +3715,10 @@ export interface components {
         };
         /** ChainReactionIn */
         ChainReactionIn: {
-            reaction: components["schemas"]["ReactionOut"];
+            reaction: components["schemas"]["ChainReactionOut"];
         };
+        /** @enum {string} */
+        ChainReactionOut: "laughed" | "surprised" | "loved" | "encore";
         /** ChainRedeemIn */
         ChainRedeemIn: {
             /** Code */
@@ -3783,6 +3789,8 @@ export interface components {
             /** Seats */
             seats: components["schemas"]["ChainSeatIn"][];
         };
+        /** @enum {string} */
+        ChainStatusOut: "open" | "finishing" | "done";
         /**
          * ChainStoryOut
          * @description A story as one seat may know it (9.4 to 9.7): only what that seat may hear.
@@ -3810,8 +3818,8 @@ export interface components {
             lines: number;
             /** Mine */
             mine: components["schemas"]["ChainMineOut"][];
-            mode: components["schemas"]["konvami_api__api__chain__ModeOut"];
-            myReaction: components["schemas"]["ReactionOut"] | null;
+            mode: components["schemas"]["ChainModeOut"];
+            myReaction: components["schemas"]["ChainReactionOut"] | null;
             /** Myseat */
             mySeat: number;
             /** Myturn */
@@ -3833,7 +3841,7 @@ export interface components {
             };
             /** Seats */
             seats: components["schemas"]["ChainSeatOut"][];
-            status: components["schemas"]["StatusOut"];
+            status: components["schemas"]["ChainStatusOut"];
             /** Title */
             title: string;
             /** Turnseat */
@@ -3855,7 +3863,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            mode: components["schemas"]["konvami_api__api__chain__ModeOut"];
+            mode: components["schemas"]["ChainModeOut"];
             /**
              * Next
              * @enum {string}
@@ -3867,7 +3875,7 @@ export interface components {
             position: number;
             /** Seats */
             seats: components["schemas"]["ChainSeatOut"][];
-            status: components["schemas"]["StatusOut"];
+            status: components["schemas"]["ChainStatusOut"];
             /** Title */
             title: string;
         };
@@ -4574,7 +4582,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            mode: components["schemas"]["konvami_api__api__halves__ModeOut"];
+            mode: components["schemas"]["ModeOut"];
             partner: components["schemas"]["HalvesPartnerOut"];
             /** Recap */
             recap: components["schemas"]["HalvesRecapLineOut"][];
@@ -4616,7 +4624,7 @@ export interface components {
              * Format: uuid
              */
             id: string;
-            mode: components["schemas"]["konvami_api__api__halves__ModeOut"];
+            mode: components["schemas"]["ModeOut"];
             /**
              * Next
              * @enum {string}
@@ -5321,8 +5329,6 @@ export interface components {
             /** Text */
             text: string;
         };
-        /** @enum {string} */
-        LineStatusOut: "checking" | "delivered" | "held" | "failed" | "removed";
         /**
          * LookModel
          * @description A portrait's parts and colors. The app draws exactly these names.
@@ -5485,6 +5491,8 @@ export interface components {
             /** Weeks */
             weeks: string[];
         };
+        /** @enum {string} */
+        ModeOut: "ai" | "friend" | "duo";
         /**
          * MotivationOut
          * @description Motivation in one answer: the streak, the next level, the week's quests, the milestones,
@@ -6424,8 +6432,6 @@ export interface components {
             resolvedAt: string | null;
             status: components["schemas"]["FlagStatus"];
         };
-        /** @enum {string} */
-        ReactionOut: "laughed" | "surprised" | "loved" | "encore";
         /** ReadinessOut */
         ReadinessOut: {
             /** Change */
@@ -6915,8 +6921,6 @@ export interface components {
          * @enum {string}
          */
         Stage: "essentials" | "review" | "placement" | "partners" | "ready" | "done";
-        /** @enum {string} */
-        StatusOut: "open" | "finishing" | "done";
         /** StoryAnswerOut */
         StoryAnswerOut: {
             /** Heard */
@@ -7612,10 +7616,6 @@ export interface components {
             /** Word */
             word: string;
         };
-        /** @enum {string} */
-        konvami_api__api__chain__ModeOut: "solo" | "friends";
-        /** @enum {string} */
-        konvami_api__api__halves__ModeOut: "ai" | "friend" | "duo";
     };
     responses: never;
     parameters: never;

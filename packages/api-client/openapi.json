@@ -1056,7 +1056,7 @@
             "type": "integer"
           },
           "status": {
-            "$ref": "#/components/schemas/LineStatusOut"
+            "$ref": "#/components/schemas/ChainLineStatusOut"
           },
           "transcript": {
             "title": "Transcript",
@@ -1071,6 +1071,16 @@
         ],
         "title": "ChainLineOut",
         "type": "object"
+      },
+      "ChainLineStatusOut": {
+        "enum": [
+          "checking",
+          "delivered",
+          "held",
+          "failed",
+          "removed"
+        ],
+        "type": "string"
       },
       "ChainMineOut": {
         "additionalProperties": false,
@@ -1109,7 +1119,7 @@
             "type": "array"
           },
           "status": {
-            "$ref": "#/components/schemas/LineStatusOut"
+            "$ref": "#/components/schemas/ChainLineStatusOut"
           },
           "transcript": {
             "title": "Transcript",
@@ -1132,6 +1142,13 @@
         ],
         "title": "ChainMineOut",
         "type": "object"
+      },
+      "ChainModeOut": {
+        "enum": [
+          "solo",
+          "friends"
+        ],
+        "type": "string"
       },
       "ChainOpeningOut": {
         "additionalProperties": false,
@@ -1372,7 +1389,7 @@
         "additionalProperties": false,
         "properties": {
           "reaction": {
-            "$ref": "#/components/schemas/ReactionOut"
+            "$ref": "#/components/schemas/ChainReactionOut"
           }
         },
         "required": [
@@ -1380,6 +1397,15 @@
         ],
         "title": "ChainReactionIn",
         "type": "object"
+      },
+      "ChainReactionOut": {
+        "enum": [
+          "laughed",
+          "surprised",
+          "loved",
+          "encore"
+        ],
+        "type": "string"
       },
       "ChainRedeemIn": {
         "additionalProperties": false,
@@ -1602,6 +1628,14 @@
         "title": "ChainStartIn",
         "type": "object"
       },
+      "ChainStatusOut": {
+        "enum": [
+          "open",
+          "finishing",
+          "done"
+        ],
+        "type": "string"
+      },
       "ChainStoryOut": {
         "additionalProperties": false,
         "description": "A story as one seat may know it (9.4 to 9.7): only what that seat may hear.",
@@ -1672,12 +1706,12 @@
             "type": "array"
           },
           "mode": {
-            "$ref": "#/components/schemas/konvami_api__api__chain__ModeOut"
+            "$ref": "#/components/schemas/ChainModeOut"
           },
           "myReaction": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ReactionOut"
+                "$ref": "#/components/schemas/ChainReactionOut"
               },
               {
                 "type": "null"
@@ -1732,7 +1766,7 @@
             "type": "array"
           },
           "status": {
-            "$ref": "#/components/schemas/StatusOut"
+            "$ref": "#/components/schemas/ChainStatusOut"
           },
           "title": {
             "title": "Title",
@@ -1801,7 +1835,7 @@
             "type": "string"
           },
           "mode": {
-            "$ref": "#/components/schemas/konvami_api__api__chain__ModeOut"
+            "$ref": "#/components/schemas/ChainModeOut"
           },
           "next": {
             "enum": [
@@ -1829,7 +1863,7 @@
             "type": "array"
           },
           "status": {
-            "$ref": "#/components/schemas/StatusOut"
+            "$ref": "#/components/schemas/ChainStatusOut"
           },
           "title": {
             "title": "Title",
@@ -4066,7 +4100,7 @@
             "type": "string"
           },
           "mode": {
-            "$ref": "#/components/schemas/konvami_api__api__halves__ModeOut"
+            "$ref": "#/components/schemas/ModeOut"
           },
           "partner": {
             "$ref": "#/components/schemas/HalvesPartnerOut"
@@ -4177,7 +4211,7 @@
             "type": "string"
           },
           "mode": {
-            "$ref": "#/components/schemas/konvami_api__api__halves__ModeOut"
+            "$ref": "#/components/schemas/ModeOut"
           },
           "next": {
             "enum": [
@@ -6281,16 +6315,6 @@
         "title": "LifeEventOut",
         "type": "object"
       },
-      "LineStatusOut": {
-        "enum": [
-          "checking",
-          "delivered",
-          "held",
-          "failed",
-          "removed"
-        ],
-        "type": "string"
-      },
       "LookModel": {
         "additionalProperties": false,
         "description": "A portrait's parts and colors. The app draws exactly these names.",
@@ -6700,6 +6724,14 @@
         ],
         "title": "MistakeTrendsOut",
         "type": "object"
+      },
+      "ModeOut": {
+        "enum": [
+          "ai",
+          "friend",
+          "duo"
+        ],
+        "type": "string"
       },
       "MotivationOut": {
         "additionalProperties": false,
@@ -9449,15 +9481,6 @@
         "title": "QueuedFlagOut",
         "type": "object"
       },
-      "ReactionOut": {
-        "enum": [
-          "laughed",
-          "surprised",
-          "loved",
-          "encore"
-        ],
-        "type": "string"
-      },
       "ReadinessOut": {
         "additionalProperties": false,
         "properties": {
@@ -10890,14 +10913,6 @@
           "done"
         ],
         "title": "Stage",
-        "type": "string"
-      },
-      "StatusOut": {
-        "enum": [
-          "open",
-          "finishing",
-          "done"
-        ],
         "type": "string"
       },
       "StoryAnswerOut": {
@@ -12941,21 +12956,6 @@
         ],
         "title": "WordTimingOut",
         "type": "object"
-      },
-      "konvami_api__api__chain__ModeOut": {
-        "enum": [
-          "solo",
-          "friends"
-        ],
-        "type": "string"
-      },
-      "konvami_api__api__halves__ModeOut": {
-        "enum": [
-          "ai",
-          "friend",
-          "duo"
-        ],
-        "type": "string"
       }
     }
   },
