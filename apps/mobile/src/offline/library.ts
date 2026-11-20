@@ -31,6 +31,8 @@ export interface LibraryTools {
   unpin(id: string): Promise<void>;
   local(transcript: Transcript): Promise<Transcript>;
   export(transcript: Transcript, format: TranscriptFormat, labels: SpeakerLabels): Promise<void>;
+  /** Prints an HTML page to a PDF and opens the share sheet with it (6.23). */
+  sharePdf(html: string, name: string): Promise<void>;
 }
 // A personal working library rather than an unlimited mirror of cloud audio.
 const MAX_PINNED = 20;
@@ -182,6 +184,7 @@ export function createLibraryTools(
         ),
       };
     },
+    sharePdf: (html, name) => media.share(html, name, 'pdf'),
     export: (transcript, format, labels) =>
       media.share(
         exportTranscript(transcript, format, labels),

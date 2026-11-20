@@ -58,6 +58,11 @@ import {
   type WeekPlan,
   type WeekReview,
   type WordDetails,
+  type OwnScenario,
+  type RealLife,
+  type Scene,
+  type SceneDraft,
+  type TeacherReport,
 } from '@konvami/api-client';
 import { draftOf, ROLE_TEACHING } from '@/profile/persona-draft';
 
@@ -248,6 +253,53 @@ export const FAKE_WEEK_REVIEW: WeekReview = {
 /** What the partner's worker writes for `FAKE_WEEK_REVIEW`. */
 export const FAKE_WEEK_TEXT =
   'You spoke for 34 minutes last week, nine more than the week before. The dative is coming along nicely. Does this week’s plan suit you? You can change your weekly goal in your profile.';
+
+/** A scene the server writes from a description (services/api: domain/real_life.py). */
+export const FAKE_SCENE: Scene = {
+  title: 'Returning a coat',
+  character: 'A friendly shop assistant',
+  situation: 'You bought a coat last week and the zip is broken.',
+  goals: [
+    { id: 'g1', text: 'Explain what is wrong' },
+    { id: 'g2', text: 'Ask for a refund' },
+    { id: 'g3', text: 'Agree on what happens next' },
+  ],
+  level: 'A2',
+};
+
+/** What a month of conversations showed, for the learner's teacher (6.23). */
+export const FAKE_TEACHER_REPORT: TeacherReport = {
+  language: 'de',
+  level: 'A2',
+  since: '2026-09-09T12:00:00Z',
+  until: '2026-10-09T12:00:00Z',
+  seconds: 1800,
+  conversations: [
+    {
+      id: 'rtc_1',
+      startedAt: '2026-10-08T18:00:00Z',
+      seconds: 600,
+      partnerName: 'Lena',
+      scenario: null,
+    },
+  ],
+  mistakes: [
+    {
+      category: 'case',
+      count: 3,
+      examples: [
+        {
+          original: 'mit der Mann',
+          corrected: 'mit dem Mann',
+          explanation: '„mit“ takes the dative.',
+        },
+      ],
+    },
+  ],
+  topics: [],
+  levels: [{ at: '2026-09-01T12:00:00Z', level: 'A2', source: 'asked' }],
+  fits: [{ at: '2026-10-08T18:00:00Z', grammar: 'at', vocabulary: 'above', speaking: 'at' }],
+};
 
 /** Part of the Goethe B1 phrase bank (services/api: domain/exam_phrases.py). */
 export const FAKE_PHRASE_BANK: ExamPhraseBank = {
@@ -936,6 +988,12 @@ export interface FakeApi extends ApiClient {
   videoAvatars(state: Partial<VideoAvatars> & { session?: VideoAvatarSession | null }): void;
   /** Phrases the phrasebook suggests next (by default `FAKE_PHRASE_SUGGESTIONS`). */
   nextPhraseSuggestions(suggestions: PhraseSuggestion[]): void;
+  /** The events of the learner's life the server lists (by default none). */
+  lifeEvents(life: Partial<RealLife>): void;
+  /** The scene the next description is written as (by default `FAKE_SCENE`). */
+  nextScene(scene: Scene): void;
+  /** Own role-plays the learner kept earlier, newest first. */
+  keptScenes(scenarios: OwnScenario[]): void;
   /** Phrases the learner kept earlier, oldest first. */
   keptPhrases(phrases: { phrase: string; meaning: string; situation?: string }[]): void;
   /** What the course companion makes of the next thing brought (by default `FAKE_IMPORT`). */
@@ -1126,6 +1184,21 @@ export function createFakeApi(): FakeApi {
     });
   // The phrasebook, newest first, and what is suggested next.
   let phrases: Phrase[] = [];
+  let ownScenarios: OwnScenario[] = [];
+  let realLife: RealLife = { comingUp: [], toDebrief: [] };
+  let nextScene: Scene = FAKE_SCENE;
+  function keepScene(scene: SceneDraft, id: string, memoryId: string | null = null): OwnScenario {
+    const kept: OwnScenario = {
+      id,
+      scenario: `own-${id.replaceAll('-', '')}`,
+      scene,
+      source: memoryId ? 'event' : 'custom',
+      memoryId,
+      updatedAt: new Date(now).toISOString(),
+    };
+    ownScenarios = [kept, ...ownScenarios.filter((one) => one.id !== id)];
+    return kept;
+  }
   let phraseSuggestions: PhraseSuggestion[] = FAKE_PHRASE_SUGGESTIONS;
   const keepPhrase = (draft: { phrase: string; meaning: string; situation?: string | null }) => {
     const text = draft.phrase.trim();
@@ -2217,6 +2290,15 @@ export function createFakeApi(): FakeApi {
     nextPhraseSuggestions(suggestions) {
       phraseSuggestions = suggestions;
     },
+    lifeEvents(life) {
+      realLife = { ...realLife, ...life };
+    },
+    nextScene(scene) {
+      nextScene = scene;
+    },
+    keptScenes(scenarios) {
+      ownScenarios = [...scenarios];
+    },
     keptPhrases(kept) {
       for (const draft of kept) keepPhrase(draft);
     },
@@ -2650,6 +2732,72 @@ export function createFakeApi(): FakeApi {
       const mistake = reports.get(conversationId)?.report?.mistakes[index];
       if (!mistake) throw new ApiError('not_found', 404);
       return keepQuestion(`${mistake.original} → ${mistake.corrected}`, 'report', now);
+    },
+    async getOwnScenarios() {
+      await record('getOwnScenarios');
+      return { scenarios: ownScenarios };
+    },
+    async draftOwnScenario(description) {
+      await record('draftOwnScenario', description);
+      return nextScene;
+    },
+    async hearScenarioDescription(recording) {
+      await record('hearScenarioDescription', recording);
+      return { text: 'I want to return a coat.' };
+    },
+    async saveOwnScenario(scene) {
+      await record('saveOwnScenario', scene);
+      const number = ownScenarios.length + 1;
+      return keepScene(scene, `abababab-abab-4bab-8bab-${String(number).padStart(12, '0')}`);
+    },
+    async changeOwnScenario(id, scene) {
+      await record('changeOwnScenario', id, scene);
+      const found = ownScenarios.find((one) => one.id === id);
+      if (!found) throw new ApiError('not_found', 404);
+      return keepScene(scene, id, found.memoryId);
+    },
+    async removeOwnScenario(id) {
+      await record('removeOwnScenario', id);
+      if (!ownScenarios.some((one) => one.id === id)) throw new ApiError('not_found', 404);
+      ownScenarios = ownScenarios.filter((one) => one.id !== id);
+      return { scenarios: ownScenarios };
+    },
+    async getRealLife(localDate) {
+      await record('getRealLife', localDate);
+      return realLife;
+    },
+    async rehearseEvent(memoryId) {
+      await record('rehearseEvent', memoryId);
+      const event = realLife.comingUp.find((one) => one.memoryId === memoryId);
+      if (!event) throw new ApiError('not_found', 404);
+      const existing = ownScenarios.find((one) => one.memoryId === memoryId);
+      if (existing) return existing;
+      const rehearsal = keepScene(
+        {
+          title: event.text,
+          character: '',
+          situation: '',
+          goals: [
+            { id: 'explain', text: '' },
+            { id: 'ask', text: '' },
+            { id: 'close', text: '' },
+          ],
+          level: 'A2',
+        },
+        `cdcdcdcd-cdcd-4dcd-8dcd-${String(ownScenarios.length + 1).padStart(12, '0')}`,
+        memoryId,
+      );
+      realLife = {
+        ...realLife,
+        comingUp: realLife.comingUp.map((one) =>
+          one.memoryId === memoryId ? { ...one, rehearsal } : one,
+        ),
+      };
+      return rehearsal;
+    },
+    async getTeacherReport(days) {
+      await record('getTeacherReport', days);
+      return { ...FAKE_TEACHER_REPORT, since: new Date(now - days * 86_400_000).toISOString() };
     },
     async getPhrasebook() {
       await record('getPhrasebook');

@@ -80,6 +80,8 @@ export const ROUTES = {
   penPal: '/pen-pal',
   /** 5.13 Role-plays: the real-life situations a learner can rehearse. */
   rolePlays: '/role-plays',
+  /** 5.31 Create a scenario: a situation from the learner's life, written as a role-play. */
+  ownScenario: '/own-scenario',
   /** 5.24 Choose two partners: a conversation with two of the learner's partners at once. */
   together: '/together',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
@@ -128,6 +130,8 @@ export const ROUTES = {
 
   /** 6.19 Export my data: a copy of everything Konvami keeps about the learner. */
   accountExport: '/account/export',
+  /** 6.23 Report for my teacher: a PDF of what the conversations of a period showed. */
+  accountTeacherReport: '/account/teacher-report',
   /** 6.18 Terms of Use and Privacy Policy, shown by the app until a website address is set. */
   legalTerms: '/legal/terms',
   legalPrivacy: '/legal/privacy',
@@ -195,6 +199,20 @@ export const importCallRoute = (personaId: string, importId: string) =>
 /** 5.3 The reply or phone call an imported letter asks for, rehearsed (the letters helper). */
 export const letterCallRoute = (personaId: string, importId: string) =>
   callRoute(personaId, { practise: `letter:${importId.replaceAll('-', '')}` });
+
+/** 5.31 Edit one of the learner's own role-plays; without an id, create one. */
+export const ownScenarioRoute = (id?: string) =>
+  ({
+    pathname: '/own-scenario',
+    params: id ? { id } : {},
+  }) as const satisfies Href;
+
+/**
+ * 5.3 A debrief: talking over an event of the learner's life after it happened (spec §7). The
+ * server reads `debrief:<memory>` in the call's `practise`, with the id as 32 hex digits.
+ */
+export const debriefCallRoute = (personaId: string, memoryId: string) =>
+  callRoute(personaId, { practise: `debrief:${memoryId.replaceAll('-', '')}` });
 
 /** 5.7 Learn with one card open, as a word of the day opens it. */
 export const learnCardRoute = (card: string) =>
