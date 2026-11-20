@@ -296,3 +296,17 @@ variable "halves" {
   })
   default = {}
 }
+
+variable "radio" {
+  description = <<-EOT
+    Radio Konvami (section 8): a daily call-in show in each language learned. Off until enabled.
+    open_to_testers: every learner may listen and call in while the app is in the testers' hands;
+    off, only the owners (var.costs.owners). Only adults who agreed are ever aired, every call is
+    checked first, and the Veil is on by default.
+  EOT
+  type = object({
+    enabled         = optional(bool, false)
+    open_to_testers = optional(bool, false)
+  })
+  default = {}
+}
