@@ -48,6 +48,22 @@ export type WordDetails = Schemas['WordDetailsOut'];
 export type Retried = Schemas['RetriedOut'];
 /** A sentence recorded on the device: a correction said again, or a card's answer. */
 export type SpokenRecording = Schemas['RecordingIn'];
+// Two Halves (section 7).
+export type Halves = Schemas['HalvesOut'];
+export type HalvesProfile = Schemas['HalvesProfileOut'];
+export type HalvesJoin = Schemas['HalvesJoinIn'];
+export type HalvesProfileChange = Schemas['HalvesProfileChangeIn'];
+export type HalvesCaseSummary = Schemas['HalvesCaseSummaryOut'];
+export type HalvesCase = Schemas['HalvesCaseOut'];
+export type HalvesRound = Schemas['HalvesRoundOut'];
+export type HalvesMine = Schemas['HalvesMineOut'];
+export type HalvesTheirs = Schemas['HalvesTheirsOut'];
+export type HalvesMove = Schemas['HalvesMoveOut'];
+export type HalvesMoveInput = Schemas['HalvesMoveIn'];
+export type HalvesInvite = Schemas['HalvesInviteOut'];
+export type HalvesReaction = Schemas['HalvesReactionIn']['reaction'];
+export type HalvesReportReason = Schemas['HalvesReportIn']['reason'];
+export type HalvesQueueItem = Schemas['HalvesQueueItemOut'];
 /** A card answered out loud (voice review): what was heard, how close, the rating it points to. */
 export type AnsweredCard = Schemas['AnsweredOut'];
 export type AnswerOutcome = AnsweredCard['outcome'];
@@ -296,6 +312,44 @@ export interface ApiClientOptions {
 }
 
 export interface ApiClient {
+  /** Two Halves' hub (7.1). */
+  getHalves(): Promise<Halves>;
+  /** Joins Two Halves or changes the join answers (7.2). */
+  joinHalves(answers: HalvesJoin): Promise<Halves>;
+  changeHalves(changes: HalvesProfileChange): Promise<Halves>;
+  rerollHalvesCodename(): Promise<Halves>;
+  /** Deletes the learner's Two Halves data (7.11). */
+  leaveHalves(): Promise<void>;
+  /** A case against an AI stand-in (7.3). */
+  startHalvesCase(start: { templateId?: string | null; season?: boolean }): Promise<HalvesCase>;
+  createHalvesInvite(templateId?: string | null): Promise<HalvesInvite>;
+  cancelHalvesInvite(): Promise<void>;
+  redeemHalvesInvite(code: string): Promise<HalvesCase>;
+  startHalvesDuoCase(duoId: string): Promise<HalvesCase>;
+  removeHalvesDuo(duoId: string): Promise<void>;
+  removeHalvesBlock(blockId: string): Promise<void>;
+  getHalvesCase(caseId: string): Promise<HalvesCase>;
+  /** Records a move (7.6): checked on the server before the other hears it. */
+  sendHalvesMove(caseId: string, move: HalvesMoveInput): Promise<HalvesMove>;
+  solveHalvesCase(caseId: string, option: number): Promise<HalvesCase>;
+  playHalvesAgain(caseId: string, yes: boolean): Promise<HalvesCase>;
+  handOverHalvesSeat(caseId: string): Promise<HalvesCase>;
+  blockHalvesPartner(caseId: string): Promise<HalvesCase>;
+  getHalvesRecapAudio(caseId: string, line: number): Promise<{ url: string }>;
+  getHalvesMoveAudio(moveId: string): Promise<{ url: string }>;
+  reactToHalvesMove(moveId: string, reaction: HalvesReaction): Promise<HalvesCase>;
+  answerHalvesMove(moveId: string, option: number): Promise<HalvesCase>;
+  reportHalvesMove(
+    moveId: string,
+    report: { reason: HalvesReportReason; note?: string | null },
+  ): Promise<HalvesCase>;
+  /** The owner's Two Halves queue (6.15). */
+  getHalvesQueue(): Promise<{ items: HalvesQueueItem[] }>;
+  decideHalvesItem(
+    kind: 'held' | 'report',
+    id: string,
+    action: 'remove' | 'dismiss',
+  ): Promise<void>;
   getCatalog(): Promise<Catalog>;
   getProfile(): Promise<Profile>;
   /** Applies all changes or none. Fails with `invalid_value` and the field for a refused one. */
@@ -746,8 +800,43 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const personaPath = (id: string) => `/v1/personas/${encodeURIComponent(id)}`;
   const personas = async (answer: Promise<Schemas['PersonasOut']>) => (await answer).personas;
 
+  const halvesCase = (id: string) => `/v1/halves/cases/${encodeURIComponent(id)}`;
+  const halvesMove = (id: string) => `/v1/halves/moves/${encodeURIComponent(id)}`;
+
   return {
     getCatalog: () => request('GET', '/v1/catalog'),
+    getHalves: () => request('GET', '/v1/halves'),
+    joinHalves: (answers) => request('PUT', '/v1/halves/profile', answers),
+    changeHalves: (changes) => request('PATCH', '/v1/halves/profile', changes),
+    rerollHalvesCodename: () => request('POST', '/v1/halves/profile/codename'),
+    leaveHalves: () => request('DELETE', '/v1/halves/profile'),
+    startHalvesCase: (start) => request('POST', '/v1/halves/cases', start),
+    createHalvesInvite: (templateId) =>
+      request('POST', '/v1/halves/invites', { templateId: templateId ?? null }),
+    cancelHalvesInvite: () => request('DELETE', '/v1/halves/invites'),
+    redeemHalvesInvite: (code) => request('POST', '/v1/halves/invites/redeem', { code }),
+    startHalvesDuoCase: (duoId) =>
+      request('POST', `/v1/halves/duos/${encodeURIComponent(duoId)}/cases`),
+    removeHalvesDuo: (duoId) => request('DELETE', `/v1/halves/duos/${encodeURIComponent(duoId)}`),
+    removeHalvesBlock: (blockId) =>
+      request('DELETE', `/v1/halves/blocks/${encodeURIComponent(blockId)}`),
+    getHalvesCase: (caseId) => request('GET', halvesCase(caseId)),
+    sendHalvesMove: (caseId, move) => request('POST', `${halvesCase(caseId)}/moves`, move),
+    solveHalvesCase: (caseId, option) => request('POST', `${halvesCase(caseId)}/final`, { option }),
+    playHalvesAgain: (caseId, yes) => request('POST', `${halvesCase(caseId)}/again`, { yes }),
+    handOverHalvesSeat: (caseId) => request('POST', `${halvesCase(caseId)}/hand-over`),
+    blockHalvesPartner: (caseId) => request('POST', `${halvesCase(caseId)}/block`),
+    getHalvesRecapAudio: (caseId, line) =>
+      request('GET', `${halvesCase(caseId)}/recap/${line}/audio`),
+    getHalvesMoveAudio: (moveId) => request('GET', `${halvesMove(moveId)}/audio`),
+    reactToHalvesMove: (moveId, reaction) =>
+      request('POST', `${halvesMove(moveId)}/reaction`, { reaction }),
+    answerHalvesMove: (moveId, option) =>
+      request('POST', `${halvesMove(moveId)}/answer`, { option }),
+    reportHalvesMove: (moveId, report) => request('POST', `${halvesMove(moveId)}/report`, report),
+    getHalvesQueue: () => request('GET', '/v1/halves/queue'),
+    decideHalvesItem: (kind, id, action) =>
+      request('POST', `/v1/halves/queue/${kind}/${encodeURIComponent(id)}`, { action }),
     getProfile: () => request('GET', '/v1/profile'),
     updateProfile: (changes) => request('PATCH', '/v1/profile', { changes }),
     getProfileChanges: () => request('GET', '/v1/profile/changes'),

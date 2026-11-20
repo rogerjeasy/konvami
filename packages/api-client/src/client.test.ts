@@ -766,6 +766,40 @@ describe('api client', () => {
     expect(calls[0]?.body).toEqual({ audio: 'AAEC', format: 'm4a', durationMs: 2400 });
   });
 
+  it('plays Two Halves: joins, starts a case, sends a move, answers and reports', async () => {
+    const { fetch, calls } = fakeFetch(
+      json(200, { available: true }),
+      json(200, { id: 'c/1' }),
+      json(200, { id: 'm/1', status: 'checking' }),
+      json(200, { id: 'c/1' }),
+      json(200, { id: 'c/1' }),
+      json(200, { code: 'ABC234' }),
+      new Response(null, { status: 204 }),
+    );
+    const { api } = client(fetch);
+
+    await api.joinHalves({ nativeLanguage: 'fr', voiceConsent: true });
+    await api.startHalvesCase({ season: true });
+    await api.sendHalvesMove('c/1', { audio: 'AAEC', format: 'm4a', veiled: true });
+    await api.answerHalvesMove('m/1', 2);
+    await api.reportHalvesMove('m/1', { reason: 'harassment' });
+    await api.createHalvesInvite();
+    expect(await api.decideHalvesItem('held', 'm/1', 'remove')).toBeUndefined();
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'PUT https://api.example.test/v1/halves/profile',
+      'POST https://api.example.test/v1/halves/cases',
+      'POST https://api.example.test/v1/halves/cases/c%2F1/moves',
+      'POST https://api.example.test/v1/halves/moves/m%2F1/answer',
+      'POST https://api.example.test/v1/halves/moves/m%2F1/report',
+      'POST https://api.example.test/v1/halves/invites',
+      'POST https://api.example.test/v1/halves/queue/held/m%2F1',
+    ]);
+    expect(calls[2]?.body).toEqual({ audio: 'AAEC', format: 'm4a', veiled: true });
+    expect(calls[3]?.body).toEqual({ option: 2 });
+    expect(calls[5]?.body).toEqual({ templateId: null });
+  });
+
   it('reads and changes the pen-pal, and sends a voice note', async () => {
     const note = { id: 'n/1', status: 'pending' };
     const { fetch, calls } = fakeFetch(
