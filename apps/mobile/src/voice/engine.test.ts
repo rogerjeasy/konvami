@@ -35,6 +35,8 @@ const PLAN = {
   lesson: false,
   material: null,
   rehearse: false,
+  drill: false,
+  polish: 0,
 };
 const answer = { callId: 'rtc_1', sdp: 'v=0 answer', maxSeconds: 480, plan: PLAN };
 

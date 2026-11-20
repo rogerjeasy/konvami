@@ -68,6 +68,10 @@ export const ROUTES = {
   tutor: '/tutor',
   /** 5.19 Phrasebook: the phrases the learner needs in their life, to keep and to learn. */
   phrasebook: '/phrasebook',
+  /** 5.29 Stories: listening episodes made around the learner's words (`storyRoute`). */
+  stories: '/stories',
+  /** 5.30 Commute drill: a hands-free drill call for walking or travelling (`drillCallRoute`). */
+  drill: '/drill',
   /** 5.20 Then vs Now: the learner's voice from their first weeks next to a recent conversation. */
   thenVsNow: '/then-vs-now',
   /** 5.22 Pronunciation lab: drills for the sounds that are hard, and the learner's missed words. */
@@ -149,11 +153,16 @@ export const partnerRoute = (id: string) =>
 /**
  * 5.3 A live conversation with one of the learner's partners; with `scenario`, a role-play; with
  * `practise`, one that practises a grammar topic first; with `guest`, a second partner joins
- * (5.24) and `personaId` leads.
+ * (5.24) and `personaId` leads; with `walking`, walking mode turns on once the call is live.
  */
 export const callRoute = (
   personaId: string,
-  { scenario, practise, guest }: { scenario?: string; practise?: string; guest?: string } = {},
+  {
+    scenario,
+    practise,
+    guest,
+    walking,
+  }: { scenario?: string; practise?: string; guest?: string; walking?: boolean } = {},
 ) =>
   ({
     pathname: '/call/[personaId]',
@@ -162,8 +171,21 @@ export const callRoute = (
       ...(scenario ? { scenario } : {}),
       ...(practise ? { practise } : {}),
       ...(guest ? { guest } : {}),
+      ...(walking ? { walking: '1' } : {}),
     },
   }) as const satisfies Href;
+
+/**
+ * 5.3 A hands-free drill (5.30): rounds of prompt, answer and recast over the due words and the
+ * learner's corrected sentences, in walking mode where the device has it. The server reads
+ * `drill` in the call's `practise`.
+ */
+export const drillCallRoute = (personaId: string) =>
+  callRoute(personaId, { practise: 'drill', walking: true });
+
+/** 5.29 One episode of the listening series. */
+export const storyRoute = (id: string) =>
+  ({ pathname: '/stories/[id]', params: { id } }) as const satisfies Href;
 
 /**
  * 5.3 A guided lesson (spec §6.3) on a grammar topic: a short call that explains it, gives

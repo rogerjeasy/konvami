@@ -427,6 +427,8 @@ describe('5.3 Conversation', () => {
       lesson: false,
       material: null,
       rehearse: false,
+      drill: false,
+      polish: 0,
     };
     await live({ voice });
 
@@ -451,6 +453,8 @@ describe('5.3 Conversation', () => {
       lesson: false,
       material: null,
       rehearse: false,
+      drill: false,
+      polish: 0,
     };
     await live({ voice });
 
@@ -469,6 +473,8 @@ describe('5.3 Conversation', () => {
       lesson: true,
       material: null,
       rehearse: false,
+      drill: false,
+      polish: 0,
     };
     await live({ voice });
 
@@ -486,6 +492,8 @@ describe('5.3 Conversation', () => {
       lesson: false,
       material: null,
       rehearse: false,
+      drill: false,
+      polish: 0,
     };
     await live({ voice });
 
