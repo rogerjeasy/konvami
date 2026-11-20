@@ -3,6 +3,7 @@ import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
+import { STORIES_TEXT } from '../stories-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
@@ -13,6 +14,8 @@ export const fr: Translation = {
   examStages: EXAM_STAGES.fr,
   offlineLibrary: offlineLibrary.fr,
   vocabulary: VOCABULARY_TEXT.fr,
+  stories: STORIES_TEXT.fr.stories,
+  drill: STORIES_TEXT.fr.drill,
   common: {
     earlier: '{{what}} : plus tôt',
     later: '{{what}} : plus tard',
@@ -1318,6 +1321,10 @@ export const fr: Translation = {
 
     importRow: 'Apporter ton propre matériel',
     importHint: 'Textes, liens et photos, avec leurs mots',
+    storiesRow: 'Histoires',
+    storiesHint: 'Des épisodes à écouter faits avec tes mots',
+    drillRow: 'Exercice trajet',
+    drillHint: 'Dix minutes sans les mains en route',
     body: 'Les mots et corrections de tes conversations, de retour juste avant que tu les oublies.',
     loading: 'Chargement de tes cartes',
     loadFailed: 'Impossible de charger tes cartes.',
@@ -2341,6 +2348,9 @@ export const fr: Translation = {
       pen_pal_audio: 'Sons du correspondant',
       pen_pal_listen: 'Messages vocaux transcrits',
       coach: 'Suggestions du coach',
+      story: 'Histoires',
+      story_audio: 'Sons des histoires',
+      story_listen: 'Réponses aux histoires transcrites',
     },
   },
   plan: {

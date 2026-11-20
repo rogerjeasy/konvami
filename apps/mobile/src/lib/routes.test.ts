@@ -1,4 +1,23 @@
-import { importCallRoute, importRoute, letterCallRoute } from './routes';
+import {
+  drillCallRoute,
+  importCallRoute,
+  importRoute,
+  letterCallRoute,
+  storyRoute,
+} from './routes';
+
+describe('routes of the stories and the drill', () => {
+  it('opens one episode', () => {
+    expect(storyRoute('s1')).toEqual({ pathname: '/stories/[id]', params: { id: 's1' } });
+  });
+
+  it('starts a drill in walking mode', () => {
+    expect(drillCallRoute('p1')).toEqual({
+      pathname: '/call/[personaId]',
+      params: { personaId: 'p1', practise: 'drill', walking: '1' },
+    });
+  });
+});
 
 // The call's `practise` is at most 40 characters on the server.
 const PRACTISE_MAX = 40;

@@ -12,6 +12,9 @@ class MemoryVocabularyRepository:
     def __init__(self) -> None:
         self.scans: dict[str, tuple[UUID, dt.datetime, int, bool]] = {}
         self.rows: dict[tuple[UUID, str, str, str], Evidence] = {}
+        # Words heard in listening stories (5.29), as (user, language, key): the SQL counts read
+        # them from story_word.
+        self.story_words: set[tuple[UUID, str, str]] = set()
 
     def claim(self, user_id: UUID, call_id: str, at: dt.datetime, stale: dt.datetime) -> bool:
         previous = self.scans.get(call_id)
@@ -37,5 +40,7 @@ class MemoryVocabularyRepository:
     def counts(self, user_id: UUID, language: str) -> VocabularyCounts:
         rows = [(key[3], item) for key, item in self.rows.items() if key[:2] == (user_id, language)]
         active = {key for key, item in rows if item.produced}
-        heard = {key for key, item in rows if item.heard}
+        heard = {key for key, item in rows if item.heard} | {
+            key for user, lang, key in self.story_words if (user, lang) == (user_id, language)
+        }
         return VocabularyCounts(len(active), len(heard - active))

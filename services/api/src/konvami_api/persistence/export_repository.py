@@ -75,6 +75,8 @@ EXPORTED: tuple[ExportedTable, ...] = (
             "pronunciation_word",
             "retry_attempt",
             "retry_day",
+            "story_episode",
+            "story_word",
             "tutor_day",
             "tutor_question",
             "usage_charge",

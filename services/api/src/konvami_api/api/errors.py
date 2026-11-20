@@ -39,6 +39,7 @@ from konvami_api.domain.pronunciation import PronunciationError
 from konvami_api.domain.reports import ReportError
 from konvami_api.domain.retries import RetryError
 from konvami_api.domain.scenarios import ScenarioError
+from konvami_api.domain.stories import StoryError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.video_avatars import VideoAvatarError
 from konvami_api.domain.voice import VoiceError
@@ -184,6 +185,15 @@ _PEN_PAL_STATUS = {
     "retry_limit": 429,
 }
 
+_STORY_STATUS = {
+    "not_found": 404,
+    "no_partner": 409,
+    "pending": 409,
+    "invalid_value": 422,
+    "consent_required": 403,
+    "daily_limit": 429,
+}
+
 # The plan does not include what was asked: HTTP 402, "payment required".
 _PLAN_STATUS = {"plan_required": 402}
 _UNAVAILABLE = 503
@@ -264,6 +274,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(PenPalError)
     async def _pen_pal_error(_: Request, error: PenPalError) -> JSONResponse:
         return _response(_PEN_PAL_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(StoryError)
+    async def _story_error(_: Request, error: StoryError) -> JSONResponse:
+        return _response(_STORY_STATUS.get(error.code, _UNAVAILABLE), error.code)
 
     @app.exception_handler(WebDeletionError)
     async def _web_deletion_error(_: Request, error: WebDeletionError) -> JSONResponse:

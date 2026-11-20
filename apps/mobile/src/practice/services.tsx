@@ -47,6 +47,9 @@ import type {
   PenPalSettingsChange,
   PenPalThread,
   Phrase,
+  StoryAnswer,
+  StoryEpisode,
+  StorySeries,
   PhraseDraft,
   PhraseSuggestion,
   CaptionMeaning,
@@ -242,6 +245,26 @@ export interface PracticeServices {
   sendPenPalReply: (personaId: string, recording: SentenceRecording) => Promise<PenPalReply>;
   /** Has a note or an answer that failed written again. */
   retryPenPalNote: (noteId: string) => Promise<PenPalNote>;
+  /** The listening series, newest episode first (5.29). */
+  stories: ResourceStore<StorySeries>;
+  /**
+   * Asks for the next episode (told by `cast`, or the series' own cast); it is pending until
+   * it is ready. Rejects with an `ApiError` (`pending`, `daily_limit`, …).
+   */
+  makeStory: (cast?: string[]) => Promise<StoryEpisode>;
+  /** One episode. Rejects with an `ApiError` (`not_found`). */
+  readStory: (id: string) => Promise<StoryEpisode>;
+  /** The learner listened to an episode to the end: its words count as heard. */
+  listenedToStory: (id: string) => Promise<StoryEpisode>;
+  /**
+   * A question of an episode answered out loud, checked. Rejects with an `ApiError`
+   * (`consent_required`, `unavailable`, …).
+   */
+  answerStoryQuestion: (
+    id: string,
+    question: number,
+    recording: SentenceRecording,
+  ) => Promise<StoryAnswer>;
   /**
    * Says correction `index` of a conversation's report again, from a recording ("Say it better").
    * Rejects with an `ApiError` (`unsure`, `retry_limit`, …).
@@ -339,6 +362,11 @@ export function createPracticeServices(
     | 'askForPenPalNote'
     | 'sendPenPalReply'
     | 'retryPenPalNote'
+    | 'getStories'
+    | 'makeStory'
+    | 'getStory'
+    | 'listenedToStory'
+    | 'answerStoryQuestion'
     | 'getCatalog'
     | 'askTutor'
     | 'getPhrasebook'
@@ -413,6 +441,7 @@ export function createPracticeServices(
 
   const penPal = createResourceStore(() => api.getPenPal(), clock.now);
   const coach = createResourceStore(() => api.getCoach(clock.timeZone()), clock.now);
+  const stories = createResourceStore(() => api.getStories(), clock.now);
   return {
     ...extensions,
     home,
@@ -566,6 +595,20 @@ export function createPracticeServices(
     askForPenPalNote: (personaId) => api.askForPenPalNote(personaId),
     sendPenPalReply: (personaId, recording) => api.sendPenPalReply(personaId, spoken(recording)),
     retryPenPalNote: (noteId) => api.retryPenPalNote(noteId),
+    stories,
+    async makeStory(cast) {
+      const episode = await api.makeStory(cast);
+      void stories.refresh();
+      return episode;
+    },
+    readStory: (id) => api.getStory(id),
+    async listenedToStory(id) {
+      const episode = await api.listenedToStory(id);
+      void stories.refresh();
+      return episode;
+    },
+    answerStoryQuestion: (id, question, recording) =>
+      api.answerStoryQuestion(id, question, spoken(recording)),
     grammar: createResourceStore(() => api.getGrammarMap(), clock.now),
     readGrammarTopic: (id) => api.getGrammarTopic(id),
     cardSound: async (id) => (await api.getCardAudio(id)).url,
@@ -635,6 +678,7 @@ export function PracticeProvider({
 
     services.penPal.reset();
     services.coach.reset();
+    services.stories.reset();
     services.grammar.reset();
   }, [status, services]);
   return <PracticeContext.Provider value={services}>{children}</PracticeContext.Provider>;
@@ -899,6 +943,12 @@ export function usePenPal(): ResourceState<PenPal> {
     if (signedIn) void penPal.load();
   }, [signedIn, penPal]);
   return useSyncExternalStore(penPal.subscribe, penPal.getState, penPal.getState);
+}
+
+/** The listening series; re-renders when it changes. */
+export function useStories(): ResourceState<StorySeries> {
+  const { stories } = usePracticeServices();
+  return useSyncExternalStore(stories.subscribe, stories.getState, stories.getState);
 }
 
 /** The questions asked to the Tutor; re-renders when they change. */

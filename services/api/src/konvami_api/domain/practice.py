@@ -733,11 +733,44 @@ Words from it:
 """
 
 
+def _drill(plan: SessionPlan, target: str, explanation: str) -> str:
+    """The section of a hands-free drill (5.30); empty for any other conversation. The learner is
+    walking or on a train with the screen off, so everything happens by ear."""
+    drill = plan.drill
+    if drill is None:
+        return ""
+    words = "\n".join(f"- {word.text} ({word.meaning})" for word in plan.words) or "- (none)"
+    polish = (
+        "\n".join(f'- They said: "{said}" Right: "{better}"' for said, better in drill.polish)
+        or "- (none)"
+    )
+    return f"""
+# A hands-free drill
+This call is a ten-minute drill. The learner is walking or travelling and is not looking at the
+screen: never ask them to read, tap or look at anything. Run it as quick rounds, one item each:
+1. Prompt. For a word: give its meaning in {explanation} and ask for a short {target} sentence
+   with it. For a sentence to polish: say "Earlier you said:" and the sentence as they said it,
+   then ask them to say it better.
+2. Wait for their answer. After a few seconds of silence give a small hint (the first sound, or
+   one word of the sentence), never the whole answer at once.
+3. Recast. Say the right version once, clearly and a little slowly, after a reaction of two or
+   three words. If their answer was wrong, have them say it once more, then move on. No grammar
+   lectures: one short reason at most, in {explanation}.
+4. Next item. After the last one, bring back the items they missed, in another order.
+Start with one friendly sentence that says what is coming ("Ten quick rounds while you walk").
+Keep a steady, warm rhythm. End with a goodbye that says how many they got right without help.
+Words to drill (the {target} word, and its meaning):
+{words}
+Sentences they said in earlier conversations, with the confirmed correction:
+{polish}
+"""
+
+
 def _plan(plan: SessionPlan, role_play: bool) -> str:
     """The section on what this conversation sets out to practise; empty when that is nothing.
     A role-play has a situation of its own, so it is not told what to talk about; a guided lesson
     has its own section (`_lesson`)."""
-    if plan.lesson is not None:
+    if plan.lesson is not None or plan.drill is not None:
         return ""
     topics = () if role_play else plan.recent_topics
     if not (plan.focus or plan.words or topics):
@@ -840,10 +873,11 @@ def practice_instructions(
 {chr(10).join(practise)}
 """
     plan = _plan(learner.plan, scenario is not None)
-    lesson = _lesson(learner.plan, target, explanation)
+    lesson = _lesson(learner.plan, target, explanation) + _drill(learner.plan, target, explanation)
     material = _material(learner.plan, target, explanation)
-    if learner.plan.lesson is not None:
-        # A lesson teaches its one topic: other things to steer towards would compete with it.
+    if learner.plan.lesson is not None or learner.plan.drill is not None:
+        # A lesson teaches its one topic, and a drill has its items: other things to steer
+        # towards would compete with them.
         weak = ""
     usage = teaching.explanation_usage or learner.explanation_usage
     use = _EXPLANATION_USE.get(usage, _EXPLANATION_USE["when_stuck"])

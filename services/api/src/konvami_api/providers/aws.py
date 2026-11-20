@@ -154,6 +154,23 @@ class LambdaCoachStarter:
         )
 
 
+class LambdaStoryStarter:
+    """Has a listening story's episode written by the worker function, in an invocation of its
+    own: writing it and speaking its lines takes longer than an API request may (5.29)."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, episode_id: UUID) -> None:
+        # The worker writes only an episode that is waiting in the database.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"story": str(episode_id)}).encode(),
+        )
+
+
 class LambdaWeekReviewStarter:
     """Has a learner's weekly check-in written by the worker function, in an invocation of its
     own, so opening Progress does not wait for the text model."""

@@ -3,6 +3,7 @@ import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
+import { STORIES_TEXT } from '../stories-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 import type { Translation } from './en';
@@ -13,6 +14,8 @@ export const it: Translation = {
   examStages: EXAM_STAGES.it,
   offlineLibrary: offlineLibrary.it,
   vocabulary: VOCABULARY_TEXT.it,
+  stories: STORIES_TEXT.it.stories,
+  drill: STORIES_TEXT.it.drill,
   common: {
     earlier: '{{what}}: prima',
     later: '{{what}}: dopo',
@@ -1312,6 +1315,10 @@ export const it: Translation = {
 
     importRow: 'Porta il tuo materiale',
     importHint: 'Testi, link e foto, con le loro parole',
+    storiesRow: 'Storie',
+    storiesHint: 'Episodi da ascoltare fatti con le tue parole',
+    drillRow: 'Esercizio in viaggio',
+    drillHint: 'Dieci minuti a mani libere in giro',
     body: 'Parole e correzioni dalle tue conversazioni, di ritorno poco prima che tu le dimentichi.',
     loading: 'Carico le tue schede',
     loadFailed: 'Non è stato possibile caricare le tue schede.',
@@ -2328,6 +2335,9 @@ export const it: Translation = {
       pen_pal_audio: 'Suoni dell’amico di penna',
       pen_pal_listen: 'Messaggi vocali trascritti',
       coach: 'Suggerimenti del coach',
+      story: 'Storie',
+      story_audio: 'Suoni delle storie',
+      story_listen: 'Risposte alle storie trascritte',
     },
   },
   plan: {

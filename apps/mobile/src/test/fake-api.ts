@@ -39,6 +39,7 @@ import {
   type QueuedFlag,
   type Rating,
   type SessionReport,
+  type StoryEpisode,
   type TranscriptTurn,
   type TurnAudio,
   type TutorAnswer,
@@ -957,6 +958,12 @@ export interface FakeApi extends ApiClient {
   penPalWritten(noteId: string, note: Partial<PenPalNote>): void;
   /** What the next voice note is written down as (by default `FAKE_PEN_PAL_HEARD`). */
   nextPenPalHeard(text: string): void;
+  /** Episodes of the listening series, oldest first (`FAKE_STORY_EPISODE`'s other fields). */
+  storyEpisodes(episodes: Partial<StoryEpisode>[]): void;
+  /** Completes a pending episode, as the server's worker would (`FAKE_STORY_EPISODE`'s text). */
+  storyWritten(id: string, changes?: Partial<StoryEpisode>): void;
+  /** What the next spoken answer to a story's question is written down as. */
+  nextStoryHeard(text: string): void;
   /** Ends a call recorded with `ended: false`. */
   finish(id: string, options?: { minutes?: number; learnerSays?: string[] }): void;
   /**
@@ -1053,6 +1060,32 @@ export const FAKE_PEN_PAL_NOTE: PenPalNote = {
 };
 /** What a voice note of the learner is written down as. */
 export const FAKE_PEN_PAL_HEARD = 'Ich habe gestern ein Film gesehen';
+/** A ready episode of the listening series (5.29): Lena tells it. */
+export const FAKE_STORY_EPISODE: StoryEpisode = {
+  id: 'story_0',
+  number: 1,
+  status: 'ready',
+  title: 'Lenas Wohnung',
+  cast: [],
+  names: ['Lena'],
+  lines: [
+    { speaker: 0, text: 'Heute sehe ich eine Wohnung.', audioUrl: 'https://files.test/s/0.mp3' },
+    { speaker: 0, text: 'Sie ist klein, aber hell.', audioUrl: 'https://files.test/s/1.mp3' },
+    {
+      speaker: 0,
+      text: 'Der Vermieter heißt Herr Keller.',
+      audioUrl: 'https://files.test/s/2.mp3',
+    },
+    { speaker: 0, text: 'Morgen rufe ich ihn an.', audioUrl: 'https://files.test/s/3.mp3' },
+  ],
+  questions: [{ question: 'Wie heißt der Vermieter?', answer: 'Herr Keller' }],
+  words: ['die Wohnung'],
+  listened: false,
+  answers: [],
+  createdAt: '2026-10-09T12:00:00Z',
+};
+/** What a spoken answer to a story's question is written down as. */
+export const FAKE_STORY_HEARD = 'Er heißt Herr Keller.';
 
 export function createFakeApi(): FakeApi {
   let activeCall: Awaited<ReturnType<ApiClient['startVoiceCall']>> | null = null;
@@ -1139,6 +1172,25 @@ export function createFakeApi(): FakeApi {
         unread: notes.filter((n) => penPalUnread.has(n.id)).length,
       };
     });
+  // The listening series (5.29), oldest episode first.
+  let storyLog: StoryEpisode[] = [];
+  let storyHeard = FAKE_STORY_HEARD;
+  const storyEpisode = (changes: Partial<StoryEpisode>): StoryEpisode => ({
+    ...FAKE_STORY_EPISODE,
+    id: `story_${storyLog.length + 1}`,
+    number: storyLog.length + 1,
+    createdAt: new Date(now).toISOString(),
+    ...changes,
+  });
+  const ownStory = (id: string) => {
+    const episode = storyLog.find((e) => e.id === id);
+    if (!episode) throw new ApiError('not_found', 404);
+    return episode;
+  };
+  const storyChanged = (id: string, changes: Partial<StoryEpisode>) => {
+    storyLog = storyLog.map((e) => (e.id === id ? { ...e, ...changes } : e));
+    return ownStory(id);
+  };
   // The phrasebook, newest first, and what is suggested next.
   let phrases: Phrase[] = [];
   let phraseSuggestions: PhraseSuggestion[] = FAKE_PHRASE_SUGGESTIONS;
@@ -1869,9 +1921,11 @@ export function createFakeApi(): FakeApi {
       if (left < MIN_CALL_SECONDS) throw new ApiError('minutes_used_up', 429);
       const maxSeconds = Math.min(['practice', 'exam'].includes(purpose) ? 600 : 480, left);
       usedSeconds += maxSeconds;
-      // Nothing to plan from yet: no reports in the fake. A review brings the due words.
+      // Nothing to plan from yet: no reports in the fake. A review, or a hands-free drill (5.30),
+      // brings the due words.
       const review = practise === 'words';
-      const words = review ? dueCards().filter(({ kind }) => kind === 'word') : [];
+      const drill = practise === 'drill';
+      const words = review || drill ? dueCards().filter(({ kind }) => kind === 'word') : [];
       // A guided lesson is `lesson:<topic>`: the topic alone, with no words.
       const lessonTopic = practise?.startsWith('lesson:') ? practise.slice('lesson:'.length) : null;
       // A conversation about an import is `import:<id>` (32 hex digits) or `letter:<id>` to
@@ -1891,6 +1945,8 @@ export function createFakeApi(): FakeApi {
               lesson: lessonTopic !== null,
               material: brought?.title ?? null,
               rehearse: aboutImport?.[1] === 'letter',
+              drill,
+              polish: 0,
             }
           : null;
       activeCall = { callId: 'rtc_fake', sdp: 'v=0 answer', maxSeconds, plan };
@@ -2350,6 +2406,88 @@ export function createFakeApi(): FakeApi {
     },
     nextPenPalHeard(text) {
       penPalHeard = text;
+    },
+    storyEpisodes(episodes) {
+      for (const changes of episodes) storyLog = [...storyLog, storyEpisode(changes)];
+    },
+    storyWritten(id, changes = {}) {
+      storyChanged(id, {
+        status: 'ready',
+        title: FAKE_STORY_EPISODE.title,
+        lines: FAKE_STORY_EPISODE.lines,
+        questions: FAKE_STORY_EPISODE.questions,
+        words: FAKE_STORY_EPISODE.words,
+        ...changes,
+      });
+    },
+    nextStoryHeard(text) {
+      storyHeard = text;
+    },
+    async getStories() {
+      await record('getStories');
+      const today = storyLog.filter((e) => now - Date.parse(e.createdAt) < 24 * 3_600_000);
+      return {
+        episodes: [...storyLog].reverse().map((e) => ({
+          id: e.id,
+          number: e.number,
+          status: e.status,
+          title: e.title,
+          names: e.names,
+          listened: e.listened,
+          createdAt: e.createdAt,
+        })),
+        leftToday: Math.max(0, 3 - today.length),
+        perDay: 3,
+        available: true,
+      };
+    },
+    async makeStory(cast = []) {
+      await record('makeStory', cast);
+      if (storyLog.at(-1)?.status === 'pending') throw new ApiError('pending', 409);
+      const partners = personas ?? [];
+      if (!partners.length) throw new ApiError('no_partner', 409);
+      if (cast.some((id) => !partners.some((p) => p.id === id))) {
+        throw new ApiError('invalid_value', 422);
+      }
+      const ids = cast.length ? cast : [partners[0]?.id ?? ''];
+      const episode = storyEpisode({
+        status: 'pending',
+        title: '',
+        lines: [],
+        questions: [],
+        words: [],
+        cast: ids,
+        names: ids.map((id) => partners.find((p) => p.id === id)?.name ?? ''),
+      });
+      storyLog = [...storyLog, episode];
+      return episode;
+    },
+    async getStory(id) {
+      await record('getStory', id);
+      return ownStory(id);
+    },
+    async listenedToStory(id) {
+      await record('listenedToStory', id);
+      if (ownStory(id).status !== 'ready') throw new ApiError('not_found', 404);
+      return storyChanged(id, { listened: true });
+    },
+    async answerStoryQuestion(id, question, recording) {
+      await record('answerStoryQuestion', id, question, recording);
+      const episode = ownStory(id);
+      const asked = episode.questions[question];
+      if (episode.status !== 'ready' || !asked) throw new ApiError('not_found', 404);
+      if (!recording.audio) throw new ApiError('invalid_value', 422);
+      const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+      const heard = new Set(words(storyHeard));
+      const answer = {
+        question,
+        heard: storyHeard,
+        right: words(asked.answer).every((word) => heard.has(word)),
+      };
+      storyChanged(id, {
+        answers: [...episode.answers.filter((a) => a.question !== question), answer],
+      });
+      return answer;
     },
     async getPenPal() {
       await record('getPenPal');

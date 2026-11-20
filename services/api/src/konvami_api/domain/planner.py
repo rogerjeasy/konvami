@@ -20,6 +20,10 @@ A review conversation (spec §6.7, `practise=PRACTISE_WORDS`) is built around th
 more of them, the due ones only (or the next ones when none is due), and no structure to
 compete with them.
 
+A hands-free drill (5.30, `practise=PRACTISE_DRILL`) takes more of the due words still, and the
+sentences of the learner's recent reports that a confirmed correction made better, for rounds of
+prompt, answer and recast that need no screen.
+
 It is plain code, not a model: it runs while the learner waits for the call to connect, and the
 partner, who is a model, makes the conversation out of it.
 """
@@ -33,6 +37,7 @@ from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.grammar_topics import GrammarTopic
 from konvami_api.domain.plan import (
+    DrillMaterial,
     FocusPoint,
     ImportMaterial,
     LessonMaterial,
@@ -50,6 +55,11 @@ MAX_PLAN_WORDS = 4
 MAX_REVIEW_WORDS = 6
 # What a learner asks to practise for a review conversation, instead of a grammar topic.
 PRACTISE_WORDS = "words"
+# What a learner asks to practise for a hands-free drill (5.30).
+PRACTISE_DRILL = "drill"
+# A drill's items: about a minute's round each, with time for the missed ones to come back.
+MAX_DRILL_WORDS = 8
+MAX_DRILL_POLISH = 4
 # What precedes a grammar topic's id when a learner asks for a guided lesson on it (spec §6.3).
 LESSON_PREFIX = "lesson:"
 # What precedes an import's id (32 hex digits) when a learner asks to talk about it, or, for a
@@ -116,6 +126,20 @@ def choose_focus(
     )
 
 
+def polish_items(reports: Sequence[Report]) -> tuple[tuple[str, str], ...]:
+    """What the learner said and its confirmed correction, newest report first, each sentence
+    once. A correction the second check doubted may not be one, so it is never drilled."""
+    items: list[tuple[str, str]] = []
+    for report in reports:
+        for mistake in report.mistakes:
+            pair = (mistake.original, mistake.corrected)
+            if mistake.certain and mistake.original != mistake.corrected and pair not in items:
+                items.append(pair)
+            if len(items) == MAX_DRILL_POLISH:
+                return tuple(items)
+    return tuple(items)
+
+
 # What the learner imported: the material of an import, for a talk about it (`rehearse` False) or
 # for rehearsing a letter's reply; None when they have no such import.
 type ImportReader = Callable[[UUID, UUID, bool], ImportMaterial | None]
@@ -153,6 +177,8 @@ class SessionPlanner:
         pack = self._profiles.catalog.available_pack(language)
         if practise is not None and practise.startswith((IMPORT_PREFIX, LETTER_PREFIX)):
             return self._import_plan(user_id, language, pack, practise)
+        if practise == PRACTISE_DRILL:
+            return self._drill_plan(user_id, language)
         review = practise == PRACTISE_WORDS
         lesson = practise is not None and practise.startswith(LESSON_PREFIX)
         if lesson and practise is not None:
@@ -183,6 +209,17 @@ class SessionPlanner:
             words=tuple(PlanWord(card.front, card.back, str(card.id)) for card in cards),
             recent_topics=tuple(report.summary for report in reports[:RECENT_TOPICS]),
             review=review,
+        )
+
+    def _drill_plan(self, user_id: UUID, language: str) -> SessionPlan:
+        """A hands-free drill (5.30): the due words (or the next ones when none is due), and the
+        learner's own sentences that a confirmed correction made better, newest first."""
+        due = self._cards.words_due(user_id, MAX_DRILL_WORDS)
+        cards = due or self._cards.words_to_bring_back(user_id, MAX_DRILL_WORDS)
+        return SessionPlan(
+            language=language,
+            words=tuple(PlanWord(card.front, card.back, str(card.id)) for card in cards),
+            drill=DrillMaterial(polish=polish_items(self._reports.recent(user_id, RECENT_REPORTS))),
         )
 
     def _import_plan(

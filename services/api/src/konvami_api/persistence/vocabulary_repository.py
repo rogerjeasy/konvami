@@ -43,10 +43,16 @@ _COUNTS = """
     SELECT count(*) FILTER (WHERE active) AS active,
            count(*) FILTER (WHERE heard AND NOT active) AS passive
     FROM (
-        SELECT word_key, bool_or(produced IS NOT NULL) AS active,
-               bool_or(heard IS NOT NULL) AS heard
-        FROM vocabulary_evidence
-        WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+        SELECT word_key, bool_or(active) AS active, bool_or(heard) AS heard
+        FROM (
+            SELECT word_key, produced IS NOT NULL AS active, heard IS NOT NULL AS heard
+            FROM vocabulary_evidence
+            WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+            UNION ALL
+            -- A word heard to the end of a listening story (5.29) is heard too.
+            SELECT word_key, false, true FROM story_word
+            WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+        ) evidence
         GROUP BY word_key
     ) words
 """

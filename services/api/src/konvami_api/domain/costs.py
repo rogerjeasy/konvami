@@ -79,6 +79,11 @@ class Feature(StrEnum):
     # The Coach's suggestions worded for the learner (spec §6.12, `coach.py`).
     COACH = "coach"
 
+    # Listening stories (5.29): an episode's text, its sound, and a spoken answer written down.
+    STORY = "story"
+    STORY_AUDIO = "story_audio"
+    STORY_LISTEN = "story_listen"
+
 
 @dataclass(frozen=True)
 class Charge:

@@ -62,6 +62,7 @@ from konvami_api.domain.retries import RetryService
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
+from konvami_api.domain.stories import StoryService
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
@@ -132,6 +133,7 @@ from tests.fakes import (
     ScriptedTranscriber,
     text_guard,
 )
+from tests.story_fake import InMemoryStoryRepository, RecordingStoryStarter
 from tests.vocabulary_fake import MemoryVocabularyRepository
 
 USER = UUID("11111111-1111-4111-8111-111111111111")
@@ -585,6 +587,33 @@ class World:
             clock=self.clock,
             announce=lambda user, persona, reply: self.push.pen_pal(user, persona, reply=reply),
             new_id=lambda: next(note_ids),
+        )
+        self.story_store = InMemoryStoryRepository(self.vocabulary_store)
+        self.story_starter = RecordingStoryStarter()
+        self.story_transcriber = ScriptedTranscriber()
+        self.story_speech = FakeSpeechModel()
+        # Episode ids in the order they are handed out: ...0001, ...0002, and so on.
+        episode_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{n:012d}") for n in range(1, 10_000))
+        self.stories = StoryService(
+            profiles=self.profiles,
+            personas=self.personas,
+            cards=self.cards,
+            memories=self.memories,
+            repository=self.story_store,
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.story_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            text_model=self.text,
+            model="gpt-6-luna",
+            speech=self.story_speech,
+            speech_model="gpt-4o-mini-tts",
+            files=self.files,
+            starter=self.story_starter,
+            clock=self.clock,
+            new_id=lambda: next(episode_ids),
         )
         self.voice = VoiceCallService(
             settings=VOICE,

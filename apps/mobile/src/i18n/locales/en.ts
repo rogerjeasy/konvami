@@ -3,6 +3,7 @@ import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
 import { CAPTION_LOOKUP } from '../caption-lookup';
 import { VOCABULARY_TEXT } from '../vocabulary-strings';
+import { STORIES_TEXT } from '../stories-strings';
 import { offlineLibrary } from '../offline-library';
 import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 /**
@@ -16,6 +17,8 @@ export const en = {
   examStages: EXAM_STAGES.en,
   offlineLibrary: offlineLibrary.en,
   vocabulary: VOCABULARY_TEXT.en,
+  stories: STORIES_TEXT.en.stories,
+  drill: STORIES_TEXT.en.drill,
   common: {
     earlier: '{{what}}: earlier',
     later: '{{what}}: later',
@@ -1298,6 +1301,10 @@ export const en = {
 
     importRow: 'Bring your own material',
     importHint: 'Texts, links and photos, with their words',
+    storiesRow: 'Stories',
+    storiesHint: 'Listening episodes made from your words',
+    drillRow: 'Commute drill',
+    drillHint: 'Ten hands-free minutes on the go',
     body: 'Words and corrections from your conversations, back just before you would forget them.',
     loading: 'Loading your cards',
     loadFailed: 'Your cards couldn’t be loaded.',
@@ -2305,6 +2312,9 @@ export const en = {
       pen_pal_audio: 'Pen-pal sounds',
       pen_pal_listen: 'Pen-pal voice notes written down',
       coach: 'The coach’s suggestions',
+      story: 'Stories',
+      story_audio: 'Story sounds',
+      story_listen: 'Story answers written down',
     },
   },
   plan: {

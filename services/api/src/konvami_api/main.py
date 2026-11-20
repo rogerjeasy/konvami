@@ -63,6 +63,7 @@ from konvami_api.domain.retries import RetryService
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
+from konvami_api.domain.stories import StoryService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.two_partners import GuestSpeech
@@ -114,6 +115,7 @@ from konvami_api.persistence.repositories import (
 )
 from konvami_api.persistence.schedule_repository import SqlScheduleRepository
 from konvami_api.persistence.sql import SqlClient
+from konvami_api.persistence.story_repository import SqlStoryRepository
 from konvami_api.persistence.video_avatar_repository import SqlVideoAvatarRepository
 from konvami_api.persistence.vocabulary_repository import SqlVocabularyRepository
 from konvami_api.providers.audio_encoding import FfmpegEncoder
@@ -126,6 +128,7 @@ from konvami_api.providers.aws import (
     LambdaFitStarter,
     LambdaPenPalStarter,
     LambdaReportStarter,
+    LambdaStoryStarter,
     LambdaWeekReviewStarter,
     SecretsClient,
     SnsClient,
@@ -748,6 +751,22 @@ def build_backend(
                 user_id, persona_id, reply=reply
             ),
         ),
+        stories=StoryService(
+            profiles=profiles,
+            personas=personas,
+            cards=cards,
+            memories=memories,
+            repository=SqlStoryRepository(sql),
+            listener=listener,
+            text_model=text,
+            # An episode is a short story at the learner's level, like a pen-pal note.
+            model=models.week or models.memory,
+            speech=speech,
+            speech_model=models.speech,
+            files=files,
+            starter=LambdaStoryStarter(clients.functions, worker),
+            clock=_now,
+        ),
         retries=retries,
         pronunciation=pronunciation,
         coach=coach,
@@ -822,7 +841,8 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     (`card_schedule`); writing a learner's weekly check-in (`week_review`); scoring
     an exam simulation (`exam`); and, once an hour, nudging learners who have been quiet for a
     week (`nudges`, from the schedule), and the partners' voice notes: the ones due, sent by the
-    same hourly run (spec §6.16), and writing a note or an answer that is waiting (`pen_pal`)."""
+    same hourly run (spec §6.16), and writing a note or an answer that is waiting (`pen_pal`);
+    and writing a listening story's episode (`story`, 5.29)."""
     if "nudges" in event:
         # One failing does not stop the other.
         try:
@@ -832,6 +852,9 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
         return
     if "pen_pal" in event:
         backend.services.pen_pal.write(UUID(event["pen_pal"]))
+        return
+    if "story" in event:
+        backend.services.stories.write(UUID(event["story"]))
         return
     if "exam" in event:
         backend.services.exams.score(event["exam"])

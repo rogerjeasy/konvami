@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -184,6 +184,7 @@ function Call({
   scenario,
   practise,
   rang = false,
+  walkOnStart = false,
   onRetry,
 }: {
   language: string;
@@ -196,6 +197,8 @@ function Call({
   practise?: string;
   /** A short call the learner accepted from the partner's ring (5.28). */
   rang?: boolean;
+  /** Turns walking mode on as soon as the call is live (a hands-free drill, 5.30). */
+  walkOnStart?: boolean;
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
@@ -232,6 +235,15 @@ function Call({
   }, [stop, callId]);
 
   const walking = useWalkingCall(call, leave);
+  // A hands-free drill (5.30) starts in walking mode, once, where the device offers it; the
+  // learner can still turn it off in the help sheet.
+  const walkedOnStart = useRef(false);
+  const live = call.status === 'live';
+  useEffect(() => {
+    if (!walkOnStart || walkedOnStart.current || !live || !walking.available) return;
+    walkedOnStart.current = true;
+    void walking.set(true);
+  }, [walkOnStart, live, walking]);
 
   // The partner has said goodbye and it has been heard.
   const { over } = conversation;
@@ -384,13 +396,14 @@ function Call({
 export function LiveConversationScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { personaId, scenario, practise, guest, rang } = useLocalSearchParams<{
+  const { personaId, scenario, practise, guest, rang, walking } = useLocalSearchParams<{
     personaId: string;
     scenario?: string;
     practise?: string;
     guest?: string;
     /** "1" for a call the learner accepted from the partner's ring (5.28). */
     rang?: string;
+    walking?: string;
   }>();
   const { home: store } = usePracticeServices();
   const home = useHome();
@@ -445,6 +458,7 @@ export function LiveConversationScreen() {
       scenario={scenario}
       practise={practise}
       rang={rang === '1'}
+      walkOnStart={walking === '1'}
       onRetry={() => setAttempt((count) => count + 1)}
     />
   );

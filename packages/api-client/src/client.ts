@@ -238,6 +238,14 @@ export type PenPalThread = Schemas['PenPalThreadOut'];
 export type PenPalNote = Schemas['PenPalNoteOut'];
 export type PenPalCorrection = Schemas['PenPalCorrectionOut'];
 export type PenPalReply = Schemas['PenPalReplyOut'];
+/**
+ * Listening stories (5.29): the learner's series, one episode (its lines with their sounds, its
+ * questions and the learner's answers), and a spoken answer, checked.
+ */
+export type StorySeries = Schemas['StorySeriesOut'];
+export type StorySummary = Schemas['StorySummaryOut'];
+export type StoryEpisode = Schemas['StoryEpisodeOut'];
+export type StoryAnswer = Schemas['StoryAnswerOut'];
 /** Whether the audio of the learner's conversations is kept for them to hear again. */
 export type Recordings = Schemas['RecordingsOut'];
 export type ThenVsNow = Schemas['ThenVsNowOut'];
@@ -519,6 +527,27 @@ export interface ApiClient {
   sendPenPalReply(personaId: string, note: SpokenRecording): Promise<PenPalReply>;
   /** Has a note or an answer that failed written again. Fails with `not_found`, `retry_limit`. */
   retryPenPalNote(noteId: string): Promise<PenPalNote>;
+  /** The learner's listening series, newest episode first (5.29). */
+  getStories(): Promise<StorySeries>;
+  /**
+   * Asks for the next episode, told by `cast` (one or two partners; empty for the series' own).
+   * It is pending until it is ready. Fails with `pending`, `daily_limit`, `no_partner`,
+   * `invalid_value` or `unavailable`.
+   */
+  makeStory(cast?: string[]): Promise<StoryEpisode>;
+  /** One episode. Fails with `not_found`. */
+  getStory(episodeId: string): Promise<StoryEpisode>;
+  /** The learner listened to the end: its words count as heard. */
+  listenedToStory(episodeId: string): Promise<StoryEpisode>;
+  /**
+   * A question answered out loud, written down and checked. Fails with `not_found`,
+   * `invalid_value`, `consent_required` or `unavailable`.
+   */
+  answerStoryQuestion(
+    episodeId: string,
+    question: number,
+    answer: SpokenRecording,
+  ): Promise<StoryAnswer>;
 
   /** Sends the owner a message. Fails with `invalid_value`, `feedback_limit`. */
   sendFeedback(input: FeedbackInput): Promise<Schemas['FeedbackOut']>;
@@ -881,6 +910,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       request('POST', `/v1/pen-pal/${encodeURIComponent(personaId)}/replies`, note),
     retryPenPalNote: (noteId) =>
       request('POST', `/v1/pen-pal/notes/${encodeURIComponent(noteId)}/retry`),
+    getStories: () => request('GET', '/v1/stories'),
+    makeStory: (cast = []) => request('POST', '/v1/stories', { cast }),
+    getStory: (episodeId) => request('GET', `/v1/stories/${encodeURIComponent(episodeId)}`),
+    listenedToStory: (episodeId) =>
+      request('POST', `/v1/stories/${encodeURIComponent(episodeId)}/listened`),
+    answerStoryQuestion: (episodeId, question, answer) =>
+      request('POST', `/v1/stories/${encodeURIComponent(episodeId)}/answers/${question}`, answer),
 
     sendFeedback: (input) => request('POST', '/v1/feedback', input),
     getFeedbackInbox: (status) => request('GET', withQuery('/v1/owner/feedback', { status })),

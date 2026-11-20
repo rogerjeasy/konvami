@@ -8,10 +8,14 @@ from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.plan import FocusPoint, LessonMaterial, PlanWord, SessionPlan
 from konvami_api.domain.planner import (
     LESSON_PREFIX,
+    MAX_DRILL_POLISH,
+    MAX_DRILL_WORDS,
     MAX_FOCUS,
     MAX_PLAN_WORDS,
     MAX_REVIEW_WORDS,
+    PRACTISE_DRILL,
     PRACTISE_WORDS,
+    polish_items,
 )
 from konvami_api.domain.reports import Mistake, Severity, Word
 from tests.world import NOON, OTHER_USER, USER, World
@@ -441,3 +445,58 @@ def test_a_lesson_is_stored_with_its_plan() -> None:
 
     assert SessionPlan.from_document(plan.document()) == plan
     assert SessionPlan.from_document({"language": "de"}).lesson is None
+
+
+def test_a_drill_brings_due_words_and_the_learners_confirmed_corrections() -> None:
+    world = World()
+    world.onboard()
+    report(world, mistake("case_dative"), days_ago=2)
+    report(
+        world,
+        mistake("word_order", "Ich gestern war krank", "Ich war gestern krank"),
+        mistake("case_dative"),
+        mistake("gender", "das Tisch", "der Tisch", certain=False),
+        days_ago=1,
+    )
+    card(world, "der Termin", "le rendez-vous", due_in=-timedelta(days=1))
+
+    plan = world.planner.plan(USER, practise=PRACTISE_DRILL)
+
+    assert plan.drill is not None
+    assert [word.text for word in plan.words] == ["der Termin"]
+    # Newest report first, each sentence once, and never a correction the check doubted.
+    assert plan.drill.polish == (
+        ("Ich gestern war krank", "Ich war gestern krank"),
+        ("mit der Bus", "mit dem Bus"),
+    )
+    assert plan.focus == ()
+    assert not plan.review
+    assert SessionPlan.from_document(plan.document()) == plan
+
+
+def test_a_drill_keeps_its_rounds_to_a_ten_minute_call() -> None:
+    world = World()
+    world.onboard()
+    for number in range(12):
+        card(world, f"das Wort{number}", "un mot", due_in=-timedelta(hours=number + 1))
+    report(
+        world, *(mistake("case_dative", f"Satz {n}", f"Satz {n}!") for n in range(6)), days_ago=1
+    )
+
+    plan = world.planner.plan(USER, practise=PRACTISE_DRILL)
+
+    assert len(plan.words) == MAX_DRILL_WORDS
+    assert plan.drill is not None
+    assert len(plan.drill.polish) == MAX_DRILL_POLISH
+
+
+def test_polish_items_skip_a_sentence_left_as_it_was() -> None:
+    world = World()
+    world.onboard()
+    report(world, mistake("other", "Hallo", "Hallo"), days_ago=1)
+
+    plan = world.planner.plan(USER, practise=PRACTISE_DRILL)
+
+    assert plan.drill is not None
+    assert plan.drill.polish == ()
+    assert polish_items([]) == ()

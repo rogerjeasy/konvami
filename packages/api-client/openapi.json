@@ -196,6 +196,11 @@
         "additionalProperties": false,
         "description": "What a practice conversation sets out to practise, as the learner sees it: the kinds of\nmistake (a language pack's categories) and the words to use. How the partner is told to\nbring them up stays on the server.",
         "properties": {
+          "drill": {
+            "default": false,
+            "title": "Drill",
+            "type": "boolean"
+          },
           "focus": {
             "items": {
               "type": "string"
@@ -221,6 +226,11 @@
               }
             ],
             "title": "Material"
+          },
+          "polish": {
+            "default": 0,
+            "title": "Polish",
+            "type": "integer"
           },
           "rehearse": {
             "title": "Rehearse",
@@ -7879,6 +7889,279 @@
         ],
         "title": "Stage",
         "type": "string"
+      },
+      "StoryAnswerOut": {
+        "additionalProperties": false,
+        "properties": {
+          "heard": {
+            "title": "Heard",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "integer"
+          },
+          "right": {
+            "title": "Right",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "question",
+          "heard",
+          "right"
+        ],
+        "title": "StoryAnswerOut",
+        "type": "object"
+      },
+      "StoryEpisodeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/StoryAnswerOut"
+            },
+            "title": "Answers",
+            "type": "array"
+          },
+          "cast": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Cast",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StoryLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "listened": {
+            "title": "Listened",
+            "type": "boolean"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/StoryQuestionOut"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "words": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Words",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "title",
+          "cast",
+          "names",
+          "lines",
+          "questions",
+          "words",
+          "listened",
+          "answers",
+          "createdAt"
+        ],
+        "title": "StoryEpisodeOut",
+        "type": "object"
+      },
+      "StoryIn": {
+        "additionalProperties": false,
+        "description": "Who tells the next episode: one or two of the learner's partners; empty for the series'\nown cast.",
+        "properties": {
+          "cast": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Cast",
+            "type": "array"
+          }
+        },
+        "title": "StoryIn",
+        "type": "object"
+      },
+      "StoryLineOut": {
+        "additionalProperties": false,
+        "properties": {
+          "audioUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audiourl"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "speaker",
+          "text",
+          "audioUrl"
+        ],
+        "title": "StoryLineOut",
+        "type": "object"
+      },
+      "StoryQuestionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question",
+          "answer"
+        ],
+        "title": "StoryQuestionOut",
+        "type": "object"
+      },
+      "StorySeriesOut": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "episodes": {
+            "items": {
+              "$ref": "#/components/schemas/StorySummaryOut"
+            },
+            "title": "Episodes",
+            "type": "array"
+          },
+          "leftToday": {
+            "title": "Lefttoday",
+            "type": "integer"
+          },
+          "perDay": {
+            "title": "Perday",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "episodes",
+          "leftToday",
+          "perDay",
+          "available"
+        ],
+        "title": "StorySeriesOut",
+        "type": "object"
+      },
+      "StorySummaryOut": {
+        "additionalProperties": false,
+        "description": "An episode in the series' list, without its lines.",
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "listened": {
+            "title": "Listened",
+            "type": "boolean"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "title",
+          "names",
+          "listened",
+          "createdAt"
+        ],
+        "title": "StorySummaryOut",
+        "type": "object"
       },
       "SyncedReviewOut": {
         "additionalProperties": false,
@@ -15866,6 +16149,374 @@
           }
         },
         "summary": "Get Recording Formats"
+      }
+    },
+    "/v1/stories": {
+      "get": {
+        "description": "The learner's listening series (5.29): its episodes, the newest first.",
+        "operationId": "getStories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorySeriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Stories"
+      },
+      "post": {
+        "description": "Asks for the next episode, told by one or two partners. It is written in the\nbackground: the episode is pending until it is ready.",
+        "operationId": "makeStory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryEpisodeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Make Story"
+      }
+    },
+    "/v1/stories/{episode_id}": {
+      "get": {
+        "description": "One episode, with an address to play each line.",
+        "operationId": "getStory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryEpisodeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Story"
+      }
+    },
+    "/v1/stories/{episode_id}/answers/{question}": {
+      "post": {
+        "description": "A question about the episode answered out loud, written down and checked.",
+        "operationId": "answerStoryQuestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "question",
+            "required": true,
+            "schema": {
+              "title": "Question",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryAnswerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Answer Story Question"
+      }
+    },
+    "/v1/stories/{episode_id}/listened": {
+      "post": {
+        "description": "The learner listened to the end: the episode's words count as heard.",
+        "operationId": "listenedToStory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryEpisodeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Listened To Story"
       }
     },
     "/v1/then-vs-now": {

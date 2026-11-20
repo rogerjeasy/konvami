@@ -54,6 +54,7 @@ from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
+from konvami_api.domain.stories import StoryService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.two_partners import GuestSpeech
@@ -119,6 +120,7 @@ from tests.fakes import (
     ScriptedTranscriber,
     text_guard,
 )
+from tests.story_fake import InMemoryStoryRepository, RecordingStoryStarter
 from tests.video_avatars_fake import FakeVideoAvatarVendor, InMemoryVideoAvatarChoices
 from tests.vocabulary_fake import MemoryVocabularyRepository
 
@@ -337,6 +339,17 @@ def pen_pal_starter() -> RecordingPenPalStarter:
 
 
 @pytest.fixture
+def story_transcriber() -> ScriptedTranscriber:
+    """Writes down the learner's spoken answers to a listening story's questions."""
+    return ScriptedTranscriber()
+
+
+@pytest.fixture
+def story_starter() -> RecordingStoryStarter:
+    return RecordingStoryStarter()
+
+
+@pytest.fixture
 def exam_starter() -> RecordingExamStarter:
     return RecordingExamStarter()
 
@@ -407,6 +420,8 @@ def services(
     exam_starter: RecordingExamStarter,
     pen_pal_transcriber: ScriptedTranscriber,
     pen_pal_starter: RecordingPenPalStarter,
+    story_transcriber: ScriptedTranscriber,
+    story_starter: RecordingStoryStarter,
     plan_settings: PlanSettings,
     entitlement_store: InMemoryEntitlementRepository,
 ) -> Services:
@@ -812,6 +827,26 @@ def services(
             announce=lambda user_id, persona_id, reply: push.pen_pal(
                 user_id, persona_id, reply=reply
             ),
+        ),
+        stories=StoryService(
+            profiles=profiles,
+            personas=personas,
+            cards=cards,
+            memories=memories,
+            repository=InMemoryStoryRepository(),
+            listener=Listener(
+                profiles=profiles,
+                accounts=directory,
+                transcriber=story_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            text_model=text_model,
+            model="gpt-6-luna",
+            speech=speech,
+            speech_model="gpt-4o-mini-tts",
+            files=files,
+            starter=story_starter,
+            clock=clock,
         ),
         retries=retries,
         pronunciation=pronunciation,

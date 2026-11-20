@@ -1019,6 +1019,38 @@ def test_a_free_conversation_is_no_guided_lesson() -> None:
     assert "guided lesson" not in instructions(World())
 
 
+# --- Hands-free drills (5.30) ------------------------------------------------------------------
+
+
+def drill(world: World) -> str:
+    lena, _ = world.onboard()
+    world.reported(world.talk(lena, at=NOON - timedelta(days=1)), mistakes=(DATIVE,))
+    account = world.accounts.get(USER)
+    return world.practice.prepare(USER, account, TODAY, lena.id, None, "drill").instructions
+
+
+def test_a_drill_runs_rounds_by_ear_over_the_learners_own_sentences() -> None:
+    text = drill(World())
+
+    assert "# A hands-free drill" in text
+    assert "not looking at the" in text
+    for step in ("Prompt.", "Wait for their answer", "Recast.", "Next item."):
+        assert step in text
+    # The learner's own sentence and its confirmed correction are drilled.
+    assert f'They said: "{DATIVE.original}" Right: "{DATIVE.corrected}"' in text
+
+
+def test_a_drill_has_no_other_plan_to_compete_with_it() -> None:
+    text = drill(World())
+
+    assert "# Today's plan" not in text
+    assert "# Worth practising" not in text
+
+
+def test_a_free_conversation_is_no_drill() -> None:
+    assert "hands-free drill" not in instructions(World())
+
+
 # --- Something the learner imported (spec §6.17) ---------------------------------------------
 
 _IMPORTED_TEXT = "Sehr geehrter Herr Amara, bitte bringen Sie Ihren Mietvertrag mit."
