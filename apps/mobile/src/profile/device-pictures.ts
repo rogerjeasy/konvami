@@ -12,7 +12,7 @@ import {
 /**
  * The learner's photo on a real device: the system's photo picker, then a small square JPEG.
  * The picker runs outside the app and needs no permission to the whole library. The camera is
- * not offered: Konvami never opens it (see app.config.ts).
+ * not offered for a profile photo; it is opened only to import material (5.23).
  */
 export const devicePictures: PictureDevice = {
   async pick() {
