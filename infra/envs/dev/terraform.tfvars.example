@@ -58,3 +58,10 @@ openai_api_key = "sk-..."
 # recording_alignment_model = "whisper-1"
 # recording_encoder_path = "/opt/bin/ffmpeg"
 # recording_encoder_layers = ["<deployed-layer-version-arn>"]
+
+# Two Halves (section 7, phase 1): off until enabled. Turn it on for the owners first, then for
+# every tester with open_to_testers.
+# halves = {
+#   enabled         = true
+#   open_to_testers = false
+# }
