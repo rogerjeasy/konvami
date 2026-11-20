@@ -60,6 +60,61 @@ async function open(
 }
 
 describe('5.1 Today', () => {
+  it('asks how an event went, and opens the debrief with the partner who heard about it', async () => {
+    const api = inApp();
+    api.lifeEvents({
+      toDebrief: [
+        {
+          memoryId: 'aaaa-bbbb',
+          text: 'Went to a job interview',
+          day: '2026-10-08',
+          partnerId: FAKE_PERSONAS[1]!.id,
+          rehearsal: null,
+          done: false,
+        },
+      ],
+    });
+    await open(api);
+
+    await fireEvent.press(await screen.findByRole('button', { name: /How did it go\?/ }));
+
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/call/[personaId]',
+      params: { personaId: FAKE_PERSONAS[1]!.id, practise: 'debrief:aaaabbbb' },
+    });
+  });
+
+  it('offers to rehearse an event coming up this week', async () => {
+    const api = inApp();
+    api.lifeEvents({
+      comingUp: [
+        {
+          memoryId: 'm-1',
+          text: 'Has a job interview',
+          day: '2026-10-12',
+          partnerId: null,
+          rehearsal: null,
+          done: false,
+        },
+      ],
+    });
+    await open(api);
+
+    await fireEvent.press(
+      await screen.findByRole('button', { name: /Coming up: Has a job interview/ }),
+    );
+
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith({
+        pathname: '/call/[personaId]',
+        params: {
+          personaId: FAKE_PERSONAS[0]!.id,
+          scenario: 'own-cdcdcdcdcdcd4dcd8dcd000000000001',
+        },
+      }),
+    );
+  });
+
   it.each([
     [new Date(2026, 9, 9, 8, 30), 'Good morning, Amara'],
     [new Date(2026, 9, 9, 14, 0), 'Good afternoon, Amara'],

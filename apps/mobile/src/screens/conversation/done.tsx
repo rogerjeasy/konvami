@@ -17,7 +17,8 @@ import { successFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { conversationRoute, reportRoute, ROUTES } from '@/lib/routes';
 import type { ReportView } from '@/practice';
-import { useHome, usePracticeServices, useReport, useScenarios } from '@/practice/services';
+import { useRolePlays } from '@/hooks/use-role-plays';
+import { useHome, usePracticeServices, useReport } from '@/practice/services';
 import { useTheme } from '@/theme';
 import { BlockScope } from '@/components/block-scope';
 import { Goals } from './goals';
@@ -177,14 +178,14 @@ function ReportNews({ view }: { view: ReportView }) {
 /** After a role-play: how many of its goals the learner reached, and which. */
 function GoalsReached({ id, reached }: { id: string; reached: readonly string[] }) {
   const { t } = useTranslation();
-  const scenario = useScenarios().scenarios?.find((s) => s.id === id);
+  const scenario = useRolePlays().find(id);
   if (!scenario) return null;
   return (
     <View className="items-start gap-1.5">
       <Text variant="labelMedium">
         {t('conversation.goals.reached', { count: reached.length, total: scenario.goals.length })}
       </Text>
-      <Goals scenario={scenario} reached={reached} />
+      <Goals goals={scenario.goals} reached={reached} />
     </View>
   );
 }

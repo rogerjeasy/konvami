@@ -22,7 +22,8 @@ import { formatDuration } from '@/lib/format';
 import { commitFeedback, successFeedback } from '@/lib/haptics';
 import { backOr } from '@/lib/navigation';
 import { conversationDoneRoute, ROUTES } from '@/lib/routes';
-import { useHome, usePracticeServices, useScenarios } from '@/practice/services';
+import { useRolePlays } from '@/hooks/use-role-plays';
+import { useHome, usePracticeServices } from '@/practice/services';
 import { usePaywall, usePurchaseDevice } from '@/plan/services';
 import { useMinutesBack, usePlan } from '@/profile/services';
 import { CaptionLookupSheet, type CaptionSelection } from './caption-lookup';
@@ -208,8 +209,8 @@ function Call({
   );
   // A vendor's video face while the call is live, where one is offered and picked (6.6).
   const video = useVideoAvatar(partner.id, call.status === 'live');
-  const { scenarios } = useScenarios();
-  const rolePlay = scenario ? scenarios?.find(({ id }) => id === scenario) : undefined;
+  const rolePlays = useRolePlays();
+  const rolePlay = scenario ? rolePlays.find(scenario) : undefined;
   const { conversation, callId, stop, plan } = call;
   const { partnerCaptions, liveCorrections } = usePreferences();
   const [helping, setHelping] = useState(false);
@@ -262,7 +263,7 @@ function Call({
         problem={call.problem && !lost ? withLine(t(problemKey(call.problem)), minutesBack) : null}
         progress={
           <>
-            {rolePlay ? <Goals scenario={rolePlay} reached={conversation.tasksDone} /> : null}
+            {rolePlay ? <Goals goals={rolePlay.goals} reached={conversation.tasksDone} /> : null}
             {plan ? <CallPlanStrip plan={plan} learnerLines={conversation.learnerLines} /> : null}
           </>
         }

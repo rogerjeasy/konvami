@@ -187,6 +187,12 @@ export function ProfileScreen() {
               onPress={go(ROUTES.accountLearning)}
             />
             <ListRow
+              icon="file"
+              title={t('teacherReport.row')}
+              detail={t('teacherReport.rowHint')}
+              onPress={go(ROUTES.accountTeacherReport)}
+            />
+            <ListRow
               icon="message"
               title={t('profile.rows.changes')}
               detail={t('profile.rows.changesHint')}
