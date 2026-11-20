@@ -616,6 +616,25 @@
           "language": {
             "title": "Language",
             "type": "string"
+          },
+          "retention": {
+            "default": 0.9,
+            "title": "Retention",
+            "type": "number"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weights"
           }
         },
         "required": [
@@ -1080,6 +1099,11 @@
               }
             ],
             "title": "Next"
+          },
+          "scheduleTuned": {
+            "default": false,
+            "title": "Scheduletuned",
+            "type": "boolean"
           },
           "total": {
             "title": "Total",

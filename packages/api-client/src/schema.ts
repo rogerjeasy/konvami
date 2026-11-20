@@ -2299,6 +2299,13 @@ export interface components {
             cards: components["schemas"]["CardOut"][];
             /** Language */
             language: string;
+            /**
+             * Retention
+             * @default 0.9
+             */
+            retention: number;
+            /** Weights */
+            weights?: number[] | null;
         };
         /** CatalogOut */
         CatalogOut: {
@@ -2450,6 +2457,11 @@ export interface components {
             due: number;
             /** Next */
             next: string | null;
+            /**
+             * Scheduletuned
+             * @default false
+             */
+            scheduleTuned: boolean;
             /** Total */
             total: number;
         };

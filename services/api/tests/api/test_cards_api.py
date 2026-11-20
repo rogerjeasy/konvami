@@ -302,6 +302,7 @@ def test_the_deck_is_read_with_what_is_due(
         "next": None,
         "total": 0,
         "due": 0,
+        "scheduleTuned": False,
     }
 
 
@@ -537,3 +538,5 @@ def test_the_cards_ahead_are_the_ones_due_in_the_coming_days(
     assert ahead["language"] == "de"
     assert [card["front"] for card in ahead["cards"]] == ["das Wochenende"]
     assert ahead["cards"][0]["memory"]["stability"] == 2.3065
+    # Without a fit of their own, the phone schedules with the published parameters.
+    assert (ahead["weights"], ahead["retention"]) == (None, 0.9)
