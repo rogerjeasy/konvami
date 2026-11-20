@@ -130,6 +130,9 @@ class ChainSeat:
     ai_name: str | None = None
     # Seated by the host: its learner is the host's friend or duo.
     host: bool = False
+    # Blocked by another player: an AI took the seat and the learner is out of the story. They
+    # keep only the lines they recorded themselves.
+    removed: bool = False
 
     @property
     def ai(self) -> bool:
@@ -160,7 +163,8 @@ class Story:
     language: str
     level: str
     mode: Mode
-    host: UUID
+    # The learner who started it, in seat 1; None once their account is deleted.
+    host: UUID | None
     status: StoryStatus
     created_at: dt.datetime
     seats: tuple[ChainSeat, ...]
@@ -177,8 +181,19 @@ class Story:
     def seat(self, number: int) -> ChainSeat:
         return self.seats[number - 1]
 
+    @property
+    def payer(self) -> UUID | None:
+        """Whose the narrator's requests are: the host's, else the first learner's still there."""
+        if self.host is not None:
+            return self.host
+        return next((s.user_id for s in self.seats if s.user_id is not None), None)
+
     def seat_of(self, user_id: UUID) -> ChainSeat | None:
         return next((s for s in self.seats if s.user_id == user_id), None)
+
+    def players(self) -> list[UUID]:
+        """The learners still in the story: told of it and given its radio play."""
+        return [s.user_id for s in self.seats if s.user_id is not None and not s.removed]
 
     def with_seat(self, state: ChainSeat) -> "Story":
         seats = tuple(state if s.seat == state.seat else s for s in self.seats)
@@ -237,6 +252,9 @@ class ChainRepository(Protocol):
 
     def unfinished(self, limit: int) -> list[Story]:
         """Stories open or finishing, oldest first."""
+
+    def ended_before(self, before: dt.datetime, limit: int) -> list[Story]:
+        """Done stories that ended before `before` and still have a radio play or opening."""
 
     def line(self, line_id: UUID) -> Line | None: ...
 
@@ -555,7 +573,7 @@ class ChainService:
                 summary = self._summary(story, user_id, language)
                 if summary is not None:
                     stories.append(summary)
-            if profile.band == "adult":
+            if self._band(user_id) == "adult":
                 for duo in self._social.duos_of(user_id):
                     other = self._social.profile(duo.other(user_id))
                     if other is not None:
@@ -618,7 +636,9 @@ class ChainService:
         does: their lines' words and sounds, their invites and their profile. Their open stories
         go on with an AI character in their seat; blocks stay, they protect both."""
         for line in self._repository.lines_by(user_id):
-            self._forget(line, "removed")
+            # A held line stays in the owner's queue: no action of its speaker takes it out.
+            if line.status != "held":
+                self._forget(line, "removed")
         for story in self._repository.stories_of(user_id, 100):
             state = story.seat_of(user_id)
             if state is None:
@@ -631,14 +651,57 @@ class ChainService:
         self._repository.delete_profile(user_id)
 
     def _forget(self, line: Line, status: LineStatus) -> None:
+        """Deletes a line's words and sounds, and what the narrator wrote from them: the
+        summaries from it on, its link in the radio play, and the ending (the hand-written one
+        stands in)."""
         for key in (line.audio_key, line.veil_key):
             if key:
                 self._files.remove(key)
         self._repository.save_line(
             replace(
-                line, status=status, transcript="", audio_key=None, veil_key=None, corrections=()
+                line,
+                status=status,
+                transcript="",
+                audio_key=None,
+                veil_key=None,
+                corrections=(),
+                recap=None,
             )
         )
+        story = self._repository.story(line.story_id)
+        if story is None:
+            return
+        for later in self._repository.lines_of(story.id):
+            if later.position > line.position and later.recap:
+                self._repository.save_line(replace(later, recap=None))
+        if not story.play:
+            return
+        found = opening(story.opening_id)
+        last = len(story.play) - 1
+        kept: list[Segment] = []
+        for index, segment in enumerate(story.play):
+            derived = segment.kind == "narrator" and (
+                index == last or (segment.position == line.position and segment.position > 0)
+            )
+            if not derived:
+                kept.append(segment)
+                continue
+            if segment.audio_key:
+                self._files.remove(segment.audio_key)
+            if index == last and found is not None:
+                kept.append(
+                    replace(segment, text=text_in(found.ending, story.language), audio_key=None)
+                )
+        self._repository.save_story(replace(story, play=tuple(kept)))
+
+    def _wipe_play(self, story: Story) -> None:
+        """The radio play 30 days after the story ended: the narrator's sounds and words go."""
+        for segment in story.play:
+            if segment.audio_key:
+                self._files.remove(segment.audio_key)
+        if story.opening_key:
+            self._files.remove(story.opening_key)
+        self._repository.save_story(replace(story, play=(), opening_key=None))
 
     # --- Starting a story (9.3, 9.9)
 
@@ -668,7 +731,7 @@ class ChainService:
         language = self._target(user_id)
         chosen = self._opening(opening_id)
         people = [kind for kind, _ in seats if kind != "ai"]
-        if people and profile.band != "adult":
+        if people and self._band(user_id) != "adult":
             raise ChainError("adults_only")
         duo_ids = [duo for kind, duo in seats if kind == "duo"]
         if len(set(duo_ids)) != len(duo_ids):
@@ -677,6 +740,12 @@ class ChainService:
         for number, (kind, duo_id) in enumerate(seats, start=2):
             if kind == "duo":
                 guests[number] = self._duo_guest(user_id, duo_id, language)
+        # Nobody is seated with someone either of them blocked, guests among themselves too.
+        everyone = [user_id, *guests.values()]
+        for index, one in enumerate(everyone):
+            for other in everyone[index + 1 :]:
+                if self._social.blocked(one, other):
+                    raise ChainError("not_found")
         now = self._clock()
         story = Story(
             id=self._new_id(),
@@ -721,7 +790,7 @@ class ChainService:
         profile = self._repository.profile(guest)
         if profile is None or profile.suspended or not self.available(guest):
             raise ChainError("partner_not_joined")
-        if profile.band != "adult":
+        if self._band(guest) != "adult":
             raise ChainError("adults_only")
         if self._social.blocked(host, guest):
             raise ChainError("not_found")
@@ -761,7 +830,7 @@ class ChainService:
         for a code that is wrong or old (`not_found`), across age bands (`adults_only`), when
         the two learn different languages, and after the day's wrong codes (`limit`, shared
         with Two Halves)."""
-        profile = self._require(user_id)
+        self._require(user_id)
         today = self._clock().date()
         if self._social.wrong_codes(user_id, today) >= WRONG_CODES_PER_DAY:
             raise ChainError("limit")
@@ -770,9 +839,10 @@ class ChainService:
         if found is None or story is None or found.expires_at <= self._clock():
             self._social.note_wrong_code(user_id, today, WRONG_CODES_PER_DAY)
             raise ChainError("not_found")
-        if story.seat_of(user_id) is not None:
-            raise ChainError("own_code")
-        if profile.band != "adult":
+        seated = story.seat_of(user_id)
+        if seated is not None:
+            raise ChainError("not_found" if seated.removed else "own_code")
+        if self._band(user_id) != "adult":
             raise ChainError("adults_only")
         empty = next((s for s in story.seats if s.open), None)
         if story.status != "open" or empty is None:
@@ -780,12 +850,13 @@ class ChainService:
         for seat in story.seats:
             if seat.user_id is not None and self._social.blocked(seat.user_id, user_id):
                 raise ChainError("not_found")
-        self._guest_ok(story.host, user_id, story.language)
+        self._guest_ok(story.payer or user_id, user_id, story.language)
         story = story.with_seat(replace(empty, user_id=user_id))
         self._repository.save_story(story)
         if not any(s.open for s in story.seats):
             self._repository.delete_invite(found.code)
-        self._announce(story.host, story.id, "invited")
+        if story.host is not None:
+            self._announce(story.host, story.id, "invited")
         if self._turn_seat(story) == empty.seat:
             self._announce(user_id, story.id, "turn")
         return story
@@ -808,10 +879,14 @@ class ChainService:
 
     # --- Playing (9.4, 9.5, 9.6)
 
-    def _story(self, user_id: UUID, story_id: UUID) -> tuple[Story, ChainSeat]:
+    def _story(
+        self, user_id: UUID, story_id: UUID, *, removed: bool = False
+    ) -> tuple[Story, ChainSeat]:
+        """The story and the learner's seat. A learner taken out by a block cannot reach it,
+        except (`removed`) for their own lines."""
         story = self._repository.story(story_id)
         state = story.seat_of(user_id) if story else None
-        if story is None or state is None:
+        if story is None or state is None or (state.removed and not removed):
             raise ChainError("not_found")
         return story, state
 
@@ -931,7 +1006,9 @@ class ChainService:
         line = self._repository.line(line_id)
         if line is None:
             raise ChainError("not_found")
-        story, state = self._story(user_id, line.story_id)
+        story, state = self._story(user_id, line.story_id, removed=True)
+        if state.removed and line.user_id != user_id:
+            raise ChainError("not_found")
         if not self._may_hear(story, state, line) or user_id in line.hidden_for:
             raise ChainError("not_found")
         if line.user_id == user_id:
@@ -1051,6 +1128,8 @@ class ChainService:
             )
         )
         self._social.remove_duo(user_id, other.user_id)
+        story = story.with_seat(replace(other, removed=True))
+        self._repository.save_story(story)
         if story.status == "open" and not other.ai:
             self._take_over(story, seat)
         return self.view(user_id, story.id)
@@ -1080,7 +1159,7 @@ class ChainService:
                     sender.codename if sender else "",
                     None,
                     None,
-                    sender.band if sender else "minor",
+                    self._band(line.user_id) if line.user_id else "minor",
                     line.created_at,
                 )
             )
@@ -1100,7 +1179,7 @@ class ChainService:
                     sender.codename if sender else "",
                     reporter.codename if reporter else "",
                     report.note,
-                    sender.band if sender else "minor",
+                    self._band(reported.user_id) if reported.user_id else "minor",
                     report.created_at,
                 )
             )
@@ -1160,8 +1239,8 @@ class ChainService:
             return
         attempt = replace(line, attempts=line.attempts + 1)
         self._repository.save_line(attempt)
-        sender = self._repository.profile(line.user_id)
-        band = sender.band if sender else self._band(line.user_id)
+        # From the sign-up age group each time, never a stored flag: the stricter band when unsure.
+        band = self._band(line.user_id)
         labels = self._narrator.check(attempt, band, story.language)
         if labels is None:
             self._unchecked(attempt)
@@ -1211,7 +1290,7 @@ class ChainService:
         upcoming = story.seat(seat_for(line.position + 1))
         if upcoming.ai:
             self._start("ai", story.id)
-        elif upcoming.user_id is not None:
+        elif upcoming.user_id is not None and not upcoming.removed:
             self._announce(upcoming.user_id, story.id, "turn")
 
     def speak_opening(self, story_id: UUID) -> None:
@@ -1265,7 +1344,8 @@ class ChainService:
         narration = self._narrator.narrate(story, lines)
         segments: list[Segment] = [s for s in narration if s.position == 0]
         for line in lines:
-            segments.append(Segment("line", line.transcript, None, line.position, line_id=line.id))
+            # The words stay on the line, never copied: forgetting the line forgets them.
+            segments.append(Segment("line", "", None, line.position, line_id=line.id))
             segments.extend(s for s in narration if s.position == line.position)
         now = self._clock()
         for line in self._repository.lines_of(story.id):
@@ -1279,9 +1359,8 @@ class ChainService:
                 play_status="ready" if narration else "failed",
             )
         )
-        for seat in story.seats:
-            if seat.user_id is not None:
-                self._announce(seat.user_id, story.id, "ready")
+        for player in story.players():
+            self._announce(player, story.id, "ready")
 
     def tick(self) -> None:
         """Once an hour: lines lost with their worker are checked again (or fail), sounds and
@@ -1294,7 +1373,12 @@ class ChainService:
             else:
                 self._start("check", line.id)
         for line in self._repository.expired(now, TICK_SCAN):
+            if line.status == "held":
+                # Waits for the owner's decision, which deletes it.
+                continue
             self._forget(line, "removed" if line.status != "delivered" else "delivered")
+        for story in self._repository.ended_before(now - KEEP_FOR, TICK_SCAN):
+            self._wipe_play(story)
         self._repository.delete_expired_invites(now)
         for story in self._repository.unfinished(TICK_SCAN):
             if story.status == "finishing":
@@ -1336,7 +1420,7 @@ class ChainService:
     def _summary(self, story: Story, user_id: UUID, language: str) -> StorySummary | None:
         state = story.seat_of(user_id)
         found = opening(story.opening_id)
-        if state is None or found is None:
+        if state is None or state.removed or found is None:
             return None
         lines = self._repository.lines_of(story.id)
         position = next_position(story, lines)
@@ -1440,7 +1524,9 @@ class ChainService:
                 if said is None:
                     continue
                 label = labels[said.seat - 1]
-                hidden = user_id in said.hidden_for or said.status != "delivered"
+                hidden = (
+                    user_id in said.hidden_for or said.status != "delivered" or not said.transcript
+                )
                 play.append(
                     PlayView(
                         index,

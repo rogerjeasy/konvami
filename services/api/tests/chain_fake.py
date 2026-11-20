@@ -47,6 +47,16 @@ class InMemoryChainRepository:
     def unfinished(self, limit: int) -> list[Story]:
         return [s for s in self.stories.values() if s.status != "done"][:limit]
 
+    def ended_before(self, before: dt.datetime, limit: int) -> list[Story]:
+        return [
+            s
+            for s in self.stories.values()
+            if s.status == "done"
+            and s.ended_at is not None
+            and s.ended_at < before
+            and (s.play or s.opening_key)
+        ][:limit]
+
     def line(self, line_id: UUID) -> Line | None:
         return self.lines.get(line_id)
 

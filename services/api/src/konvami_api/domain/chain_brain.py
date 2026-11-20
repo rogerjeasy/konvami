@@ -30,7 +30,7 @@ from konvami_api.domain.chain_openings import FALLBACK_LINES, opening, text_in
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.halves import VEIL_VOICE, Band, Correction
 from konvami_api.domain.halves_check import check_spoken, private_corrections, speak_to_file
-from konvami_api.domain.moderation import Moderator
+from konvami_api.domain.moderation import Moderator, ModeratorError, local_problem
 from konvami_api.domain.reports import words_in
 from konvami_api.domain.speech import SpeechModel
 from konvami_api.domain.storage import FileStore
@@ -113,9 +113,11 @@ class ModelNarrator:
         self._language_name = language_name
         self._clock = clock
 
-    def _charge(self, story: Story) -> Charge:
-        """The narrator's requests are the host's: the one who started the story."""
-        return Charge(story.host, Feature.CHAIN)
+    @staticmethod
+    def _folder(story: Story) -> str:
+        """The narrator's and AI characters' sounds hold nobody's voice: they are the story's,
+        kept with it under halves/ for 30 days at most."""
+        return f"{FOLDER}/chain/{story.id}"
 
     def _speak(self, user: UUID | None, voice: str, text: str, key: str) -> str | None:
         return speak_to_file(
@@ -132,7 +134,10 @@ class ModelNarrator:
     def _write(
         self, story: Story, instructions: str, content: object, name: str, schema: dict[str, object]
     ) -> dict[str, object] | None:
-        if not self._write_model:
+        """The narrator's requests are the host's, or a player's still there; with nobody to
+        meter them, none is made."""
+        payer = story.payer
+        if not self._write_model or payer is None:
             return None
         task = TextTask(
             model=self._write_model,
@@ -140,12 +145,29 @@ class ModelNarrator:
             content=json.dumps(content, ensure_ascii=False),
             answer_name=name,
             answer_schema=schema,
-            charge=self._charge(story),
+            charge=Charge(payer, Feature.CHAIN),
         )
         try:
             return self._text_model.answer(task)
         except TextModelError:
             return None
+
+    def _clean(self, story: Story, texts: Sequence[str]) -> bool:
+        """Whether what the model wrote may reach the players: other learners hear it, so it
+        passes the local rules and the moderation provider first. Fails closed: when it cannot
+        be checked, the hand-written text is used instead."""
+        written = [text for text in texts if text.strip()]
+        if not written:
+            return True
+        if any(local_problem(text) is not None for text in written):
+            return False
+        payer = story.payer
+        if payer is None:
+            return False
+        try:
+            return not self._moderator.check(written, Charge(payer, Feature.MODERATION)).flagged
+        except ModeratorError:
+            return False
 
     # --- The check and the private corrections
 
@@ -219,17 +241,17 @@ class ModelNarrator:
             written = _clip(_Said.model_validate(answer).text, RECAP_MAX) if answer else ""
         except ValidationError:
             written = ""
-        return written if words_in(written) else fallback
+        return written if words_in(written) and self._clean(story, [written]) else fallback
 
     def speak_opening(self, story: Story) -> str | None:
         found = opening(story.opening_id)
         if found is None:
             return None
         return self._speak(
-            story.host,
+            story.payer,
             NARRATOR_VOICE,
             text_in(found.opening, story.language),
-            f"{FOLDER}/{story.host}/chain/{story.id}/opening.mp3",
+            f"{self._folder(story)}/opening.mp3",
         )
 
     def go_on(self, story: Story, lines: Sequence[Line], seat: ChainSeat, voice: str) -> Line:
@@ -256,15 +278,15 @@ class ModelNarrator:
             written = _clip(_Said.model_validate(answer).text, LINE_MAX) if answer else ""
         except ValidationError:
             written = ""
-        if words_in(written):
+        if words_in(written) and self._clean(story, [written]):
             said = written
         now = self._clock()
         line_id = UUID(int=0)
         key = self._speak(
-            story.host,
+            story.payer,
             voice,
             said,
-            f"{FOLDER}/{story.host}/chain/{story.id}/ai-{position}.mp3",
+            f"{self._folder(story)}/ai-{position}.mp3",
         )
         return Line(
             id=line_id,
@@ -306,18 +328,22 @@ class ModelNarrator:
         if answer:
             try:
                 narration = _Narration.model_validate(answer)
-                links = [_clip(link, LINE_MAX) for link in narration.links[: len(lines)]]
-                if words_in(narration.ending):
-                    ending = _clip(narration.ending, LINE_MAX * 2)
+                written_links = [_clip(link, LINE_MAX) for link in narration.links[: len(lines)]]
+                written_ending = _clip(narration.ending, LINE_MAX * 2)
+                # All or nothing: a flagged link means the hand-written opening and ending.
+                if self._clean(story, [*written_links, written_ending]):
+                    links = written_links
+                    if words_in(written_ending):
+                        ending = written_ending
             except ValidationError:
                 logger.warning("chain radio play not written; the opening and ending are used")
-        folder = f"{FOLDER}/{story.host}/chain/{story.id}"
+        folder = self._folder(story)
         segments = [
             Segment(
                 "narrator",
                 opening_text,
                 story.opening_key
-                or self._speak(story.host, NARRATOR_VOICE, opening_text, f"{folder}/opening.mp3"),
+                or self._speak(story.payer, NARRATOR_VOICE, opening_text, f"{folder}/opening.mp3"),
                 0,
             )
         ]
@@ -328,7 +354,7 @@ class ModelNarrator:
                         "narrator",
                         link,
                         self._speak(
-                            story.host, NARRATOR_VOICE, link, f"{folder}/link-{line.position}.mp3"
+                            story.payer, NARRATOR_VOICE, link, f"{folder}/link-{line.position}.mp3"
                         ),
                         line.position,
                     )
@@ -338,7 +364,7 @@ class ModelNarrator:
             Segment(
                 "narrator",
                 ending,
-                self._speak(story.host, NARRATOR_VOICE, ending, f"{folder}/ending.mp3"),
+                self._speak(story.payer, NARRATOR_VOICE, ending, f"{folder}/ending.mp3"),
                 last,
             )
         )

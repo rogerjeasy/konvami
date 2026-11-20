@@ -16,7 +16,7 @@ from konvami_api.domain.chain import (
     seat_for,
 )
 from konvami_api.domain.chain_openings import AI_NAMES, FALLBACK_LINES, LANGUAGES, OPENINGS
-from konvami_api.domain.halves import CHECK_ATTEMPTS, WRONG_CODES_PER_DAY, Correction, Duo
+from konvami_api.domain.halves import CHECK_ATTEMPTS, WRONG_CODES_PER_DAY, Block, Correction, Duo
 from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.spoken import Listener
 from tests.chain_fake import FakeNarrator, InMemoryChainRepository, RecordingChainStarter
@@ -452,3 +452,100 @@ def test_only_a_confirmed_correction_is_said_again_and_kept_as_a_card() -> None:
     assert tried.right
     with pytest.raises(ChainError, match="not_found"):
         t.service.save_card(OTHER_USER, line, 0)
+
+
+# --- What the security review asked for ----------------------------------------------------------
+
+
+def _friends(t: Table) -> UUID:
+    """A story of USER with OTHER_USER in seat 2, after USER's first line."""
+    join(t, USER, OTHER_USER)
+    story = t.service.start(USER, None, [("friend", None), ("ai", None), ("ai", None)])
+    t.service.redeem(OTHER_USER, t.service.invite(USER, story.id).code)
+    say(t, story.id, "Ich sehe einen Mann mit einem Hut")
+    return story.id
+
+
+def test_a_blocked_learner_is_out_of_the_story_and_keeps_only_their_own_lines() -> None:
+    t = table()
+    story = _friends(t)
+    theirs = say(t, story, "Der Mann trägt einen roten Koffer", OTHER_USER)
+    t.service.block(USER, story, 2)
+    with pytest.raises(ChainError, match="not_found"):
+        t.service.view(OTHER_USER, story)
+    assert t.service.overview(OTHER_USER).stories == ()
+    t.service.address(OTHER_USER, theirs)
+    first = next(x.id for x in t.store.lines.values() if x.position == 1)
+    with pytest.raises(ChainError, match="not_found"):
+        t.service.address(OTHER_USER, first)
+    t.announced.clear()
+    t.run_jobs()
+    say(t, story, "Und dann lachten alle sehr laut")
+    assert t.service.view(USER, story).status == "done"
+    assert all(user != OTHER_USER for user, _, _ in t.announced)
+
+
+def test_duos_who_blocked_each_other_are_never_seated_together() -> None:
+    t = table()
+    join(t, USER, OTHER_USER, THIRD)
+    t.social.add_duo(Duo(UUID(int=5), USER, OTHER_USER, t.world.clock()))
+    t.social.add_duo(Duo(UUID(int=6), USER, THIRD, t.world.clock()))
+    t.social.add_block(Block(UUID(int=9), OTHER_USER, THIRD, "", t.world.clock()))
+    with pytest.raises(ChainError, match="not_found"):
+        t.service.start(USER, None, [("duo", UUID(int=5)), ("duo", UUID(int=6)), ("ai", None)])
+
+
+def test_the_radio_play_holds_no_words_and_forgets_what_came_from_a_removed_line() -> None:
+    t = table()
+    join(t)
+    story = t.service.start(USER, "night-train", AI_SEATS)
+    first = say(t, story.id, "Ich sehe einen Mann mit einem Hut")
+    say(t, story.id, "Der Mann hat den Koffer gestohlen")
+    done = t.store.stories[story.id]
+    assert all(s.text == "" for s in done.play if s.kind == "line")
+    t.service.leave(USER)
+    after = t.store.stories[story.id]
+    assert "Link 1." not in [s.text for s in after.play]
+    assert after.play[-1].text.startswith("Am Morgen kam der Zug")
+    assert after.play[-1].audio_key is None
+    assert all(x.recap is None for x in t.store.lines.values() if x.position >= 2)
+    assert t.store.lines[first].transcript == ""
+
+
+def test_thirty_days_after_the_end_the_radio_play_is_wiped() -> None:
+    t = table()
+    join(t)
+    story = t.service.start(USER, None, AI_SEATS)
+    say(t, story.id, "Ich sehe einen Mann mit einem Hut")
+    say(t, story.id, "Der Mann hat den Koffer gestohlen")
+    t.world.clock.now += dt.timedelta(days=31)
+    t.service.tick()
+    ended = t.store.stories[story.id]
+    assert ended.play == ()
+    assert ended.opening_key is None
+    assert all(not x.transcript for x in t.store.lines.values())
+
+
+def test_a_held_line_stays_in_the_owners_queue_when_its_speaker_leaves() -> None:
+    t = table()
+    join(t)
+    story = t.service.start(USER, None, AI_SEATS)
+    t.narrator.labels.append(("harassment",))
+    held = say(t, story.id, "Du bist so dumm und hässlich")
+    say(t, story.id, "Ich sehe einen Mann mit einem Hut")
+    t.service.leave(USER)
+    assert t.store.lines[held].status == "held"
+    assert t.store.lines[held].transcript == "Du bist so dumm und hässlich"
+    assert [i.move_id for i in t.service.queue(OTHER_USER)] == [held]
+
+
+def test_the_age_band_is_read_from_the_sign_up_each_time() -> None:
+    t = table()
+    join(t)
+    account = t.world.accounts.accounts[USER]
+    t.world.accounts.accounts[USER] = replace(account, age_bracket="16-17")
+    with pytest.raises(ChainError, match="adults_only"):
+        t.service.start(USER, None, [("friend", None), ("ai", None), ("ai", None)])
+    story = t.service.start(USER, None, AI_SEATS)
+    say(t, story.id, "Ich sehe einen Mann mit einem Hut")
+    assert t.narrator.checked[-1][1] == "minor"
