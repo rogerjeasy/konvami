@@ -26,6 +26,11 @@ export function formatPercent(locale: string, ratio: number): string {
   );
 }
 
+/** A 0–100 score as a whole number ("62"), as a pronunciation provider gives it. */
+export function formatScore(locale: string, score: number): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(score);
+}
+
 /** Seconds as m:ss ("0:04"). */
 export function formatDuration(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);

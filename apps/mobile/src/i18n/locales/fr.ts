@@ -1442,6 +1442,24 @@ export const fr: Translation = {
       fluency: 'Fluidité : {{score}} / 100',
       prosody: 'Accentuation et rythme : {{score}} / 100',
     },
+    soundScore: {
+      band: {
+        good: '{{sound}} sonne bien',
+        close: '{{sound}} y est presque',
+        practise: 'Continue à travailler {{sound}}',
+      },
+      bandShort: {
+        good: 'Sonne bien',
+        close: 'Presque',
+        practise: 'À travailler',
+      },
+      outOf: '{{score}} / 100',
+      again: 'Redis d’abord « {{word}} ».',
+      fromWords:
+        'Aucun son isolé n’a été renvoyé pour cette langue : ce score porte sur les mots entiers.',
+      recent_one: '{{band}} · {{score}} / 100 sur {{count}} exercice évalué',
+      recent_other: '{{band}} · {{score}} / 100 sur tes {{count}} derniers exercices évalués',
+    },
     title: 'Labo de prononciation',
     body: 'Des sons difficiles à entendre et à dire. Écoute, dis-le, et vois quels mots ont été entendus comme demandé.',
     loading: 'Ouverture du labo de prononciation',

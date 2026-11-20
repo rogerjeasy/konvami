@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { createFakeApi, type FakeApi } from '@/test/fake-api';
+import { createFakeApi, FAKE_SOUND_SCORE, type FakeApi } from '@/test/fake-api';
 import { createFakeProfileDevice } from '@/test/fake-profile-device';
 import { createFakeRecorder } from '@/test/fake-recorder';
 import { renderScreen } from '@/test/render';
@@ -249,4 +249,43 @@ it('offers acoustic assessment only when configured and sends it after explicit 
       recording: expect.objectContaining({ format: 'wav' }),
     }),
   ]);
+});
+
+it('shows how the sound went after an assessed drill, and its recent score in the lab', async () => {
+  const api = inApp();
+  const original = api.getPronunciationSounds.bind(api);
+  jest
+    .spyOn(api, 'getPronunciationSounds')
+    .mockImplementation(async () => ({ ...(await original()), assessmentProvider: 'Test speech' }));
+  await openSound(api);
+  await fireEvent.press(screen.getByRole('button', { name: 'fühlen' }));
+  await fireEvent.press(await screen.findByRole('switch', { name: 'Assess pronunciation' }));
+  await say();
+
+  expect(await screen.findByText('Keep practising ü')).toBeTruthy();
+  expect(screen.getByText(`${FAKE_SOUND_SCORE} / 100`)).toBeTruthy();
+  expect(screen.getByText('Say “fühlen” again first.')).toBeTruthy();
+  // The caveat that sounds are not scored stays on the page, not under an assessed result.
+  expect(screen.getAllByText(/can’t score single sounds/)).toHaveLength(1);
+  expect((await original()).sounds[0]).toMatchObject({
+    score: FAKE_SOUND_SCORE,
+    band: 'practise',
+    scored: 1,
+  });
+});
+
+it('lists a sound with its recent score once drills on it were assessed', async () => {
+  const api = inApp();
+  await api.drillPronunciation({
+    drill: 'word',
+    soundId: 'ue',
+    target: 'für',
+    assessmentConsent: true,
+    recording: { audio: 'AAEA', format: 'wav', durationMs: 1000 },
+  });
+  await openLab(api);
+
+  expect(
+    await screen.findByText(`Keep practising · ${FAKE_SOUND_SCORE} / 100 from 1 assessed drill`),
+  ).toBeTruthy();
 });

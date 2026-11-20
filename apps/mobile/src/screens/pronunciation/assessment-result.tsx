@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { PronunciationAttempt } from '@konvami/api-client';
 import { Text } from '@/components/text';
+import { formatScore } from '@/lib/format';
 
 /** Only genuine acoustic-provider fields are rendered; unsupported prosody stays absent. */
 export function AssessmentResult({
@@ -10,8 +11,7 @@ export function AssessmentResult({
   assessment: NonNullable<PronunciationAttempt['assessment']>;
 }) {
   const { t, i18n } = useTranslation();
-  const score = (value: number) =>
-    new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 }).format(value);
+  const score = (value: number) => formatScore(i18n.language, value);
   return (
     <View className="gap-2 rounded-card bg-surface-raised p-4">
       <Text variant="labelMedium">{t('pronunciation.assessment.title')}</Text>

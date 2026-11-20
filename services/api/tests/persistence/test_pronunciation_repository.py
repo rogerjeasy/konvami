@@ -118,3 +118,31 @@ def test_a_word_is_found_whatever_its_capitals(lab: PronunciationRepository) -> 
     drill(lab, [("tür", False)])
 
     assert [(w.word.lower(), w.misses) for w in lab.problems(USER, "de", 10)] == [("tür", 2)]
+
+
+def scored(lab: PronunciationRepository, score: float, minutes: int, user: UUID = USER) -> None:
+    lab.record(
+        user,
+        "de",
+        NOON + timedelta(minutes=minutes),
+        drill="word",
+        sound_id="ue",
+        target="für",
+        heard="für",
+        right=True,
+        marks=[("für", True)],
+        sound_score=score,
+    )
+
+
+def test_sound_scores_are_the_newest_scored_drills_per_sound_and_learner(
+    lab: PronunciationRepository,
+) -> None:
+    for minutes, score in enumerate([40.0, 60.0, 80.0]):
+        scored(lab, score, minutes)
+    drill(lab, [("Tür", True)], right=True, at=NOON + timedelta(hours=1))  # not assessed
+    scored(lab, 10.0, 0, user=OTHER_USER)
+
+    assert lab.sound_scores(USER, "de", 2) == {"ue": [80.0, 60.0]}
+    assert lab.sound_scores(OTHER_USER, "de", 5) == {"ue": [10.0]}
+    assert lab.sound_scores(USER, "fr", 2) == {}

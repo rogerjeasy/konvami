@@ -1024,6 +1024,22 @@ class PhraseSuggestionsIn(ApiModel):
     situation: Annotated[str, Field(max_length=SITUATION_MAX)]
 
 
+SoundBand = Literal["good", "close", "practise"]
+
+
+class SoundScoreOut(ApiModel):
+    """How a drill's sound went, from the acoustic provider's phoneme scores (0-100)."""
+
+    sound_id: str
+    score: float
+    band: SoundBand
+    # "phonemes": from the sound's own phonemes; "words": from the words that carry it, when the
+    # provider gave no phoneme of the sound.
+    basis: Literal["phonemes", "words"]
+    # The word whose sound scored lowest, to say again first.
+    weakest: str
+
+
 class SoundSummaryOut(ApiModel):
     """A problem sound of the language being learned, with what the learner did on it."""
 
@@ -1037,6 +1053,11 @@ class SoundSummaryOut(ApiModel):
     # Drills made on it, and how many were right.
     tries: int
     right: int
+    # The mean acoustic score (0-100) of its last assessed drills, its band, and how many drills
+    # it is from; null and 0 when none was assessed.
+    score: float | None = None
+    band: SoundBand | None = None
+    scored: int = 0
 
     @classmethod
     def of(cls, sound: SoundSummary) -> "SoundSummaryOut":
@@ -1048,6 +1069,9 @@ class SoundSummaryOut(ApiModel):
             pairs=sound.pairs,
             tries=sound.tries,
             right=sound.right,
+            score=sound.score,
+            band=cast(SoundBand, sound.band) if sound.band else None,
+            scored=sound.scored,
         )
 
 
@@ -1135,10 +1159,21 @@ class PronunciationAttemptOut(ApiModel):
     right: bool
     words: list[WordMarkOut]
     assessment: PronunciationAssessmentOut | None = None
+    sound_score: SoundScoreOut | None = None
 
     @classmethod
     def of(cls, attempt: Attempt) -> "PronunciationAttemptOut":
+        score = attempt.sound_score
         return cls(
+            sound_score=SoundScoreOut(
+                sound_id=score.sound_id,
+                score=score.score,
+                band=score.band,
+                basis=score.basis,
+                weakest=score.weakest,
+            )
+            if score
+            else None,
             heard=attempt.heard,
             right=attempt.right,
             words=[WordMarkOut(word=mark.word, ok=mark.ok) for mark in attempt.words],

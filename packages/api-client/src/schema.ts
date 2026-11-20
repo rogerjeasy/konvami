@@ -3946,6 +3946,7 @@ export interface components {
             heard: string;
             /** Right */
             right: boolean;
+            soundScore?: components["schemas"]["SoundScoreOut"] | null;
             /** Words */
             words: components["schemas"]["WordMarkOut"][];
         };
@@ -4348,10 +4349,34 @@ export interface components {
             url: string;
         };
         /**
+         * SoundScoreOut
+         * @description How a drill's sound went, from the acoustic provider's phoneme scores (0-100).
+         */
+        SoundScoreOut: {
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "good" | "close" | "practise";
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "phonemes" | "words";
+            /** Score */
+            score: number;
+            /** Soundid */
+            soundId: string;
+            /** Weakest */
+            weakest: string;
+        };
+        /**
          * SoundSummaryOut
          * @description A problem sound of the language being learned, with what the learner did on it.
          */
         SoundSummaryOut: {
+            /** Band */
+            band?: ("good" | "close" | "practise") | null;
             /** Id */
             id: string;
             /** Listening */
@@ -4360,6 +4385,13 @@ export interface components {
             pairs: number;
             /** Right */
             right: number;
+            /** Score */
+            score?: number | null;
+            /**
+             * Scored
+             * @default 0
+             */
+            scored: number;
             /** Tip */
             tip: string;
             /** Title */

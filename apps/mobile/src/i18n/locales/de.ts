@@ -1441,6 +1441,24 @@ export const de: Translation = {
       fluency: 'Sprechfluss: {{score}} / 100',
       prosody: 'Betonung und Rhythmus: {{score}} / 100',
     },
+    soundScore: {
+      band: {
+        good: '{{sound}} klingt gut',
+        close: '{{sound}} ist fast da',
+        practise: '{{sound}} weiter üben',
+      },
+      bandShort: {
+        good: 'Klingt gut',
+        close: 'Fast da',
+        practise: 'Weiter üben',
+      },
+      outOf: '{{score}} / 100',
+      again: 'Sag zuerst „{{word}}“ noch einmal.',
+      fromWords:
+        'Für diese Sprache kamen keine einzelnen Laute zurück, darum gilt der Wert für die ganzen Wörter.',
+      recent_one: '{{band}} · {{score}} / 100 aus {{count}} bewerteten Übung',
+      recent_other: '{{band}} · {{score}} / 100 aus deinen letzten {{count}} bewerteten Übungen',
+    },
     title: 'Aussprache-Labor',
     body: 'Laute, die schwer zu hören und zu sprechen sind. Hör zu, sprich nach und sieh, welche Wörter wie verlangt zu hören waren.',
     loading: 'Das Aussprache-Labor wird geöffnet',

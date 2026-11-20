@@ -1434,6 +1434,8 @@ class InMemoryPronunciationRepository:
         self.drills: list[tuple[UUID, str, str | None, str, str, str, bool]] = []
         # (user, language, lower word) -> [word, sound, misses, streak]
         self.words: dict[tuple[UUID, str, str], list[Any]] = {}
+        # (user, language, sound, score), oldest first.
+        self.scores: list[tuple[UUID, str, str, float]] = []
 
     def reserve(self, user_id: UUID, day: date, limit: int) -> bool:
         used = self.days.get((user_id, day), 0)
@@ -1454,8 +1456,11 @@ class InMemoryPronunciationRepository:
         heard: str,
         right: bool,
         marks: Sequence[tuple[str, bool]],
+        sound_score: float | None = None,
     ) -> None:
         self.drills.append((user_id, language, sound_id, drill, target, heard, right))
+        if sound_id is not None and sound_score is not None:
+            self.scores.append((user_id, language, sound_id, sound_score))
         for word, ok in marks:
             key = (user_id, language, word.lower())
             known = self.words.get(key)
@@ -1477,6 +1482,13 @@ class InMemoryPronunciationRepository:
                 tries, rights = tally.get(sound_id, (0, 0))
                 tally[sound_id] = (tries + 1, rights + int(right))
         return tally
+
+    def sound_scores(self, user_id: UUID, language: str, recent: int) -> dict[str, list[float]]:
+        found: dict[str, list[float]] = {}
+        for owner, lang, sound_id, score in reversed(self.scores):
+            if (owner, lang) == (user_id, language) and len(found.get(sound_id, [])) < recent:
+                found.setdefault(sound_id, []).append(score)
+        return found
 
     def problems(self, user_id: UUID, language: str, limit: int) -> list[ProblemWord]:
         mine = [

@@ -1431,6 +1431,24 @@ export const it: Translation = {
       fluency: 'Fluidità: {{score}} / 100',
       prosody: 'Accento e ritmo: {{score}} / 100',
     },
+    soundScore: {
+      band: {
+        good: '{{sound}} suona bene',
+        close: '{{sound}}: ci sei quasi',
+        practise: 'Continua a esercitare {{sound}}',
+      },
+      bandShort: {
+        good: 'Suona bene',
+        close: 'Quasi',
+        practise: 'Da esercitare',
+      },
+      outOf: '{{score}} / 100',
+      again: 'Ripeti prima «{{word}}».',
+      fromWords:
+        'Per questa lingua non sono tornati suoni singoli, quindi il punteggio riguarda le parole intere.',
+      recent_one: '{{band}} · {{score}} / 100 su {{count}} esercizio valutato',
+      recent_other: '{{band}} · {{score}} / 100 sui tuoi ultimi {{count}} esercizi valutati',
+    },
     title: 'Laboratorio di pronuncia',
     body: 'Suoni difficili da sentire e da dire. Ascolta, ripeti e guarda quali parole sono state sentite come richiesto.',
     loading: 'Apro il laboratorio di pronuncia',

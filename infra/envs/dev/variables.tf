@@ -265,6 +265,10 @@ variable "prices" {
     # model. 300 per million characters is the upper end of the plans' overage rates: check the
     # plan and set the real rate here, since the owner's budget counts this figure.
     "eleven_multilingual_v2" = { characters = 300 }
+    # Azure Speech pronunciation assessment (only when azure_speech_enabled) is billed as real-time
+    # speech to text, about $1 an hour in the EU regions: 278 per million seconds. Check the
+    # Speech pricing page for the resource's region and tier and set the real rate here.
+    "pronunciation" = { seconds = 278 }
   }
 }
 

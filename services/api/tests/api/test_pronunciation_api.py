@@ -35,6 +35,7 @@ def test_the_sounds_are_listed_with_their_practice(
     first = body["sounds"][0]
     assert first["id"] == "ue"
     assert (first["tries"], first["right"], first["listening"]) == (0, 0, True)
+    assert (first["score"], first["band"], first["scored"]) == (None, None, 0)
     assert first["title"]
     assert first["tip"]
 
@@ -69,6 +70,7 @@ def test_a_drill_says_which_words_were_heard(
 
     assert body == {
         "assessment": None,
+        "soundScore": None,
         "heard": "vier",
         "right": False,
         "words": [{"word": "vier", "ok": True}, {"word": "für", "ok": False}],

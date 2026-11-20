@@ -24,6 +24,8 @@ def test_azure_receives_reference_and_returns_real_phoneme_scores() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         config = json.loads(base64.b64decode(request.headers["Pronunciation-Assessment"]))
         assert config["Granularity"] == "Phoneme"
+        # IPA, so phoneme names match the lab's sounds (domain/sound_phonemes.py).
+        assert config["PhonemeAlphabet"] == "IPA"
         assert config["ReferenceText"] == "Hallo"
         assert request.url.params["language"] == "de-DE"
         assert request.content == wav()

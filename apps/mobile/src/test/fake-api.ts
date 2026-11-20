@@ -130,6 +130,8 @@ const ESSENTIAL_FIELDS = [
 
 /** The fake server's clock: a Friday, at noon in UTC. Its week runs from Monday 5 October. */
 export const FAKE_NOW = '2026-10-09T12:00:00Z';
+/** The score of every assessed lab drill: a sound still to practise (5.22). */
+export const FAKE_SOUND_SCORE = 64;
 /** When the week of `FAKE_NOW` ends and voice minutes come back: Monday, in UTC. */
 export const FAKE_WEEK_ENDS = '2026-10-12T00:00:00Z';
 /** Each learner's voice minutes per week, in seconds (as configured on the server). */
@@ -1145,6 +1147,7 @@ export function createFakeApi(): FakeApi {
       pairs: 2,
       tries: 0,
       right: 0,
+      scored: 0,
     },
     {
       id: 'final_devoicing',
@@ -1154,6 +1157,7 @@ export function createFakeApi(): FakeApi {
       pairs: 1,
       tries: 0,
       right: 0,
+      scored: 0,
     },
   ];
   const labDetails: Record<string, Omit<PronunciationSoundDetail, 'sound'>> = {
@@ -2402,7 +2406,38 @@ export function createFakeApi(): FakeApi {
           ? labWords.map((word) => (word === known ? { ...word, misses: word.misses + 1 } : word))
           : [...labWords, { word: mark.word, soundId: input.soundId, misses: 1 }];
       }
-      return { heard, right, words };
+      if (!input.assessmentConsent || !input.soundId) return { heard, right, words };
+      // An assessed drill: a sound still to practise (amber), kept as the sound's recent score.
+      const soundScore = {
+        soundId: input.soundId,
+        score: FAKE_SOUND_SCORE,
+        band: 'practise' as const,
+        basis: 'phonemes' as const,
+        weakest: words[0]?.word ?? input.target,
+      };
+      const sound = labSounds.find((candidate) => candidate.id === input.soundId);
+      if (sound) {
+        sound.score = FAKE_SOUND_SCORE;
+        sound.band = 'practise';
+        sound.scored += 1;
+      }
+      return {
+        heard,
+        right,
+        words,
+        soundScore,
+        assessment: {
+          provider: 'Test speech',
+          accuracy: FAKE_SOUND_SCORE,
+          fluency: null,
+          prosody: null,
+          words: words.map((mark) => ({
+            word: mark.word,
+            accuracy: FAKE_SOUND_SCORE,
+            phonemes: [],
+          })),
+        },
+      };
     },
     async pickPronunciationWord(input) {
       await record('pickPronunciationWord', input);

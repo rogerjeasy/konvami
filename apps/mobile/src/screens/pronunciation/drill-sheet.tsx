@@ -20,6 +20,7 @@ import { useSpokenAttempt } from '@/voice/use-spoken-attempt';
 import { HeardWords } from './heard-words';
 import { labFailureKey, type LabDrill } from './lab';
 import { ListenButton } from './listen-button';
+import { SoundScoreCard } from './sound-score';
 import { WaveformComparison } from './waveform-comparison';
 
 // How fast a sentence plays when the learner asks for it slowly.
@@ -155,6 +156,15 @@ export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose
               ) : (
                 <Text variant="labelMedium">{t('pronunciation.sheet.notYet')}</Text>
               )}
+              {step.result.soundScore ? (
+                <SoundScoreCard
+                  title={
+                    lab.data?.sounds.find((sound) => sound.id === step.result.soundScore?.soundId)
+                      ?.title ?? ''
+                  }
+                  score={step.result.soundScore}
+                />
+              ) : null}
               <HeardWords words={step.result.words} />
               {step.result.assessment ? (
                 <AssessmentResult assessment={step.result.assessment} />
@@ -167,9 +177,13 @@ export function DrillSheet({ drill, onClose }: { drill: LabDrill | null; onClose
               {drill?.listen.length === 1 && drill.listen[0] === drill.target ? (
                 <WaveformComparison recording={step.recording} reference={drill.target} />
               ) : null}
-              <Text variant="caption" tone="subtle">
-                {t('pronunciation.approx')}
-              </Text>
+              {/* An assessed drill carries the provider's own caveat; this one says sounds are not
+                  scored, which is only true without it. */}
+              {step.result.assessment ? null : (
+                <Text variant="caption" tone="subtle">
+                  {t('pronunciation.approx')}
+                </Text>
+              )}
               {step.result.right ? (
                 <Button label={t('pronunciation.sheet.done')} onPress={close} />
               ) : (
