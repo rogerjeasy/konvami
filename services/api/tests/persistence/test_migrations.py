@@ -79,6 +79,7 @@ def test_migrating_an_empty_database_creates_the_tables(empty_db: SqlClient) -> 
         "0190_two_partners",
         "0210_video_avatar",
         "0230_coach",
+        "0240_motivation",
         "0250_rang_call",
         "0260_story",
         "0270_own_scenario",

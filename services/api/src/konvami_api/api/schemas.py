@@ -89,6 +89,13 @@ from konvami_api.domain.live_call import Speaker, TurnAudio
 from konvami_api.domain.memories import TEXT_MAX as MEMORY_TEXT_MAX
 from konvami_api.domain.memories import Kind as MemoryKind
 from konvami_api.domain.memories import Memory, MemoryBook
+from konvami_api.domain.motivation import (
+    PAUSE_DAYS,
+    LevelOutlook,
+    Milestone,
+    MotivationView,
+    QuestKind,
+)
 from konvami_api.domain.onboarding import OnboardingStatus, PlacementStatus, Stage
 from konvami_api.domain.penpal import Note as PenPalNote
 from konvami_api.domain.penpal import Overview as PenPalOverview
@@ -1909,6 +1916,18 @@ class MilestoneOut(ApiModel):
     current: int
     target: int
     reached: bool
+    # When it was first reached; null before, and for one reached before milestones were dated.
+    reached_at: dt.datetime | None = None
+
+    @classmethod
+    def of(cls, mark: Milestone) -> "MilestoneOut":
+        return cls(
+            id=mark.id,
+            current=mark.current,
+            target=mark.target,
+            reached=mark.reached,
+            reached_at=mark.reached_at,
+        )
 
 
 class LevelPointOut(ApiModel):
@@ -2515,12 +2534,7 @@ class ProgressOut(ApiModel):
                 reviews=cards.reviews,
                 remembered=cards.remembered,
             ),
-            milestones=[
-                MilestoneOut(
-                    id=mark.id, current=mark.current, target=mark.target, reached=mark.reached
-                )
-                for mark in progress.milestones
-            ],
+            milestones=[MilestoneOut.of(mark) for mark in progress.milestones],
         )
 
 
@@ -3721,3 +3735,175 @@ class TeacherReportOut(ApiModel):
                 for dated in report.fits
             ],
         )
+
+
+# --- Motivation (spec §6.15) ---------------------------------------------------------------------
+
+
+class RepairOfferOut(ApiModel):
+    # The planned day that went by without speaking, and the last day speaking repairs it.
+    missed: dt.date
+    until: dt.date
+
+
+class StreakOut(ApiModel):
+    # The days the learner spoke in the current run (rest days and repairs never break it).
+    days: int
+    longest: int
+    planned_today: bool
+    spoke_today: bool
+    # Null unless a planned day was missed and speaking today still repairs it.
+    repair: RepairOfferOut | None
+
+
+class LevelOutlookOut(ApiModel):
+    """`pointing` of the last `counted` conversations point to `next`; the level moves when
+    `agreeing` of `needed` do."""
+
+    level: StartingLevel
+    next: StartingLevel
+    pointing: int
+    counted: int
+    needed: int
+    agreeing: int
+
+    @classmethod
+    def of(cls, outlook: LevelOutlook) -> "LevelOutlookOut":
+        return cls.model_validate(
+            {
+                "level": outlook.level,
+                "next": outlook.next,
+                "pointing": outlook.pointing,
+                "counted": outlook.counted,
+                "needed": outlook.needed,
+                "agreeing": outlook.agreeing,
+            }
+        )
+
+
+class QuestOut(ApiModel):
+    kind: QuestKind
+    target: int
+    # Never beyond the target.
+    progress: int
+    done: bool
+    done_at: dt.datetime | None
+
+
+class QuestWeekOut(ApiModel):
+    # The week's Monday on the learner's calendar.
+    week: dt.date
+    quests: list[QuestOut]
+    all_done: bool
+
+
+class CelebrationOut(ApiModel):
+    kind: Literal["quest", "milestone"]
+    # The quest's kind or the milestone's id.
+    id: str
+    at: dt.datetime
+
+
+class RecapOut(ApiModel):
+    # Last week's Monday.
+    week: dt.date
+    minutes: int
+    conversations: int
+    speaking_days: int
+    quests_done: int
+    quests_total: int
+    # Milestones first reached last week.
+    milestones: list[str]
+    # Kinds of mistake that came up less than the week before.
+    improved: list[str]
+
+
+class WelcomeBackOut(ApiModel):
+    days: int
+    partner_id: UUID | None
+    # What the partner remembers to ask about, in the explanation language; shown in the app
+    # only (a push says just that there is a question). Null without one.
+    question: str | None
+
+
+class MotivationOut(ApiModel):
+    """Motivation in one answer: the streak, the next level, the week's quests, the milestones,
+    moments to celebrate, Monday's recap and a welcome back."""
+
+    today: dt.date
+    streak: StreakOut
+    outlook: LevelOutlookOut | None
+    quests: QuestWeekOut
+    milestones: list[MilestoneOut]
+    # Not celebrated yet, the oldest first: the app shows one at a time.
+    celebrations: list[CelebrationOut]
+    fresh_start: bool
+    recap: RecapOut | None
+    welcome_back: WelcomeBackOut | None
+    reminders_paused_until: dt.datetime | None
+
+    @classmethod
+    def of(cls, view: MotivationView) -> "MotivationOut":
+        streak, recap, welcome = view.streak, view.recap, view.welcome_back
+        return cls(
+            today=view.today,
+            streak=StreakOut(
+                days=streak.days,
+                longest=streak.longest,
+                planned_today=streak.planned_today,
+                spoke_today=streak.spoke_today,
+                repair=RepairOfferOut(missed=streak.repair.missed, until=streak.repair.until)
+                if streak.repair
+                else None,
+            ),
+            outlook=LevelOutlookOut.of(view.outlook) if view.outlook else None,
+            quests=QuestWeekOut(
+                week=view.quests.week,
+                quests=[
+                    QuestOut(
+                        kind=quest.kind,
+                        target=quest.target,
+                        progress=quest.progress,
+                        done=quest.done,
+                        done_at=quest.done_at,
+                    )
+                    for quest in view.quests.quests
+                ],
+                all_done=view.quests.all_done,
+            ),
+            milestones=[MilestoneOut.of(mark) for mark in view.milestones],
+            celebrations=[CelebrationOut(kind=c.kind, id=c.id, at=c.at) for c in view.celebrations],
+            fresh_start=view.fresh_start,
+            recap=RecapOut(
+                week=recap.week,
+                minutes=recap.minutes,
+                conversations=recap.conversations,
+                speaking_days=recap.speaking_days,
+                quests_done=recap.quests_done,
+                quests_total=recap.quests_total,
+                milestones=list(recap.milestones),
+                improved=list(recap.improved),
+            )
+            if recap
+            else None,
+            welcome_back=WelcomeBackOut(
+                days=welcome.days, partner_id=welcome.partner_id, question=welcome.question
+            )
+            if welcome
+            else None,
+            reminders_paused_until=view.reminders_paused_until,
+        )
+
+
+class CelebratedIn(ApiModel):
+    kind: Literal["quest", "milestone"]
+    id: str = Field(min_length=1, max_length=64)
+
+
+class PauseRemindersIn(ApiModel):
+    # How many days to pause for; null resumes the reminders.
+    days: int | None = Field(default=None, ge=1, le=PAUSE_DAYS)
+
+
+class PauseRemindersOut(ApiModel):
+    paused_until: dt.datetime | None

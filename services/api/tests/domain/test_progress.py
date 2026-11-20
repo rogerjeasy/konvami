@@ -5,16 +5,14 @@ import pytest
 from konvami_api.domain.cards import CardProgress
 from konvami_api.domain.conversations import ActivityDays, DayActivity
 from konvami_api.domain.live_call import Turn, TurnAudio
+from konvami_api.domain.motivation import Milestone, MilestoneNumbers, milestones
 from konvami_api.domain.onboarding import OnboardingError
 from konvami_api.domain.progress import (
     WEEKS_OF_ACTIVITY,
     WEEKS_OF_MISTAKES,
-    Milestone,
     MistakeTrend,
     TalkShare,
     WeekActivity,
-    longest_streak,
-    milestones,
     mistake_trends,
     weekly,
 )
@@ -82,15 +80,6 @@ def test_someone_who_never_talked_has_empty_weeks() -> None:
     assert weekly(days(), 2) == (WeekActivity(MONDAY - WEEK, 0, 0), WeekActivity(MONDAY, 0, 0))
 
 
-def test_the_longest_streak_is_the_longest_run_of_days_ever() -> None:
-    run_of_four = [(date(2026, 9, day), 60) for day in (1, 2, 3, 4)]
-    run_of_two = [(FRIDAY, 60), (FRIDAY - timedelta(days=1), 60)]
-
-    assert longest_streak(days(*run_of_four, (date(2026, 9, 20), 60), *run_of_two)) == 4
-    assert longest_streak(days((FRIDAY, 60))) == 1
-    assert longest_streak(days()) == 0
-
-
 # --- Mistakes ------------------------------------------------------------------------------------
 
 WEEKS = (MONDAY - 2 * WEEK, MONDAY - WEEK, MONDAY)
@@ -143,7 +132,7 @@ def reached(**numbers: int) -> dict[str, tuple[int, int, bool]]:
         "reviews": 0,
         **numbers,
     }
-    return {m.id: (m.current, m.target, m.reached) for m in milestones(**figures)}
+    return {m.id: (m.current, m.target, m.reached) for m in milestones(MilestoneNumbers(**figures))}
 
 
 def test_a_new_learner_has_every_milestone_ahead() -> None:
@@ -151,11 +140,15 @@ def test_a_new_learner_has_every_milestone_ahead() -> None:
         "first_conversation": (0, 1, False),
         "five_conversations": (0, 5, False),
         "long_conversation": (0, 8, False),
+        "first_quest_week": (0, 1, False),
         "hour_of_talking": (0, 60, False),
         "week_streak": (0, 7, False),
+        "streak_repaired": (0, 1, False),
         "hundred_words": (0, 100, False),
         "first_card": (0, 1, False),
+        "level_up": (0, 1, False),
         "fifty_reviews": (0, 50, False),
+        "month_streak": (0, 30, False),
     }
 
 
@@ -244,14 +237,30 @@ def test_practice_is_charted_per_week_with_the_streaks_and_the_milestones_it_rea
         (MONDAY - WEEK, 8 * 60, 2),
         (MONDAY, 11 * 60, 2),
     ]
-    assert (progress.activity.streak_days, progress.longest_streak_days) == (2, 3)
+    # The streak is motivation's: these conversations are dated before the learner joined
+    # (today), and no day before joining was planned, so none of the gaps breaks the run.
+    assert (progress.activity.streak_days, progress.longest_streak_days) == (5, 5)
     assert (progress.activity.conversations, progress.activity.seconds) == (5, 28 * 60)
     marks = {m.id: (m.current, m.reached) for m in progress.milestones}
     assert marks["first_conversation"] == (1, True)
     assert marks["five_conversations"] == (5, True)
     assert marks["long_conversation"] == (8, True)
     assert marks["hour_of_talking"] == (28, False)
-    assert marks["week_streak"] == (3, False)
+    assert marks["week_streak"] == (5, False)
+
+
+def test_a_planned_day_missed_after_joining_ends_the_streak_once_too_late_to_repair() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    # Joined on Friday 9th; spoke Saturday 10th and Monday 12th, then nothing on Tuesday 13th
+    # (planned) nor in the two days after it.
+    world.talk(lena, at=NOON + DAY)
+    world.talk(lena, at=NOON + 3 * DAY)
+    world.clock.now = NOON + 7 * DAY
+
+    progress = world.progress.view(USER, None)
+
+    assert (progress.activity.streak_days, progress.longest_streak_days) == (0, 2)
 
 
 def test_the_mistakes_that_keep_coming_up_are_counted_per_week() -> None:

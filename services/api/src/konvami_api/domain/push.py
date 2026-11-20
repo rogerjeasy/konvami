@@ -54,6 +54,15 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "A répondu à ton message vocal.",
         "it": "Ha risposto al tuo messaggio vocale.",
     },
+    # When the partner remembers something to ask about (`has_question` below). The question
+    # itself never goes into a push: a notification shows on the lock screen and passes through
+    # Expo, Apple and Google, so it stays generic and the question waits inside the app.
+    "nudge_question": {
+        "en": "I have a question for you. Got five minutes?",
+        "de": "Ich habe eine Frage an dich. Hast du fünf Minuten?",
+        "fr": "J’ai une question pour toi. Tu as cinq minutes ?",  # noqa: RUF001
+        "it": "Ho una domanda per te. Hai cinque minuti?",
+    },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
         "de": "Wir haben lange nicht gesprochen. Hast du fünf Minuten?",
@@ -147,12 +156,31 @@ class PushService:
         personas: PersonaService,
         conversations: ConversationService,
         clock: Callable[[], dt.datetime],
+        paused: Callable[[UUID], bool] | None = None,
+        has_question: Callable[[UUID, UUID | None], bool] | None = None,
     ) -> None:
+        """`paused` tells a learner who paused reminders (motivation's "pause for a month"), who
+        gets no nudge; `has_question` tells whether the partner remembers something to ask
+        them about. The push then says so in general words; the question itself is only shown
+        in the app (Today's welcome back)."""
+        self._paused = paused
+        self._has_question = has_question
         self._repository = repository
         self._sender = sender
         self._personas = personas
         self._conversations = conversations
         self._clock = clock
+
+    def use_motivation(
+        self,
+        *,
+        paused: Callable[[UUID], bool],
+        has_question: Callable[[UUID, UUID | None], bool],
+    ) -> None:
+        """For a backend that builds motivation after push (pen-pal notes need push first): the
+        same `paused` and `has_question` as the constructor takes."""
+        self._paused = paused
+        self._has_question = has_question
 
     def register(
         self,
@@ -179,6 +207,8 @@ class PushService:
     ) -> None:
         if not devices:
             return
+        # The body is always one of the fixed `_WORDS`: nothing the learner said or a partner
+        # remembers is put into a notification.
         messages = [
             PushMessage(device.token, title, _WORDS[kind][device.language], data)
             for device in devices
@@ -248,10 +278,17 @@ class PushService:
             quiet_from = (
                 last[0].started_at if last else min(device.registered_at for device in devices)
             )
-            if now - quiet_from < QUIET_FOR:
+            if now - quiet_from < QUIET_FOR or (self._paused and self._paused(user_id)):
                 continue
             partner = last[0].persona_id if last else None
-            self._send(devices, "nudge", self._partner_name(user_id, partner), {"open": "today"})
+            # Fixed words only: what the partner remembers stays inside the app.
+            asking = self._has_question is not None and self._has_question(user_id, partner)
+            self._send(
+                devices,
+                "nudge_question" if asking else "nudge",
+                self._partner_name(user_id, partner),
+                {"open": "today"},
+            )
             for device in devices:
                 self._repository.nudged(device.token, now)
             nudged += len(devices)

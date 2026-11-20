@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, cast
 from uuid import UUID
 
-from konvami_api.domain import plans
+from konvami_api.domain import motivation, plans
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
 from konvami_api.domain.card_schedule import FitState
 from konvami_api.domain.cards import Card, CardTotals, WordDetails
@@ -2014,3 +2014,90 @@ class RecordingCoachStarter:
 
     def start(self, user_id: UUID, day: date) -> None:
         self.started.append((user_id, day))
+
+
+class InMemoryMotivationRepository:
+    """`events` stands in for the pen-pal replies, drills and "Say it better" tries the SQL
+    repository reads from their own tables."""
+
+    def __init__(self) -> None:
+        self.events: dict[UUID, list[motivation.SpeakingEvent]] = {}
+        # (user, week) -> quests in their order.
+        self.weeks: dict[tuple[UUID, date], list[motivation.StoredQuest]] = {}
+        self.milestones: dict[UUID, dict[str, motivation.Reached]] = {}
+        self.paused: dict[UUID, datetime] = {}
+
+    def speaking_events(self, user_id: UUID, since: datetime) -> list[motivation.SpeakingEvent]:
+        return sorted(
+            (e for e in self.events.get(user_id, []) if e.at >= since), key=lambda e: e.at
+        )
+
+    def quests(self, user_id: UUID, week: date) -> list[motivation.StoredQuest]:
+        return list(self.weeks.get((user_id, week), []))
+
+    def choose(
+        self,
+        user_id: UUID,
+        week: date,
+        picks: Sequence[motivation.QuestPick],
+        at: datetime,
+    ) -> None:
+        self.weeks.setdefault(
+            (user_id, week), [motivation.StoredQuest(p.kind, p.target) for p in picks]
+        )
+
+    def quest_done(self, user_id: UUID, week: date, kind: str, at: datetime) -> None:
+        self.weeks[(user_id, week)] = [
+            replace(q, done_at=at) if q.kind.value == kind and q.done_at is None else q
+            for q in self.weeks.get((user_id, week), [])
+        ]
+
+    def completed_weeks(self, user_id: UUID) -> int:
+        return sum(
+            1
+            for (user, _), quests in self.weeks.items()
+            if user == user_id and quests and all(q.done_at for q in quests)
+        )
+
+    def reached(self, user_id: UUID) -> dict[str, motivation.Reached]:
+        return dict(self.milestones.get(user_id, {}))
+
+    def reach(self, user_id: UUID, ids: Sequence[str], at: datetime, backfilled: bool) -> None:
+        known = self.milestones.setdefault(user_id, {})
+        for milestone in ids:
+            known.setdefault(
+                milestone, motivation.Reached(at, backfilled, at if backfilled else None)
+            )
+
+    def celebrated(self, user_id: UUID, kind: str, key: str, at: datetime) -> bool:
+        if kind == "milestone":
+            known = self.milestones.get(user_id, {})
+            found = known.get(key)
+            if found is None or found.celebrated_at is not None:
+                return False
+            known[key] = replace(found, celebrated_at=at)
+            return True
+        weeks = sorted(
+            (
+                week
+                for (user, week), qs in self.weeks.items()
+                if user == user_id and any(q.kind.value == key and q.done_at for q in qs)
+            ),
+        )
+        if not weeks:
+            return False
+        quests = self.weeks[(user_id, weeks[-1])]
+        for i, quest in enumerate(quests):
+            if quest.kind.value == key and quest.celebrated_at is None:
+                quests[i] = replace(quest, celebrated_at=at)
+                return True
+        return False
+
+    def pause_reminders(self, user_id: UUID, until: datetime | None) -> None:
+        if until is None:
+            self.paused.pop(user_id, None)
+        else:
+            self.paused[user_id] = until
+
+    def reminders_paused_until(self, user_id: UUID) -> datetime | None:
+        return self.paused.get(user_id)

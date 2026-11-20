@@ -463,6 +463,10 @@ export const motion = {
   orbit: 60000,
   /** How long each Welcome greeting stays before the next country's flag spreads in. */
   greeting: 2200,
+  /** A celebration's burst of colour pieces flying out and fading (a quest or milestone). */
+  burst: 900,
+  /** How far a burst's pieces fly from the middle (pt). */
+  burstReach: 90,
   /** Cubic-bezier control points (CSS order). Never ease-in on UI. */
   easing: {
     /** Entering and exiting. */

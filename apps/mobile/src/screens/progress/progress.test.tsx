@@ -27,6 +27,9 @@ jest.mock('expo-router', () => ({
   },
 }));
 
+// Sharing goes through the phone's share sheet: the test only sees that it was asked to.
+jest.mock('@/lib/share-image', () => ({ shareSvgImage: jest.fn(async () => {}) }));
+
 beforeEach(() => {
   jest.clearAllMocks();
   (SecureStore as unknown as { __reset: () => void }).__reset();
@@ -313,5 +316,51 @@ describe('5.8 Progress', () => {
         expect(device.played).toEqual(['https://files.test/weeks/2026-09-28.mp3']),
       );
     });
+  });
+});
+
+describe('5.8 Progress: motivation', () => {
+  it('turns the next level’s step butter and says how close it is', async () => {
+    const api = practised();
+    api.motivates({
+      outlook: { level: 'A2', next: 'B1', pointing: 3, counted: 4, needed: 5, agreeing: 4 },
+    });
+    await open(api);
+
+    expect(await screen.findByText('3 of 5 conversations point to B1')).toBeTruthy();
+    expect(screen.getByText('Your level moves to B1 once 4 of 5 do.')).toBeTruthy();
+    expect(screen.getByText('Almost there')).toBeTruthy();
+  });
+
+  it('dates a milestone the learner reached', async () => {
+    const api = practised();
+    const read = api.getProgress.bind(api);
+    api.getProgress = async (zone) => {
+      const progress = await read(zone);
+      return {
+        ...progress,
+        milestones: progress.milestones.map((m) =>
+          m.id === 'first_conversation' ? { ...m, reachedAt: '2026-10-01T09:00:00Z' } : m,
+        ),
+      };
+    };
+    await open(api);
+
+    // The badge says it to a screen reader; the card under the grid shows it.
+    expect(
+      await screen.findByLabelText('First conversation: Reached on October 1, 2026'),
+    ).toBeTruthy();
+  });
+
+  it('previews the progress picture and shares it only when asked', async () => {
+    const shared = jest.requireMock<{ shareSvgImage: jest.Mock }>('@/lib/share-image');
+    await open(practised());
+
+    fireEvent.press(await screen.findByRole('button', { name: 'Share my progress' }));
+    expect(shared.shareSvgImage).not.toHaveBeenCalled();
+    fireEvent.press(await screen.findByRole('button', { name: 'Share' }));
+
+    await waitFor(() => expect(shared.shareSvgImage).toHaveBeenCalledTimes(1));
+    expect(shared.shareSvgImage.mock.calls[0]?.[1]).toBe('konvami-progress');
   });
 });

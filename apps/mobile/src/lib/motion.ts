@@ -106,3 +106,32 @@ export function slideUpKeyframes(reduced: boolean): Keyframes {
     to: { transform: [{ translateY: 0 }] },
   };
 }
+
+/**
+ * Where piece `index` of `count` lands in a celebration's burst: spread evenly around the middle,
+ * every other one a little nearer so the burst is not a ring.
+ */
+export function burstOffset(index: number, count: number): { x: number; y: number } {
+  const angle = (2 * Math.PI * index) / count;
+  const reach = motion.burstReach * (index % 2 === 0 ? 1 : 0.7);
+  return { x: Math.round(Math.cos(angle) * reach), y: Math.round(Math.sin(angle) * reach) };
+}
+
+/**
+ * One piece of a celebration's burst: out from the middle to `x`, `y` while it turns and fades.
+ * Reduced motion: no travel and no turning, the piece only fades in and out where it lands.
+ */
+export function burstKeyframes(x: number, y: number, reduced: boolean): Keyframes {
+  if (reduced) {
+    return {
+      from: { opacity: 0, transform: [{ translateX: x }, { translateY: y }] },
+      [pct(30)]: { opacity: 1, transform: [{ translateX: x }, { translateY: y }] },
+      to: { opacity: 0, transform: [{ translateX: x }, { translateY: y }] },
+    };
+  }
+  return {
+    from: { opacity: 0, transform: [{ translateX: 0 }, { translateY: 0 }, { rotate: '0deg' }] },
+    [pct(20)]: { opacity: 1 },
+    to: { opacity: 0, transform: [{ translateX: x }, { translateY: y }, { rotate: '180deg' }] },
+  };
+}

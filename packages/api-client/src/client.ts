@@ -133,6 +133,17 @@ export type CoachFeedback = Schemas['CoachFeedbackIn'];
 /** One level on the way, from when it was set and by whom. */
 export type LevelPoint = Schemas['LevelPointOut'];
 export type ProgressWeek = Schemas['WeekOut'];
+/** Motivation (spec §6.15): the streak, the next level, quests, milestones and moments. */
+export type Motivation = Schemas['MotivationOut'];
+export type Streak = Schemas['StreakOut'];
+export type LevelOutlook = Schemas['LevelOutlookOut'];
+export type Quest = Schemas['QuestOut'];
+export type QuestKind = Schemas['QuestOut']['kind'];
+export type QuestWeek = Schemas['QuestWeekOut'];
+export type Celebration = Schemas['CelebrationOut'];
+export type Recap = Schemas['RecapOut'];
+export type RepairOffer = Schemas['RepairOfferOut'];
+export type WelcomeBack = Schemas['WelcomeBackOut'];
 /** The exam centre (spec §6.13): the learner's exam, the speaking tests, simulations, readiness. */
 export type ExamCentre = Schemas['ExamCentreOut'];
 export type SpeakingExam = Schemas['SpeakingExamOut'];
@@ -412,6 +423,18 @@ export interface ApiClient {
   getCoach(timeZone?: string): Promise<Coach>;
   /** The learner's answer to a suggestion. Fails with `not_found`. */
   answerCoachSuggestion(id: string, feedback: CoachFeedback): Promise<void>;
+  /**
+   * The streak, the next level, the week's quests, the dated milestones and the moments to
+   * celebrate; `timeZone` as for `getHome`.
+   */
+  getMotivation(timeZone?: string): Promise<Motivation>;
+  /** The app showed a moment, so it is not shown again. Fails with `not_found`. */
+  markCelebrated(kind: Celebration['kind'], id: string): Promise<void>;
+  /**
+   * Pauses the reminders and the quiet-week nudge for `days` (at most 30), or resumes them
+   * (null). Answers until when.
+   */
+  pauseReminders(days: number | null): Promise<string | null>;
   /**
    * Has last week's check-in written (`week` is its Monday); answers at once with its status.
    * Fails with `not_found` (not last week), `nothing_to_report`, `consent_required` or
@@ -877,6 +900,15 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         `/v1/coach/suggestions/${encodeURIComponent(id)}/feedback`,
         feedback,
       )),
+    getMotivation: (timeZone) => request('GET', withQuery('/v1/motivation', { tz: timeZone })),
+    markCelebrated: async (kind, id) =>
+      void (await request('POST', '/v1/motivation/celebrated', { kind, id })),
+    pauseReminders: async (days) =>
+      (
+        await request<Schemas['PauseRemindersOut']>('PUT', '/v1/motivation/reminder-pause', {
+          days,
+        })
+      ).pausedUntil,
     requestWeekReview: (week, timeZone) =>
       request('POST', withQuery(`/v1/weeks/${encodeURIComponent(week)}/review`, { tz: timeZone })),
     getWeekReview: (week, timeZone) =>

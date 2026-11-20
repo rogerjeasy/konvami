@@ -7,7 +7,7 @@ is empty rather than filled in.
 
 import datetime as dt
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from konvami_api.domain.cards import CardProgress, CardService
@@ -20,6 +20,7 @@ from konvami_api.domain.conversations import (
 from konvami_api.domain.fluency import RecordingFluency, recording_fluency
 from konvami_api.domain.home import LevelView, level_view
 from konvami_api.domain.levels import LevelPoint, LevelService
+from konvami_api.domain.motivation import Milestone, Streak
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.placement import PlacementService
 from konvami_api.domain.profile import ProfileService
@@ -36,8 +37,6 @@ RECENT = dt.timedelta(days=30)
 FLUENCY_CONVERSATIONS = 8
 
 _WEEK = dt.timedelta(days=7)
-_DAY = dt.timedelta(days=1)
-_MINUTE = 60
 
 
 @dataclass(frozen=True)
@@ -53,18 +52,6 @@ class MistakeTrend:
     category: str
     # How often it came up in each of the weeks shown, the oldest first.
     counts: tuple[int, ...]
-
-
-@dataclass(frozen=True)
-class Milestone:
-    id: str
-    # How far the learner is, never beyond the target, in the milestone's own unit.
-    current: int
-    target: int
-
-    @property
-    def reached(self) -> bool:
-        return self.current >= self.target
 
 
 @dataclass(frozen=True)
@@ -117,21 +104,6 @@ def weekly(activity: ActivityDays, weeks: int) -> tuple[WeekActivity, ...]:
     )
 
 
-def longest_streak(activity: ActivityDays) -> int:
-    """The most days in a row the learner ever practised."""
-    practised = {day.day for day in activity.days}
-    longest = 0
-    for day in practised:
-        # Count each run once, from its first day.
-        if day - _DAY in practised:
-            continue
-        length = 1
-        while day + _DAY * length in practised:
-            length += 1
-        longest = max(longest, length)
-    return longest
-
-
 def mistake_trends(
     weeks: Sequence[dt.date], found: Sequence[WeekMistakes], *, top: int
 ) -> tuple[MistakeTrend, ...]:
@@ -147,34 +119,6 @@ def mistake_trends(
     return tuple(MistakeTrend(category, tuple(per_week)) for category, per_week in ranked[:top])
 
 
-def milestones(
-    *,
-    conversations: int,
-    seconds: int,
-    longest_seconds: int,
-    longest_streak_days: int,
-    most_words: int,
-    cards: int,
-    reviews: int,
-) -> tuple[Milestone, ...]:
-    """The milestones, in the order a learner usually passes them. Light on purpose (spec §6.15):
-    each marks something said, kept or come back to, never tapping for its own sake."""
-    marks = (
-        ("first_conversation", conversations, 1),
-        ("five_conversations", conversations, 5),
-        # Minutes of one conversation; a practice conversation lasts ten at most.
-        ("long_conversation", longest_seconds // _MINUTE, 8),
-        # Minutes of talking in all.
-        ("hour_of_talking", seconds // _MINUTE, 60),
-        ("week_streak", longest_streak_days, 7),
-        # Words the learner said in one conversation.
-        ("hundred_words", most_words, 100),
-        ("first_card", cards, 1),
-        ("fifty_reviews", reviews, 50),
-    )
-    return tuple(Milestone(name, min(value, target), target) for name, value, target in marks)
-
-
 class ProgressService:
     def __init__(
         self,
@@ -187,7 +131,12 @@ class ProgressService:
         cards: CardService,
         levels: LevelService,
         clock: Callable[[], dt.datetime],
+        streak: Callable[[UUID, str | None], Streak],
+        milestones: Callable[[UUID, str | None], tuple[Milestone, ...]],
     ) -> None:
+        """`streak` and `milestones` come from motivation (`motivation.py`), which owns both."""
+        self._streak = streak
+        self._milestones = milestones
         self._profiles = profiles
         self._onboarding = onboarding
         self._placement = placement
@@ -206,8 +155,8 @@ class ProgressService:
         language = profile.target_language or ""
         result = self._placement.view(user_id).result
         days = self._conversations.days(user_id, timezone, now)
-        activity = summarise(days)
-        streak = longest_streak(days)
+        streak = self._streak(user_id, timezone)
+        activity = replace(summarise(days), streak_days=streak.days)
         mistake_weeks = week_starts(days.today, WEEKS_OF_MISTAKES)
         found = self._reports.mistakes_by_week(user_id, timezone, mistake_weeks[0])
         words = self._reports.totals(user_id, now - RECENT)
@@ -227,18 +176,10 @@ class ProgressService:
             level_history=self._levels.history(user_id, language),
             activity=activity,
             weeks=weekly(days, WEEKS_OF_ACTIVITY),
-            longest_streak_days=streak,
+            longest_streak_days=streak.longest,
             talk=TalkShare(words.learner_words, words.partner_words) if said else None,
             mistake_weeks=mistake_weeks,
             mistakes=mistake_trends(mistake_weeks, found, top=TOP_MISTAKES),
             cards=cards,
-            milestones=milestones(
-                conversations=activity.conversations,
-                seconds=activity.seconds,
-                longest_seconds=self._conversations.longest_seconds(user_id),
-                longest_streak_days=streak,
-                most_words=words.most_words,
-                cards=cards.total,
-                reviews=cards.reviews_ever,
-            ),
+            milestones=self._milestones(user_id, timezone),
         )

@@ -24,6 +24,7 @@ import {
   type PersonaDraft,
   type Placement,
   type PlacementResult,
+  type Motivation,
   type PlacementStatus,
   type ProblemWord,
   type PronunciationSound,
@@ -924,6 +925,8 @@ export interface FakeApi extends ApiClient {
   hasPlan(changes: Partial<Plan>): void;
   /** What the Coach finds for today (5.1, 5.26); by default nothing yet. */
   coaches(changes: Partial<Coach>): void;
+  /** Overrides parts of what `getMotivation` answers (a repair offer, a recap, moments, …). */
+  motivates(changes: Partial<Motivation>): void;
   /** Every call so far, as `[method, ...arguments]`, in order. */
   readonly calls: readonly unknown[][];
   /** Stores answers directly, as if they had been given earlier. */
@@ -1146,6 +1149,9 @@ export const FAKE_STORY_EPISODE: StoryEpisode = {
 export const FAKE_STORY_HEARD = 'Er heißt Herr Keller.';
 
 export function createFakeApi(): FakeApi {
+  let motivationChanges: Partial<Motivation> = {};
+  const celebrated = new Set<string>();
+  let pausedUntil: string | null = null;
   let activeCall: Awaited<ReturnType<ApiClient['startVoiceCall']>> | null = null;
   let callEndsAt = 0;
   const fields = new Map<string, unknown>();
@@ -1693,6 +1699,43 @@ export function createFakeApi(): FakeApi {
     };
   }
 
+  /** Motivation as the server would answer it, from what the learner did here. */
+  function motivation(): Motivation {
+    const done = progress();
+    const week = done.weeks.at(-1)?.start ?? FAKE_NOW.slice(0, 10);
+    const answer: Motivation = {
+      today: done.activity.today,
+      streak: {
+        days: done.activity.streakDays,
+        longest: done.longestStreakDays,
+        plannedToday: true,
+        spokeToday: done.activity.practisedToday,
+        repair: null,
+      },
+      outlook: null,
+      quests: {
+        week,
+        allDone: false,
+        quests: [
+          { kind: 'talk_days', target: 3, progress: 0, done: false, doneAt: null },
+          { kind: 'sound_drills', target: 3, progress: 0, done: false, doneAt: null },
+          { kind: 'long_call', target: 1, progress: 0, done: false, doneAt: null },
+        ],
+      },
+      milestones: done.milestones,
+      celebrations: [],
+      freshStart: false,
+      recap: null,
+      welcomeBack: null,
+      remindersPausedUntil: pausedUntil,
+      ...motivationChanges,
+    };
+    return {
+      ...answer,
+      celebrations: answer.celebrations.filter((c) => !celebrated.has(`${c.kind}/${c.id}`)),
+    };
+  }
+
   function home(): Home {
     if (onboarding().stage !== 'done') throw new ApiError('wrong_stage', 409);
     const language = target() ?? '';
@@ -1796,6 +1839,9 @@ export function createFakeApi(): FakeApi {
     },
     asking(question) {
       dueQuestion = question;
+    },
+    motivates(changes) {
+      motivationChanges = { ...motivationChanges, ...changes };
     },
     havePicture() {
       picture = `${FILES}/users/amara/picture/earlier.jpg`;
@@ -2061,6 +2107,23 @@ export function createFakeApi(): FakeApi {
           suggestion.id === id ? { ...suggestion, status: feedback.response } : suggestion,
         ),
       };
+    },
+    async getMotivation(timeZone) {
+      await record('getMotivation', timeZone);
+      return motivation();
+    },
+    async markCelebrated(kind, id) {
+      await record('markCelebrated', kind, id);
+      const known = motivation().celebrations.some((c) => c.kind === kind && c.id === id);
+      if (!known) throw new ApiError('not_found', 404);
+      celebrated.add(`${kind}/${id}`);
+    },
+    async pauseReminders(days) {
+      await record('pauseReminders', days);
+      if (days !== null && (days < 1 || days > 30)) throw new ApiError('invalid_value', 422);
+      pausedUntil =
+        days === null ? null : new Date(Date.parse(FAKE_NOW) + days * DAY_MS).toISOString();
+      return pausedUntil;
     },
     async getExamCentre(): Promise<ExamCentre> {
       await record('getExamCentre');

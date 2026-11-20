@@ -55,6 +55,7 @@ EXPORTED: tuple[ExportedTable, ...] = (
             "feedback",
             "memory",
             "memory_forget",
+            "milestone_reached",
             "minute_pack",
             "minute_pack_purchase",
             "minute_pack_week",
@@ -74,6 +75,7 @@ EXPORTED: tuple[ExportedTable, ...] = (
             "pronunciation_day",
             "pronunciation_drill",
             "pronunciation_word",
+            "reminder_pause",
             "retry_attempt",
             "retry_day",
             "story_episode",
@@ -89,6 +91,7 @@ EXPORTED: tuple[ExportedTable, ...] = (
             "voice_session",
             "voice_week",
             "week_review",
+            "weekly_quest",
         )
     ),
     # A push token is the address Expo delivers notifications to: anyone who holds it can send

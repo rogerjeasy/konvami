@@ -28,6 +28,7 @@ from konvami_api.api.schemas import (
     CardOut,
     CardsAheadOut,
     CatalogOut,
+    CelebratedIn,
     CoachFeedbackIn,
     CoachOut,
     ConversationAssessmentIn,
@@ -62,10 +63,13 @@ from konvami_api.api.schemas import (
     MemoryOut,
     MemoryPatch,
     MemorySettingsPatch,
+    MotivationOut,
     NextSimulationOut,
     OnboardingOut,
     OwnScenarioOut,
     OwnScenariosOut,
+    PauseRemindersIn,
+    PauseRemindersOut,
     PenPalNoteOut,
     PenPalOut,
     PenPalReplyOut,
@@ -173,6 +177,7 @@ from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import Memory, MemoryBook, MemoryService
+from konvami_api.domain.motivation import MotivationService
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.penpal import PenPalError, PenPalService
 from konvami_api.domain.persona_parts import Voice
@@ -248,6 +253,7 @@ class Services:
     flags: FlagService
     then_vs_now: ThenVsNowService
     pronunciation: PronunciationService
+    motivation: MotivationService
 
     pen_pal: PenPalService
     coach: CoachService
@@ -611,6 +617,31 @@ def _router(services: Services) -> APIRouter:
     ) -> None:
         """The learner's answer: do it, not now, or not for me (with why)."""
         services.coach.respond(user, suggestion_id, body.response, body.reason)
+
+    @router.get("/motivation", operation_id="getMotivation")
+    def get_motivation(
+        user: CurrentUser,
+        # The device's time zone, as for `/home`: the streak, the week and Monday follow it.
+        tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
+    ) -> MotivationOut:
+        """The streak, the next level, the week's quests, the milestones and the moments to
+        celebrate (spec §6.15)."""
+        return MotivationOut.of(services.motivation.view(user, tz))
+
+    @router.post(
+        "/motivation/celebrated",
+        operation_id="markCelebrated",
+        status_code=204,
+        responses=NOT_FOUND,
+    )
+    def mark_celebrated(user: CurrentUser, moment: CelebratedIn) -> None:
+        """The app showed a moment: it is not shown again."""
+        services.motivation.celebrate(user, moment.kind, moment.id)
+
+    @router.put("/motivation/reminder-pause", operation_id="pauseReminders", responses=REFUSED)
+    def pause_reminders(user: CurrentUser, pause: PauseRemindersIn) -> PauseRemindersOut:
+        """Pauses the reminders and the quiet-week nudge (`days`), or resumes them (null)."""
+        return PauseRemindersOut(paused_until=services.motivation.pause_reminders(user, pause.days))
 
     @router.post(
         "/weeks/{week}/review",
