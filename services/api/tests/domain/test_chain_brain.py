@@ -4,11 +4,13 @@ from uuid import UUID
 from konvami_api.domain.chain import ChainSeat, Line, Story
 from konvami_api.domain.chain_brain import ModelNarrator
 from konvami_api.domain.chain_openings import FALLBACK_LINES
+from konvami_api.domain.voice_messages import MessageChecker
 from tests.fakes import FakeModerator, FakeSpeechModel, InMemoryFileStore, ScriptedTextModel
 
 NOW = dt.datetime(2026, 11, 20, 12, 0, tzinfo=dt.UTC)
 USER = UUID("11111111-1111-4111-8111-111111111111")
 STORY = UUID("33333333-3333-4333-8333-333333333333")
+LANGUAGE_NAMES = {"de": "German", "fr": "French", "en": "English", "it": "Italian"}
 
 
 def story(host: UUID | None = USER) -> Story:
@@ -42,15 +44,19 @@ def narrator(
     files = InMemoryFileStore()
     return (
         ModelNarrator(
-            moderator=moderator or FakeModerator(),
+            checker=MessageChecker(
+                moderator=moderator or FakeModerator(),
+                text_model=text,
+                check_model="small" if models else "",
+                review_model="strong" if models else "",
+                language_name=LANGUAGE_NAMES.get,  # type: ignore[arg-type]
+            ),
             text_model=text,
-            check_model="small" if models else "",
             write_model="small" if models else "",
-            review_model="strong" if models else "",
             speech=FakeSpeechModel(),
             speech_model="tts" if models else "",
             files=files,
-            language_name={"de": "German", "fr": "French", "en": "English", "it": "Italian"}.get,  # type: ignore[arg-type]
+            language_name=LANGUAGE_NAMES.get,  # type: ignore[arg-type]
             clock=lambda: NOW,
         ),
         text,

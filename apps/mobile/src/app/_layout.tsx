@@ -1,6 +1,7 @@
 import { api } from '@/api';
 import { ChainProvider } from '@/chain/services';
 import { HalvesProvider } from '@/halves/services';
+import { RadioProvider } from '@/radio/services';
 import '../../global.css';
 import '@/i18n';
 import { useEffect, useState } from 'react';
@@ -87,30 +88,32 @@ function RootLayout() {
         <OnboardingProvider store={onboardingStore}>
           <PracticeProvider services={practiceServices}>
             <HalvesProvider api={api}>
-              <ChainProvider api={api}>
-                <ProfileProvider services={profileServices}>
-                  <PlanProvider device={appPurchaseDevice}>
-                    <RemindersProvider device={appReminderDevice}>
-                      <RecorderProvider useRecorder={useAppSentenceRecorder}>
-                        <VoiceProvider createEngine={createAppVoiceEngine}>
-                          <VideoAvatarProvider avatars={appVideoAvatars}>
-                            <SignUpDraftProvider>
-                              <AccessDraftProvider>
-                                <ExamNotesProvider>
-                                  <StatusBar style="auto" />
-                                  <ReminderKeeper />
-                                  <RootStack />
-                                  <PaywallSheet />
-                                </ExamNotesProvider>
-                              </AccessDraftProvider>
-                            </SignUpDraftProvider>
-                          </VideoAvatarProvider>
-                        </VoiceProvider>
-                      </RecorderProvider>
-                    </RemindersProvider>
-                  </PlanProvider>
-                </ProfileProvider>
-              </ChainProvider>
+              <RadioProvider api={api}>
+                <ChainProvider api={api}>
+                  <ProfileProvider services={profileServices}>
+                    <PlanProvider device={appPurchaseDevice}>
+                      <RemindersProvider device={appReminderDevice}>
+                        <RecorderProvider useRecorder={useAppSentenceRecorder}>
+                          <VoiceProvider createEngine={createAppVoiceEngine}>
+                            <VideoAvatarProvider avatars={appVideoAvatars}>
+                              <SignUpDraftProvider>
+                                <AccessDraftProvider>
+                                  <ExamNotesProvider>
+                                    <StatusBar style="auto" />
+                                    <ReminderKeeper />
+                                    <RootStack />
+                                    <PaywallSheet />
+                                  </ExamNotesProvider>
+                                </AccessDraftProvider>
+                              </SignUpDraftProvider>
+                            </VideoAvatarProvider>
+                          </VoiceProvider>
+                        </RecorderProvider>
+                      </RemindersProvider>
+                    </PlanProvider>
+                  </ProfileProvider>
+                </ChainProvider>
+              </RadioProvider>
             </HalvesProvider>
           </PracticeProvider>
         </OnboardingProvider>

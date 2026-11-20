@@ -18,8 +18,11 @@ COSTS_VARIABLE = "KONVAMI_COSTS"
 PREMIUM_VOICES_VARIABLE = "KONVAMI_PREMIUM_VOICES"
 
 PLANS_VARIABLE = "KONVAMI_PLANS"
-# Two Halves (section 7): {"enabled": true, "open_to_testers": true}. Off without it.
+# Two Halves (section 7): {"enabled": true, "open_to_testers": true, "strangers": false}. Off
+# without it; strangers are matched only with "strangers" (phase 2, after the legal review).
 HALVES_VARIABLE = "KONVAMI_HALVES"
+# Radio Konvami (section 8): {"enabled": true, "open_to_testers": true}. Off without it.
+RADIO_VARIABLE = "KONVAMI_RADIO"
 # The story chain (section 9): {"enabled": true, "open_to_testers": true}. Off without it.
 CHAIN_VARIABLE = "KONVAMI_CHAIN"
 
@@ -278,11 +281,13 @@ def video_avatar_settings(raw: str | None) -> VideoAvatars:
 
 @dataclass(frozen=True)
 class HalvesSettings:
-    """Two Halves (section 7, phase 1). Off until turned on; while it is in the testers' hands
-    (`open_to_testers`) every learner may play, else the owners only."""
+    """Two Halves (section 7). Off until turned on; while it is in the testers' hands
+    (`open_to_testers`) every learner may play, else the owners only. `strangers` (phase 2)
+    lets adults who do not know each other be matched: off until the legal review."""
 
     enabled: bool = False
     open_to_testers: bool = False
+    strangers: bool = False
 
 
 class _Halves(BaseModel):
@@ -290,6 +295,7 @@ class _Halves(BaseModel):
 
     enabled: bool = False
     open_to_testers: bool = False
+    strangers: bool = False
 
 
 def halves_settings(raw: str | None) -> HalvesSettings:
@@ -300,16 +306,26 @@ def halves_settings(raw: str | None) -> HalvesSettings:
         parsed = _Halves.model_validate(json.loads(raw))
     except (ValueError, ValidationError) as error:
         raise RuntimeError(f"{HALVES_VARIABLE} is not valid") from error
-    return HalvesSettings(parsed.enabled, parsed.open_to_testers)
+    return HalvesSettings(parsed.enabled, parsed.open_to_testers, parsed.strangers)
 
 
-def chain_settings(raw: str | None) -> HalvesSettings:
-    """The story chain's switches from the `KONVAMI_CHAIN` JSON, the same shape as Two Halves'.
-    Without it, the story chain is off."""
+def _game_settings(raw: str | None, variable: str) -> HalvesSettings:
+    """A social game's two switches (`enabled`, `open_to_testers`) from its JSON variable, the
+    same shape as Two Halves'. Without it, the game is off. No strangers switch of its own."""
     if not raw:
         return HalvesSettings()
     try:
         parsed = _Halves.model_validate(json.loads(raw))
     except (ValueError, ValidationError) as error:
-        raise RuntimeError(f"{CHAIN_VARIABLE} is not valid") from error
+        raise RuntimeError(f"{variable} is not valid") from error
     return HalvesSettings(parsed.enabled, parsed.open_to_testers)
+
+
+def radio_settings(raw: str | None) -> HalvesSettings:
+    """Radio Konvami's switches from `KONVAMI_RADIO`: a show is heard by every listener."""
+    return _game_settings(raw, RADIO_VARIABLE)
+
+
+def chain_settings(raw: str | None) -> HalvesSettings:
+    """The story chain's switches from `KONVAMI_CHAIN`: friends, duos and AI characters only."""
+    return _game_settings(raw, CHAIN_VARIABLE)

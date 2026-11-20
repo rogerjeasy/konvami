@@ -121,6 +121,18 @@ friend they invite by code (adults only); strangers are never matched.
 | H5  | Answer the store forms for user content: App Review notes on the safeguards (check before delivery, report, block, no messages, codenames), Play's Data safety ("Audio" also heard by another user at the learner's request)     | needs owner |
 | H6  | A trained second moderator and a written escalation path before the 16–17 band opens (phase 3)                                                                                                                                   | needs owner |
 
+## I. Radio Konvami (section 8)
+
+A daily call-in show, off until switched on. Adults who agreed are aired after the check; minors
+listen and practise in private.
+
+| #   | Step                                                                                                                                                                                                       | Status      |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| I1  | Plan and apply the Terraform: `KONVAMI_RADIO` for the API and the 30-day `delete-radio-audio` rule on the media bucket (`infra/modules/media`). Turn it on with `radio = { enabled = true }`, owners first | needs owner |
+| I2  | **Legal review before anyone outside the owners and testers is aired**: one learner's voice heard by many (GDPR and revFADP, the DSA's notice and action), as for H4                                       | needs owner |
+| I3  | Read and decide the **held calls and reports** on 6.15 within 24 hours, every day, while the show is open; take a show off air if needed                                                                   | needs owner |
+| I4  | Answer the store forms: App Review notes on the safeguards (check before airing, report, moderated host, codenames, no comments), Play's Data safety ("Audio" shared with other users)                     | needs owner |
+
 ## Critical path
 
 G1 (14 days) cannot start until a Play account exists (A2), a closed-test build exists (C1, C2, C9)

@@ -288,3 +288,20 @@ def test_a_two_halves_clue_or_a_held_move_opens_the_case() -> None:
             {"open": "halves", "id": case},
         ),
     ]
+
+
+def test_a_call_that_aired_opens_the_show_and_a_held_one_its_report() -> None:
+    world = World()
+    phone(world)
+    episode = "33333333-3333-4333-8333-333333333333"
+    call = "44444444-4444-4444-8444-444444444444"
+
+    world.push.radio(USER, UUID(episode), "aired")
+    world.push.radio(USER, UUID(call), "held")
+
+    assert [dict(m.data) for m in world.push_sender.sent] == [
+        {"open": "radio", "id": episode},
+        {"open": "radio_call", "id": call},
+    ]
+    aired = "Ton appel passe aujourd’hui sur Radio Konvami. Écoute !"
+    assert world.push_sender.sent[0].body == aired

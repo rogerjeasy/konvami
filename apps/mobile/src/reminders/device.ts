@@ -14,6 +14,11 @@ export type OpenTarget =
   | { open: 'call'; partner: string; ask?: string }
   /** A Two Halves case: a clue arrived, or the learner's move was held (7.4). */
   | { open: 'halves'; id: string }
+  /** Two Halves' hub: a partner search ended, or the owner wrote about a move (7.1, 7.3). */
+  | { open: 'halvesHub' }
+  /** Radio Konvami: the learner's call aired in a show (8.2), or was held (its report, 8.4). */
+  | { open: 'radio'; id: string }
+  | { open: 'radio_call'; id: string }
   /** A story-chain story: the learner's turn, a line held, a seat given, the radio play (9.5). */
   | { open: 'chain'; id: string }
   | { open: 'today' };
@@ -28,15 +33,10 @@ export function openTargetOf(data: Record<string, unknown> | undefined): OpenTar
       ? { open: 'call', partner: data.partner, ask: data.ask }
       : { open: 'call', partner: data.partner };
   }
-  if (
-    id &&
-    (data?.open === 'report' ||
-      data?.open === 'simulation' ||
-      data?.open === 'halves' ||
-      data?.open === 'chain')
-  ) {
-    return { open: data.open, id };
-  }
+  const withId = ['report', 'simulation', 'halves', 'radio', 'radio_call', 'chain'] as const;
+  const open = withId.find((one) => one === data?.open);
+  if (id && open) return { open, id };
+  if (data?.open === 'halves') return { open: 'halvesHub' };
   return { open: 'today' };
 }
 

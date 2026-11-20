@@ -54,6 +54,14 @@ const ICONS = {
       <Path d="M12 19v4M8 23h8" />
     </>
   ),
+  /** On air: a signal going out both ways (Radio Konvami, 8.x). */
+  radio: (
+    <>
+      <Circle cx="12" cy="12" r="2" />
+      <Path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49" />
+      <Path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14" />
+    </>
+  ),
   volume: (
     <>
       <Path d="M11 5L6 9H2v6h4l5 4V5z" />

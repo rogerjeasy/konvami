@@ -27,6 +27,16 @@ import { chainStoryRoute, ROUTES } from '@/lib/routes';
 import { useTheme } from '@/theme';
 import { HeardLine, ListenButton, turnFailureKey } from './parts';
 
+// The social reasons of a report, the same in every game (7.10, 8.x, 9.10).
+const REPORT_REASONS: ChainReportReason[] = [
+  'harassment',
+  'sexual',
+  'personal',
+  'hate',
+  'off_topic',
+  'other',
+];
+
 /**
  * 9.4 Your turn: the line before (heard first, its words behind a tap) and the narrator's summary
  * of the story so far, then the learner's own line: recorded, listened back, recorded again if
@@ -194,7 +204,22 @@ export function ChainTurnScreen() {
               {t(turnFailureKey(step.code))}
             </NoticeBox>
           ) : null}
-          <ReportSheet visible={reporting} onSend={report} onClose={() => setReporting(false)} />
+          <ReportSheet
+            visible={reporting}
+            title={t('chain.report.title')}
+            body={t('halves.report.body')}
+            reasons={REPORT_REASONS}
+            // The game's own words for off the topic; the other reasons are Two Halves'.
+            reasonLabel={(one) =>
+              one === 'off_topic' ? t('chain.report.offTopic') : t(`halves.report.reason.${one}`)
+            }
+            noteLabel={t('halves.report.note')}
+            sendLabel={t('halves.report.send')}
+            // Only a learner can be blocked; an AI character's line is reported, never blocked.
+            blockLabel={before.ai ? undefined : t('halves.report.block')}
+            onSend={report}
+            onClose={() => setReporting(false)}
+          />
         </>
       )}
     </StepLayout>

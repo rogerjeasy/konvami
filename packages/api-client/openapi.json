@@ -165,6 +165,15 @@
         "title": "AnsweredOut",
         "type": "object"
       },
+      "ApplauseCard": {
+        "enum": [
+          "bravo",
+          "ha_ha",
+          "me_too",
+          "wow"
+        ],
+        "type": "string"
+      },
       "AssessedWordOut": {
         "additionalProperties": false,
         "properties": {
@@ -268,6 +277,19 @@
           "exam"
         ],
         "title": "CallPurpose",
+        "type": "string"
+      },
+      "CallStatusOut": {
+        "enum": [
+          "checking",
+          "ready",
+          "aired",
+          "not_picked",
+          "private",
+          "held",
+          "failed",
+          "removed"
+        ],
         "type": "string"
       },
       "CaptionLookupIn": {
@@ -4053,6 +4075,25 @@
         "title": "HalvesBlockOut",
         "type": "object"
       },
+      "HalvesBridgeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "step": {
+            "enum": [
+              "slower",
+              "simpler",
+              "gist"
+            ],
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step"
+        ],
+        "title": "HalvesBridgeIn",
+        "type": "object"
+      },
       "HalvesCaseOut": {
         "additionalProperties": false,
         "description": "A case as one seat sees it (7.4 to 7.9).",
@@ -4076,6 +4117,10 @@
             "title": "Canhandover",
             "type": "boolean"
           },
+          "duo": {
+            "title": "Duo",
+            "type": "boolean"
+          },
           "ending": {
             "anyOf": [
               {
@@ -4089,6 +4134,10 @@
           },
           "final": {
             "$ref": "#/components/schemas/HalvesFinalOut"
+          },
+          "fromImport": {
+            "title": "Fromimport",
+            "type": "boolean"
           },
           "hears": {
             "title": "Hears",
@@ -4140,6 +4189,10 @@
             "title": "Rounds",
             "type": "array"
           },
+          "sameLanguage": {
+            "title": "Samelanguage",
+            "type": "boolean"
+          },
           "seat": {
             "enum": [
               "A",
@@ -4167,6 +4220,14 @@
             "title": "Title",
             "type": "string"
           },
+          "told": {
+            "title": "Told",
+            "type": "integer"
+          },
+          "understoodFirst": {
+            "title": "Understoodfirst",
+            "type": "integer"
+          },
           "veilDefault": {
             "title": "Veildefault",
             "type": "boolean"
@@ -4192,7 +4253,12 @@
           "recap",
           "recapStatus",
           "veilDefault",
-          "ending"
+          "ending",
+          "understoodFirst",
+          "told",
+          "sameLanguage",
+          "fromImport",
+          "duo"
         ],
         "title": "HalvesCaseOut",
         "type": "object"
@@ -4293,7 +4359,9 @@
           "action": {
             "enum": [
               "remove",
-              "dismiss"
+              "dismiss",
+              "warn",
+              "suspend"
             ],
             "title": "Action",
             "type": "string"
@@ -4377,6 +4445,21 @@
         "title": "HalvesFinalOut",
         "type": "object"
       },
+      "HalvesImportCaseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "importId": {
+            "format": "uuid",
+            "title": "Importid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "importId"
+        ],
+        "title": "HalvesImportCaseIn",
+        "type": "object"
+      },
       "HalvesInviteIn": {
         "additionalProperties": false,
         "properties": {
@@ -4453,6 +4536,38 @@
         "title": "HalvesJoinIn",
         "type": "object"
       },
+      "HalvesLookOut": {
+        "additionalProperties": false,
+        "description": "What looking for a partner gave: a case when someone fitted at once, else the search.",
+        "properties": {
+          "case": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HalvesCaseOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "search": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HalvesSearchOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "case",
+          "search"
+        ],
+        "title": "HalvesLookOut",
+        "type": "object"
+      },
       "HalvesMineOut": {
         "additionalProperties": false,
         "properties": {
@@ -4467,6 +4582,13 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "nudges": {
+            "items": {
+              "$ref": "#/components/schemas/HalvesNudgeOut"
+            },
+            "title": "Nudges",
+            "type": "array"
           },
           "reaction": {
             "anyOf": [
@@ -4525,7 +4647,8 @@
           "veiled",
           "reaction",
           "understood",
-          "corrections"
+          "corrections",
+          "nudges"
         ],
         "title": "HalvesMineOut",
         "type": "object"
@@ -4614,6 +4737,41 @@
         "title": "HalvesMoveOut",
         "type": "object"
       },
+      "HalvesNudgeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "HalvesNudgeIn",
+        "type": "object"
+      },
+      "HalvesNudgeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "by": {
+            "title": "By",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "by"
+        ],
+        "title": "HalvesNudgeOut",
+        "type": "object"
+      },
       "HalvesOptionIn": {
         "additionalProperties": false,
         "properties": {
@@ -4632,7 +4790,7 @@
       },
       "HalvesOut": {
         "additionalProperties": false,
-        "description": "The hub (7.1): whether Two Halves is open to the learner, their profile, cases, the week's\ncase, duos, invite and blocks, and the choices of the join form.",
+        "description": "The hub (7.1): whether Two Halves is open to the learner, their profile, cases, the week's\ncase, duos, invite and blocks, and the choices of the join form. Phase 2: whether they may\nlook for a stranger, their search, and the clues understood at the first try (private).",
         "properties": {
           "available": {
             "title": "Available",
@@ -4700,6 +4858,23 @@
               }
             ]
           },
+          "search": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HalvesSearchOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "searchHours": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Searchhours",
+            "type": "array"
+          },
           "seasonId": {
             "title": "Seasonid",
             "type": "string"
@@ -4711,6 +4886,18 @@
           "seasonWeek": {
             "title": "Seasonweek",
             "type": "string"
+          },
+          "strangers": {
+            "title": "Strangers",
+            "type": "boolean"
+          },
+          "told": {
+            "title": "Told",
+            "type": "integer"
+          },
+          "understoodFirst": {
+            "title": "Understoodfirst",
+            "type": "integer"
           }
         },
         "required": [
@@ -4725,7 +4912,12 @@
           "blocks",
           "cities",
           "countries",
-          "nativeLanguages"
+          "nativeLanguages",
+          "strangers",
+          "search",
+          "searchHours",
+          "understoodFirst",
+          "told"
         ],
         "title": "HalvesOut",
         "type": "object"
@@ -4759,6 +4951,30 @@
           "place"
         ],
         "title": "HalvesPartnerOut",
+        "type": "object"
+      },
+      "HalvesPointOut": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "latitude",
+          "longitude"
+        ],
+        "title": "HalvesPointOut",
         "type": "object"
       },
       "HalvesProfileChangeIn": {
@@ -4903,7 +5119,8 @@
           "kind": {
             "enum": [
               "held",
-              "report"
+              "report",
+              "nudge"
             ],
             "title": "Kind",
             "type": "string"
@@ -4946,6 +5163,14 @@
             "title": "Sender",
             "type": "string"
           },
+          "strikes": {
+            "title": "Strikes",
+            "type": "integer"
+          },
+          "suspended": {
+            "title": "Suspended",
+            "type": "boolean"
+          },
           "transcript": {
             "title": "Transcript",
             "type": "string"
@@ -4961,7 +5186,9 @@
           "reporter",
           "note",
           "band",
-          "createdAt"
+          "createdAt",
+          "strikes",
+          "suspended"
         ],
         "title": "HalvesQueueItemOut",
         "type": "object"
@@ -5127,6 +5354,115 @@
         "title": "HalvesRoundOut",
         "type": "object"
       },
+      "HalvesSearchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "hours": {
+            "default": 12,
+            "maximum": 48.0,
+            "minimum": 2.0,
+            "title": "Hours",
+            "type": "integer"
+          },
+          "remind": {
+            "default": true,
+            "title": "Remind",
+            "type": "boolean"
+          }
+        },
+        "title": "HalvesSearchIn",
+        "type": "object"
+      },
+      "HalvesSearchOut": {
+        "additionalProperties": false,
+        "description": "A search for a partner (7.3).",
+        "properties": {
+          "offerAi": {
+            "title": "Offerai",
+            "type": "boolean"
+          },
+          "remind": {
+            "title": "Remind",
+            "type": "boolean"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "until": {
+            "format": "date-time",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "since",
+          "until",
+          "remind",
+          "offerAi"
+        ],
+        "title": "HalvesSearchOut",
+        "type": "object"
+      },
+      "HalvesShareOut": {
+        "additionalProperties": false,
+        "description": "The share card (7.15): no voice, no words of the learner, no name.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "codename": {
+            "title": "Codename",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CaseStatusOut"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "told": {
+            "title": "Told",
+            "type": "integer"
+          },
+          "understoodFirst": {
+            "title": "Understoodfirst",
+            "type": "integer"
+          },
+          "week": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week"
+          }
+        },
+        "required": [
+          "title",
+          "week",
+          "status",
+          "understoodFirst",
+          "told",
+          "code",
+          "codename"
+        ],
+        "title": "HalvesShareOut",
+        "type": "object"
+      },
       "HalvesStartIn": {
         "additionalProperties": false,
         "properties": {
@@ -5151,6 +5487,130 @@
         "title": "HalvesStartIn",
         "type": "object"
       },
+      "HalvesStatsOut": {
+        "additionalProperties": false,
+        "description": "The owner's numbers for the last 30 days (6.15).",
+        "properties": {
+          "blocksPer1000Cases": {
+            "title": "Blocksper1000Cases",
+            "type": "number"
+          },
+          "cases": {
+            "title": "Cases",
+            "type": "integer"
+          },
+          "heldPer1000": {
+            "title": "Heldper1000",
+            "type": "number"
+          },
+          "medianDecisionHours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mediandecisionhours"
+          },
+          "moves": {
+            "title": "Moves",
+            "type": "integer"
+          },
+          "nudges": {
+            "title": "Nudges",
+            "type": "integer"
+          },
+          "nudgesDropped": {
+            "title": "Nudgesdropped",
+            "type": "integer"
+          },
+          "openItems": {
+            "title": "Openitems",
+            "type": "integer"
+          },
+          "reportsPer1000": {
+            "title": "Reportsper1000",
+            "type": "number"
+          }
+        },
+        "required": [
+          "moves",
+          "cases",
+          "heldPer1000",
+          "reportsPer1000",
+          "blocksPer1000Cases",
+          "nudges",
+          "nudgesDropped",
+          "medianDecisionHours",
+          "openItems"
+        ],
+        "title": "HalvesStatsOut",
+        "type": "object"
+      },
+      "HalvesStrandOut": {
+        "additionalProperties": false,
+        "properties": {
+          "cases": {
+            "title": "Cases",
+            "type": "integer"
+          },
+          "codename": {
+            "title": "Codename",
+            "type": "string"
+          },
+          "duo": {
+            "title": "Duo",
+            "type": "boolean"
+          },
+          "point": {
+            "$ref": "#/components/schemas/HalvesPointOut"
+          }
+        },
+        "required": [
+          "codename",
+          "point",
+          "cases",
+          "duo"
+        ],
+        "title": "HalvesStrandOut",
+        "type": "object"
+      },
+      "HalvesStrandsOut": {
+        "additionalProperties": false,
+        "description": "The strand map (7.14): nothing finer than a city, only what each chose to share.",
+        "properties": {
+          "me": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HalvesPointOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strands": {
+            "items": {
+              "$ref": "#/components/schemas/HalvesStrandOut"
+            },
+            "title": "Strands",
+            "type": "array"
+          },
+          "unplaced": {
+            "title": "Unplaced",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "me",
+          "strands",
+          "unplaced"
+        ],
+        "title": "HalvesStrandsOut",
+        "type": "object"
+      },
       "HalvesTheirsOut": {
         "additionalProperties": false,
         "properties": {
@@ -5161,6 +5621,29 @@
             "title": "Answers",
             "type": "array"
           },
+          "bridge": {
+            "title": "Bridge",
+            "type": "boolean"
+          },
+          "canNudge": {
+            "title": "Cannudge",
+            "type": "boolean"
+          },
+          "caption": {
+            "title": "Caption",
+            "type": "string"
+          },
+          "gist": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gist"
+          },
           "hidden": {
             "title": "Hidden",
             "type": "boolean"
@@ -5169,6 +5652,10 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "nudged": {
+            "title": "Nudged",
+            "type": "boolean"
           },
           "options": {
             "items": {
@@ -5192,6 +5679,17 @@
             ],
             "title": "Reaction"
           },
+          "simpler": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simpler"
+          },
           "solution": {
             "anyOf": [
               {
@@ -5211,7 +5709,13 @@
           "options",
           "answers",
           "solution",
-          "reaction"
+          "reaction",
+          "caption",
+          "canNudge",
+          "nudged",
+          "bridge",
+          "simpler",
+          "gist"
         ],
         "title": "HalvesTheirsOut",
         "type": "object"
@@ -6729,7 +7233,8 @@
         "enum": [
           "ai",
           "friend",
-          "duo"
+          "duo",
+          "match"
         ],
         "type": "string"
       },
@@ -8429,6 +8934,25 @@
         "title": "PlacementStatus",
         "type": "string"
       },
+      "PlanCaseOut": {
+        "additionalProperties": false,
+        "properties": {
+          "templateId": {
+            "title": "Templateid",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "templateId",
+          "title"
+        ],
+        "title": "PlanCaseOut",
+        "type": "object"
+      },
       "PlanOut": {
         "additionalProperties": false,
         "description": "The learner's plan (spec \u00a76.21.2): what they have and what it includes.",
@@ -9479,6 +10003,816 @@
           "resolvedAt"
         ],
         "title": "QueuedFlagOut",
+        "type": "object"
+      },
+      "RadioApplauseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApplauseCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "card"
+        ],
+        "title": "RadioApplauseIn",
+        "type": "object"
+      },
+      "RadioArchiveOut": {
+        "additionalProperties": false,
+        "properties": {
+          "episodes": {
+            "items": {
+              "$ref": "#/components/schemas/RadioEpisodeCardOut"
+            },
+            "title": "Episodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "episodes"
+        ],
+        "title": "RadioArchiveOut",
+        "type": "object"
+      },
+      "RadioAudioOut": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "RadioAudioOut",
+        "type": "object"
+      },
+      "RadioCallIn": {
+        "additionalProperties": false,
+        "properties": {
+          "audio": {
+            "maxLength": 2000000,
+            "minLength": 1,
+            "title": "Audio",
+            "type": "string"
+          },
+          "durationMs": {
+            "anyOf": [
+              {
+                "maximum": 600000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durationms"
+          },
+          "format": {
+            "maxLength": 8,
+            "minLength": 1,
+            "title": "Format",
+            "type": "string"
+          },
+          "veiled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Veiled"
+          }
+        },
+        "required": [
+          "audio",
+          "format"
+        ],
+        "title": "RadioCallIn",
+        "type": "object"
+      },
+      "RadioCallOut": {
+        "additionalProperties": false,
+        "description": "One of the learner's own calls, privately (8.4).",
+        "properties": {
+          "airedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Airedat"
+          },
+          "corrections": {
+            "items": {
+              "$ref": "#/components/schemas/RadioCorrectionOut"
+            },
+            "title": "Corrections",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "episodeId": {
+            "format": "uuid",
+            "title": "Episodeid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "playable": {
+            "title": "Playable",
+            "type": "boolean"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CallStatusOut"
+          },
+          "transcript": {
+            "title": "Transcript",
+            "type": "string"
+          },
+          "veiled": {
+            "title": "Veiled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "episodeId",
+          "day",
+          "question",
+          "status",
+          "transcript",
+          "reasons",
+          "veiled",
+          "corrections",
+          "airedAt",
+          "createdAt",
+          "playable"
+        ],
+        "title": "RadioCallOut",
+        "type": "object"
+      },
+      "RadioChangeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "veilDefault": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Veildefault"
+          }
+        },
+        "title": "RadioChangeIn",
+        "type": "object"
+      },
+      "RadioCorrectionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "certain": {
+            "title": "Certain",
+            "type": "boolean"
+          },
+          "corrected": {
+            "title": "Corrected",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          }
+        },
+        "required": [
+          "original",
+          "corrected",
+          "explanation",
+          "certain"
+        ],
+        "title": "RadioCorrectionOut",
+        "type": "object"
+      },
+      "RadioDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "remove",
+              "dismiss"
+            ],
+            "title": "Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "RadioDecisionIn",
+        "type": "object"
+      },
+      "RadioEpisodeCardOut": {
+        "additionalProperties": false,
+        "properties": {
+          "aiCallers": {
+            "title": "Aicallers",
+            "type": "integer"
+          },
+          "airsAt": {
+            "format": "date-time",
+            "title": "Airsat",
+            "type": "string"
+          },
+          "callers": {
+            "title": "Callers",
+            "type": "integer"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "day",
+          "question",
+          "host",
+          "callers",
+          "aiCallers",
+          "mine",
+          "airsAt"
+        ],
+        "title": "RadioEpisodeCardOut",
+        "type": "object"
+      },
+      "RadioEpisodeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "airsAt": {
+            "format": "date-time",
+            "title": "Airsat",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "questionHelp": {
+            "title": "Questionhelp",
+            "type": "string"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/RadioSegmentOut"
+            },
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "day",
+          "language",
+          "question",
+          "questionHelp",
+          "host",
+          "segments",
+          "airsAt"
+        ],
+        "title": "RadioEpisodeOut",
+        "type": "object"
+      },
+      "RadioJoinIn": {
+        "additionalProperties": false,
+        "properties": {
+          "veilDefault": {
+            "default": true,
+            "title": "Veildefault",
+            "type": "boolean"
+          },
+          "voiceConsent": {
+            "title": "Voiceconsent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "voiceConsent"
+        ],
+        "title": "RadioJoinIn",
+        "type": "object"
+      },
+      "RadioNextShowOut": {
+        "additionalProperties": false,
+        "properties": {
+          "airsAt": {
+            "format": "date-time",
+            "title": "Airsat",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "episodeId": {
+            "format": "uuid",
+            "title": "Episodeid",
+            "type": "string"
+          },
+          "myCall": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RadioCallOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "questionHelp": {
+            "title": "Questionhelp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "episodeId",
+          "day",
+          "airsAt",
+          "question",
+          "questionHelp",
+          "myCall"
+        ],
+        "title": "RadioNextShowOut",
+        "type": "object"
+      },
+      "RadioOut": {
+        "additionalProperties": false,
+        "description": "The hub (8.1): whether the show is open to the learner, their profile, the show on air,\nthe next show's question and their recent calls.",
+        "properties": {
+          "aired": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RadioEpisodeCardOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "callSeconds": {
+            "title": "Callseconds",
+            "type": "integer"
+          },
+          "calls": {
+            "items": {
+              "$ref": "#/components/schemas/RadioCallOut"
+            },
+            "title": "Calls",
+            "type": "array"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "nextShow": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RadioNextShowOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "onAir": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RadioEpisodeCardOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RadioProfileOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strikes": {
+            "title": "Strikes",
+            "type": "integer"
+          },
+          "suspended": {
+            "title": "Suspended",
+            "type": "boolean"
+          },
+          "warmingUp": {
+            "title": "Warmingup",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available",
+          "profile",
+          "language",
+          "onAir",
+          "warmingUp",
+          "nextShow",
+          "aired",
+          "calls",
+          "strikes",
+          "suspended",
+          "callSeconds"
+        ],
+        "title": "RadioOut",
+        "type": "object"
+      },
+      "RadioProfileOut": {
+        "additionalProperties": false,
+        "properties": {
+          "agreed": {
+            "title": "Agreed",
+            "type": "boolean"
+          },
+          "band": {
+            "enum": [
+              "adult",
+              "minor"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "codename": {
+            "title": "Codename",
+            "type": "string"
+          },
+          "veilDefault": {
+            "title": "Veildefault",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "codename",
+          "band",
+          "veilDefault",
+          "agreed"
+        ],
+        "title": "RadioProfileOut",
+        "type": "object"
+      },
+      "RadioQueueItemOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ai": {
+            "title": "Ai",
+            "type": "boolean"
+          },
+          "band": {
+            "enum": [
+              "adult",
+              "minor"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "episodeId": {
+            "format": "uuid",
+            "title": "Episodeid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "held",
+              "report"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "reporter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporter"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "string"
+          },
+          "transcript": {
+            "title": "Transcript",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "episodeId",
+          "transcript",
+          "reasons",
+          "speaker",
+          "ai",
+          "reporter",
+          "note",
+          "band",
+          "day",
+          "createdAt"
+        ],
+        "title": "RadioQueueItemOut",
+        "type": "object"
+      },
+      "RadioQueueOut": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RadioQueueItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RadioQueueOut",
+        "type": "object"
+      },
+      "RadioReportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason": {
+            "enum": [
+              "harassment",
+              "sexual",
+              "personal",
+              "hate",
+              "off_topic",
+              "other"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RadioReportIn",
+        "type": "object"
+      },
+      "RadioRetriedOut": {
+        "additionalProperties": false,
+        "properties": {
+          "corrected": {
+            "title": "Corrected",
+            "type": "string"
+          },
+          "heard": {
+            "title": "Heard",
+            "type": "string"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          },
+          "right": {
+            "title": "Right",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "heard",
+          "right",
+          "original",
+          "corrected"
+        ],
+        "title": "RadioRetriedOut",
+        "type": "object"
+      },
+      "RadioSegmentOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ai": {
+            "title": "Ai",
+            "type": "boolean"
+          },
+          "applause": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/ApplauseCard"
+            },
+            "title": "Applause",
+            "type": "object"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "host",
+              "call",
+              "ai_call"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mine": {
+            "title": "Mine",
+            "type": "boolean"
+          },
+          "myApplause": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApplauseCard"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "playable": {
+            "title": "Playable",
+            "type": "boolean"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "kind",
+          "speaker",
+          "ai",
+          "text",
+          "playable",
+          "mine",
+          "applause",
+          "myApplause",
+          "hidden"
+        ],
+        "title": "RadioSegmentOut",
         "type": "object"
       },
       "ReadinessOut": {
@@ -12598,6 +13932,16 @@
               }
             ]
           },
+          "halves": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanCaseOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "minutes": {
             "title": "Minutes",
             "type": "integer"
@@ -12663,7 +14007,8 @@
           "reason",
           "missed",
           "exam",
-          "upcoming"
+          "upcoming",
+          "halves"
         ],
         "title": "WeekPlanOut",
         "type": "object"
@@ -18089,6 +19434,105 @@
         "summary": "Start Case"
       }
     },
+    "/v1/halves/cases/import": {
+      "post": {
+        "description": "A case against the AI written from one of the learner's course imports (7.17).",
+        "operationId": "startHalvesImportCase",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HalvesImportCaseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalvesCaseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Start Import Case"
+      }
+    },
     "/v1/halves/cases/{case_id}": {
       "get": {
         "operationId": "getHalvesCase",
@@ -18829,6 +20273,107 @@
         "summary": "Recap Audio"
       }
     },
+    "/v1/halves/cases/{case_id}/share": {
+      "get": {
+        "description": "What the share card of an ended case shows (7.15).",
+        "operationId": "getHalvesShareCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalvesShareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Share Card"
+      }
+    },
     "/v1/halves/duos/{duo_id}": {
       "delete": {
         "operationId": "removeHalvesDuo",
@@ -19509,6 +21054,228 @@
         "summary": "Move Audio"
       }
     },
+    "/v1/halves/moves/{move_id}/bridge": {
+      "post": {
+        "description": "The Bridge (7.7, same-language mode): slower, then simpler, then the gist.",
+        "operationId": "bridgeHalvesMove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "move_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Move Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HalvesBridgeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalvesCaseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Bridge"
+      }
+    },
+    "/v1/halves/moves/{move_id}/nudge": {
+      "post": {
+        "description": "Suggests a better way to say a move heard (7.7): checked before the speaker sees it.",
+        "operationId": "nudgeHalvesMove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "move_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Move Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HalvesNudgeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalvesCaseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Nudge"
+      }
+    },
     "/v1/halves/moves/{move_id}/reaction": {
       "post": {
         "operationId": "reactToHalvesMove",
@@ -20183,6 +21950,95 @@
         "summary": "Get Queue"
       }
     },
+    "/v1/halves/queue/stats": {
+      "get": {
+        "description": "The owner's numbers for the last 30 days (6.15).",
+        "operationId": "getHalvesStats",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalvesStatsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Stats"
+      }
+    },
     "/v1/halves/queue/{kind}/{item_id}": {
       "post": {
         "operationId": "decideHalvesItem",
@@ -20194,7 +22050,8 @@
             "schema": {
               "enum": [
                 "held",
-                "report"
+                "report",
+                "nudge"
               ],
               "title": "Kind",
               "type": "string"
@@ -20297,6 +22154,273 @@
           }
         },
         "summary": "Decide"
+      }
+    },
+    "/v1/halves/search": {
+      "delete": {
+        "operationId": "stopHalvesSearch",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Stop Looking"
+      },
+      "post": {
+        "description": "Looks for a stranger to play with (7.3): a case at once when someone fits.",
+        "operationId": "lookForHalvesPartner",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HalvesSearchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalvesLookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Look"
+      }
+    },
+    "/v1/halves/strands": {
+      "get": {
+        "description": "The strand map (7.14).",
+        "operationId": "getHalvesStrands",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HalvesStrandsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Strands"
       }
     },
     "/v1/home": {
@@ -24722,6 +26846,1918 @@
           }
         },
         "summary": "Remove Push Device"
+      }
+    },
+    "/v1/radio": {
+      "get": {
+        "description": "The show's hub (8.1).",
+        "operationId": "getRadio",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Radio"
+      }
+    },
+    "/v1/radio/calls": {
+      "post": {
+        "description": "Calls in to the next show (8.3): written down at once, checked before anyone else\nhears it.",
+        "operationId": "sendRadioCall",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadioCallIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioCallOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Send Call"
+      }
+    },
+    "/v1/radio/calls/{call_id}": {
+      "delete": {
+        "description": "Takes a call back, also out of a show it aired in.",
+        "operationId": "withdrawRadioCall",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Withdraw Call"
+      },
+      "get": {
+        "description": "One of the learner's calls, privately (8.4).",
+        "operationId": "getRadioCall",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioCallOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Call"
+      }
+    },
+    "/v1/radio/calls/{call_id}/audio": {
+      "get": {
+        "operationId": "getRadioCallAudio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioAudioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Call Audio"
+      }
+    },
+    "/v1/radio/calls/{call_id}/corrections/{index}/card": {
+      "post": {
+        "description": "Keeps a confirmed correction as a card.",
+        "operationId": "saveRadioCorrectionCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Save Card"
+      }
+    },
+    "/v1/radio/calls/{call_id}/corrections/{index}/retry": {
+      "post": {
+        "description": "\"Say it better\" on a confirmed correction of the learner's call.",
+        "operationId": "sayRadioCorrectionBetter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "call_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Call Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioRetriedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Say Better"
+      }
+    },
+    "/v1/radio/episodes": {
+      "get": {
+        "description": "The last two weeks of shows (8.5).",
+        "operationId": "getRadioArchive",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioArchiveOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Archive"
+      }
+    },
+    "/v1/radio/episodes/{episode_id}": {
+      "get": {
+        "description": "One show (8.2): its playlist, captions and applause.",
+        "operationId": "getRadioEpisode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioEpisodeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Episode"
+      }
+    },
+    "/v1/radio/episodes/{episode_id}/pull": {
+      "post": {
+        "description": "The owner takes a whole show off air.",
+        "operationId": "pullRadioEpisode",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Pull"
+      }
+    },
+    "/v1/radio/episodes/{episode_id}/segments/{index}/applause": {
+      "post": {
+        "description": "One of the four applause cards for a call, or none.",
+        "operationId": "applaudRadioSegment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadioApplauseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioEpisodeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Applaud"
+      }
+    },
+    "/v1/radio/episodes/{episode_id}/segments/{index}/audio": {
+      "get": {
+        "operationId": "getRadioSegmentAudio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioAudioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Segment Audio"
+      }
+    },
+    "/v1/radio/episodes/{episode_id}/segments/{index}/report": {
+      "post": {
+        "description": "Reports a segment: hidden from the learner at once, and queued for the owner.",
+        "operationId": "reportRadioSegment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "episode_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Episode Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadioReportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioEpisodeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Report"
+      }
+    },
+    "/v1/radio/profile": {
+      "delete": {
+        "description": "Withdraws the voice-sharing consent and deletes the learner's calls (8.6).",
+        "operationId": "leaveRadio",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Leave Radio"
+      },
+      "patch": {
+        "operationId": "changeRadio",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadioChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Change Radio"
+      },
+      "put": {
+        "description": "Joins the show, or changes the join answers (8.6).",
+        "operationId": "joinRadio",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadioJoinIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Join Radio"
+      }
+    },
+    "/v1/radio/profile/codename": {
+      "post": {
+        "operationId": "rerollRadioCodename",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Reroll Codename"
+      }
+    },
+    "/v1/radio/queue": {
+      "get": {
+        "description": "The owner's Radio queue (6.15): held calls and reports.",
+        "operationId": "getRadioQueue",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioQueueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Queue"
+      }
+    },
+    "/v1/radio/queue/{kind}/{item_id}": {
+      "post": {
+        "operationId": "decideRadioItem",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "held",
+                "report"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RadioDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Decide"
       }
     },
     "/v1/real-life": {

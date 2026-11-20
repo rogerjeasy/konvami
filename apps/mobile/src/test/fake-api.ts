@@ -1,5 +1,6 @@
 import { createFakeChain, type FakeChainControls } from './fake-chain';
 import { createFakeHalves, type FakeHalvesControls } from './fake-halves';
+import { createFakeRadio, type FakeRadioControls } from './fake-radio';
 import {
   ApiError,
   type Activity,
@@ -196,6 +197,7 @@ export const FAKE_PLAN: WeekPlan = {
   missed: [],
   exam: null,
   upcoming: ['2026-10-10', '2026-10-12', '2026-10-13', '2026-10-15'],
+  halves: null,
 };
 
 /** A saved word, as a word of the day brings it. */
@@ -913,7 +915,8 @@ export function fakeGrammarTopic(id: string): GrammarTopicPage | null {
   };
 }
 
-export interface FakeApi extends ApiClient, FakeHalvesControls, FakeChainControls {
+export interface FakeApi
+  extends ApiClient, FakeHalvesControls, FakeRadioControls, FakeChainControls {
   failNext(method: keyof ApiClient, code: string, field?: string): void;
   /** What the next attempt at saying a correction again is heard as (its corrected words, else). */
   hearsNextRetry(heard: string): void;
@@ -1818,8 +1821,32 @@ export function createFakeApi(): FakeApi {
 
   // Listed, not spread: a spread would read this object's getters once (`deleted`, …).
   const halves = createFakeHalves(record);
+  const radio = createFakeRadio(record);
   const chain = createFakeChain(record);
   return {
+    radioOpen: radio.radioOpen,
+    radioMinor: radio.radioMinor,
+    radioQueued: radio.radioQueued,
+    radioAired: radio.radioAired,
+    getRadio: radio.getRadio,
+    joinRadio: radio.joinRadio,
+    changeRadio: radio.changeRadio,
+    rerollRadioCodename: radio.rerollRadioCodename,
+    leaveRadio: radio.leaveRadio,
+    getRadioArchive: radio.getRadioArchive,
+    getRadioEpisode: radio.getRadioEpisode,
+    getRadioSegmentAudio: radio.getRadioSegmentAudio,
+    applaudRadioSegment: radio.applaudRadioSegment,
+    reportRadioSegment: radio.reportRadioSegment,
+    sendRadioCall: radio.sendRadioCall,
+    getRadioCall: radio.getRadioCall,
+    getRadioCallAudio: radio.getRadioCallAudio,
+    withdrawRadioCall: radio.withdrawRadioCall,
+    sayRadioCorrectionBetter: radio.sayRadioCorrectionBetter,
+    saveRadioCorrectionCard: radio.saveRadioCorrectionCard,
+    getRadioQueue: radio.getRadioQueue,
+    decideRadioItem: radio.decideRadioItem,
+    pullRadioEpisode: radio.pullRadioEpisode,
     getChain: chain.getChain,
     joinChain: chain.joinChain,
     changeChain: chain.changeChain,
@@ -1847,6 +1874,9 @@ export function createFakeApi(): FakeApi {
     chainFinish: chain.chainFinish,
     halvesOpen: halves.halvesOpen,
     halvesHeld: halves.halvesHeld,
+    halvesStrangers: halves.halvesStrangers,
+    halvesMatchNext: halves.halvesMatchNext,
+    halvesSameLanguage: halves.halvesSameLanguage,
     getHalves: halves.getHalves,
     joinHalves: halves.joinHalves,
     changeHalves: halves.changeHalves,
@@ -1872,6 +1902,14 @@ export function createFakeApi(): FakeApi {
     reportHalvesMove: halves.reportHalvesMove,
     getHalvesQueue: halves.getHalvesQueue,
     decideHalvesItem: halves.decideHalvesItem,
+    getHalvesStats: halves.getHalvesStats,
+    lookForHalvesPartner: halves.lookForHalvesPartner,
+    stopHalvesSearch: halves.stopHalvesSearch,
+    getHalvesStrands: halves.getHalvesStrands,
+    getHalvesShareCard: halves.getHalvesShareCard,
+    startHalvesImportCase: halves.startHalvesImportCase,
+    bridgeHalvesMove: halves.bridgeHalvesMove,
+    nudgeHalvesMove: halves.nudgeHalvesMove,
     calls,
     get deleted() {
       return deleted;

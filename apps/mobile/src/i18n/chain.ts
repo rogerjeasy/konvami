@@ -231,6 +231,10 @@ const en = {
   queue: {
     title: 'Story chain',
   },
+  report: {
+    title: 'Report this line',
+    offTopic: 'Nothing to do with the story',
+  },
   failed: {
     unavailable: 'That didn’t work. Try again.',
     too_many_stories: 'You have three stories going. Finish one first.',
@@ -477,6 +481,10 @@ const de: Strings = {
   queue: {
     title: 'Kettengeschichte',
   },
+  report: {
+    title: 'Diesen Satz melden',
+    offTopic: 'Hat nichts mit der Geschichte zu tun',
+  },
   failed: {
     unavailable: 'Das hat nicht geklappt. Versuch es nochmal.',
     too_many_stories: 'Du hast drei Geschichten am Laufen. Beende zuerst eine.',
@@ -722,6 +730,10 @@ const fr: Strings = {
   queue: {
     title: 'Histoire à la chaîne',
   },
+  report: {
+    title: 'Signaler cette phrase',
+    offTopic: 'Rien à voir avec l’histoire',
+  },
   failed: {
     unavailable: 'Ça n’a pas marché. Réessaie.',
     too_many_stories: 'Tu as trois histoires en cours. Termine-en une d’abord.',
@@ -964,6 +976,10 @@ const it: Strings = {
   },
   queue: {
     title: 'Storia a catena',
+  },
+  report: {
+    title: 'Segnala questa frase',
+    offTopic: 'Non c’entra con la storia',
   },
   failed: {
     unavailable: 'Non ha funzionato. Riprova.',

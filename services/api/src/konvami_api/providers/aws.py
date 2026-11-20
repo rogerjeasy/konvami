@@ -151,6 +151,22 @@ class LambdaHalvesStarter:
         )
 
 
+class LambdaRadioStarter:
+    """Has the worker check a Radio Konvami call or build a show, in an invocation of its own:
+    each is a few requests to a model and a few sounds."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, job: str, item_id: UUID) -> None:
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"radio": job, "id": str(item_id)}).encode(),
+        )
+
+
 class LambdaPenPalStarter:
     """Has a pen-pal note or answer written by the worker function, in an invocation of its own:
     writing and speaking it takes longer than an API request may."""

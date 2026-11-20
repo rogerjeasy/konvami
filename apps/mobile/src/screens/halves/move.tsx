@@ -24,9 +24,23 @@ import { staggerDelay } from '@/lib/motion';
 import { backOr } from '@/lib/navigation';
 import { halvesCaseRoute, ROUTES } from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
+import { BridgePanel, Captions, NudgeSheet } from './move-help';
 import { PartnerLine } from './parts';
 
 const REACTIONS: HalvesReaction[] = ['got_it', 'again_slower', 'helped', 'bravo'];
+const REASONS: HalvesReportReason[] = [
+  'harassment',
+  'sexual',
+  'personal',
+  'hate',
+  'off_topic',
+  'other',
+];
+// The Bridge's slower replay plays the move at this rate (the device's playback rate).
+const SLOWER_RATE = 0.75;
+// The longest a move plays (ms): the app stops recording at 90 seconds.
+const MOVE_MS = 90_000;
+
 /**
  * 7.7 A clue the other player sent: play it (the veiled voice when they chose it), react with a
  * template, answer the board's question with what was heard, and report it (7.10).
@@ -41,6 +55,7 @@ export function HalvesMoveScreen() {
   const { state, refresh, set } = useHalvesCase(signedIn ? (id ?? null) : null);
   const [playing, setPlaying] = useState<'idle' | 'loading' | 'playing'>('idle');
   const [reporting, setReporting] = useState(false);
+  const [nudging, setNudging] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => () => clips.stop(), [clips]);
@@ -50,22 +65,33 @@ export function HalvesMoveScreen() {
   const round = found?.rounds.find((r) => r.theirs?.id === move);
   const theirs = round?.theirs ?? null;
 
-  async function play() {
+  async function play(rate = 1) {
     if (!move) return;
     commitFeedback();
     if (playing === 'playing') {
       clips.stop();
       setPlaying('idle');
-      return;
+      if (rate === 1) return;
     }
     setPlaying('loading');
     try {
       const { url } = await api.getHalvesMoveAudio(move);
       setPlaying('playing');
-      clips.play(url, () => setPlaying('idle'));
+      clips.play(url, () => setPlaying('idle'), MOVE_MS, rate);
     } catch {
       setPlaying('idle');
     }
+  }
+
+  async function bridge(step: 'simpler' | 'gist') {
+    if (!move) return;
+    set(await api.bridgeHalvesMove(move, step));
+  }
+
+  async function nudge(text: string) {
+    if (!move) return;
+    set(await api.nudgeHalvesMove(move, text));
+    setNudging(false);
   }
 
   async function react(reaction: HalvesReaction) {
@@ -151,7 +177,17 @@ export function HalvesMoveScreen() {
                   />
                   <Text variant="labelMedium">{t('halves.move.play')}</Text>
                 </View>
+                <Captions text={theirs.caption} />
               </Reveal>
+              {theirs.bridge ? (
+                <Reveal delay={staggerDelay(3)}>
+                  <BridgePanel
+                    theirs={theirs}
+                    onSlower={() => void play(SLOWER_RATE)}
+                    onStep={bridge}
+                  />
+                </Reveal>
+              ) : null}
               <Reveal delay={staggerDelay(3)}>
                 <ChoiceGroup label={t('halves.move.react')} chips>
                   {REACTIONS.map((reaction) => (
@@ -196,7 +232,39 @@ export function HalvesMoveScreen() {
               </Reveal>
             </>
           )}
-          <ReportSheet visible={reporting} onSend={report} onClose={() => setReporting(false)} />
+          {theirs.canNudge && !theirs.hidden ? (
+            <Reveal delay={staggerDelay(5)}>
+              {theirs.nudged ? (
+                <Text variant="small" tone="muted">
+                  {t('halves.nudge.done')}
+                </Text>
+              ) : (
+                <TextButton
+                  tone="primary"
+                  label={t('halves.nudge.action')}
+                  onPress={() => setNudging(true)}
+                />
+              )}
+            </Reveal>
+          ) : null}
+          <NudgeSheet
+            visible={nudging}
+            name={found.partner.name}
+            onSend={nudge}
+            onClose={() => setNudging(false)}
+          />
+          <ReportSheet
+            visible={reporting}
+            title={t('halves.report.title')}
+            body={t('halves.report.body')}
+            reasons={REASONS}
+            reasonLabel={(one) => t(`halves.report.reason.${one}`)}
+            noteLabel={t('halves.report.note')}
+            sendLabel={t('halves.report.send')}
+            blockLabel={t('halves.report.block')}
+            onSend={report}
+            onClose={() => setReporting(false)}
+          />
         </>
       )}
     </StepLayout>

@@ -168,7 +168,6 @@ export function ChainMineScreen() {
         ))
       )}
       <SayItBetterSheet
-        conversationId=""
         index={retrying ? retrying.index : null}
         said={retrying?.line.transcript ?? ''}
         sentence={
@@ -179,7 +178,7 @@ export function ChainMineScreen() {
         before={null}
         onClose={() => setRetrying(null)}
         onRight={() => undefined}
-        attempt={(index, recording) =>
+        check={(index, recording) =>
           api.retryChainLine(retrying?.line.id ?? '', index, {
             audio: recording.base64,
             format: recording.format,

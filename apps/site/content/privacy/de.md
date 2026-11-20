@@ -45,6 +45,8 @@ Bitte teile nichts, was du nicht aufgeschrieben haben möchtest, etwa über dein
 
 **Zwei Hälften**, wenn du mitmachst. Ein Deckname, den Konvami für dich erfindet, deine Erstsprache, der Ort, den du zeigen willst (eine Stadt aus einer Liste, ein Land oder nichts), deine Altersgruppe und deine Zustimmung, deine Stimme zu teilen. Für jeden Fall: die Züge, die du aufnimmst (die Aufnahme und was du gesagt hast, Wort für Wort aufgeschrieben), die Ergebnisse der Sicherheitsprüfung, die privaten Korrekturen für dich, deine Antworten auf dem Spielbrett, deine Reaktionen sowie deine Meldungen und Blockierungen. Jeder Zug wird geprüft, bevor ihn jemand hört; ein Zug, den die Prüfung aufhält, wird nie zugestellt und von der Person gelesen, die Konvami betreibt.
 
+**Radio Konvami**, wenn du mitmachst. Ein Codename, den Konvami für dich erfindet, deine Altersgruppe, deine Zustimmung, dass deine Anrufe gesendet werden, und ob du deine Stimme verschleierst. Für jeden Anruf: die Aufnahme und was du gesagt hast, Wort für Wort aufgeschrieben, die Ergebnisse der Sicherheitsprüfung, die privaten Korrekturen für dich sowie die Applauskarten und Meldungen, die du gibst. Jeder Anruf wird geprüft, bevor ihn jemand anderes hört; ein Anruf, den die Prüfung zurückhält, wird nie gesendet und von der Person gelesen, die Konvami betreibt.
+
 ## Wozu, und auf welcher Rechtsgrundlage
 
 - **Um Konvami bereitzustellen** (Konto, Gespräche, Berichte, Karten, Antworten des Tutors, Notizen, Aufnahmen): weil du es von uns möchtest, nach unseren Nutzungsbedingungen (Art. 6 Abs. 1 lit. b DSGVO).
@@ -53,6 +55,8 @@ Bitte teile nichts, was du nicht aufgeschrieben haben möchtest, etwa über dein
 - **Um zu verstehen, wie die App genutzt wird, und um Fehler zu finden**: Absturzberichte auf Grundlage unseres berechtigten Interesses an einer funktionierenden App (Art. 6 Abs. 1 lit. f DSGVO); anonyme Nutzungszahlen nur auf Grundlage deiner Einwilligung (Art. 6 Abs. 1 lit. a), die du jederzeit in Profil › Datenschutz und KI widerrufen kannst.
 - **Damit die andere Person eines Falls von Zwei Hälften deine Züge hört**: auf Grundlage deiner eigenen Einwilligung beim Mitmachen (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie jederzeit unter Zwei Hälften › Einstellungen › Verlassen widerrufen; deine Züge werden dann gelöscht.
 - **Damit Zwei Hälften sicher bleibt** (Prüfung jedes Zugs, Meldungen, Blockierungen): unser berechtigtes Interesse, die Spielenden zu schützen (Art. 6 Abs. 1 lit. f DSGVO).
+- **Um deine Anrufe bei Radio Konvami zu senden**: auf Grundlage deiner eigenen Einwilligung beim Mitmachen (Art. 6 Abs. 1 lit. a DSGVO); gesendet werden nur Erwachsene. Du kannst sie jederzeit unter Radio Konvami › Einstellungen widerrufen; deine Anrufe werden dann gelöscht und aus jeder Sendung genommen.
+- **Um Radio Konvami sicher zu halten** (die Prüfung jedes Anrufs, Meldungen): unser berechtigtes Interesse am Schutz der Zuhörenden und Anrufenden (Art. 6 Abs. 1 lit. f DSGVO).
 
 Konvami nutzt deine Stimme nicht, um dich zu identifizieren. Dein Niveau, deine Korrekturen und Berichte werden von KI ermittelt; sie helfen dir beim Lernen, haben keine rechtliche oder ähnlich erhebliche Wirkung auf dich, und du kannst dein Niveau jederzeit ändern.
 
@@ -79,6 +83,8 @@ Behörden geben wir Daten nur heraus, wenn das Gesetz es verlangt.
 
 **Die andere Person eines Falls von Zwei Hälften** hört deine Züge, als Aufnahme oder, mit „Meine Stimme verschleiern“, deine genauen Worte mit einer neutralen Stimme. Sie sieht deinen Decknamen und den Ort, den du zeigen willst, nie deinen Namen, deine E-Mail-Adresse oder deine Korrekturen. In dieser ersten Phase ist die andere Person eine KI oder jemand, den du mit einem Code eingeladen hast; Fremde werden nicht zusammengebracht. Die Züge werden mit der Moderation von OpenAI und dem KI-Anbieter oben geprüft.
 
+**Andere Zuhörende von Radio Konvami** hören die gesendeten Anrufe, als Aufnahme oder, mit dem Schleier, deine genauen Worte in einer neutralen Stimme, und sehen deinen Codenamen. Deinen Namen, deine E-Mail-Adresse oder deine Korrekturen sehen sie nie. Anrufe werden mit der Moderation von OpenAI und dem oben genannten KI-Anbieter geprüft.
+
 ## Wie lange Daten gespeichert bleiben
 
 - Alles in deinem Konto bleibt gespeichert, bis du dein Konto löschst, außer dem, was du vorher selbst löschst (eine Notiz, eine Karte, dein Foto, deine Aufnahmen).
@@ -88,6 +94,7 @@ Behörden geben wir Daten nur heraus, wenn das Gesetz es verlangt.
 - Ein Foto, dessen Hochladen du beginnst, aber nie bestätigst, wird nach einem Tag gelöscht.
 - OpenAI bewahrt, was es erhält, bis zu 30 Tage auf (siehe oben).
 - Züge von Zwei Hälften (die Aufnahme und ihre Worte) werden 30 Tage nach dem Ende ihres Falls gelöscht, spätestens aber 30 Tage nach der Aufnahme. Wenn du Zwei Hälften verlässt oder dein Konto löschst, werden sie sofort gelöscht; der Fall der anderen Person geht dann mit einer KI weiter.
+- Anrufe bei Radio Konvami (die Aufnahme und ihre Worte) und Sendungen werden 30 Tage nach der Sendung gelöscht. Wenn du deine Zustimmung widerrufst oder dein Konto löschst, werden deine Anrufe sofort gelöscht.
 
 ## Wie deine Daten geschützt sind
 

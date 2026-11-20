@@ -110,6 +110,22 @@ export const ROUTES = {
   halvesSettings: '/halves/settings',
   /** 7.12 Invite a friend, or redeem a friend's code. */
   halvesInvite: '/halves/invite',
+  /** 7.3 Finding a partner: a stranger who speaks the language learned, or an AI. */
+  halvesFind: '/halves/find',
+  /** 7.14 The strand map: the cities of the people the learner played with. */
+  halvesStrands: '/halves/strands',
+  /** 7.17 A case from the learner's own course import. */
+  halvesFromImport: '/halves/from-import',
+  /** 8.1 Radio Konvami: today's show, the next show's question, calling in. */
+  radio: '/radio',
+  /** 8.3 Call in to the next show. */
+  radioCallIn: '/radio/call-in',
+  /** 8.5 The last two weeks of shows. */
+  radioArchive: '/radio/archive',
+  /** 8.6 Radio settings: codename, the Veil, the consent, deleting one's calls. */
+  radioSettings: '/radio/settings',
+  /** 8.7 Join the show: the voice-sharing consent and the Veil. */
+  radioJoin: '/radio/join',
   /** 5.16 Exam centre: simulated speaking tests, their scores and how ready the learner is. */
   exams: '/exams',
   /** 5.14 Grammar map: every topic of the language learned, and how well the learner uses it. */
@@ -392,3 +408,11 @@ export const halvesMineRoute = (id: string, move: string) =>
  */
 export const halvesBriefingRoute = (personaId: string, caseId: string) =>
   callRoute(personaId, { scenario: `halves:${caseId.replaceAll('-', '')}` });
+
+/** 8.2 One Radio Konvami show: the playlist, captions and applause. */
+export const radioEpisodeRoute = (id: string) =>
+  ({ pathname: '/radio/episodes/[id]', params: { id } }) as const satisfies Href;
+
+/** 8.4 One of the learner's own calls, privately: corrections, "Say it better", cards. */
+export const radioCallRoute = (id: string) =>
+  ({ pathname: '/radio/calls/[id]', params: { id } }) as const satisfies Href;

@@ -5,7 +5,7 @@ import { createFakeApi, type FakeApi } from '@/test/fake-api';
 import { FAKE_CHAIN_CODE } from '@/test/fake-chain';
 import { createFakeRecorder } from '@/test/fake-recorder';
 import { renderScreen } from '@/test/render';
-import { ChainQueue } from '@/screens/flags/halves-queue';
+import { ChainQueue } from '@/screens/flags/chain-queue';
 import { ChainScreen } from '.';
 import { ChainInviteScreen, ChainRedeemScreen } from './invite';
 import { ChainJoinScreen } from './join';
@@ -168,6 +168,7 @@ describe('9.4 Your turn', () => {
 
     expect(await screen.findByText('So far')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Report this line' }));
+    expect(await screen.findByText('Nothing to do with the story')).toBeTruthy();
     await fireEvent.press(await screen.findByRole('radio', { name: /Harassment/ }));
     await fireEvent.press(screen.getByRole('button', { name: 'Send report' }));
 

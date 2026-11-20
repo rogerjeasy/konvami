@@ -1,65 +1,69 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import type { HalvesReportReason } from '@konvami/api-client';
 import { Button } from '@/components/button';
 import { ToggleRow } from '@/components/choice-group';
 import { ChoiceRow, Sheet } from '@/components/sheet';
 import { Text } from '@/components/text';
 import { TextField } from '@/components/text-field';
 
-export const REPORT_REASONS: HalvesReportReason[] = [
-  'harassment',
-  'sexual',
-  'personal',
-  'hate',
-  'off_topic',
-  'other',
-];
 // A report's note is a sentence or two (the server takes 300 characters).
-const NOTE_MAX = 300;
+export const REPORT_NOTE_MAX = 300;
 
 /**
- * Reporting what another learner said in a game (7.10 Two Halves, 9.10 the story chain): a reason,
- * an optional note for the owner, and blocking at once. The words are the social reasons of
- * Two Halves (`halves.report.*`), the same in both games.
+ * Reporting something another learner said (a Two Halves move, a call on Radio Konvami): a reason
+ * from a fixed list, an optional note for the owner, and, where it applies, blocking at once.
+ * The strings come from the screen, so the sheet stays the same in every feature.
  */
-export function ReportSheet({
+export function ReportSheet<Reason extends string>({
   visible,
+  title,
+  body,
+  reasons,
+  reasonLabel,
+  noteLabel,
+  sendLabel,
+  blockLabel,
   onSend,
   onClose,
 }: {
   visible: boolean;
-  onSend: (reason: HalvesReportReason, note: string, block: boolean) => Promise<void>;
+  title: string;
+  body: string;
+  reasons: readonly Reason[];
+  reasonLabel: (reason: Reason) => string;
+  noteLabel: string;
+  sendLabel: string;
+  /** Offers blocking the other learner with the report; none: no such switch. */
+  blockLabel?: string;
+  onSend: (reason: Reason, note: string, block: boolean) => Promise<void>;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
-  const [reason, setReason] = useState<HalvesReportReason | null>(null);
+  const [reason, setReason] = useState<Reason | null>(null);
   const [note, setNote] = useState('');
   const [block, setBlock] = useState(false);
   const [sending, setSending] = useState(false);
   return (
-    <Sheet visible={visible} title={t('halves.report.title')} icon="flag" onClose={onClose}>
+    <Sheet visible={visible} title={title} icon="flag" onClose={onClose}>
       <View className="gap-3 pt-1">
-        <Text tone="muted">{t('halves.report.body')}</Text>
-        {REPORT_REASONS.map((one) => (
+        <Text tone="muted">{body}</Text>
+        {reasons.map((one) => (
           <ChoiceRow
             key={one}
-            label={t(`halves.report.reason.${one}`)}
+            label={reasonLabel(one)}
             selected={reason === one}
             onPress={() => setReason(one)}
           />
         ))}
         <TextField
-          label={t('halves.report.note')}
+          label={noteLabel}
           value={note}
           onChangeText={setNote}
-          maxLength={NOTE_MAX}
+          maxLength={REPORT_NOTE_MAX}
           multiline
         />
-        <ToggleRow label={t('halves.report.block')} value={block} onChange={setBlock} />
+        {blockLabel ? <ToggleRow label={blockLabel} value={block} onChange={setBlock} /> : null}
         <Button
-          label={t('halves.report.send')}
+          label={sendLabel}
           disabled={reason === null}
           loading={sending}
           onPress={() => {

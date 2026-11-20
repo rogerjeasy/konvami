@@ -31,7 +31,7 @@ from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import CostService, Level, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
-from konvami_api.domain.director import DirectorService
+from konvami_api.domain.director import CaseSuggestion, DirectorService
 from konvami_api.domain.exam_acoustics import ExamAcoustics
 from konvami_api.domain.exam_centre import ExamScript, ExamService
 from konvami_api.domain.exports import DataExportService
@@ -40,6 +40,7 @@ from konvami_api.domain.flags import FlagService
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.halves import HalvesService
 from konvami_api.domain.halves_check import ModelBrain
+from konvami_api.domain.halves_writer import CaseMaterial, ModelCaseWriter
 from konvami_api.domain.home import HomeService
 from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
@@ -62,6 +63,8 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.radio import RadioService
+from konvami_api.domain.radio_check import ModelBrain as RadioBrain
 from konvami_api.domain.real_life import RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -78,6 +81,7 @@ from konvami_api.domain.two_partners import GuestSpeech
 from konvami_api.domain.video_avatars import VideoAvatarService
 from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
+from konvami_api.domain.voice_messages import MessageChecker
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.web_deletion import WebDeletionService
@@ -91,6 +95,7 @@ from konvami_api.persistence.halves_repository import SqlHalvesRepository
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.motivation_repository import SqlMotivationRepository
 from konvami_api.persistence.pronunciation_repository import SqlPronunciationRepository
+from konvami_api.persistence.radio_repository import SqlRadioRepository
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
     SqlAlertLog,
@@ -141,6 +146,7 @@ from konvami_api.providers.aws import (
     LambdaFitStarter,
     LambdaHalvesStarter,
     LambdaPenPalStarter,
+    LambdaRadioStarter,
     LambdaReportStarter,
     LambdaStoryStarter,
     LambdaWeekReviewStarter,
@@ -168,6 +174,7 @@ from konvami_api.settings import (
     HALVES_VARIABLE,
     PLANS_VARIABLE,
     PREMIUM_VOICES_VARIABLE,
+    RADIO_VARIABLE,
     TEXT_MODELS_VARIABLE,
     VIDEO_AVATARS_VARIABLE,
     VOICE_VARIABLE,
@@ -176,6 +183,7 @@ from konvami_api.settings import (
     halves_settings,
     plan_settings,
     premium_voice_settings,
+    radio_settings,
     text_models,
     video_avatar_settings,
     voice_settings,
@@ -522,6 +530,8 @@ def build_backend(
         allowance=lambda user_id: voice.allowance(user_id),
         call_seconds=voice_config.max_seconds.get(CallPurpose.PRACTICE, 0),
         clock=_now,
+        # Two Halves is built below; the week's case is asked for when a plan is made.
+        halves=lambda user_id, monday: _week_case(halves, user_id, monday),
     )
     voice = VoiceCallService(
         assessment_provider=exams.assessment_provider,
@@ -731,6 +741,54 @@ def build_backend(
         owners=costs.owners,
         clock=_now,
         announce=push.halves,
+        strangers=halves_config.strangers,
+        # A case from a course import is written by the strong model, as the import was.
+        writer=ModelCaseWriter(
+            text_model=text,
+            model=models.report,
+            moderator=OpenAiModerator(openai_key, meter=meter),
+            language_name=CATALOG.english_name,
+            clock=_now,
+        ),
+        material=lambda user_id, import_id: _case_material(course_imports, user_id, import_id),
+    )
+    # The check every learner's voice message passes before other learners hear it, and its
+    # private corrections: Radio Konvami's calls and the story chain's lines. The check is a small
+    # job; corrections judge the learner's language, as a report does.
+    voice_checker = MessageChecker(
+        moderator=OpenAiModerator(openai_key, meter=meter),
+        text_model=text,
+        check_model=models.memory,
+        review_model=models.report,
+        language_name=CATALOG.english_name,
+    )
+    radio_config = radio_settings(environment.get(RADIO_VARIABLE))
+    radio = RadioService(
+        profiles=profiles,
+        accounts=directory,
+        repository=SqlRadioRepository(sql),
+        listener=listener,
+        brain=RadioBrain(
+            checker=voice_checker,
+            text_model=text,
+            write_model=models.week or models.memory,
+            speech=speech,
+            speech_model=models.speech,
+            files=files,
+            language_name=CATALOG.english_name,
+        ),
+        files=files,
+        starter=LambdaRadioStarter(clients.functions, worker),
+        enabled=radio_config.enabled,
+        allowed=lambda user_id: radio_config.open_to_testers or user_id in costs.owners,
+        owners=costs.owners,
+        clock=_now,
+        save_card=lambda user_id, phrase, meaning, explained_in: cards.save_phrase(
+            user_id, phrase, meaning, explained_in
+        ),
+        # Past the month's spend target, the show is put together without a model.
+        affordable=lambda: guard.level() is Level.NORMAL,
+        announce=push.radio,
     )
     chain_config = chain_settings(environment.get(CHAIN_VARIABLE))
     chain = ChainService(
@@ -741,13 +799,10 @@ def build_backend(
         social=halves_store,
         listener=listener,
         narrator=ModelNarrator(
-            moderator=OpenAiModerator(openai_key, meter=meter),
+            checker=voice_checker,
             text_model=text,
-            # As Two Halves: the check and the narrator are small jobs, corrections judge the
-            # learner's language as a report does.
-            check_model=models.memory,
+            # The narrator is a small job, as the stand-in's lines are.
             write_model=models.week or models.memory,
-            review_model=models.report,
             speech=speech,
             speech_model=models.speech,
             files=files,
@@ -765,6 +820,7 @@ def build_backend(
     )
     services = Services(
         halves=halves,
+        radio=radio,
         chain=chain,
         catalog=CATALOG,
         profiles=profiles,
@@ -979,7 +1035,8 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     an exam simulation (`exam`); and, once an hour, nudging learners who have been quiet for a
     week (`nudges`, from the schedule), and the partners' voice notes: the ones due, sent by the
     same hourly run (spec §6.16), and writing a note or an answer that is waiting (`pen_pal`);
-    and writing a listening story's episode (`story`, 5.29)."""
+    writing a listening story's episode (`story`, 5.29); and Radio Konvami's calls and shows
+    (`radio`, section 8)."""
     if "nudges" in event:
         # One failing does not stop the others.
         try:
@@ -991,10 +1048,16 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
                 try:
                     backend.services.halves.tick()
                 finally:
-                    backend.services.chain.tick()
+                    try:
+                        backend.services.radio.tick()
+                    finally:
+                        backend.services.chain.tick()
         return
     if "halves" in event:
         _halves_job(backend, event["halves"], UUID(event["id"]))
+        return
+    if "radio" in event:
+        _radio_job(backend, event["radio"], UUID(event["id"]))
         return
     if "chain" in event:
         _chain_job(backend, event["chain"], UUID(event["id"]))
@@ -1047,6 +1110,37 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
 
 
+def _week_case(halves: HalvesService, user_id: UUID, monday: dt.date) -> CaseSuggestion | None:
+    found = halves.suggestion(user_id, monday)
+    return CaseSuggestion(found.template_id, found.title) if found else None
+
+
+def _case_material(
+    imports: CourseImportService, user_id: UUID, import_id: UUID
+) -> CaseMaterial | None:
+    """One of the learner's own course imports, as the Case Writer reads it (7.17)."""
+    found = next((item for item in imports.imports(user_id) if item.id == import_id), None)
+    if found is None:
+        return None
+    return CaseMaterial(
+        id=found.id,
+        title=found.title,
+        language=found.language,
+        level=found.level,
+        text=found.text,
+        words=tuple((word.word, word.meaning) for word in found.vocabulary),
+    )
+
+
+def _radio_job(backend: Backend, job: str, item_id: UUID) -> None:
+    """Radio Konvami's jobs (section 8): check a call, build a show."""
+    radio = backend.services.radio
+    if job == "check":
+        radio.check(item_id)
+    elif job == "build":
+        radio.build(item_id)
+
+
 def _chain_job(backend: Backend, job: str, item_id: UUID) -> None:
     """The story chain's jobs (section 9): check a line, the AI characters' lines, the
     narrator's opening and the radio play."""
@@ -1062,10 +1156,13 @@ def _chain_job(backend: Backend, job: str, item_id: UUID) -> None:
 
 
 def _halves_job(backend: Backend, job: str, item_id: UUID) -> None:
-    """Two Halves' jobs (section 7): check a move, play the AI stand-in, write the recap."""
+    """Two Halves' jobs (section 7): check a move, play the AI stand-in, write the recap, and
+    verify a native's nudge (phase 2)."""
     halves = backend.services.halves
     if job == "check":
         halves.check(item_id)
+    elif job == "nudge":
+        halves.check_nudge(item_id)
     elif job == "ai":
         halves.play(item_id)
     elif job == "recap":

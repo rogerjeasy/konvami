@@ -3,10 +3,12 @@ it, the veiled voice, the private corrections, and the narrator, an AI always la
 who sums up the story for the next seat, plays the AI characters and writes the radio play's
 links.
 
-The check is Two Halves' (`halves_check.check_spoken`), with the story as the task: it fails
-closed, and a line that fails it is held, never delivered, and goes to the owner's queue.
-Without a model the narrator still works: the AI characters say a line that goes with any
-story, and the radio play has the hand-written opening and ending.
+The check and the corrections are the shared ones of a learner's voice message
+(`voice_messages.MessageChecker`), with the story as the task: it fails closed, and a line that
+fails it is held, never delivered, and goes to the owner's queue. Everything the narrator writes
+passes `MessageChecker.clean` before other learners hear it. Without a model the narrator still
+works: the AI characters say a line that goes with any story, and the radio play has the
+hand-written opening and ending.
 """
 
 import datetime as dt
@@ -29,36 +31,32 @@ from konvami_api.domain.chain import (
 from konvami_api.domain.chain_openings import FALLBACK_LINES, opening, text_in
 from konvami_api.domain.costs import Charge, Feature
 from konvami_api.domain.halves import VEIL_VOICE, Band, Correction
-from konvami_api.domain.halves_check import check_spoken, private_corrections, speak_to_file
-from konvami_api.domain.moderation import Moderator, ModeratorError, local_problem
 from konvami_api.domain.reports import words_in
 from konvami_api.domain.speech import SpeechModel
 from konvami_api.domain.storage import FileStore
 from konvami_api.domain.text import TextModel, TextModelError, TextTask, answer_list, answer_object
+from konvami_api.domain.voice_messages import MessageChecker, Setting, speak_to_file
+from konvami_api.domain.voice_messages import clip as _clip
 
 logger = logging.getLogger(__name__)
 
 LINE_MAX = 240
 RECAP_MAX = 200
 
-_CHECK_INSTRUCTIONS = """You check one voice message in a language game before other players hear
-it. Four players, friends or AI characters, build a short story together, one line each; each
-player only hears the line before theirs. The message is a transcript of speech by a language
-learner, so expect mistakes.
-
-Label the message with exactly one of:
-- on_task: it goes on with the story, even if strange, silly or badly said, or is polite talk
-  about the game ("Hello everyone, here is my line"). Mistakes in the language never matter.
-  Story events may be dramatic (a theft, a storm, a ghost) as long as they are not graphic.
-- off_task: it is about something else, but harmless.
-- romance: flirting with the other players, compliments on their looks, dating.
-- contact_or_meetup: asks for or gives a way to contact each other outside the game (a phone
-  number, a social media handle, an email, an app) or proposes to meet in person.
-- personal_probe: asks the other players for personal details (age, school, where exactly they
-  live, photos, their real name).
-- harassment: insults or threats aimed at a player, hate, sexual content, or graphic violence.
-- self_harm: says or hints the speaker may hurt themselves.
-Answer as JSON with the label only."""
+# Where a line is heard, for the shared check (`voice_messages.py`).
+SETTING = Setting(
+    intro="""You check one voice message in a language game before other players hear it. Four
+players, friends or AI characters, build a short story together, one line each; each player only
+hears the line before theirs. The message is a transcript of speech by a language learner, so
+expect mistakes.""",
+    on_task="""it goes on with the story, even if strange, silly or badly said, or is polite talk
+  about the game ("Hello everyone, here is my line"). Story events may be dramatic (a theft, a
+  storm, a ghost) as long as they are not graphic.""",
+    answer_name="chain_line_check",
+    corrections_name="chain_corrections",
+    what="this line of a story told together with other players",
+    feature=Feature.CHAIN,
+)
 
 
 class _Answer(BaseModel):
@@ -79,21 +77,15 @@ _SAID_SCHEMA = answer_object({"text": _STRING})
 _NARRATION_SCHEMA = answer_object({"links": answer_list(_STRING, LINES), "ending": _STRING})
 
 
-def _clip(text: str, most: int) -> str:
-    return " ".join(text.split())[:most].strip()
-
-
 class ModelNarrator:
     """The `Narrator` of `ChainService` on the app's real providers."""
 
     def __init__(
         self,
         *,
-        moderator: Moderator,
+        checker: MessageChecker,
         text_model: TextModel,
-        check_model: str,
         write_model: str,
-        review_model: str,
         speech: SpeechModel,
         speech_model: str,
         files: FileStore,
@@ -102,11 +94,9 @@ class ModelNarrator:
     ) -> None:
         """Empty model names: no check can be made (every line waits, then fails), the AI
         characters say a line that fits any story, and nothing is spoken."""
-        self._moderator = moderator
+        self._checker = checker
         self._text_model = text_model
-        self._check_model = check_model
         self._write_model = write_model
-        self._review_model = review_model
         self._speech = speech
         self._speech_model = speech_model
         self._files = files
@@ -153,37 +143,15 @@ class ModelNarrator:
             return None
 
     def _clean(self, story: Story, texts: Sequence[str]) -> bool:
-        """Whether what the model wrote may reach the players: other learners hear it, so it
-        passes the local rules and the moderation provider first. Fails closed: when it cannot
-        be checked, the hand-written text is used instead."""
+        """Whether what the model wrote may reach the players (`MessageChecker.clean`): fails
+        closed, and the hand-written text is used instead."""
         written = [text for text in texts if text.strip()]
-        if not written:
-            return True
-        if any(local_problem(text) is not None for text in written):
-            return False
-        payer = story.payer
-        if payer is None:
-            return False
-        try:
-            return not self._moderator.check(written, Charge(payer, Feature.MODERATION)).flagged
-        except ModeratorError:
-            return False
+        return not written or self._checker.clean(story.payer, written)
 
     # --- The check and the private corrections
 
     def check(self, line: Line, band: Band, language: str) -> tuple[str, ...] | None:
-        return check_spoken(
-            moderator=self._moderator,
-            text_model=self._text_model,
-            model=self._check_model,
-            words=line.transcript,
-            user=line.user_id,
-            band=band,
-            language=self._language_name(language),
-            instructions=_CHECK_INSTRUCTIONS,
-            answer_name="chain_line_check",
-            feature=Feature.CHAIN,
-        )
+        return self._checker.check(line.user_id, line.transcript, band, language, SETTING)
 
     def veil(self, line: Line) -> str | None:
         if line.user_id is None:
@@ -196,19 +164,7 @@ class ModelNarrator:
         )
 
     def correct(self, line: Line, target: str, explanation: str) -> tuple[Correction, ...]:
-        if line.user_id is None:
-            return ()
-        return private_corrections(
-            text_model=self._text_model,
-            model=self._review_model,
-            words=line.transcript,
-            user=line.user_id,
-            target=self._language_name(target),
-            explained_in=self._language_name(explanation),
-            what="line of a story told together with other players",
-            answer_name="chain_corrections",
-            feature=Feature.CHAIN,
-        )
+        return self._checker.correct(line.user_id, line.transcript, target, explanation, SETTING)
 
     # --- The narrator
 

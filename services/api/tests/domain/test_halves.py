@@ -1,6 +1,7 @@
 import datetime as dt
 import random
 from dataclasses import dataclass, replace
+from typing import Any
 from uuid import UUID
 
 import pytest
@@ -53,9 +54,19 @@ class Game:
                 self.service.play(item)
             elif job == "recap":
                 self.service.write_recap(item)
+            elif job == "nudge":
+                self.service.check_nudge(item)
 
 
-def game(*, enabled: bool = True, allowed: bool = True, adult: bool = True) -> Game:
+def game(
+    *,
+    enabled: bool = True,
+    allowed: bool = True,
+    adult: bool = True,
+    **phase2: Any,
+) -> Game:
+    """A game between USER and OTHER_USER; `phase2` passes the service's phase 2 parts
+    (`strangers`, `writer`, `material`)."""
     world = World()
     world.onboard()
     world.onboard(OTHER_USER)
@@ -87,6 +98,7 @@ def game(*, enabled: bool = True, allowed: bool = True, adult: bool = True) -> G
         clock=world.clock,
         announce=lambda user, case, kind: announced.append((user, case, kind)),
         rng=random.Random(7),  # noqa: S311 - codenames in a test
+        **phase2,
     )
     return Game(world, service, store, starter, brain, heard, announced)
 
@@ -482,7 +494,8 @@ def test_two_yes_make_a_duo_who_can_start_again_at_once() -> None:
     g.store.save_case(replace(case, status="solved"))
     g.service.again(USER, case_id, True)
     assert g.store.duos_of(USER) == []
-    g.service.again(OTHER_USER, case_id, True)
+    assert not g.service.view(USER, case_id).duo
+    assert g.service.again(OTHER_USER, case_id, True).duo
     duo = g.store.duos_of(USER)[0]
     assert g.service.overview(USER).duos[0].codename == g.store.profiles[OTHER_USER].codename
     again = g.service.play_duo(USER, duo.id)

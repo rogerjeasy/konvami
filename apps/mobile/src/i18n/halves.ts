@@ -108,8 +108,6 @@ const en = {
     no: 'No',
     againYes: 'You said yes. If they do too, you’ll find them under “Play again with”.',
     againNo: 'Got it. You won’t be paired again.',
-    share: 'Share the case',
-    shareText: 'Two Halves · {{title}} · {{result}} · {{speaks}} ⇄ {{hears}}',
     handOver: 'Hand their seat to an AI',
     handOverBody:
       '{{name}} has been quiet for three days. An AI can play their half so you can finish.',
@@ -182,6 +180,7 @@ const en = {
     unsure: 'Not sure',
   },
   reasons: {
+    age_band: 'two players hear each other only when both are adults',
     contact_or_meetup: 'it asked for contact or a meeting',
     romance: 'it was flirting',
     personal_probe: 'it asked for personal details',
@@ -366,8 +365,6 @@ const de: HalvesStrings = {
     againYes:
       'Du hast Ja gesagt. Wenn die andere Person auch Ja sagt, findest du sie unter „Nochmal spielen mit“.',
     againNo: 'Alles klar. Ihr werdet nicht wieder zusammengebracht.',
-    share: 'Fall teilen',
-    shareText: 'Zwei Hälften · {{title}} · {{result}} · {{speaks}} ⇄ {{hears}}',
     handOver: 'Den Platz einer KI geben',
     handOverBody:
       '{{name}} war drei Tage still. Eine KI kann die Hälfte übernehmen, damit du fertig wirst.',
@@ -440,6 +437,7 @@ const de: HalvesStrings = {
     unsure: 'Nicht sicher',
   },
   reasons: {
+    age_band: 'zwei Spieler hören sich nur, wenn beide erwachsen sind',
     contact_or_meetup: 'er fragte nach Kontakt oder einem Treffen',
     romance: 'er war ein Flirt',
     personal_probe: 'er fragte nach persönlichen Daten',
@@ -622,8 +620,6 @@ const fr: HalvesStrings = {
     againYes:
       'Tu as dit oui. S’il ou elle dit oui aussi, tu le ou la trouveras sous « Rejouer avec ».',
     againNo: 'Compris. Vous ne serez plus mis ensemble.',
-    share: 'Partager l’enquête',
-    shareText: 'Deux moitiés · {{title}} · {{result}} · {{speaks}} ⇄ {{hears}}',
     handOver: 'Confier sa place à une IA',
     handOverBody:
       '{{name}} ne s’est pas manifesté depuis trois jours. Une IA peut jouer sa moitié pour que tu puisses finir.',
@@ -696,6 +692,7 @@ const fr: HalvesStrings = {
     unsure: 'Pas sûr',
   },
   reasons: {
+    age_band: 'deux joueurs ne s’entendent que si tous deux sont majeurs',
     contact_or_meetup: 'il demandait un contact ou un rendez-vous',
     romance: 'c’était de la drague',
     personal_probe: 'il demandait des infos personnelles',
@@ -876,8 +873,6 @@ const it: HalvesStrings = {
     againYes:
       'Hai detto sì. Se dice sì anche l’altra persona, la trovi sotto «Gioca di nuovo con».',
     againNo: 'Capito. Non sarete più messi insieme.',
-    share: 'Condividi il caso',
-    shareText: 'Due metà · {{title}} · {{result}} · {{speaks}} ⇄ {{hears}}',
     handOver: 'Affida il suo posto a un’IA',
     handOverBody:
       '{{name}} è in silenzio da tre giorni. Un’IA può giocare la sua metà per farti finire.',
@@ -950,6 +945,7 @@ const it: HalvesStrings = {
     unsure: 'Non sicuro',
   },
   reasons: {
+    age_band: 'due giocatori si sentono solo se entrambi sono maggiorenni',
     contact_or_meetup: 'chiedeva un contatto o un incontro',
     romance: 'era un approccio',
     personal_probe: 'chiedeva dati personali',

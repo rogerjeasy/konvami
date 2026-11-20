@@ -224,6 +224,15 @@ class Session:
 
 
 @dataclass(frozen=True)
+class CaseSuggestion:
+    """A Two Halves case for the week (section 7, phase 3): at most one a week, shown with the
+    plan, not counted as speaking minutes (a move is not a call)."""
+
+    template_id: str
+    title: str
+
+
+@dataclass(frozen=True)
 class WeekPlan:
     # The week's Monday.
     week: dt.date
@@ -249,6 +258,8 @@ class WeekPlan:
     # The planned days among the next seven, today's included, into next week: the device
     # reminds the learner on them (spec §6.18).
     upcoming: tuple[dt.date, ...] = ()
+    # This week's Two Halves case, while the learner has not started one this week.
+    halves: CaseSuggestion | None = None
 
 
 def _steps_down(minutes: int) -> int:
@@ -666,9 +677,11 @@ class DirectorService:
         allowance: Callable[[UUID], Allowance],
         call_seconds: int,
         clock: Callable[[], dt.datetime],
+        halves: Callable[[UUID, dt.date], CaseSuggestion | None] = lambda *_: None,
     ) -> None:
         """`allowance` reads a learner's voice minutes this week; `call_seconds` is the longest
-        practice call."""
+        practice call; `halves` suggests the week's Two Halves case (learner, Monday)."""
+        self._halves = halves
         self._profiles = profiles
         self._onboarding = onboarding
         self._conversations = conversations
@@ -730,7 +743,15 @@ class DirectorService:
                 exam=exam,
             )
         )
-        return replace(plan, today=_with_scenarios(plan.today, scenarios, level, played))
+        try:
+            suggested = self._halves(user_id, monday)
+        except Exception:  # a game must never keep the week's plan from showing
+            suggested = None
+        return replace(
+            plan,
+            today=_with_scenarios(plan.today, scenarios, level, played),
+            halves=suggested,
+        )
 
     def topic_for_call(self, user_id: UUID, today: dt.date) -> str | None:
         """The topic of the week a call puts first: the topics take turns, in their order, over

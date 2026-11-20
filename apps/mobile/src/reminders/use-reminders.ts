@@ -11,6 +11,8 @@ import {
   simulationRoute,
   chainStoryRoute,
   halvesCaseRoute,
+  radioCallRoute,
+  radioEpisodeRoute,
 } from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
 import { usePreferences } from '@/preferences';
@@ -155,6 +157,12 @@ function routeOf(target: OpenTarget) {
       return incomingCallRoute(target.partner, target.ask);
     case 'halves':
       return halvesCaseRoute(target.id);
+    case 'halvesHub':
+      return ROUTES.halves;
+    case 'radio':
+      return radioEpisodeRoute(target.id);
+    case 'radio_call':
+      return radioCallRoute(target.id);
     case 'chain':
       return chainStoryRoute(target.id);
     default:

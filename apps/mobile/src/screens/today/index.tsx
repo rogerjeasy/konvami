@@ -21,7 +21,15 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { sessionRoute } from '@/lib/plan';
 import { useChainHub } from '@/chain/services';
-import { callRoute, chainTurnRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes';
+import {
+  callRoute,
+  chainTurnRoute,
+  conversationRoute,
+  penPalRoute,
+  radioEpisodeRoute,
+  ROUTES,
+} from '@/lib/routes';
+import { useRadioHub } from '@/radio/services';
 import {
   useCoach,
   useHome,
@@ -129,6 +137,10 @@ function Day({ home, now }: { home: Home; now: Date }) {
   const question = useProfileQuestion();
   // A partner's voice note waiting to be opened (spec §14.1).
   const penPal = usePenPal();
+  // Radio Konvami (8.1): a card when the learner's call aired in a show of the last two days.
+  const { status: session } = useSession();
+  const radio = useRadioHub(session === 'signedIn');
+  const aired = radio.state.phase === 'ready' ? radio.state.data.aired : null;
   const waiting =
     penPal.phase === 'ready' ? penPal.data.threads.find((thread) => thread.unread > 0) : undefined;
   const writer = waiting
@@ -191,6 +203,16 @@ function Day({ home, now }: { home: Home; now: Date }) {
           title={t('penPal.today.title', { name: writer.name })}
           detail={t('penPal.today.body')}
           onPress={() => router.push(penPalRoute(writer.id))}
+        />
+      </ListGroup>
+    ) : null,
+    aired ? (
+      <ListGroup key="radio">
+        <ListRow
+          icon="radio"
+          title={t('radio.today_card.title')}
+          detail={t('radio.today_card.body')}
+          onPress={() => router.push(radioEpisodeRoute(aired.id))}
         />
       </ListGroup>
     ) : null,

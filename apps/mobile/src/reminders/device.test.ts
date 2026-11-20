@@ -16,7 +16,14 @@ describe('what a tapped notification opens', () => {
       open: 'simulation',
       id: 'rtc_2',
     });
+    expect(openTargetOf({ open: 'radio', id: 'show_1' })).toEqual({ open: 'radio', id: 'show_1' });
+    expect(openTargetOf({ open: 'radio_call', id: 'call_1' })).toEqual({
+      open: 'radio_call',
+      id: 'call_1',
+    });
     expect(openTargetOf({ open: 'report' })).toEqual({ open: 'today' });
+    // A search that ended, or an owner's warning, has no case: Two Halves' hub opens.
+    expect(openTargetOf({ open: 'halves' })).toEqual({ open: 'halvesHub' });
     expect(openTargetOf({ open: 'elsewhere', id: 'x' })).toEqual({ open: 'today' });
     expect(openTargetOf(undefined)).toEqual({ open: 'today' });
   });

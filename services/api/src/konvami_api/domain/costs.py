@@ -94,6 +94,12 @@ class Feature(StrEnum):
     HALVES = "halves"
     HALVES_AUDIO = "halves_audio"
 
+    # Radio Konvami (8.x): a call written down, the checks, corrections and the show's writing,
+    # and the show's sounds (the host, AI callers, a veiled call).
+    RADIO_LISTEN = "radio_listen"
+    RADIO = "radio"
+    RADIO_AUDIO = "radio_audio"
+
     # The story chain (9.x): a line written down, the checks, the narrator's writing, and the
     # sounds (a veiled line, the AI characters, the narrator).
     CHAIN_LISTEN = "chain_listen"

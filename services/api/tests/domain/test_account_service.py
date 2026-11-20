@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from konvami_api.domain.accounts import Account, AccountError, AccountService
+from konvami_api.domain.accounts import Account, AccountError, AccountService, user_folders
 from tests.fakes import (
     FakeAccountDirectory,
     FixedClock,
@@ -178,6 +178,34 @@ def test_deleting_the_account_removes_its_files_its_data_and_its_sign_in() -> No
     assert setup.records.deleted == [USER]
     assert USER not in setup.directory.accounts
     assert OTHER_USER in setup.directory.accounts
+
+
+def test_deleting_the_account_clears_every_per_user_folder() -> None:
+    """A file of the learner in each folder that holds a learner's files (their own, uploads,
+    archives, Two Halves moves, Radio calls and story-chain lines, with their veiled sound) is
+    gone; the same files of another learner, and the shared sounds, stay."""
+    setup = Setup()
+    shared = [
+        "voices/de/coral-1.mp3",
+        "radio/shows/episode/0.mp3",
+        "chain/stories/story/opening.mp3",
+    ]
+    for key in shared:
+        setup.files.save(key, b"mp3", "audio/mpeg")
+    for user in (USER, OTHER_USER):
+        for folder in user_folders(user):
+            setup.files.save(f"{folder}x/file.m4a", b"m4a", "audio/mp4")
+        setup.files.save(f"radio/{user}/episode/call-veil.mp3", b"mp3", "audio/mpeg")
+        setup.files.save(f"chain/{user}/story/line-veil.mp3", b"mp3", "audio/mpeg")
+    tops = {folder.partition("/")[0] for folder in user_folders(USER)}
+    assert tops == {"users", "uploads", "exports", "halves", "radio", "chain"}
+
+    setup.accounts.delete(USER)
+
+    left = setup.files.keys()
+    assert not [key for key in left if str(USER) in key]
+    assert all(key in left for key in shared)
+    assert len([key for key in left if str(OTHER_USER) in key]) == len(user_folders(OTHER_USER)) + 2
 
 
 def test_an_account_whose_sign_in_is_already_gone_can_still_be_deleted() -> None:

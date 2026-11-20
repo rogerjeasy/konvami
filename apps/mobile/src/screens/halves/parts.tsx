@@ -21,6 +21,36 @@ export function PartnerLine({ partner }: { partner: HalvesCase['partner'] }) {
   );
 }
 
+/**
+ * 7.19 Native intelligibility, privately: how many of the learner's clues the other player
+ * understood at the first try. Nothing before the first answer.
+ */
+export function HeardLine({ found }: { found: HalvesCase }) {
+  const { t } = useTranslation();
+  if (found.told === 0) return null;
+  return (
+    <Text variant="small" accessibilityHint={t('halves.heard.private')}>
+      {t('halves.heard.case', {
+        name: found.partner.name,
+        understood: found.understoodFirst,
+        told: found.told,
+      })}
+    </Text>
+  );
+}
+
+/** Same-language mode, labelled (both learn the language spoken): the Bridge helps there. */
+export function SameLanguageLine({ found }: { found: HalvesCase }) {
+  const { t } = useTranslation();
+  const languageName = useLanguageName();
+  if (!found.sameLanguage) return null;
+  return (
+    <Text variant="small" tone="muted">
+      {t('halves.sameMode', { language: languageName(found.speaks) })}
+    </Text>
+  );
+}
+
 /** A language's name as the interface writes it. */
 export function useLanguageName() {
   const { t } = useTranslation();
@@ -83,6 +113,7 @@ const REASONS = [
   'unsafe',
   'link',
   'instructions',
+  'age_band',
   'unavailable',
 ] as const;
 

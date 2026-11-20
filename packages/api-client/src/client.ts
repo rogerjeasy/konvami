@@ -86,6 +86,34 @@ export type HalvesInvite = Schemas['HalvesInviteOut'];
 export type HalvesReaction = Schemas['HalvesReactionIn']['reaction'];
 export type HalvesReportReason = Schemas['HalvesReportIn']['reason'];
 export type HalvesQueueItem = Schemas['HalvesQueueItemOut'];
+// Two Halves phase 2.
+export type HalvesSearch = Schemas['HalvesSearchOut'];
+export type HalvesLook = Schemas['HalvesLookOut'];
+export type HalvesStrands = Schemas['HalvesStrandsOut'];
+export type HalvesStrand = Schemas['HalvesStrandOut'];
+export type HalvesPoint = Schemas['HalvesPointOut'];
+export type HalvesShare = Schemas['HalvesShareOut'];
+export type HalvesStats = Schemas['HalvesStatsOut'];
+export type HalvesNudge = Schemas['HalvesNudgeOut'];
+export type HalvesBridgeStep = Schemas['HalvesBridgeIn']['step'];
+export type HalvesDecision = Schemas['HalvesDecisionIn']['action'];
+export type PlanCase = Schemas['PlanCaseOut'];
+// Radio Konvami (section 8).
+export type Radio = Schemas['RadioOut'];
+export type RadioProfile = Schemas['RadioProfileOut'];
+export type RadioJoin = Schemas['RadioJoinIn'];
+export type RadioEpisodeCard = Schemas['RadioEpisodeCardOut'];
+export type RadioNextShow = Schemas['RadioNextShowOut'];
+export type RadioEpisode = Schemas['RadioEpisodeOut'];
+export type RadioSegment = Schemas['RadioSegmentOut'];
+export type RadioCall = Schemas['RadioCallOut'];
+export type RadioCallStatus = RadioCall['status'];
+export type RadioCallInput = Schemas['RadioCallIn'];
+export type RadioCorrection = Schemas['RadioCorrectionOut'];
+export type RadioApplauseCard = NonNullable<Schemas['RadioApplauseIn']['card']>;
+export type RadioReportReason = Schemas['RadioReportIn']['reason'];
+export type RadioRetried = Schemas['RadioRetriedOut'];
+export type RadioQueueItem = Schemas['RadioQueueItemOut'];
 /** A card answered out loud (voice review): what was heard, how close, the rating it points to. */
 export type AnsweredCard = Schemas['AnsweredOut'];
 export type AnswerOutcome = AnsweredCard['outcome'];
@@ -402,10 +430,64 @@ export interface ApiClient {
   /** The owner's Two Halves queue (6.15). */
   getHalvesQueue(): Promise<{ items: HalvesQueueItem[] }>;
   decideHalvesItem(
-    kind: 'held' | 'report',
+    kind: HalvesQueueItem['kind'],
     id: string,
-    action: 'remove' | 'dismiss',
+    action: HalvesDecision,
   ): Promise<void>;
+  /** The owner's Two Halves numbers for the last 30 days (6.15). */
+  getHalvesStats(): Promise<HalvesStats>;
+  /** Looks for a stranger to play with (7.3): a case at once when someone fits. */
+  lookForHalvesPartner(search: { hours: number; remind: boolean }): Promise<HalvesLook>;
+  stopHalvesSearch(): Promise<void>;
+  /** The strand map (7.14). */
+  getHalvesStrands(): Promise<HalvesStrands>;
+  /** What the share card of an ended case shows (7.15). */
+  getHalvesShareCard(caseId: string): Promise<HalvesShare>;
+  /** A case against the AI from one of the learner's course imports (7.17). */
+  startHalvesImportCase(importId: string): Promise<HalvesCase>;
+  /** The Bridge for a move heard in same-language mode (7.7). */
+  bridgeHalvesMove(moveId: string, step: HalvesBridgeStep): Promise<HalvesCase>;
+  /** Suggests a better way to say a move heard (7.7). */
+  nudgeHalvesMove(moveId: string, text: string): Promise<HalvesCase>;
+  /** Radio Konvami's hub (8.1). */
+  getRadio(): Promise<Radio>;
+  /** Joins the show or changes the join answers (8.6). */
+  joinRadio(answers: RadioJoin): Promise<Radio>;
+  changeRadio(changes: { veilDefault?: boolean | null }): Promise<Radio>;
+  rerollRadioCodename(): Promise<Radio>;
+  /** Withdraws the voice-sharing consent and deletes the learner's calls (8.6). */
+  leaveRadio(): Promise<void>;
+  /** The last two weeks of shows (8.5). */
+  getRadioArchive(): Promise<{ episodes: RadioEpisodeCard[] }>;
+  getRadioEpisode(episodeId: string): Promise<RadioEpisode>;
+  getRadioSegmentAudio(episodeId: string, index: number): Promise<{ url: string }>;
+  /** One of the four applause cards for a call, or none to take it back. */
+  applaudRadioSegment(
+    episodeId: string,
+    index: number,
+    card: RadioApplauseCard | null,
+  ): Promise<RadioEpisode>;
+  reportRadioSegment(
+    episodeId: string,
+    index: number,
+    report: { reason: RadioReportReason; note?: string | null },
+  ): Promise<RadioEpisode>;
+  /** Calls in to the next show (8.3): checked on the server before anyone else hears it. */
+  sendRadioCall(call: RadioCallInput): Promise<RadioCall>;
+  /** One of the learner's own calls, privately (8.4). */
+  getRadioCall(callId: string): Promise<RadioCall>;
+  getRadioCallAudio(callId: string): Promise<{ url: string }>;
+  withdrawRadioCall(callId: string): Promise<void>;
+  sayRadioCorrectionBetter(
+    callId: string,
+    index: number,
+    recording: SpokenRecording,
+  ): Promise<RadioRetried>;
+  saveRadioCorrectionCard(callId: string, index: number): Promise<Card>;
+  /** The owner's Radio queue (6.15). */
+  getRadioQueue(): Promise<{ items: RadioQueueItem[] }>;
+  decideRadioItem(kind: 'held' | 'report', id: string, action: 'remove' | 'dismiss'): Promise<void>;
+  pullRadioEpisode(episodeId: string): Promise<void>;
   /** The story chain's hub (9.1). */
   getChain(): Promise<Chain>;
   /** Joins the story chain or changes the join answers (9.2). */
@@ -440,11 +522,7 @@ export interface ApiClient {
   saveChainCard(lineId: string, index: number): Promise<{ id: string }>;
   /** The owner's story-chain queue (6.15). */
   getChainQueue(): Promise<{ items: HalvesQueueItem[] }>;
-  decideChainItem(
-    kind: 'held' | 'report',
-    id: string,
-    action: 'remove' | 'dismiss',
-  ): Promise<void>;
+  decideChainItem(kind: 'held' | 'report', id: string, action: 'remove' | 'dismiss'): Promise<void>;
   getCatalog(): Promise<Catalog>;
   getProfile(): Promise<Profile>;
   /** Applies all changes or none. Fails with `invalid_value` and the field for a refused one. */
@@ -959,6 +1037,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const chainLine = (id: string) => `/v1/chain/lines/${encodeURIComponent(id)}`;
   const halvesCase = (id: string) => `/v1/halves/cases/${encodeURIComponent(id)}`;
   const halvesMove = (id: string) => `/v1/halves/moves/${encodeURIComponent(id)}`;
+  const radioEpisode = (id: string) => `/v1/radio/episodes/${encodeURIComponent(id)}`;
+  const radioCall = (id: string) => `/v1/radio/calls/${encodeURIComponent(id)}`;
 
   return {
     getCatalog: () => request('GET', '/v1/catalog'),
@@ -994,6 +1074,39 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getHalvesQueue: () => request('GET', '/v1/halves/queue'),
     decideHalvesItem: (kind, id, action) =>
       request('POST', `/v1/halves/queue/${kind}/${encodeURIComponent(id)}`, { action }),
+    getHalvesStats: () => request('GET', '/v1/halves/queue/stats'),
+    lookForHalvesPartner: (search) => request('POST', '/v1/halves/search', search),
+    stopHalvesSearch: () => request('DELETE', '/v1/halves/search'),
+    getHalvesStrands: () => request('GET', '/v1/halves/strands'),
+    getHalvesShareCard: (caseId) => request('GET', `${halvesCase(caseId)}/share`),
+    startHalvesImportCase: (importId) => request('POST', '/v1/halves/cases/import', { importId }),
+    bridgeHalvesMove: (moveId, step) => request('POST', `${halvesMove(moveId)}/bridge`, { step }),
+    nudgeHalvesMove: (moveId, text) => request('POST', `${halvesMove(moveId)}/nudge`, { text }),
+    getRadio: () => request('GET', '/v1/radio'),
+    joinRadio: (answers) => request('PUT', '/v1/radio/profile', answers),
+    changeRadio: (changes) => request('PATCH', '/v1/radio/profile', changes),
+    rerollRadioCodename: () => request('POST', '/v1/radio/profile/codename'),
+    leaveRadio: () => request('DELETE', '/v1/radio/profile'),
+    getRadioArchive: () => request('GET', '/v1/radio/episodes'),
+    getRadioEpisode: (episodeId) => request('GET', radioEpisode(episodeId)),
+    getRadioSegmentAudio: (episodeId, index) =>
+      request('GET', `${radioEpisode(episodeId)}/segments/${index}/audio`),
+    applaudRadioSegment: (episodeId, index, card) =>
+      request('POST', `${radioEpisode(episodeId)}/segments/${index}/applause`, { card }),
+    reportRadioSegment: (episodeId, index, report) =>
+      request('POST', `${radioEpisode(episodeId)}/segments/${index}/report`, report),
+    sendRadioCall: (call) => request('POST', '/v1/radio/calls', call),
+    getRadioCall: (callId) => request('GET', radioCall(callId)),
+    getRadioCallAudio: (callId) => request('GET', `${radioCall(callId)}/audio`),
+    withdrawRadioCall: (callId) => request('DELETE', radioCall(callId)),
+    sayRadioCorrectionBetter: (callId, index, recording) =>
+      request('POST', `${radioCall(callId)}/corrections/${index}/retry`, recording),
+    saveRadioCorrectionCard: (callId, index) =>
+      request('POST', `${radioCall(callId)}/corrections/${index}/card`),
+    getRadioQueue: () => request('GET', '/v1/radio/queue'),
+    decideRadioItem: (kind, id, action) =>
+      request('POST', `/v1/radio/queue/${kind}/${encodeURIComponent(id)}`, { action }),
+    pullRadioEpisode: (episodeId) => request('POST', `${radioEpisode(episodeId)}/pull`),
     getChain: () => request('GET', '/v1/chain'),
     joinChain: (answers) => request('PUT', '/v1/chain/profile', answers),
     changeChain: (changes) => request('PATCH', '/v1/chain/profile', changes),

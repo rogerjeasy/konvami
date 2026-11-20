@@ -51,8 +51,8 @@ from konvami_api.domain.halves import (
     QueueItem,
     Report,
     band_of,
-    codename_from,
     invite_code,
+    make_codename,
 )
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import words_in
@@ -610,7 +610,7 @@ class ChainService:
         now = self._clock()
         profile = ChainProfile(
             user_id=user_id,
-            codename=current.codename if current else codename_from(self._rng),
+            codename=current.codename if current else make_codename(self._rng),
             band=self._band(user_id),
             veil_default=veil_default,
             paused=current.paused if current else False,
@@ -624,7 +624,7 @@ class ChainService:
 
     def reroll(self, user_id: UUID) -> ChainProfile:
         profile = self._require(user_id)
-        changed = replace(profile, codename=codename_from(self._rng))
+        changed = replace(profile, codename=make_codename(self._rng))
         self._repository.save_profile(changed)
         return changed
 

@@ -145,7 +145,7 @@ describe('7.4 A case', () => {
     );
   });
 
-  it('ends with the result, the recap and a share', async () => {
+  it('ends with the result, the recap and a share card', async () => {
     const { api, caseId } = await playing();
     await api.solveHalvesCase(caseId, 0);
     jest.mocked(useLocalSearchParams).mockReturnValue({ id: caseId });
@@ -153,7 +153,8 @@ describe('7.4 A case', () => {
 
     expect(await screen.findByText('Case solved!')).toBeTruthy();
     expect(screen.getByText('Wir haben es!')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Share the case' })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Share the case card' }));
+    await waitFor(() => expect(api.calls).toContainEqual(['getHalvesShareCard', caseId]));
   });
 });
 
@@ -280,6 +281,8 @@ describe('6.15 The owner’s Two Halves queue', () => {
       note: null,
       band: 'adult',
       createdAt: '2026-11-20T12:00:00Z',
+      strikes: 0,
+      suspended: false,
     });
     await renderScreen(<HalvesQueue />, { api, signedIn: true });
 

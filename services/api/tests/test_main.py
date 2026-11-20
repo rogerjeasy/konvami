@@ -322,10 +322,11 @@ def test_the_worker_nudges_quiet_learners_when_the_schedule_starts_it(stub: Stub
     """Started by the hourly schedule, it reads the registered phones (here: none) and sends
     nothing. The pen-pals write only where a text model is named, as here they are not. Two
     Halves' tick looks for moves to check again, words past their 30 days, old invites and
-    stand-ins to catch up, and so does the story chain's, with its radio plays past their 30
-    days (here: none)."""
+    stand-ins to catch up, nudges to verify again and searches to end (here: none), and Radio
+    Konvami's for calls to check again, shows to build and words and sounds past their 30 days,
+    and the story chain's, with its radio plays past their 30 days (here: none)."""
     backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
-    for _ in range(10):
+    for _ in range(16):
         stub.add_response("execute_statement", {"formattedRecords": "[]"})
 
     main.run_worker(backend, {"nudges": True})
@@ -353,6 +354,18 @@ def test_the_worker_checks_a_story_chain_line_when_that_is_what_it_is_started_fo
     stub.add_response("execute_statement", {"formattedRecords": "[]"})
 
     main.run_worker(backend, {"chain": "check", "id": "44444444-4444-4444-8444-444444444444"})
+
+    stub.assert_no_pending_responses()
+
+
+def test_the_worker_builds_a_radio_show_when_that_is_what_it_is_started_for(
+    stub: Stubber,
+) -> None:
+    """Asked to build a show, it reads the show (here: none) and asks no model."""
+    backend = main.build_backend(ENVIRONMENT, clients(stub), sleep=lambda _: None)
+    stub.add_response("execute_statement", {"formattedRecords": "[]"})
+
+    main.run_worker(backend, {"radio": "build", "id": "44444444-4444-4444-8444-444444444444"})
 
     stub.assert_no_pending_responses()
 

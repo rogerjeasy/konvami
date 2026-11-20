@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Share, View } from 'react-native';
+import { View } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { HalvesCase, HalvesRound } from '@konvami/api-client';
@@ -7,6 +7,7 @@ import { apiErrorCode } from '@/api/messages';
 import { useSession } from '@/auth';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { Celebration } from '@/components/celebration';
 import { ConfirmSheet } from '@/components/confirm-sheet';
 import { LoadState } from '@/components/load-state';
 import { Pop, Reveal } from '@/components/motion';
@@ -30,7 +31,8 @@ import {
   ROUTES,
 } from '@/lib/routes';
 import { useHome, usePracticeServices } from '@/practice/services';
-import { failureKey, PartnerLine, reasonKey, useLanguageName } from './parts';
+import { failureKey, HeardLine, PartnerLine, reasonKey, SameLanguageLine } from './parts';
+import { ShareCaseCard } from './share-card';
 
 function RoundCard({ found, round }: { found: HalvesCase; round: HalvesRound }) {
   const { t } = useTranslation();
@@ -169,9 +171,9 @@ function FinalCard({
 function Ended({ found, onChanged }: { found: HalvesCase; onChanged: (c: HalvesCase) => void }) {
   const { t } = useTranslation();
   const api = useHalvesApi();
-  const languageName = useLanguageName();
   const { clips } = usePracticeServices();
   const [playing, setPlaying] = useState<number | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
   const solved = found.status === 'solved';
   const answer = found.final.solution !== null ? found.final.options[found.final.solution] : '';
 
@@ -198,19 +200,13 @@ function Ended({ found, onChanged }: { found: HalvesCase; onChanged: (c: HalvesC
 
   async function again(yes: boolean) {
     commitFeedback();
-    onChanged(await api.playHalvesAgain(found.id, yes));
-  }
-
-  function share() {
-    commitFeedback();
-    void Share.share({
-      message: t('halves.case.shareText', {
-        title: found.title,
-        result: solved ? t('halves.case.solved') : t('halves.case.unsolved'),
-        speaks: languageName(found.speaks),
-        hears: languageName(found.hears),
-      }),
-    });
+    const changed = await api.playHalvesAgain(found.id, yes);
+    onChanged(changed);
+    // Both said yes: the two are a duo now, which is worth a moment.
+    if (changed.duo && !found.duo) {
+      successFeedback();
+      setCelebrate(true);
+    }
   }
 
   return (
@@ -225,6 +221,7 @@ function Ended({ found, onChanged }: { found: HalvesCase; onChanged: (c: HalvesC
               {t('halves.case.unsolvedBody', { answer })}
             </Text>
           ) : null}
+          <HeardLine found={found} />
         </Card>
       </Pop>
       <Card className="gap-2.5 p-4">
@@ -269,12 +266,24 @@ function Ended({ found, onChanged }: { found: HalvesCase; onChanged: (c: HalvesC
             </View>
           </View>
         </Card>
+      ) : found.duo ? (
+        <Pop>
+          <Text variant="labelMedium">{t('halves.duo.made')}</Text>
+        </Pop>
       ) : found.again !== null ? (
         <Text tone="muted">
           {found.again ? t('halves.case.againYes') : t('halves.case.againNo')}
         </Text>
       ) : null}
-      <Button variant="secondary" label={t('halves.case.share')} onPress={share} />
+      <ShareCaseCard caseId={found.id} />
+      <Celebration
+        visible={celebrate}
+        title={t('halves.duo.made')}
+        name={t('halves.duo.madeBody', { name: found.partner.name })}
+        glyph="users"
+        closeLabel={t('common.close')}
+        onClose={() => setCelebrate(false)}
+      />
     </View>
   );
 }
@@ -370,7 +379,11 @@ export function HalvesCaseScreen() {
             <PageHero color="tomato" icon="compass" title={found.title} body={found.setting} />
           </Reveal>
           <Reveal delay={staggerDelay(1)}>
-            <PartnerLine partner={found.partner} />
+            <View className="gap-1">
+              <PartnerLine partner={found.partner} />
+              <SameLanguageLine found={found} />
+              {found.status === 'open' ? <HeardLine found={found} /> : null}
+            </View>
           </Reveal>
           {failure ? (
             <NoticeBox icon="info" tone="warn">

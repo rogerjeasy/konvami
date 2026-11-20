@@ -15,7 +15,13 @@ from konvami_api.domain.halves import (
     CITIES,
     COUNTRIES,
     NATIVE_LANGUAGES,
+    NUDGE_MAX,
+    NUDGE_MIN,
     REPORT_NOTE_MAX,
+    SEARCH_HOURS_DEFAULT,
+    SEARCH_HOURS_MAX,
+    SEARCH_HOURS_MIN,
+    Case,
     CaseSummary,
     CaseView,
     HalvesService,
@@ -24,6 +30,11 @@ from konvami_api.domain.halves import (
     PartnerLabel,
     Profile,
     QueueItem,
+    SafetyStats,
+    SearchView,
+    ShareCard,
+    StrandMap,
+    StrandPoint,
 )
 
 # The status of each refusal: a rule of the game (409), not allowed (403), a wrong value (422).
@@ -45,13 +56,16 @@ STATUS: dict[str, int] = {
     "invalid_value": 422,
     "too_short": 422,
     "too_long": 422,
+    "too_few_words": 422,
     "limit": 429,
+    # The model could not write the Bridge's help, or what it wrote may not be shown.
+    "not_written": 503,
 }
 REFUSED: dict[int | str, dict[str, Any]] = {
     code: {"model": ErrorBody} for code in sorted(set(STATUS.values()) | {503})
 }
 
-type ModeOut = Literal["ai", "friend", "duo"]
+type ModeOut = Literal["ai", "friend", "duo", "match"]
 type CaseStatusOut = Literal["open", "solved", "unsolved"]
 
 
@@ -131,9 +145,26 @@ class HalvesBlockOut(ApiModel):
     codename: str
 
 
+class HalvesSearchOut(ApiModel):
+    """A search for a partner (7.3)."""
+
+    since: dt.datetime
+    until: dt.datetime
+    remind: bool
+    # It went on long enough to offer an AI, or it is over.
+    offer_ai: bool
+
+    @classmethod
+    def of(cls, search: SearchView) -> "HalvesSearchOut":
+        return cls(
+            since=search.since, until=search.until, remind=search.remind, offer_ai=search.offer_ai
+        )
+
+
 class HalvesOut(ApiModel):
     """The hub (7.1): whether Two Halves is open to the learner, their profile, cases, the week's
-    case, duos, invite and blocks, and the choices of the join form."""
+    case, duos, invite and blocks, and the choices of the join form. Phase 2: whether they may
+    look for a stranger, their search, and the clues understood at the first try (private)."""
 
     available: bool
     profile: HalvesProfileOut | None
@@ -147,6 +178,11 @@ class HalvesOut(ApiModel):
     cities: list[str]
     countries: list[str]
     native_languages: list[str]
+    strangers: bool
+    search: HalvesSearchOut | None
+    search_hours: list[int]
+    understood_first: int
+    told: int
 
     @classmethod
     def of(cls, overview: Overview) -> "HalvesOut":
@@ -167,6 +203,12 @@ class HalvesOut(ApiModel):
             cities=list(CITIES),
             countries=list(COUNTRIES),
             native_languages=list(NATIVE_LANGUAGES),
+            strangers=overview.strangers,
+            search=HalvesSearchOut.of(overview.search) if overview.search else None,
+            # The search's shortest, usual and longest length, in hours (a Stepper on 7.3).
+            search_hours=[SEARCH_HOURS_MIN, SEARCH_HOURS_DEFAULT, SEARCH_HOURS_MAX],
+            understood_first=overview.understood_first,
+            told=overview.told,
         )
 
 
@@ -226,7 +268,26 @@ class HalvesReportIn(ApiModel):
 
 
 class HalvesDecisionIn(ApiModel):
-    action: Literal["remove", "dismiss"]
+    # remove: a strike; warn: a push, no strike; suspend: at once; dismiss: nothing.
+    action: Literal["remove", "dismiss", "warn", "suspend"]
+
+
+class HalvesSearchIn(ApiModel):
+    hours: int = Field(default=SEARCH_HOURS_DEFAULT, ge=SEARCH_HOURS_MIN, le=SEARCH_HOURS_MAX)
+    # Tell me by push when someone is found, or when the search ends.
+    remind: bool = True
+
+
+class HalvesBridgeIn(ApiModel):
+    step: Literal["slower", "simpler", "gist"]
+
+
+class HalvesNudgeIn(ApiModel):
+    text: str = Field(min_length=NUDGE_MIN, max_length=NUDGE_MAX)
+
+
+class HalvesImportCaseIn(ApiModel):
+    import_id: UUID
 
 
 class HalvesCorrectionOut(ApiModel):
@@ -234,6 +295,11 @@ class HalvesCorrectionOut(ApiModel):
     corrected: str
     explanation: str
     certain: bool
+
+
+class HalvesNudgeOut(ApiModel):
+    text: str
+    by: str
 
 
 class HalvesMineOut(ApiModel):
@@ -245,6 +311,7 @@ class HalvesMineOut(ApiModel):
     reaction: str | None
     understood: bool | None
     corrections: list[HalvesCorrectionOut]
+    nudges: list[HalvesNudgeOut]
 
 
 class HalvesTheirsOut(ApiModel):
@@ -255,6 +322,13 @@ class HalvesTheirsOut(ApiModel):
     answers: list[int]
     solution: int | None
     reaction: str | None
+    caption: str
+    can_nudge: bool
+    nudged: bool
+    # Same-language mode: the Bridge, and what it gave so far.
+    bridge: bool
+    simpler: str | None
+    gist: str | None
 
 
 class HalvesRoundOut(ApiModel):
@@ -303,6 +377,12 @@ class HalvesCaseOut(ApiModel):
     recap_status: Literal["none", "pending", "ready", "failed"]
     veil_default: bool
     ending: str | None
+    # Native intelligibility, private to this seat.
+    understood_first: int
+    told: int
+    same_language: bool
+    from_import: bool
+    duo: bool
 
     @classmethod
     def of(cls, view: CaseView) -> "HalvesCaseOut":
@@ -340,6 +420,7 @@ class HalvesCaseOut(ApiModel):
                                 )
                                 for c in r.mine.corrections
                             ],
+                            nudges=[HalvesNudgeOut(text=n.text, by=n.by) for n in r.mine.nudges],
                         )
                         if r.mine
                         else None
@@ -353,6 +434,12 @@ class HalvesCaseOut(ApiModel):
                             answers=list(r.theirs.answers),
                             solution=r.theirs.solution,
                             reaction=r.theirs.reaction,
+                            caption=r.theirs.caption,
+                            can_nudge=r.theirs.can_nudge,
+                            nudged=r.theirs.nudged,
+                            bridge=r.theirs.bridge,
+                            simpler=r.theirs.simpler,
+                            gist=r.theirs.gist,
                         )
                         if r.theirs
                         else None
@@ -381,6 +468,11 @@ class HalvesCaseOut(ApiModel):
             recap_status=view.recap_status,
             veil_default=view.veil_default,
             ending=view.ending,
+            understood_first=view.understood_first,
+            told=view.told,
+            same_language=view.same_language,
+            from_import=view.from_import,
+            duo=view.duo,
         )
 
 
@@ -401,7 +493,7 @@ class HalvesAudioOut(ApiModel):
 
 
 class HalvesQueueItemOut(ApiModel):
-    kind: Literal["held", "report"]
+    kind: Literal["held", "report", "nudge"]
     id: UUID
     move_id: UUID
     transcript: str
@@ -411,6 +503,8 @@ class HalvesQueueItemOut(ApiModel):
     note: str | None
     band: Literal["adult", "minor"]
     created_at: dt.datetime
+    strikes: int
+    suspended: bool
 
     @classmethod
     def of(cls, item: QueueItem) -> "HalvesQueueItemOut":
@@ -425,11 +519,110 @@ class HalvesQueueItemOut(ApiModel):
             note=item.note,
             band=item.band,
             created_at=item.created_at,
+            strikes=item.strikes,
+            suspended=item.suspended,
         )
 
 
 class HalvesQueueOut(ApiModel):
     items: list[HalvesQueueItemOut]
+
+
+class HalvesStatsOut(ApiModel):
+    """The owner's numbers for the last 30 days (6.15)."""
+
+    moves: int
+    cases: int
+    held_per_1000: float
+    reports_per_1000: float
+    blocks_per_1000_cases: float
+    nudges: int
+    nudges_dropped: int
+    median_decision_hours: float | None
+    open_items: int
+
+    @classmethod
+    def of(cls, stats: SafetyStats) -> "HalvesStatsOut":
+        return cls(
+            moves=stats.moves,
+            cases=stats.cases,
+            held_per_1000=stats.held_per_1000,
+            reports_per_1000=stats.reports_per_1000,
+            blocks_per_1000_cases=stats.blocks_per_1000_cases,
+            nudges=stats.nudges,
+            nudges_dropped=stats.nudges_dropped,
+            median_decision_hours=stats.median_decision_hours,
+            open_items=stats.open_items,
+        )
+
+
+class HalvesLookOut(ApiModel):
+    """What looking for a partner gave: a case when someone fitted at once, else the search."""
+
+    case: HalvesCaseOut | None
+    search: HalvesSearchOut | None
+
+
+class HalvesPointOut(ApiModel):
+    label: str
+    latitude: float
+    longitude: float
+
+    @classmethod
+    def of(cls, point: StrandPoint) -> "HalvesPointOut":
+        return cls(label=point.label, latitude=point.latitude, longitude=point.longitude)
+
+
+class HalvesStrandOut(ApiModel):
+    codename: str
+    point: HalvesPointOut
+    cases: int
+    duo: bool
+
+
+class HalvesStrandsOut(ApiModel):
+    """The strand map (7.14): nothing finer than a city, only what each chose to share."""
+
+    me: HalvesPointOut | None
+    strands: list[HalvesStrandOut]
+    unplaced: int
+
+    @classmethod
+    def of(cls, found: StrandMap) -> "HalvesStrandsOut":
+        return cls(
+            me=HalvesPointOut.of(found.me) if found.me else None,
+            strands=[
+                HalvesStrandOut(
+                    codename=s.codename, point=HalvesPointOut.of(s.point), cases=s.cases, duo=s.duo
+                )
+                for s in found.strands
+            ],
+            unplaced=found.unplaced,
+        )
+
+
+class HalvesShareOut(ApiModel):
+    """The share card (7.15): no voice, no words of the learner, no name."""
+
+    title: str
+    week: str | None
+    status: CaseStatusOut
+    understood_first: int
+    told: int
+    code: str | None
+    codename: str
+
+    @classmethod
+    def of(cls, card: ShareCard) -> "HalvesShareOut":
+        return cls(
+            title=card.title,
+            week=card.week,
+            status=card.status,
+            understood_first=card.understood_first,
+            told=card.told,
+            code=card.code,
+            codename=card.codename,
+        )
 
 
 def halves_router(service: Callable[[], HalvesService], recorded: Any) -> APIRouter:
@@ -482,6 +675,29 @@ def halves_router(service: Callable[[], HalvesService], recorded: Any) -> APIRou
         """A case against an AI stand-in (7.3)."""
         case = service().play_ai(user, start.template_id, start.season)
         return HalvesCaseOut.of(service().view(user, case.id))
+
+    @router.post("/cases/import", operation_id="startHalvesImportCase")
+    def start_import_case(user: CurrentUser, start: HalvesImportCaseIn) -> HalvesCaseOut:
+        """A case against the AI written from one of the learner's course imports (7.17)."""
+        case = service().play_import(user, start.import_id)
+        return HalvesCaseOut.of(service().view(user, case.id))
+
+    @router.post("/search", operation_id="lookForHalvesPartner")
+    def look(user: CurrentUser, search: HalvesSearchIn) -> HalvesLookOut:
+        """Looks for a stranger to play with (7.3): a case at once when someone fits."""
+        found = service().look(user, search.hours, search.remind)
+        if isinstance(found, Case):
+            return HalvesLookOut(case=HalvesCaseOut.of(service().view(user, found.id)), search=None)
+        return HalvesLookOut(case=None, search=HalvesSearchOut.of(found))
+
+    @router.delete("/search", operation_id="stopHalvesSearch", status_code=204)
+    def stop_looking(user: CurrentUser) -> None:
+        service().stop_looking(user)
+
+    @router.get("/strands", operation_id="getHalvesStrands")
+    def get_strands(user: CurrentUser) -> HalvesStrandsOut:
+        """The strand map (7.14)."""
+        return HalvesStrandsOut.of(service().strands(user))
 
     @router.post("/invites", operation_id="createHalvesInvite")
     def create_invite(user: CurrentUser, invite: HalvesInviteIn) -> HalvesInviteOut:
@@ -539,6 +755,11 @@ def halves_router(service: Callable[[], HalvesService], recorded: Any) -> APIRou
     def block_partner(user: CurrentUser, case_id: UUID) -> HalvesCaseOut:
         return HalvesCaseOut.of(service().block(user, case_id))
 
+    @router.get("/cases/{case_id}/share", operation_id="getHalvesShareCard")
+    def share_card(user: CurrentUser, case_id: UUID) -> HalvesShareOut:
+        """What the share card of an ended case shows (7.15)."""
+        return HalvesShareOut.of(service().share(user, case_id))
+
     @router.get("/cases/{case_id}/recap/{line}/audio", operation_id="getHalvesRecapAudio")
     def recap_audio(user: CurrentUser, case_id: UUID, line: int) -> HalvesAudioOut:
         return HalvesAudioOut(url=service().recap_address(user, case_id, line))
@@ -556,6 +777,16 @@ def halves_router(service: Callable[[], HalvesService], recorded: Any) -> APIRou
         """Acts on a clue heard (7.7): an option of the board's question."""
         return HalvesCaseOut.of(service().answer(user, move_id, answer.option))
 
+    @router.post("/moves/{move_id}/bridge", operation_id="bridgeHalvesMove")
+    def bridge(user: CurrentUser, move_id: UUID, step: HalvesBridgeIn) -> HalvesCaseOut:
+        """The Bridge (7.7, same-language mode): slower, then simpler, then the gist."""
+        return HalvesCaseOut.of(service().bridge(user, move_id, step.step))
+
+    @router.post("/moves/{move_id}/nudge", operation_id="nudgeHalvesMove")
+    def nudge(user: CurrentUser, move_id: UUID, nudge: HalvesNudgeIn) -> HalvesCaseOut:
+        """Suggests a better way to say a move heard (7.7): checked before the speaker sees it."""
+        return HalvesCaseOut.of(service().nudge(user, move_id, nudge.text))
+
     @router.post("/moves/{move_id}/report", operation_id="reportHalvesMove")
     def report(user: CurrentUser, move_id: UUID, report: HalvesReportIn) -> HalvesCaseOut:
         """Reports a move heard (7.10): hidden at once, and queued for the owner."""
@@ -566,10 +797,15 @@ def halves_router(service: Callable[[], HalvesService], recorded: Any) -> APIRou
         """The owner's Two Halves queue (6.15): held moves and reports."""
         return HalvesQueueOut(items=[HalvesQueueItemOut.of(item) for item in service().queue(user)])
 
+    @router.get("/queue/stats", operation_id="getHalvesStats")
+    def get_stats(user: CurrentUser) -> HalvesStatsOut:
+        """The owner's numbers for the last 30 days (6.15)."""
+        return HalvesStatsOut.of(service().stats(user))
+
     @router.post("/queue/{kind}/{item_id}", operation_id="decideHalvesItem", status_code=204)
     def decide(
         user: CurrentUser,
-        kind: Literal["held", "report"],
+        kind: Literal["held", "report", "nudge"],
         item_id: UUID,
         decision: HalvesDecisionIn,
     ) -> None:
