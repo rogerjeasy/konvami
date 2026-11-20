@@ -54,6 +54,7 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.real_life import RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService
@@ -61,6 +62,7 @@ from konvami_api.domain.retries import RetryService
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
+from konvami_api.domain.teacher_report import TeacherReportService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.two_partners import GuestSpeech
@@ -93,6 +95,7 @@ from konvami_api.persistence.repositories import (
     SqlLevelRepository,
     SqlMemoryRepository,
     SqlOnboardingRepository,
+    SqlOwnScenarioRepository,
     SqlPackRepository,
     SqlPenPalRepository,
     SqlPersonaRepository,
@@ -406,6 +409,20 @@ def build_backend(
         clock=_now,
     )
     grammar = GrammarMapService(profiles=profiles, reports=reports)
+    real_life = RealLifeService(
+        profiles=profiles,
+        accounts=directory,
+        memories=memories,
+        conversations=conversations,
+        repository=SqlOwnScenarioRepository(sql),
+        # Scenes count against the Tutor's requests of the day: the same strong text model.
+        limit=tutor_store,
+        guard=text_guard,
+        text_model=text,
+        model=models.tutor,
+        clock=_now,
+        listener=listener,
+    )
     conversation_review = ConversationReview(
         profiles=profiles, sessions=sessions, conversations=conversations, cards=cards
     )
@@ -506,7 +523,9 @@ def build_backend(
                     cards=cards,
                     week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
                     imports=course_imports.material,
+                    events=real_life.debrief,
                 ),
+                own_scenarios=real_life.scenario,
             ),
         },
         accounts=directory,
@@ -581,6 +600,15 @@ def build_backend(
         recordings=recordings,
         tutor=tutor,
         course_imports=course_imports,
+        real_life=real_life,
+        teacher_report=TeacherReportService(
+            profiles=profiles,
+            conversations=conversations,
+            reports=reports,
+            grammar=grammar,
+            levels=levels,
+            clock=_now,
+        ),
         vocabulary=vocabulary,
         caption_lookup=CaptionLookupService(
             profiles=profiles,

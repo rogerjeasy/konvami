@@ -47,12 +47,14 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.real_life import RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
 from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
+from konvami_api.domain.teacher_report import TeacherReportService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.two_partners import GuestSpeech
@@ -89,6 +91,7 @@ from tests.fakes import (
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryOwnScenarioRepository,
     InMemoryPackRepository,
     InMemoryPenPalRepository,
     InMemoryPersonaRepository,
@@ -499,6 +502,18 @@ def services(
         clock=clock,
         new_id=lambda: next(import_ids),
     )
+    real_life = RealLifeService(
+        profiles=profiles,
+        accounts=directory,
+        memories=memories,
+        conversations=conversations,
+        repository=InMemoryOwnScenarioRepository(),
+        limit=tutor_store,
+        guard=text_guard(clock),
+        text_model=text_model,
+        model="gpt-6.1-sol",
+        clock=clock,
+    )
     # Phrase ids in the order they are handed out: ...0001, ...0002, and so on.
     phrase_ids = (UUID(f"eeeeeeee-eeee-4eee-8eee-{number:012d}") for number in range(1, 1000))
     exams = ExamService(
@@ -544,7 +559,9 @@ def services(
                     cards=cards,
                     week_topic=lambda user_id, today: director.topic_for_call(user_id, today),
                     imports=course_imports.material,
+                    events=real_life.debrief,
                 ),
+                own_scenarios=real_life.scenario,
             ),
             CallPurpose.EXAM: ExamScript(exams),
         },
@@ -647,6 +664,15 @@ def services(
         recordings=recordings,
         tutor=tutor,
         course_imports=course_imports,
+        real_life=real_life,
+        teacher_report=TeacherReportService(
+            profiles=profiles,
+            conversations=conversations,
+            reports=reports,
+            grammar=GrammarMapService(profiles=profiles, reports=reports),
+            levels=levels,
+            clock=clock,
+        ),
         caption_lookup=CaptionLookupService(
             profiles=profiles,
             accounts=directory,

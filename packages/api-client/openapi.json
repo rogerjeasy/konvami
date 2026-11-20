@@ -767,6 +767,17 @@
       "ConversationOut": {
         "additionalProperties": false,
         "properties": {
+          "debrief": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debrief"
+          },
           "endedAt": {
             "anyOf": [
               {
@@ -2069,6 +2080,20 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HeardOut": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "HeardOut",
+        "type": "object"
+      },
       "HomeExamOut": {
         "additionalProperties": false,
         "properties": {
@@ -3041,6 +3066,61 @@
         "title": "LevelStepOut",
         "type": "object"
       },
+      "LifeEventOut": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "memoryId": {
+            "format": "uuid",
+            "title": "Memoryid",
+            "type": "string"
+          },
+          "partnerId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerid"
+          },
+          "rehearsal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnScenarioOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "memoryId",
+          "text",
+          "day",
+          "partnerId",
+          "rehearsal",
+          "done"
+        ],
+        "title": "LifeEventOut",
+        "type": "object"
+      },
       "LookModel": {
         "additionalProperties": false,
         "description": "A portrait's parts and colors. The app draws exactly these names.",
@@ -3557,6 +3637,97 @@
           "placement"
         ],
         "title": "OnboardingOut",
+        "type": "object"
+      },
+      "OwnGoalIn": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 160,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "OwnGoalIn",
+        "type": "object"
+      },
+      "OwnScenarioOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "memoryId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memoryid"
+          },
+          "scenario": {
+            "title": "Scenario",
+            "type": "string"
+          },
+          "scene": {
+            "$ref": "#/components/schemas/SceneOut"
+          },
+          "source": {
+            "enum": [
+              "custom",
+              "event"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scenario",
+          "scene",
+          "source",
+          "memoryId",
+          "updatedAt"
+        ],
+        "title": "OwnScenarioOut",
+        "type": "object"
+      },
+      "OwnScenariosOut": {
+        "additionalProperties": false,
+        "properties": {
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/OwnScenarioOut"
+            },
+            "title": "Scenarios",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scenarios"
+        ],
+        "title": "OwnScenariosOut",
         "type": "object"
       },
       "PairOut": {
@@ -5932,6 +6103,31 @@
         "title": "ReadinessOut",
         "type": "object"
       },
+      "RealLifeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "comingUp": {
+            "items": {
+              "$ref": "#/components/schemas/LifeEventOut"
+            },
+            "title": "Comingup",
+            "type": "array"
+          },
+          "toDebrief": {
+            "items": {
+              "$ref": "#/components/schemas/LifeEventOut"
+            },
+            "title": "Todebrief",
+            "type": "array"
+          }
+        },
+        "required": [
+          "comingUp",
+          "toDebrief"
+        ],
+        "title": "RealLifeOut",
+        "type": "object"
+      },
       "Reason": {
         "description": "Why today's part of the plan is what it is.",
         "enum": [
@@ -6499,6 +6695,111 @@
           "goals"
         ],
         "title": "ScenarioOut",
+        "type": "object"
+      },
+      "SceneDraftIn": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "title": "SceneDraftIn",
+        "type": "object"
+      },
+      "SceneIn": {
+        "additionalProperties": false,
+        "description": "A role-play as the learner reads and edits it, in their explanation language.",
+        "properties": {
+          "character": {
+            "maxLength": 200,
+            "title": "Character",
+            "type": "string"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/OwnGoalIn"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Goals",
+            "type": "array"
+          },
+          "level": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "situation": {
+            "maxLength": 400,
+            "title": "Situation",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 80,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "character",
+          "situation",
+          "goals",
+          "level"
+        ],
+        "title": "SceneIn",
+        "type": "object"
+      },
+      "SceneOut": {
+        "additionalProperties": false,
+        "properties": {
+          "character": {
+            "title": "Character",
+            "type": "string"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/OwnGoalIn"
+            },
+            "title": "Goals",
+            "type": "array"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "situation": {
+            "title": "Situation",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "character",
+          "situation",
+          "goals",
+          "level"
+        ],
+        "title": "SceneOut",
         "type": "object"
       },
       "SessionKind": {
@@ -7130,6 +7431,212 @@
           "partnerWords"
         ],
         "title": "TalkShareOut",
+        "type": "object"
+      },
+      "TeacherConversationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "partnerName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnername"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "title": "Startedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "startedAt",
+          "seconds",
+          "partnerName",
+          "scenario"
+        ],
+        "title": "TeacherConversationOut",
+        "type": "object"
+      },
+      "TeacherFitOut": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "grammar": {
+            "title": "Grammar",
+            "type": "string"
+          },
+          "speaking": {
+            "title": "Speaking",
+            "type": "string"
+          },
+          "vocabulary": {
+            "title": "Vocabulary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "grammar",
+          "vocabulary",
+          "speaking"
+        ],
+        "title": "TeacherFitOut",
+        "type": "object"
+      },
+      "TeacherMistakeKindOut": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "examples": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherMistakeOut"
+            },
+            "title": "Examples",
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "count",
+          "examples"
+        ],
+        "title": "TeacherMistakeKindOut",
+        "type": "object"
+      },
+      "TeacherMistakeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "corrected": {
+            "title": "Corrected",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          }
+        },
+        "required": [
+          "original",
+          "corrected",
+          "explanation"
+        ],
+        "title": "TeacherMistakeOut",
+        "type": "object"
+      },
+      "TeacherReportOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherConversationOut"
+            },
+            "title": "Conversations",
+            "type": "array"
+          },
+          "fits": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherFitOut"
+            },
+            "title": "Fits",
+            "type": "array"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/LevelPointOut"
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "mistakes": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherMistakeKindOut"
+            },
+            "title": "Mistakes",
+            "type": "array"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/GrammarTopicOut"
+            },
+            "title": "Topics",
+            "type": "array"
+          },
+          "until": {
+            "format": "date-time",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "language",
+          "level",
+          "since",
+          "until",
+          "seconds",
+          "conversations",
+          "mistakes",
+          "topics",
+          "levels",
+          "fits"
+        ],
+        "title": "TeacherReportOut",
         "type": "object"
       },
       "TeachingModel": {
@@ -11863,6 +12370,388 @@
         "summary": "Confirm Partners"
       }
     },
+    "/v1/own-scenarios": {
+      "get": {
+        "description": "The learner's own role-plays in the language they learn now, the latest first.",
+        "operationId": "getOwnScenarios",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnScenariosOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "summary": "Get Own Scenarios"
+      },
+      "post": {
+        "description": "Keeps a role-play the learner wrote or had written.",
+        "operationId": "saveOwnScenario",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnScenarioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Save Own Scenario"
+      }
+    },
+    "/v1/own-scenarios/drafts": {
+      "post": {
+        "description": "A role-play written from a situation the learner described; kept only once saved.",
+        "operationId": "draftOwnScenario",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneDraftIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SceneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Draft Own Scenario"
+      }
+    },
+    "/v1/own-scenarios/heard": {
+      "post": {
+        "description": "What a situation described out loud says, to edit before a scene is written.",
+        "operationId": "hearScenarioDescription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Hear Scenario Description"
+      }
+    },
+    "/v1/own-scenarios/{scenario_id}": {
+      "delete": {
+        "operationId": "removeOwnScenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnScenariosOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Own Scenario"
+      },
+      "put": {
+        "operationId": "changeOwnScenario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scenario_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Scenario Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SceneIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnScenarioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Change Own Scenario"
+      }
+    },
     "/v1/owner/costs": {
       "get": {
         "description": "A month's estimated spending (this month unless `month` names its first day).",
@@ -14813,6 +15702,135 @@
         "summary": "Remove Push Device"
       }
     },
+    "/v1/real-life": {
+      "get": {
+        "description": "Events of the learner's life to rehearse before they happen and to talk over after;\n`local_date` is today on their device.",
+        "operationId": "getRealLife",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "local_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Local Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealLifeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Real Life"
+      }
+    },
+    "/v1/real-life/events/{memory_id}/rehearsal": {
+      "post": {
+        "description": "The role-play that rehearses an event, written the first time it is asked for.",
+        "operationId": "rehearseEvent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memory_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Memory Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnScenarioOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rehearse Event"
+      }
+    },
     "/v1/recordings": {
       "get": {
         "description": "Whether the audio of the learner's conversations is kept (spec \u00a76.6).",
@@ -14915,6 +15933,66 @@
           }
         },
         "summary": "Get Recording Formats"
+      }
+    },
+    "/v1/teacher-report": {
+      "get": {
+        "description": "What the conversations of the last `days` days (7, 30 or 90) showed, for the\nlearner's own teacher (6.23).",
+        "operationId": "getTeacherReport",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": true,
+            "schema": {
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Teacher Report"
       }
     },
     "/v1/then-vs-now": {

@@ -49,6 +49,7 @@ from konvami_api.api.schemas import (
     FlagsOut,
     GrammarMapOut,
     GrammarTopicPageOut,
+    HeardOut,
     HomeOut,
     ImportIn,
     ImportOut,
@@ -61,6 +62,8 @@ from konvami_api.api.schemas import (
     MemorySettingsPatch,
     NextSimulationOut,
     OnboardingOut,
+    OwnScenarioOut,
+    OwnScenariosOut,
     PenPalNoteOut,
     PenPalOut,
     PenPalReplyOut,
@@ -103,6 +106,7 @@ from konvami_api.api.schemas import (
     PushDeviceOut,
     QueuedFlagOut,
     QueueOut,
+    RealLifeOut,
     RecordingFormatsOut,
     RecordingIn,
     RecordingsOut,
@@ -115,12 +119,16 @@ from konvami_api.api.schemas import (
     ReviewIn,
     ReviewSyncIn,
     ReviewSyncOut,
+    SceneDraftIn,
+    SceneIn,
+    SceneOut,
     SimulationOut,
     SoundDetailOut,
     SoundOut,
     SoundsOut,
     SoundSummaryOut,
     SpeakingExamOut,
+    TeacherReportOut,
     ThenVsNowOut,
     TranscriptOut,
     TutorCorrectionIn,
@@ -170,10 +178,12 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationError, PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.real_life import RealLifeError, RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import ReportService, ReportState
 from konvami_api.domain.retries import RetryError, RetryService
+from konvami_api.domain.teacher_report import TeacherReportService
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
 from konvami_api.domain.video_avatars import VideoAvatarService
@@ -211,6 +221,8 @@ class Services:
     vocabulary: VocabularyService
     caption_lookup: CaptionLookupService
     phrasebook: PhrasebookService
+    real_life: RealLifeService
+    teacher_report: TeacherReportService
     course_imports: CourseImportService
     voices: VoiceSampleService
     premium_voices: PremiumVoiceService
@@ -1033,6 +1045,79 @@ def _router(services: Services) -> APIRouter:
         return CardOut.of(
             services.caption_lookup.save(user, asked.language, asked.word, asked.meaning)
         )
+
+    # --- Real life: own role-plays, rehearsals and debriefs (5.13, 5.31) --------------------
+
+    def own_scenarios(user: UUID) -> OwnScenariosOut:
+        return OwnScenariosOut(
+            scenarios=[OwnScenarioOut.of(found) for found in services.real_life.own(user)]
+        )
+
+    @router.get("/own-scenarios", operation_id="getOwnScenarios")
+    def get_own_scenarios(user: CurrentUser) -> OwnScenariosOut:
+        """The learner's own role-plays in the language they learn now, the latest first."""
+        return own_scenarios(user)
+
+    @router.post(
+        "/own-scenarios/drafts",
+        operation_id="draftOwnScenario",
+        responses=REFUSED | CONFLICT | TUTOR_REFUSED,
+    )
+    def draft_own_scenario(user: CurrentUser, described: SceneDraftIn) -> SceneOut:
+        """A role-play written from a situation the learner described; kept only once saved."""
+        return SceneOut.of(services.real_life.draft(user, described.description))
+
+    @router.post(
+        "/own-scenarios/heard",
+        operation_id="hearScenarioDescription",
+        responses=REFUSED | TUTOR_REFUSED,
+    )
+    def hear_scenario_description(user: CurrentUser, recording: RecordingIn) -> HeardOut:
+        """What a situation described out loud says, to edit before a scene is written."""
+        audio, seconds = recorded(recording, RealLifeError)
+        return HeardOut(text=services.real_life.hear(user, audio, recording.format, seconds))
+
+    @router.post("/own-scenarios", operation_id="saveOwnScenario", responses=REFUSED | CONFLICT)
+    def save_own_scenario(user: CurrentUser, scene: SceneIn) -> OwnScenarioOut:
+        """Keeps a role-play the learner wrote or had written."""
+        return OwnScenarioOut.of(services.real_life.save(user, scene.scene()))
+
+    @router.put(
+        "/own-scenarios/{scenario_id}",
+        operation_id="changeOwnScenario",
+        responses=REFUSED | NOT_FOUND,
+    )
+    def change_own_scenario(user: CurrentUser, scenario_id: UUID, scene: SceneIn) -> OwnScenarioOut:
+        return OwnScenarioOut.of(services.real_life.save(user, scene.scene(), scenario_id))
+
+    @router.delete(
+        "/own-scenarios/{scenario_id}", operation_id="removeOwnScenario", responses=NOT_FOUND
+    )
+    def remove_own_scenario(user: CurrentUser, scenario_id: UUID) -> OwnScenariosOut:
+        services.real_life.remove(user, scenario_id)
+        return own_scenarios(user)
+
+    @router.get("/real-life", operation_id="getRealLife")
+    def get_real_life(user: CurrentUser, local_date: dt.date | None = None) -> RealLifeOut:
+        """Events of the learner's life to rehearse before they happen and to talk over after;
+        `local_date` is today on their device."""
+        today = services.real_life.today_of(local_date)
+        return RealLifeOut.of(services.real_life.life(user, today))
+
+    @router.post(
+        "/real-life/events/{memory_id}/rehearsal",
+        operation_id="rehearseEvent",
+        responses=NOT_FOUND | CONFLICT,
+    )
+    def rehearse_event(user: CurrentUser, memory_id: UUID) -> OwnScenarioOut:
+        """The role-play that rehearses an event, written the first time it is asked for."""
+        return OwnScenarioOut.of(services.real_life.rehearsal(user, memory_id))
+
+    @router.get("/teacher-report", operation_id="getTeacherReport", responses=REFUSED | CONFLICT)
+    def get_teacher_report(user: CurrentUser, days: int) -> TeacherReportOut:
+        """What the conversations of the last `days` days (7, 30 or 90) showed, for the
+        learner's own teacher (6.23)."""
+        return TeacherReportOut.of(services.teacher_report.report(user, days))
 
     @router.get("/phrasebook", operation_id="getPhrasebook", responses=REFUSED)
     def get_phrasebook(user: CurrentUser) -> PhrasebookOut:

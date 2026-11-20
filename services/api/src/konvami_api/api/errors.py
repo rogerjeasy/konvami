@@ -35,9 +35,11 @@ from konvami_api.domain.premium_voices import PremiumError
 from konvami_api.domain.profile import ProfileError
 from konvami_api.domain.profile_questions import QuestionError
 from konvami_api.domain.pronunciation import PronunciationError
+from konvami_api.domain.real_life import RealLifeError
 from konvami_api.domain.reports import ReportError
 from konvami_api.domain.retries import RetryError
 from konvami_api.domain.scenarios import ScenarioError
+from konvami_api.domain.teacher_report import TeacherReportError
 from konvami_api.domain.tutor import TutorError
 from konvami_api.domain.video_avatars import VideoAvatarError
 from konvami_api.domain.voice import VoiceError
@@ -185,6 +187,16 @@ _PEN_PAL_STATUS = {
 
 # The plan does not include what was asked: HTTP 402, "payment required".
 _PLAN_STATUS = {"plan_required": 402}
+_REAL_LIFE_STATUS = {
+    "invalid_value": 422,
+    "not_found": 404,
+    "no_language": 409,
+    "too_many": 409,
+    "consent_required": 403,
+    "scenario_limit": 429,
+    **_MODERATION_STATUS,
+}
+_TEACHER_REPORT_STATUS = {"invalid_value": 422, "no_language": 409}
 _UNAVAILABLE = 503
 
 
@@ -310,6 +322,14 @@ def install_error_handlers(app: FastAPI) -> None:
             "question_limit": 429,
         }
         return _response(statuses.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(RealLifeError)
+    async def _real_life_error(_: Request, error: RealLifeError) -> JSONResponse:
+        return _response(_REAL_LIFE_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(TeacherReportError)
+    async def _teacher_report_error(_: Request, error: TeacherReportError) -> JSONResponse:
+        return _response(_TEACHER_REPORT_STATUS.get(error.code, 422), error.code)
 
     @app.exception_handler(PhrasebookError)
     async def _phrasebook_error(_: Request, error: PhrasebookError) -> JSONResponse:
