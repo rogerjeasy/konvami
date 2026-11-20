@@ -38,6 +38,7 @@ export const createAppVoiceEngine: VoiceEngineFactory = (
         personaId,
         // A second partner speaks as a clip, so the lead keeps the call's own voice (no premium).
         ...(options?.guestId ? { guestPersonaId: options.guestId } : {}),
+        ...(purpose === 'practice' && options?.rang ? { rang: true } : {}),
         ...(purpose === 'practice' && getPreferences().premiumCalls && !options?.guestId
           ? { premium: true }
           : {}),

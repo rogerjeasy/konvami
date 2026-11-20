@@ -12,6 +12,8 @@ export interface FakeReminderDevice extends ReminderDevice {
   asked: number;
   /** The reminders scheduled last, and the channel name they came with. */
   scheduled: ScheduledReminder[];
+  /** Reminders put off on 5.28, kept across `replace`. */
+  snoozed: ScheduledReminder[];
   channel: string | null;
   /** This phone's push address; `null` for none. */
   token: string | null;
@@ -29,6 +31,7 @@ export function createFakeReminderDevice(
     answer,
     asked: 0,
     scheduled: [],
+    snoozed: [],
     channel: null,
     token: 'ExponentPushToken[fake-phone]',
     pushToken: async () => (device.token ? { token: device.token, platform: 'ios' } : null),
@@ -41,6 +44,13 @@ export function createFakeReminderDevice(
     async replace(reminders, channel) {
       device.scheduled = [...reminders];
       device.channel = channel;
+    },
+    async snooze(reminder) {
+      device.snoozed.push(reminder);
+    },
+    async clear() {
+      device.scheduled = [];
+      device.snoozed = [];
     },
     onOpen(open) {
       opened.add(open);

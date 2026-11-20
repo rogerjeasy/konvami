@@ -24,14 +24,18 @@ import { callRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes'
 import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useAccount, useProfileQuestion, useProfileServices } from '@/profile/services';
 import { useReminderSchedule } from '@/reminders/use-reminders';
+import { useWidgetTimeline } from '@/widgets/use-widget';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
 import { isKnownQuestion, ProfileQuestion } from './profile-question';
-import { ReminderOffer } from './reminder-offer';
+import { CallsOffer, ReminderOffer } from './reminder-offer';
 import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
 import { CardsTile } from './cards-tile';
 import { GoalTile, StreakTile, TopicsTile } from './week-card';
+
+// Partner calls are offered after this many conversations (5.28), not with the first reminder.
+const CALLS_OFFER_AFTER = 3;
 
 /** The greeting and the day, with the way to the account at the end. */
 function Header({ now }: { now: Date }) {
@@ -94,8 +98,9 @@ function Bento({ home }: { home: Home }) {
 function Day({ home, now }: { home: Home; now: Date }) {
   const { t } = useTranslation();
   const { split } = useScreenLayout();
-  // Today is where the plan is read: the device's reminders follow it from here.
+  // Today is where the plan is read: the device's reminders and widget follow it from here.
   useReminderSchedule(home, now);
+  useWidgetTimeline(home, now);
   const partner =
     home.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ?? home.partners[0];
   // A question about a setting, when the server finds one due (progressive profiling).
@@ -146,6 +151,10 @@ function Day({ home, now }: { home: Home; now: Date }) {
     // Once there was a first conversation, reminders are worth offering.
     partner && home.activity.conversations > 0 ? (
       <ReminderOffer key="reminders" partnerName={partner.persona.name} />
+    ) : null,
+    // Partner calls (5.28) once a few conversations show the learner keeps coming back.
+    partner && home.activity.conversations >= CALLS_OFFER_AFTER ? (
+      <CallsOffer key="calls" partnerName={partner.persona.name} />
     ) : null,
   ];
   const about = [

@@ -672,6 +672,12 @@ export const de: Translation = {
   },
   reminders: {
     channel: 'Übungserinnerungen',
+    callsChannel: 'Anrufe deiner Partner',
+    call: {
+      title: '{{name}} ruft an',
+      body: 'Hast du 3 Minuten zum Reden? Tippe, um anzunehmen.',
+      about: '{{ask}} Tippe, um anzunehmen: etwa 3 Minuten.',
+    },
     word: {
       title: 'Wort des Tages',
       line: 'Wort des Tages: {{word}} ({{meaning}})',
@@ -684,6 +690,18 @@ export const de: Translation = {
         'Deine Simulation für das {{name}} ist diese Woche geplant. Wann immer du bereit bist.',
       cards: 'Deine Karten warten auf dich, bevor du sie vergisst.',
     },
+  },
+  incomingCall: {
+    calling: '{{name}} ruft an',
+    short: 'Ein kurzes Gespräch, etwa 3 Minuten',
+    about: 'Thema: {{ask}}',
+    accept: 'Annehmen',
+    decline: 'Jetzt nicht',
+    later: 'In einer Stunde erinnern',
+    laterDone: '{{name}} ruft um {{time}} noch einmal an.',
+    laterFailed: 'Das hat nicht geklappt. Versuche es über Heute.',
+    notFound: 'Diesen Partner gibt es in deiner Liste nicht mehr.',
+    back: 'Zurück zu Heute',
   },
   today: {
     question: {
@@ -708,6 +726,12 @@ export const de: Translation = {
           daily: '5 Tage, 90 Minuten pro Woche',
         },
       },
+    },
+    calls: {
+      title: 'Soll dein Partner dich anrufen?',
+      body: 'An deinen Übungstagen kann {{name}} um {{time}} für ein 3‑Minuten-Gespräch über etwas anrufen, das du erzählt hast. Das ersetzt die Erinnerung des Tages: höchstens einmal am Tag, nie nachts.',
+      yes: 'Ja, ruf mich an',
+      no: 'Jetzt nicht',
     },
     reminders: {
       title: 'Eine Erinnerung an deinen Übungstagen?',
@@ -2329,6 +2353,9 @@ export const de: Translation = {
       goals: 'Deine Ziele',
     },
     reminders: {
+      calls: 'Mein Partner ruft mich an',
+      callsHint:
+        'An deinen geplanten Tagen ruft ein Partner zu deiner Erinnerungszeit für ein kurzes Gespräch über etwas an, das er sich gemerkt hat, statt der Erinnerung des Tages. Es ist eine Mitteilung von Konvami, kein Telefonanruf, und dein Fokus oder „Nicht stören“ entscheidet weiterhin, ob sie erscheint.',
       title: 'Erinnerungen',
       body: 'Eine kurze Nachricht an den Tagen, an denen du üben wolltest, zur Uhrzeit deiner Wahl. Höchstens eine am Tag, nie nachts.',
       on: 'An meinen Übungstagen erinnern',

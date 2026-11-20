@@ -62,6 +62,8 @@ export function useVoiceCall(
   const assessmentConsent = options?.assessmentConsent ?? false;
   // The second partner of a two-partner conversation (5.24).
   const guestId = options?.guestId;
+  // A call the learner accepted from the partner's ring (5.28).
+  const rang = options?.rang ?? false;
   const createEngine = useVoiceEngineFactory();
   const [status, setStatus] = useState<VoiceCall['status']>('starting');
   const [problem, setProblem] = useState<CallProblem | null>(null);
@@ -79,6 +81,7 @@ export function useVoiceCall(
     const call = createEngine(purpose, personaId, scenario, practise, {
       assessmentConsent,
       ...(guestId ? { guestId } : {}),
+      ...(rang ? { rang } : {}),
     });
     engine.current = call;
     let current = true;
@@ -119,7 +122,7 @@ export function useVoiceCall(
       unsubscribe();
       call.stop();
     };
-  }, [createEngine, purpose, personaId, scenario, practise, assessmentConsent, guestId]);
+  }, [createEngine, purpose, personaId, scenario, practise, assessmentConsent, guestId, rang]);
 
   // The lips and the listening ring follow the voice levels while the call is live.
   const speaking = conversation.phase === 'speaking';

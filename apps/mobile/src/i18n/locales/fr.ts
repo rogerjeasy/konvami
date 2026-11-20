@@ -670,6 +670,12 @@ export const fr: Translation = {
   },
   reminders: {
     channel: 'Rappels d’entraînement',
+    callsChannel: 'Appels de tes partenaires',
+    call: {
+      title: '{{name}} t’appelle',
+      body: 'Tu as 3 minutes pour discuter ? Touche pour répondre.',
+      about: '{{ask}} Touche pour répondre : environ 3 minutes.',
+    },
     word: {
       title: 'Le mot du jour',
       line: 'Mot du jour : {{word}} ({{meaning}})',
@@ -681,6 +687,18 @@ export const fr: Translation = {
       simulation: 'Ta simulation du {{name}} est prévue cette semaine. Quand tu veux.',
       cards: 'Tes cartes t’attendent, avant que tu les oublies.',
     },
+  },
+  incomingCall: {
+    calling: '{{name}} t’appelle',
+    short: 'Un appel court, environ 3 minutes',
+    about: 'Sujet : {{ask}}',
+    accept: 'Répondre',
+    decline: 'Pas maintenant',
+    later: 'Me rappeler dans une heure',
+    laterDone: '{{name}} rappellera à {{time}}.',
+    laterFailed: 'Ça n’a pas marché. Réessaie depuis Aujourd’hui.',
+    notFound: 'Ce partenaire n’est plus dans ta liste.',
+    back: 'Retour à Aujourd’hui',
   },
   today: {
     question: {
@@ -705,6 +723,12 @@ export const fr: Translation = {
           daily: '5 jours, 90 minutes par semaine',
         },
       },
+    },
+    calls: {
+      title: 'Ton partenaire peut-il t’appeler ?',
+      body: 'Les jours où tu pratiques, {{name}} peut t’appeler à {{time}} pour 3 minutes de discussion sur quelque chose que tu lui as raconté. Cela remplace le rappel du jour : une fois par jour au plus, jamais la nuit.',
+      yes: 'Oui, appelle-moi',
+      no: 'Pas maintenant',
     },
     reminders: {
       title: 'Un rappel les jours où tu t’entraînes ?',
@@ -2329,6 +2353,9 @@ export const fr: Translation = {
       goals: 'Tes objectifs',
     },
     reminders: {
+      calls: 'Mon partenaire m’appelle',
+      callsHint:
+        'Les jours prévus, un partenaire t’appelle à l’heure de ton rappel pour une courte discussion sur quelque chose dont il se souvient, à la place du rappel du jour. C’est une notification de Konvami, pas un appel téléphonique, et ton mode Concentration ou Ne pas déranger décide toujours si elle s’affiche.',
       title: 'Rappels',
       body: 'Un petit mot les jours où tu as prévu de t’entraîner, à l’heure de ton choix. Un par jour au plus, jamais la nuit.',
       on: 'Me rappeler les jours d’entraînement',

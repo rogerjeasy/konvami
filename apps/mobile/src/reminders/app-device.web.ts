@@ -8,10 +8,17 @@ import type { ReminderDevice } from './device';
 const standIn = (globalThis as { __konvamiReminderDevice?: ReminderDevice })
   .__konvamiReminderDevice;
 
-export const appReminderDevice: ReminderDevice = standIn ?? {
+const unsupported: ReminderDevice = {
   permission: async () => 'unsupported',
   ask: async () => 'unsupported',
   replace: async () => {},
+  snooze: async () => {},
+  clear: async () => {},
   pushToken: async () => null,
   onOpen: () => () => {},
 };
+
+// A stand-in written before a method existed gets the web's own for it.
+export const appReminderDevice: ReminderDevice = standIn
+  ? { ...unsupported, ...standIn }
+  : unsupported;

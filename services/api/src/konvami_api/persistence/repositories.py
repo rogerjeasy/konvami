@@ -300,12 +300,13 @@ _START_SESSION = f"""
     WITH {_ENSURE_USER}
     INSERT INTO voice_session
         (call_id, user_id, purpose, model, started_at, persona_id, scenario,
-         max_seconds, plan, premium, assessment_consent, assessment_language, guest_persona_id)
+         max_seconds, plan, premium, assessment_consent, assessment_language, guest_persona_id,
+         rang)
     VALUES (:call_id, CAST(:user_id AS uuid), :purpose, :model, CAST(:started_at AS timestamptz),
             CAST(:persona_id AS uuid), :scenario, CAST(:max_seconds AS integer),
             CAST(:plan AS jsonb), CAST(:premium AS boolean),
             CAST(:assessment_consent AS boolean), :assessment_language,
-            CAST(:guest_persona_id AS uuid))
+            CAST(:guest_persona_id AS uuid), CAST(:rang AS boolean))
 """
 
 _LOAD_SESSION = f"""
@@ -313,7 +314,7 @@ _LOAD_SESSION = f"""
            {epoch_micros("started_at")} AS started_at, CAST(persona_id AS text) AS persona_id,
            scenario, max_seconds, CAST(plan AS text) AS plan, premium,
            assessment_consent, assessment_language,
-           CAST(guest_persona_id AS text) AS guest_persona_id
+           CAST(guest_persona_id AS text) AS guest_persona_id, rang
     FROM voice_session
     WHERE call_id = :call_id
 """
@@ -1162,6 +1163,7 @@ class SqlVoiceSessionRepository:
                 "guest_persona_id": (
                     str(session.guest_persona_id) if session.guest_persona_id else None
                 ),
+                "rang": session.rang,
             },
         )
 
@@ -1184,6 +1186,7 @@ class SqlVoiceSessionRepository:
             assessment_consent=bool(row.get("assessment_consent", False)),
             assessment_language=row.get("assessment_language"),
             guest_persona_id=UUID(row["guest_persona_id"]) if row.get("guest_persona_id") else None,
+            rang=bool(row.get("rang", False)),
         )
 
     def goals_reached(self, call_id: str, goals: tuple[str, ...]) -> None:

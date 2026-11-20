@@ -53,6 +53,15 @@ WRAP_UP_SECONDS = 45
 GOODBYE_GRACE_SECONDS = 8
 # The least time worth starting a call with: below it the learner's minutes count as used up.
 MIN_CALL_SECONDS = 60
+# A call the learner accepted from a partner's ring (5.28) is a short chat, not a lesson.
+RANG_CALL_SECONDS = 300
+# What the partner is told when the learner picked up its ring.
+RANG_NOTE = (
+    "\nYou called the learner: they accepted your call a moment ago. Open as the one who rang, "
+    "warmly and briefly, about what is most current in what you know of them (an event that "
+    "just happened or is coming up, otherwise this conversation's focus). Keep it to a short "
+    "chat of about three minutes, then say goodbye."
+)
 WEEK = dt.timedelta(days=7)
 
 
@@ -144,6 +153,9 @@ class VoiceSession:
     assessment_language: str | None = None
     # The second partner of a two-partner conversation; None for every other call.
     guest_persona_id: UUID | None = None
+    # A practice call the learner accepted from a partner's ring (5.28): shorter, and the
+    # partner opens as the one who called.
+    rang: bool = False
 
 
 @dataclass(frozen=True)
@@ -405,15 +417,27 @@ class VoiceCallService:
         premium: bool = False,
         assessment_consent: bool = False,
         guest_persona_id: UUID | None = None,
+        rang: bool = False,
     ) -> CallStarted:
         """`local_date` is today on the learner's calendar, as their device has it; `scenario`
         makes a practice call a role-play; `practise` puts a grammar topic first in its plan;
-        `guest_persona_id` brings a second partner into a free practice conversation."""
+        `guest_persona_id` brings a second partner into a free practice conversation; `rang` is a
+        short free conversation the learner accepted from a partner's ring (5.28)."""
         model = self._settings.models.get(purpose)
         max_seconds = self._settings.max_seconds.get(purpose)
         script = self._scripts.get(purpose)
         if model is None or max_seconds is None or script is None:
             raise VoiceError("voice_unavailable")
+        if rang:
+            # A ring opens one partner's free conversation, nothing planned or shared.
+            if (
+                purpose is not CallPurpose.PRACTICE
+                or scenario is not None
+                or practise is not None
+                or guest_persona_id is not None
+            ):
+                raise VoiceError("voice_unavailable")
+            max_seconds = min(max_seconds, RANG_CALL_SECONDS)
         if guest_persona_id is not None and (
             purpose is not CallPurpose.PRACTICE
             or not isinstance(script, DuoScript)
@@ -481,6 +505,8 @@ class VoiceCallService:
             },
         }
 
+        if rang:
+            session["instructions"] += RANG_NOTE
         if premium:
             session["output_modalities"] = ["text"]
             session["audio"].pop("output")
@@ -514,6 +540,7 @@ class VoiceCallService:
                     assessment_consent,
                     briefing.hearing.language if assessment_consent and briefing.hearing else None,
                     guest_persona_id,
+                    rang,
                 ),
                 sdp_offer,
                 session,

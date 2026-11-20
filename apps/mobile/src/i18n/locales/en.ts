@@ -658,6 +658,12 @@ export const en = {
   },
   reminders: {
     channel: 'Practice reminders',
+    callsChannel: 'Partner calls',
+    call: {
+      title: '{{name}} is calling',
+      body: 'Got 3 minutes to talk? Tap to answer.',
+      about: '{{ask}} Tap to answer: about 3 minutes.',
+    },
     word: {
       title: 'Today’s word',
       line: 'Today’s word: {{word}} ({{meaning}})',
@@ -669,6 +675,18 @@ export const en = {
       simulation: 'Your {{name}} simulation is planned for this week. Ready when you are.',
       cards: 'Your cards are waiting, back before you forget them.',
     },
+  },
+  incomingCall: {
+    calling: '{{name}} is calling',
+    short: 'A short call, about 3 minutes',
+    about: 'About: {{ask}}',
+    accept: 'Answer',
+    decline: 'Not now',
+    later: 'Remind me in an hour',
+    laterDone: '{{name}} will try again at {{time}}.',
+    laterFailed: 'That didn’t work. Try again from Today.',
+    notFound: 'This partner is no longer in your list.',
+    back: 'Back to Today',
   },
   today: {
     question: {
@@ -693,6 +711,12 @@ export const en = {
           daily: '5 days, 90 minutes a week',
         },
       },
+    },
+    calls: {
+      title: 'Should your partner call you?',
+      body: 'On your practice days {{name}} can ring at {{time}} for a 3-minute chat about something you told them. It replaces that day’s reminder: one a day at most, never at night.',
+      yes: 'Yes, call me',
+      no: 'Not now',
     },
     reminders: {
       title: 'A reminder on your practice days?',
@@ -2297,6 +2321,9 @@ export const en = {
       goals: 'Your goals',
     },
     reminders: {
+      calls: 'My partner calls me',
+      callsHint:
+        'On your planned days a partner rings at your reminder time for a short chat about something they remember, in place of that day’s reminder. It’s a notification from Konvami, not a phone call, and your phone’s Focus or Do Not Disturb still decides whether it shows.',
       title: 'Reminders',
       body: 'A short note on the days you planned to practise, at the time you choose. At most one a day, never at night.',
       on: 'Remind me on my practice days',

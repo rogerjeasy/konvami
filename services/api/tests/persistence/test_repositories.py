@@ -419,6 +419,17 @@ def test_a_session_keeps_the_time_it_was_granted(sessions: Sessions) -> None:
     assert sessions.repository.get("rtc_1") == granted
 
 
+def test_a_session_keeps_whether_the_learner_accepted_a_ring(sessions: Sessions) -> None:
+    rang = replace(session("rtc_1"), rang=True)
+    sessions.repository.started(rang)
+    sessions.repository.started(session("rtc_2"))
+
+    assert sessions.repository.get("rtc_1") == rang
+    stored = sessions.repository.get("rtc_2")
+    assert stored is not None
+    assert not stored.rang
+
+
 def test_a_session_keeps_its_plan(sessions: Sessions) -> None:
     plan = SessionPlan(
         focus=(

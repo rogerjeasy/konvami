@@ -7904,6 +7904,11 @@
           "purpose": {
             "$ref": "#/components/schemas/CallPurpose"
           },
+          "rang": {
+            "default": false,
+            "title": "Rang",
+            "type": "boolean"
+          },
           "scenario": {
             "anyOf": [
               {

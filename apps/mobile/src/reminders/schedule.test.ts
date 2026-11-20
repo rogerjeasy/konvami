@@ -159,3 +159,62 @@ describe('the reminders of the next seven days', () => {
     expect(remind({}, { notes }).some((reminder) => reminder.word)).toBe(false);
   });
 });
+
+describe('partner calls (5.28)', () => {
+  const calls = { ...DEFAULT_REMINDERS, calls: true };
+
+  it('are off until the learner turns them on', () => {
+    expect(remind().some((reminder) => reminder.kind === 'call')).toBe(false);
+  });
+
+  it('ring on the planned days instead of the plain reminder, once a day at the same time', () => {
+    expect(days(remind({}, { settings: calls }))).toEqual([
+      ['Thu Oct 08 2026', 18, 'call'],
+      ['Sat Oct 10 2026', 18, 'call'],
+      ['Mon Oct 12 2026', 18, 'call'],
+      ['Tue Oct 13 2026', 18, 'call'],
+    ]);
+  });
+
+  it('ask how an event went by ringing on the day after it', () => {
+    const notes = {
+      followUps: [{ day: '2026-10-10', text: 'Alors, cet entretien ?' }],
+      words: [{ day: '2026-10-10', card: WORD }],
+    };
+    const saturday = remind({}, { settings: { ...calls, word: true }, notes })[1];
+
+    // The call is the day's one thing: no word of the day with it.
+    expect(saturday).toEqual({
+      id: 'reminder-2026-10-10',
+      at: new Date(2026, 9, 10, 18, 0),
+      kind: 'call',
+      ask: 'Alors, cet entretien ?',
+    });
+  });
+
+  it('leave a simulation’s day to its own reminder', () => {
+    const exam = { ...FAKE_EXAM_WEEK, simulations: 1, done: 0 };
+
+    expect(days(remind({ exam }, { settings: calls })).slice(0, 2)).toEqual([
+      ['Thu Oct 08 2026', 18, 'call'],
+      ['Sat Oct 10 2026', 18, 'simulation'],
+    ]);
+  });
+
+  it('never ring in a week without voice minutes, nor once today is practised', () => {
+    const quiet = remind({ reason: 'minutes_used_up', today: [] }, { settings: calls });
+    expect(days(quiet).map(([day]) => day)).toEqual(['Mon Oct 12 2026', 'Tue Oct 13 2026']);
+    expect(days(remind({}, { settings: calls, practisedToday: true }))[0]?.[0]).toBe(
+      'Sat Oct 10 2026',
+    );
+  });
+
+  it('let the cards remind on a day without practice, as before', () => {
+    const cardsDay = remind(
+      { upcoming: ['2026-10-10'], today: [] },
+      { settings: calls, cardsDue: 3 },
+    );
+    // Today has no practice planned: the cards today, the ring on Saturday.
+    expect(cardsDay.map((reminder) => reminder.kind)).toEqual(['cards', 'call']);
+  });
+});

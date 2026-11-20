@@ -76,6 +76,12 @@ const config: ExpoConfig = {
     supportsTablet: true,
     config: { usesNonExemptEncryption: false },
     privacyManifests: PRIVACY_MANIFEST,
+    // A partner's ring (5.28) is time-sensitive: shown at once, and through a Focus only where
+    // the learner allows the app in it. Store builds only: EAS turns the capability on for the
+    // App ID; a development build signed with a personal team may not have it.
+    ...(IS_DEV_BUILD
+      ? {}
+      : { entitlements: { 'com.apple.developer.usernotifications.time-sensitive': true } }),
   },
   android: {
     package: BUNDLE_ID,
@@ -107,6 +113,8 @@ const config: ExpoConfig = {
     favicon: './assets/brand/favicon.png',
   },
   plugins: [
+    // The home-screen widget (5.28 design note): adds nothing unless KONVAMI_WIDGETS=1.
+    './plugins/with-konvami-widgets',
     'expo-sharing',
     // Local assessment decoding and the opt-in screen-off conversation service.
     [

@@ -638,4 +638,70 @@ describe('5.1 Today', () => {
       });
     });
   });
+
+  describe('partner calls (5.28)', () => {
+    // A learner who keeps coming back: three conversations on three days.
+    function talkedThrice() {
+      const api = inApp();
+      for (const daysAgo of [1, 2, 3]) api.talked(0, { id: `rtc_${daysAgo}`, daysAgo });
+      return api;
+    }
+
+    it('ring from the partner on planned days once turned on, in their own channel', async () => {
+      await setReminders({ ...DEFAULT_REMINDERS, calls: true, callsOffered: true });
+      const device = createFakeReminderDevice('granted');
+      // Friday at 9:00: today's ring at 18:00 is still ahead.
+      await open(inApp(), new Date(2026, 9, 9, 9, 0), device);
+
+      await waitFor(() => expect(device.scheduled.length).toBeGreaterThan(0));
+      expect(device.scheduled[0]).toMatchObject({
+        id: 'reminder-2026-10-09',
+        title: 'Lena is calling',
+        body: 'Got 3 minutes to talk? Tap to answer.',
+        call: { partner: expect.any(String) },
+      });
+    });
+
+    it('are offered once, after a few conversations, where reminders are on', async () => {
+      await setReminders(DEFAULT_REMINDERS);
+      await open(talkedThrice(), undefined, createFakeReminderDevice('granted'));
+
+      expect(screen.getByRole('header', { name: 'Should your partner call you?' })).toBeTruthy();
+      await fireEvent.press(screen.getByRole('button', { name: 'Yes, call me' }));
+
+      await waitFor(() =>
+        expect(getPreferences().reminders).toEqual({
+          ...DEFAULT_REMINDERS,
+          calls: true,
+          callsOffered: true,
+        }),
+      );
+      expect(screen.queryByRole('header', { name: 'Should your partner call you?' })).toBeNull();
+    });
+
+    it('take no for an answer, for good', async () => {
+      await setReminders(DEFAULT_REMINDERS);
+      await open(talkedThrice(), undefined, createFakeReminderDevice('granted'));
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
+
+      await waitFor(() => expect(getPreferences().reminders?.callsOffered).toBe(true));
+      expect(getPreferences().reminders?.calls).toBe(false);
+      expect(screen.queryByRole('header', { name: 'Should your partner call you?' })).toBeNull();
+    });
+
+    it('are not offered while reminders are off, or too early', async () => {
+      await setReminders({ ...DEFAULT_REMINDERS, on: false });
+      await open(talkedThrice(), undefined, createFakeReminderDevice('granted'));
+      expect(screen.queryByRole('header', { name: 'Should your partner call you?' })).toBeNull();
+    });
+
+    it('are not offered before the third conversation', async () => {
+      await setReminders(DEFAULT_REMINDERS);
+      const api = inApp();
+      api.talked(0, { daysAgo: 1 });
+      await open(api, undefined, createFakeReminderDevice('granted'));
+      expect(screen.queryByRole('header', { name: 'Should your partner call you?' })).toBeNull();
+    });
+  });
 });

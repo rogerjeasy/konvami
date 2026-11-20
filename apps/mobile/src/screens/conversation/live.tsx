@@ -183,6 +183,7 @@ function Call({
   guest,
   scenario,
   practise,
+  rang = false,
   onRetry,
 }: {
   language: string;
@@ -193,6 +194,8 @@ function Call({
   scenario?: string;
   /** A grammar topic the learner chose to practise (the grammar map's "Practise this"). */
   practise?: string;
+  /** A short call the learner accepted from the partner's ring (5.28). */
+  rang?: boolean;
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
@@ -204,7 +207,7 @@ function Call({
     partner.id,
     scenario,
     practise,
-    guest ? { guestId: guest.id } : undefined,
+    guest ? { guestId: guest.id } : rang ? { rang } : undefined,
   );
   // A vendor's video face while the call is live, where one is offered and picked (6.6).
   const video = useVideoAvatar(partner.id, call.status === 'live');
@@ -381,11 +384,13 @@ function Call({
 export function LiveConversationScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { personaId, scenario, practise, guest } = useLocalSearchParams<{
+  const { personaId, scenario, practise, guest, rang } = useLocalSearchParams<{
     personaId: string;
     scenario?: string;
     practise?: string;
     guest?: string;
+    /** "1" for a call the learner accepted from the partner's ring (5.28). */
+    rang?: string;
   }>();
   const { home: store } = usePracticeServices();
   const home = useHome();
@@ -439,6 +444,7 @@ export function LiveConversationScreen() {
       guest={second}
       scenario={scenario}
       practise={practise}
+      rang={rang === '1'}
       onRetry={() => setAttempt((count) => count + 1)}
     />
   );

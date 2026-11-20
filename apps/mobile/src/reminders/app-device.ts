@@ -1,10 +1,19 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
-import { openTargetOf, type ReminderDevice, type ReminderPermission } from './device';
+import {
+  openTargetOf,
+  type ReminderDevice,
+  type ReminderPermission,
+  type ScheduledReminder,
+} from './device';
 
-// Android groups an app's notifications in channels; reminders are the only one.
+// Android groups an app's notifications in channels: reminders, and partners' rings (5.28),
+// which pop up over other apps (high importance) but never bypass Do Not Disturb.
 const CHANNEL = 'reminders';
+const CALLS_CHANNEL = 'calls';
+// A reminder the learner put off on 5.28 ("in an hour"): kept when the schedule is replaced.
+const SNOOZE_PREFIX = 'snooze-';
 
 function permissionOf(status: Notifications.NotificationPermissionsStatus): ReminderPermission {
   if (Platform.OS === 'ios') {
@@ -30,6 +39,38 @@ function ensureChannel(name: string) {
   });
 }
 
+// The rings' own channel, so the learner can quiet them without quieting reminders.
+function ensureCallsChannel(name: string) {
+  return Notifications.setNotificationChannelAsync(CALLS_CHANNEL, {
+    name,
+    importance: Notifications.AndroidImportance.HIGH,
+    bypassDnd: false,
+  });
+}
+
+function schedule(reminder: ScheduledReminder) {
+  const { call } = reminder;
+  return Notifications.scheduleNotificationAsync({
+    identifier: reminder.id,
+    content: {
+      title: reminder.title,
+      body: reminder.body,
+      data: call
+        ? { open: 'call', partner: call.partner, ...(call.ask ? { ask: call.ask } : {}) }
+        : reminder.card
+          ? { card: reminder.card }
+          : { open: 'today' },
+      // iOS shows a ring at once, through a Focus only where the learner allows the app in it.
+      ...(call ? { interruptionLevel: 'timeSensitive' as const } : {}),
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: reminder.at,
+      channelId: call ? CALLS_CHANNEL : CHANNEL,
+    },
+  });
+}
+
 /**
  * Reminders on a phone, with expo-notifications. While the app is open no handler is set, so a
  * reminder due then is not shown: the learner is already here.
@@ -48,24 +89,23 @@ export const appReminderDevice: ReminderDevice = {
       }),
     );
   },
-  async replace(reminders, channel) {
+  async replace(reminders, channel, callsChannel = channel) {
     await ensureChannel(channel);
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    for (const reminder of reminders) {
-      await Notifications.scheduleNotificationAsync({
-        identifier: reminder.id,
-        content: {
-          title: reminder.title,
-          body: reminder.body,
-          data: reminder.card ? { card: reminder.card } : { open: 'today' },
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: reminder.at,
-          channelId: CHANNEL,
-        },
-      });
+    if (reminders.some((reminder) => reminder.call)) await ensureCallsChannel(callsChannel);
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const { identifier } of scheduled) {
+      if (!identifier.startsWith(SNOOZE_PREFIX)) {
+        await Notifications.cancelScheduledNotificationAsync(identifier);
+      }
     }
+    for (const reminder of reminders) await schedule(reminder);
+  },
+  async snooze(reminder, callsChannel) {
+    await ensureCallsChannel(callsChannel);
+    await schedule({ ...reminder, id: `${SNOOZE_PREFIX}${reminder.id}` });
+  },
+  async clear() {
+    await Notifications.cancelAllScheduledNotificationsAsync();
   },
   async pushToken() {
     // The EAS project the token is made for: Expo's push service sends with its credentials.

@@ -415,6 +415,8 @@ class VoiceCallIn(ApiModel):
     persona_id: UUID | None = None
     # A second partner who joins a free practice conversation (5.24); `persona_id` leads.
     guest_persona_id: UUID | None = None
+    # A short free conversation the learner accepted from the partner's ring (5.28).
+    rang: bool = False
     # Today on the learner's calendar, so a persona names the right weekday. Left out, or not
     # a date any time zone has right now, the date in UTC is used.
     local_date: dt.date | None = None

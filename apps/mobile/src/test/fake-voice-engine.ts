@@ -31,6 +31,8 @@ export interface FakeVoiceEngine extends VoiceEngine {
   readonly openedAssessments: boolean[];
   /** The second partner of each of those calls (5.24); undefined for one partner. */
   readonly openedGuests: (string | undefined)[];
+  /** Whether each call was one the learner accepted from a partner's ring (5.28). */
+  readonly openedRang: boolean[];
 }
 
 /** The id and the time limit every call of the fake engine reports. */
@@ -64,6 +66,7 @@ export function createFakeVoiceEngine(): FakeVoiceEngine {
     openedPractise: [],
     openedAssessments: [],
     openedGuests: [],
+    openedRang: [],
     emit,
     failNextStart: (code) => void (failure = code),
     holdStart() {
