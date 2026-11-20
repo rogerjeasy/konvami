@@ -55,6 +55,9 @@ const FEATURE = {
   pen_pal: 'costs.feature.pen_pal',
   pen_pal_audio: 'costs.feature.pen_pal_audio',
   pen_pal_listen: 'costs.feature.pen_pal_listen',
+  halves_listen: 'costs.feature.halves_listen',
+  halves: 'costs.feature.halves',
+  halves_audio: 'costs.feature.halves_audio',
 } as const;
 
 // Providers go by their own names, which are not translated.
