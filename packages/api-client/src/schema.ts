@@ -926,6 +926,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/own-scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Own Scenarios
+         * @description The learner's own role-plays in the language they learn now, the latest first.
+         */
+        get: operations["getOwnScenarios"];
+        put?: never;
+        /**
+         * Save Own Scenario
+         * @description Keeps a role-play the learner wrote or had written.
+         */
+        post: operations["saveOwnScenario"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/own-scenarios/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft Own Scenario
+         * @description A role-play written from a situation the learner described; kept only once saved.
+         */
+        post: operations["draftOwnScenario"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/own-scenarios/heard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hear Scenario Description
+         * @description What a situation described out loud says, to edit before a scene is written.
+         */
+        post: operations["hearScenarioDescription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/own-scenarios/{scenario_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change Own Scenario */
+        put: operations["changeOwnScenario"];
+        post?: never;
+        /** Remove Own Scenario */
+        delete: operations["removeOwnScenario"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/owner/costs": {
         parameters: {
             query?: never;
@@ -1803,6 +1885,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/real-life": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Real Life
+         * @description Events of the learner's life to rehearse before they happen and to talk over after;
+         *     `local_date` is today on their device.
+         */
+        get: operations["getRealLife"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/real-life/events/{memory_id}/rehearsal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rehearse Event
+         * @description The role-play that rehearses an event, written the first time it is asked for.
+         */
+        post: operations["rehearseEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/recordings": {
         parameters: {
             query?: never;
@@ -1923,6 +2046,27 @@ export interface paths {
          * @description The learner listened to the end: the episode's words count as heard.
          */
         post: operations["listenedToStory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/teacher-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Teacher Report
+         * @description What the conversations of the last `days` days (7, 30 or 90) showed, for the
+         *     learner's own teacher (6.23).
+         */
+        get: operations["getTeacherReport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2650,6 +2794,8 @@ export interface components {
         };
         /** ConversationOut */
         ConversationOut: {
+            /** Debrief */
+            debrief?: string | null;
             /** Endedat */
             endedAt: string | null;
             /** Goalsreached */
@@ -3118,6 +3264,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HeardOut */
+        HeardOut: {
+            /** Text */
+            text: string;
+        };
         /** HomeExamOut */
         HomeExamOut: {
             /** Date */
@@ -3432,6 +3583,26 @@ export interface components {
             /** Rose */
             rose: boolean;
         };
+        /** LifeEventOut */
+        LifeEventOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Done */
+            done: boolean;
+            /**
+             * Memoryid
+             * Format: uuid
+             */
+            memoryId: string;
+            /** Partnerid */
+            partnerId: string | null;
+            rehearsal: components["schemas"]["OwnScenarioOut"] | null;
+            /** Text */
+            text: string;
+        };
         /**
          * LookModel
          * @description A portrait's parts and colors. The app draws exactly these names.
@@ -3638,6 +3809,41 @@ export interface components {
             missing: string[];
             placement: components["schemas"]["PlacementStatus"];
             stage: components["schemas"]["Stage"];
+        };
+        /** OwnGoalIn */
+        OwnGoalIn: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+        };
+        /** OwnScenarioOut */
+        OwnScenarioOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Memoryid */
+            memoryId: string | null;
+            /** Scenario */
+            scenario: string;
+            scene: components["schemas"]["SceneOut"];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "custom" | "event";
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
+        /** OwnScenariosOut */
+        OwnScenariosOut: {
+            /** Scenarios */
+            scenarios: components["schemas"]["OwnScenarioOut"][];
         };
         /** PairOut */
         PairOut: {
@@ -4445,6 +4651,13 @@ export interface components {
             /** Weakest */
             weakest: string | null;
         };
+        /** RealLifeOut */
+        RealLifeOut: {
+            /** Comingup */
+            comingUp: components["schemas"]["LifeEventOut"][];
+            /** Todebrief */
+            toDebrief: components["schemas"]["LifeEventOut"][];
+        };
         /**
          * Reason
          * @description Why today's part of the plan is what it is.
@@ -4635,6 +4848,43 @@ export interface components {
              * @enum {string}
              */
             level: "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+        };
+        /** SceneDraftIn */
+        SceneDraftIn: {
+            /** Description */
+            description: string;
+        };
+        /**
+         * SceneIn
+         * @description A role-play as the learner reads and edits it, in their explanation language.
+         */
+        SceneIn: {
+            /** Character */
+            character: string;
+            /** Goals */
+            goals: components["schemas"]["OwnGoalIn"][];
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Situation */
+            situation: string;
+            /** Title */
+            title: string;
+        };
+        /** SceneOut */
+        SceneOut: {
+            /** Character */
+            character: string;
+            /** Goals */
+            goals: components["schemas"]["OwnGoalIn"][];
+            /** Level */
+            level: string;
+            /** Situation */
+            situation: string;
+            /** Title */
+            title: string;
         };
         /**
          * SessionKind
@@ -4972,6 +5222,83 @@ export interface components {
             learnerWords: number;
             /** Partnerwords */
             partnerWords: number;
+        };
+        /** TeacherConversationOut */
+        TeacherConversationOut: {
+            /** Id */
+            id: string;
+            /** Partnername */
+            partnerName: string | null;
+            /** Scenario */
+            scenario: string | null;
+            /** Seconds */
+            seconds: number;
+            /**
+             * Startedat
+             * Format: date-time
+             */
+            startedAt: string;
+        };
+        /** TeacherFitOut */
+        TeacherFitOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Grammar */
+            grammar: string;
+            /** Speaking */
+            speaking: string;
+            /** Vocabulary */
+            vocabulary: string;
+        };
+        /** TeacherMistakeKindOut */
+        TeacherMistakeKindOut: {
+            /** Category */
+            category: string;
+            /** Count */
+            count: number;
+            /** Examples */
+            examples: components["schemas"]["TeacherMistakeOut"][];
+        };
+        /** TeacherMistakeOut */
+        TeacherMistakeOut: {
+            /** Corrected */
+            corrected: string;
+            /** Explanation */
+            explanation: string;
+            /** Original */
+            original: string;
+        };
+        /** TeacherReportOut */
+        TeacherReportOut: {
+            /** Conversations */
+            conversations: components["schemas"]["TeacherConversationOut"][];
+            /** Fits */
+            fits: components["schemas"]["TeacherFitOut"][];
+            /** Language */
+            language: string;
+            /** Level */
+            level: string;
+            /** Levels */
+            levels: components["schemas"]["LevelPointOut"][];
+            /** Mistakes */
+            mistakes: components["schemas"]["TeacherMistakeKindOut"][];
+            /** Seconds */
+            seconds: number;
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Topics */
+            topics: components["schemas"]["GrammarTopicOut"][];
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
         };
         /**
          * TeachingModel
@@ -8254,6 +8581,335 @@ export interface operations {
             };
         };
     };
+    getOwnScenarios: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnScenariosOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    saveOwnScenario: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SceneIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnScenarioOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    draftOwnScenario: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SceneDraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SceneOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    hearScenarioDescription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HeardOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    changeOwnScenario: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SceneIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnScenarioOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    removeOwnScenario: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnScenariosOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getCosts: {
         parameters: {
             query?: {
@@ -10750,6 +11406,104 @@ export interface operations {
             };
         };
     };
+    getRealLife: {
+        parameters: {
+            query?: {
+                local_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealLifeOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rehearseEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnScenarioOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getRecordings: {
         parameters: {
             query?: never;
@@ -11150,6 +11904,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getTeacherReport: {
+        parameters: {
+            query: {
+                days: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherReportOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
