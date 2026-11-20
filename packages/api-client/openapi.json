@@ -715,6 +715,60 @@
         "title": "CatalogOut",
         "type": "object"
       },
+      "CelebratedIn": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "quest",
+              "milestone"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "CelebratedIn",
+        "type": "object"
+      },
+      "CelebrationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "quest",
+              "milestone"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "at"
+        ],
+        "title": "CelebrationOut",
+        "type": "object"
+      },
       "ChangeIn": {
         "additionalProperties": false,
         "properties": {
@@ -2965,6 +3019,64 @@
         "title": "Level",
         "type": "string"
       },
+      "LevelOutlookOut": {
+        "additionalProperties": false,
+        "description": "`pointing` of the last `counted` conversations point to `next`; the level moves when\n`agreeing` of `needed` do.",
+        "properties": {
+          "agreeing": {
+            "title": "Agreeing",
+            "type": "integer"
+          },
+          "counted": {
+            "title": "Counted",
+            "type": "integer"
+          },
+          "level": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "needed": {
+            "title": "Needed",
+            "type": "integer"
+          },
+          "next": {
+            "enum": [
+              "A0",
+              "A1",
+              "A2",
+              "B1",
+              "B2",
+              "C1",
+              "C2"
+            ],
+            "title": "Next",
+            "type": "string"
+          },
+          "pointing": {
+            "title": "Pointing",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "level",
+          "next",
+          "pointing",
+          "counted",
+          "needed",
+          "agreeing"
+        ],
+        "title": "LevelOutlookOut",
+        "type": "object"
+      },
       "LevelPointOut": {
         "additionalProperties": false,
         "properties": {
@@ -3377,6 +3489,18 @@
             "title": "Reached",
             "type": "boolean"
           },
+          "reachedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reachedat"
+          },
           "target": {
             "title": "Target",
             "type": "integer"
@@ -3437,6 +3561,97 @@
           "kinds"
         ],
         "title": "MistakeTrendsOut",
+        "type": "object"
+      },
+      "MotivationOut": {
+        "additionalProperties": false,
+        "description": "Motivation in one answer: the streak, the next level, the week's quests, the milestones,\nmoments to celebrate, Monday's recap and a welcome back.",
+        "properties": {
+          "celebrations": {
+            "items": {
+              "$ref": "#/components/schemas/CelebrationOut"
+            },
+            "title": "Celebrations",
+            "type": "array"
+          },
+          "freshStart": {
+            "title": "Freshstart",
+            "type": "boolean"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/MilestoneOut"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "outlook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LevelOutlookOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quests": {
+            "$ref": "#/components/schemas/QuestWeekOut"
+          },
+          "recap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecapOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "remindersPausedUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminderspauseduntil"
+          },
+          "streak": {
+            "$ref": "#/components/schemas/StreakOut"
+          },
+          "today": {
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          },
+          "welcomeBack": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WelcomeBackOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "today",
+          "streak",
+          "outlook",
+          "quests",
+          "milestones",
+          "celebrations",
+          "freshStart",
+          "recap",
+          "welcomeBack",
+          "remindersPausedUntil"
+        ],
+        "title": "MotivationOut",
         "type": "object"
       },
       "NamedLanguageOut": {
@@ -3609,6 +3824,48 @@
           "modelAnswer"
         ],
         "title": "PartScoreOut",
+        "type": "object"
+      },
+      "PauseRemindersIn": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 30.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          }
+        },
+        "title": "PauseRemindersIn",
+        "type": "object"
+      },
+      "PauseRemindersOut": {
+        "additionalProperties": false,
+        "properties": {
+          "pausedUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pauseduntil"
+          }
+        },
+        "required": [
+          "pausedUntil"
+        ],
+        "title": "PauseRemindersOut",
         "type": "object"
       },
       "PenPalCorrectionOut": {
@@ -5746,6 +6003,90 @@
         "title": "PushDeviceOut",
         "type": "object"
       },
+      "QuestKind": {
+        "enum": [
+          "talk_days",
+          "long_call",
+          "review_call",
+          "role_play_goal",
+          "say_it_better",
+          "use_word",
+          "pen_pal",
+          "quiet_partner",
+          "sound_drills"
+        ],
+        "title": "QuestKind",
+        "type": "string"
+      },
+      "QuestOut": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "doneAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doneat"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/QuestKind"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "integer"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "target",
+          "progress",
+          "done",
+          "doneAt"
+        ],
+        "title": "QuestOut",
+        "type": "object"
+      },
+      "QuestWeekOut": {
+        "additionalProperties": false,
+        "properties": {
+          "allDone": {
+            "title": "Alldone",
+            "type": "boolean"
+          },
+          "quests": {
+            "items": {
+              "$ref": "#/components/schemas/QuestOut"
+            },
+            "title": "Quests",
+            "type": "array"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "quests",
+          "allDone"
+        ],
+        "title": "QuestWeekOut",
+        "type": "object"
+      },
       "QueueCardOut": {
         "additionalProperties": false,
         "properties": {
@@ -5945,6 +6286,62 @@
         "title": "Reason",
         "type": "string"
       },
+      "RecapOut": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "improved": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Improved",
+            "type": "array"
+          },
+          "milestones": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "minutes": {
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "questsDone": {
+            "title": "Questsdone",
+            "type": "integer"
+          },
+          "questsTotal": {
+            "title": "Queststotal",
+            "type": "integer"
+          },
+          "speakingDays": {
+            "title": "Speakingdays",
+            "type": "integer"
+          },
+          "week": {
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "minutes",
+          "conversations",
+          "speakingDays",
+          "questsDone",
+          "questsTotal",
+          "milestones",
+          "improved"
+        ],
+        "title": "RecapOut",
+        "type": "object"
+      },
       "RecordingFluencyOut": {
         "additionalProperties": false,
         "properties": {
@@ -6140,6 +6537,27 @@
           "words"
         ],
         "title": "ReminderNotesOut",
+        "type": "object"
+      },
+      "RepairOfferOut": {
+        "additionalProperties": false,
+        "properties": {
+          "missed": {
+            "format": "date",
+            "title": "Missed",
+            "type": "string"
+          },
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "missed",
+          "until"
+        ],
+        "title": "RepairOfferOut",
         "type": "object"
       },
       "ReportMistakeOut": {
@@ -7076,6 +7494,46 @@
         ],
         "title": "Stage",
         "type": "string"
+      },
+      "StreakOut": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "longest": {
+            "title": "Longest",
+            "type": "integer"
+          },
+          "plannedToday": {
+            "title": "Plannedtoday",
+            "type": "boolean"
+          },
+          "repair": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RepairOfferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spokeToday": {
+            "title": "Spoketoday",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "days",
+          "longest",
+          "plannedToday",
+          "spokeToday",
+          "repair"
+        ],
+        "title": "StreakOut",
+        "type": "object"
       },
       "SyncedReviewOut": {
         "additionalProperties": false,
@@ -8359,6 +8817,33 @@
           "free"
         ],
         "title": "WeekSessionsOut",
+        "type": "object"
+      },
+      "WelcomeBackOut": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "partnerId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerid"
+          }
+        },
+        "required": [
+          "days",
+          "partnerId"
+        ],
+        "title": "WelcomeBackOut",
         "type": "object"
       },
       "WordDetailsOut": {
@@ -11719,6 +12204,165 @@
           }
         },
         "summary": "Change Memory"
+      }
+    },
+    "/v1/motivation": {
+      "get": {
+        "description": "The streak, the next level, the week's quests, the milestones and the moments to\ncelebrate (spec \u00a76.15).",
+        "operationId": "getMotivation",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tz",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tz"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MotivationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Motivation"
+      }
+    },
+    "/v1/motivation/celebrated": {
+      "post": {
+        "description": "The app showed a moment: it is not shown again.",
+        "operationId": "markCelebrated",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CelebratedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark Celebrated"
+      }
+    },
+    "/v1/motivation/reminder-pause": {
+      "put": {
+        "description": "Pauses the reminders and the quiet-week nudge (`days`), or resumes them (null).",
+        "operationId": "pauseReminders",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PauseRemindersIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PauseRemindersOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Pause Reminders"
       }
     },
     "/v1/onboarding": {

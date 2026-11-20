@@ -433,6 +433,32 @@ describe('api client', () => {
     ]);
   });
 
+  it('reads motivation, marks a moment celebrated and pauses reminders', async () => {
+    const motivation = { streak: { days: 3 }, celebrations: [] };
+    const { fetch, calls } = fakeFetch(
+      json(200, motivation),
+      new Response(null, { status: 204 }),
+      json(200, { pausedUntil: '2026-12-01T12:00:00Z' }),
+      json(200, { pausedUntil: null }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.getMotivation('Europe/Zurich')).toEqual(motivation);
+    await api.markCelebrated('quest', 'talk_days');
+    expect(await api.pauseReminders(30)).toBe('2026-12-01T12:00:00Z');
+    expect(await api.pauseReminders(null)).toBeNull();
+
+    expect(calls.map((call) => [`${call.method} ${call.url}`, call.body])).toEqual([
+      ['GET https://api.example.test/v1/motivation?tz=Europe%2FZurich', undefined],
+      [
+        'POST https://api.example.test/v1/motivation/celebrated',
+        { kind: 'quest', id: 'talk_days' },
+      ],
+      ['PUT https://api.example.test/v1/motivation/reminder-pause', { days: 30 }],
+      ['PUT https://api.example.test/v1/motivation/reminder-pause', { days: null }],
+    ]);
+  });
+
   it('asks for, follows and plays last week’s check-in', async () => {
     const review = { status: 'pending', text: null, numbers: { week: '2026-10-05' } };
     const { fetch, calls } = fakeFetch(

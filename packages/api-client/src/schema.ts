@@ -817,6 +817,67 @@ export interface paths {
         patch: operations["changeMemory"];
         trace?: never;
     };
+    "/v1/motivation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Motivation
+         * @description The streak, the next level, the week's quests, the milestones and the moments to
+         *     celebrate (spec §6.15).
+         */
+        get: operations["getMotivation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/motivation/celebrated": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Celebrated
+         * @description The app showed a moment: it is not shown again.
+         */
+        post: operations["markCelebrated"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/motivation/reminder-pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Pause Reminders
+         * @description Pauses the reminders and the quiet-week nudge (`days`), or resumes them (null).
+         */
+        put: operations["pauseReminders"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/onboarding": {
         parameters: {
             query?: never;
@@ -2315,6 +2376,31 @@ export interface components {
             /** Startinglevels */
             startingLevels: ("A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2")[];
         };
+        /** CelebratedIn */
+        CelebratedIn: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "quest" | "milestone";
+        };
+        /** CelebrationOut */
+        CelebrationOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "quest" | "milestone";
+        };
         /** ChangeIn */
         ChangeIn: {
             /** Field */
@@ -3061,6 +3147,31 @@ export interface components {
          * @enum {string}
          */
         Level: "normal" | "economy" | "paused";
+        /**
+         * LevelOutlookOut
+         * @description `pointing` of the last `counted` conversations point to `next`; the level moves when
+         *     `agreeing` of `needed` do.
+         */
+        LevelOutlookOut: {
+            /** Agreeing */
+            agreeing: number;
+            /** Counted */
+            counted: number;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Needed */
+            needed: number;
+            /**
+             * Next
+             * @enum {string}
+             */
+            next: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+            /** Pointing */
+            pointing: number;
+        };
         /** LevelPointOut */
         LevelPointOut: {
             /**
@@ -3236,6 +3347,8 @@ export interface components {
             id: string;
             /** Reached */
             reached: boolean;
+            /** Reachedat */
+            reachedAt?: string | null;
             /** Target */
             target: number;
         };
@@ -3252,6 +3365,31 @@ export interface components {
             kinds: components["schemas"]["MistakeKindOut"][];
             /** Weeks */
             weeks: string[];
+        };
+        /**
+         * MotivationOut
+         * @description Motivation in one answer: the streak, the next level, the week's quests, the milestones,
+         *     moments to celebrate, Monday's recap and a welcome back.
+         */
+        MotivationOut: {
+            /** Celebrations */
+            celebrations: components["schemas"]["CelebrationOut"][];
+            /** Freshstart */
+            freshStart: boolean;
+            /** Milestones */
+            milestones: components["schemas"]["MilestoneOut"][];
+            outlook: components["schemas"]["LevelOutlookOut"] | null;
+            quests: components["schemas"]["QuestWeekOut"];
+            recap: components["schemas"]["RecapOut"] | null;
+            /** Reminderspauseduntil */
+            remindersPausedUntil: string | null;
+            streak: components["schemas"]["StreakOut"];
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            welcomeBack: components["schemas"]["WelcomeBackOut"] | null;
         };
         /** NamedLanguageOut */
         NamedLanguageOut: {
@@ -3318,6 +3456,16 @@ export interface components {
             part: string;
             /** Share */
             share: number;
+        };
+        /** PauseRemindersIn */
+        PauseRemindersIn: {
+            /** Days */
+            days?: number | null;
+        };
+        /** PauseRemindersOut */
+        PauseRemindersOut: {
+            /** Pauseduntil */
+            pausedUntil: string | null;
         };
         /** PenPalCorrectionOut */
         PenPalCorrectionOut: {
@@ -4047,6 +4195,35 @@ export interface components {
             /** Registered */
             registered: boolean;
         };
+        /**
+         * QuestKind
+         * @enum {string}
+         */
+        QuestKind: "talk_days" | "long_call" | "review_call" | "role_play_goal" | "say_it_better" | "use_word" | "pen_pal" | "quiet_partner" | "sound_drills";
+        /** QuestOut */
+        QuestOut: {
+            /** Done */
+            done: boolean;
+            /** Doneat */
+            doneAt: string | null;
+            kind: components["schemas"]["QuestKind"];
+            /** Progress */
+            progress: number;
+            /** Target */
+            target: number;
+        };
+        /** QuestWeekOut */
+        QuestWeekOut: {
+            /** Alldone */
+            allDone: boolean;
+            /** Quests */
+            quests: components["schemas"]["QuestOut"][];
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
+        };
         /** QueueCardOut */
         QueueCardOut: {
             card: components["schemas"]["CardOut"];
@@ -4112,6 +4289,28 @@ export interface components {
          * @enum {string}
          */
         Reason: "on_track" | "missed" | "short_of_minutes" | "minutes_used_up" | "today_done" | "week_done";
+        /** RecapOut */
+        RecapOut: {
+            /** Conversations */
+            conversations: number;
+            /** Improved */
+            improved: string[];
+            /** Milestones */
+            milestones: string[];
+            /** Minutes */
+            minutes: number;
+            /** Questsdone */
+            questsDone: number;
+            /** Queststotal */
+            questsTotal: number;
+            /** Speakingdays */
+            speakingDays: number;
+            /**
+             * Week
+             * Format: date
+             */
+            week: string;
+        };
         /** RecordingFluencyOut */
         RecordingFluencyOut: {
             /** Activeseconds */
@@ -4175,6 +4374,19 @@ export interface components {
             followUps: components["schemas"]["FollowUpOut"][];
             /** Words */
             words: components["schemas"]["DailyWordOut"][];
+        };
+        /** RepairOfferOut */
+        RepairOfferOut: {
+            /**
+             * Missed
+             * Format: date
+             */
+            missed: string;
+            /**
+             * Until
+             * Format: date
+             */
+            until: string;
         };
         /** ReportMistakeOut */
         ReportMistakeOut: {
@@ -4495,6 +4707,18 @@ export interface components {
          * @enum {string}
          */
         Stage: "essentials" | "review" | "placement" | "partners" | "ready" | "done";
+        /** StreakOut */
+        StreakOut: {
+            /** Days */
+            days: number;
+            /** Longest */
+            longest: number;
+            /** Plannedtoday */
+            plannedToday: boolean;
+            repair: components["schemas"]["RepairOfferOut"] | null;
+            /** Spoketoday */
+            spokeToday: boolean;
+        };
         /** SyncedReviewOut */
         SyncedReviewOut: {
             card: components["schemas"]["CardOut"] | null;
@@ -4931,6 +5155,13 @@ export interface components {
             review: number;
             /** Roleplay */
             rolePlay: number;
+        };
+        /** WelcomeBackOut */
+        WelcomeBackOut: {
+            /** Days */
+            days: number;
+            /** Partnerid */
+            partnerId: string | null;
         };
         /**
          * WordDetailsOut
@@ -7531,6 +7762,137 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    getMotivation: {
+        parameters: {
+            query?: {
+                tz?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MotivationOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    markCelebrated: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CelebratedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pauseReminders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PauseRemindersIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PauseRemindersOut"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
