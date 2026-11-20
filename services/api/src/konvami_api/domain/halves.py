@@ -20,6 +20,7 @@ learner gives are their moves, which are checked; a report's note goes only to t
 
 import datetime as dt
 import random
+import secrets
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -95,7 +96,10 @@ ADDRESS_SECONDS = 5 * 60
 REPORT_NOTE_MAX = 300
 QUEUE_LIMIT = 100
 TICK_SCAN = 200
-CODE_LENGTH = 6
+# About 49 bits from a cryptographic source: a code is the key to a friend's case.
+CODE_LENGTH = 10
+# Wrong codes a learner may try in a day before redeeming is refused until the next day.
+WRONG_CODES_PER_DAY = 10
 # No 0/O, 1/I/L: a code is read aloud and typed.
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 SOUND_TYPE = "audio/mpeg"
@@ -365,6 +369,12 @@ class HalvesRepository(Protocol):
         """Moves past their `delete_after` that still have words or a sound."""
 
     def invite(self, code: str) -> Invite | None: ...
+
+    def note_wrong_code(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        """Counts one more wrong code on `day` and returns True, unless the learner reached
+        `limit`. One step: guesses arriving together cannot both take the last place."""
+
+    def wrong_codes(self, user_id: UUID, day: dt.date) -> int: ...
 
     def invite_of(self, user_id: UUID) -> Invite | None: ...
 
@@ -956,7 +966,8 @@ class HalvesService:
         earlier = self._repository.invite_of(user_id)
         if earlier is not None:
             self._repository.delete_invite(earlier.code)
-        code = "".join(self._rng.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+        # Never `self._rng`: that one picks codenames and cases and may be seeded.
+        code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
         made = Invite(code, user_id, template_id, now, now + INVITE_FOR)
         self._repository.save_invite(made)
         return made
@@ -969,10 +980,16 @@ class HalvesService:
     def redeem(self, user_id: UUID, code: str) -> Case:
         """Starts a case with the friend whose code it is. Refused calmly for a code that is
         wrong or old (`not_found`), one's own, someone blocked either way, across age bands
-        (`adults_only`), and when neither could follow the other (`no_shared_language`)."""
+        (`adults_only`), and when neither could follow the other (`no_shared_language`).
+        After `WRONG_CODES_PER_DAY` wrong codes in a day, every code is refused (`limit`) until
+        the next day, so codes cannot be guessed."""
         profile = self._require(user_id)
+        today = self._clock().date()
+        if self._repository.wrong_codes(user_id, today) >= WRONG_CODES_PER_DAY:
+            raise HalvesError("limit")
         invite = self._repository.invite("".join(code.split()).upper())
         if invite is None or invite.expires_at <= self._clock():
+            self._repository.note_wrong_code(user_id, today, WRONG_CODES_PER_DAY)
             raise HalvesError("not_found")
         if invite.user_id == user_id:
             raise HalvesError("own_code")

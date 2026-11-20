@@ -7,9 +7,12 @@ import pytest
 
 from konvami_api.domain.halves import (
     CHECK_ATTEMPTS,
+    CODE_ALPHABET,
+    CODE_LENGTH,
     MOVES_PER_DAY,
     SEAT_TIMEOUT,
     STRIKES_TO_SUSPEND,
+    WRONG_CODES_PER_DAY,
     HalvesError,
     HalvesService,
     Move,
@@ -403,6 +406,35 @@ def test_a_friend_redeems_a_code_and_both_hear_the_others_learned_language() -> 
     assert mine.partner.place == "city:Lyon"
     assert g.store.invite_of(USER) is None
     assert (USER, case_id, "move") in g.announced
+
+
+def test_a_code_is_long_and_comes_from_a_cryptographic_source() -> None:
+    g = game()
+    join(g)
+
+    codes = {g.service.invite(USER).code for _ in range(20)}
+
+    assert all(len(code) == CODE_LENGTH >= 10 for code in codes)
+    assert all(set(code) <= set(CODE_ALPHABET) for code in codes)
+    # Seeding the game's own random source (codenames, cases) does not make codes repeat.
+    assert len(codes) == 20
+
+
+def test_wrong_codes_are_capped_for_the_day() -> None:
+    g = game()
+    join(g)
+    join(g, OTHER_USER, native="it")
+    invite = g.service.invite(USER)
+    for _ in range(WRONG_CODES_PER_DAY):
+        with pytest.raises(HalvesError, match="not_found"):
+            g.service.redeem(OTHER_USER, "ZZZZZZZZZZ")
+
+    # Even the right code is refused now, so guessing gains nothing.
+    with pytest.raises(HalvesError, match="limit"):
+        g.service.redeem(OTHER_USER, invite.code)
+    # The next day the learner may try again.
+    g.world.clock.now += dt.timedelta(days=1)
+    assert g.service.redeem(OTHER_USER, invite.code).mode == "friend"
 
 
 def test_codes_are_refused_calmly() -> None:

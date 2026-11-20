@@ -409,6 +409,28 @@ class SqlHalvesRepository:
         rows = self._client.execute(f"{_INVITE} WHERE code = :code", {"code": code})
         return _invite(rows[0]) if rows else None
 
+    def note_wrong_code(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        if limit < 1:
+            return False
+        self._learner(user_id)
+        rows = self._client.execute(
+            """INSERT INTO halves_redeem_day (user_id, day, wrong)
+            VALUES (CAST(:user_id AS uuid), CAST(:day AS date), 1)
+            ON CONFLICT (user_id, day) DO UPDATE SET wrong = halves_redeem_day.wrong + 1
+                WHERE halves_redeem_day.wrong < :limit
+            RETURNING wrong""",
+            {"user_id": str(user_id), "day": day.isoformat(), "limit": limit},
+        )
+        return bool(rows)
+
+    def wrong_codes(self, user_id: UUID, day: dt.date) -> int:
+        rows = self._client.execute(
+            "SELECT wrong FROM halves_redeem_day"
+            " WHERE user_id = CAST(:user_id AS uuid) AND day = CAST(:day AS date)",
+            {"user_id": str(user_id), "day": day.isoformat()},
+        )
+        return int(rows[0]["wrong"]) if rows else 0
+
     def invite_of(self, user_id: UUID) -> Invite | None:
         rows = self._client.execute(
             f"{_INVITE} WHERE user_id = CAST(:user_id AS uuid)", {"user_id": str(user_id)}

@@ -102,7 +102,13 @@ EXPORTED: tuple[ExportedTable, ...] = (
     # they sat in. Never the other learner's moves.
     *(
         ExportedTable(name, f"WHERE t.user_id = {USER}")
-        for name in ("halves_profile", "halves_seat", "halves_move", "halves_invite")
+        for name in (
+            "halves_profile",
+            "halves_seat",
+            "halves_move",
+            "halves_invite",
+            "halves_redeem_day",
+        )
     ),
     ExportedTable(
         "halves_case", f"JOIN halves_seat s ON s.case_id = t.id WHERE s.user_id = {USER}"

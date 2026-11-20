@@ -30,6 +30,7 @@ class InMemoryHalvesRepository:
         self.blocks: dict[UUID, Block] = {}
         self.duos: dict[UUID, Duo] = {}
         self.reports: dict[UUID, Report] = {}
+        self.wrong: dict[tuple[UUID, dt.date], int] = {}
 
     def profile(self, user_id: UUID) -> Profile | None:
         return self.profiles.get(user_id)
@@ -89,6 +90,16 @@ class InMemoryHalvesRepository:
 
     def invite(self, code: str) -> Invite | None:
         return self.invites.get(code)
+
+    def note_wrong_code(self, user_id: UUID, day: dt.date, limit: int) -> bool:
+        count = self.wrong.get((user_id, day), 0)
+        if limit < 1 or count >= limit:
+            return False
+        self.wrong[(user_id, day)] = count + 1
+        return True
+
+    def wrong_codes(self, user_id: UUID, day: dt.date) -> int:
+        return self.wrong.get((user_id, day), 0)
 
     def invite_of(self, user_id: UUID) -> Invite | None:
         return next((i for i in self.invites.values() if i.user_id == user_id), None)

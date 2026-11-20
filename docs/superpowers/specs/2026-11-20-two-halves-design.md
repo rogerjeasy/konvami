@@ -74,6 +74,11 @@ their moves privately (7.9): the other player only hears the attempt.
   a case or a move is only reachable through the learner's own seat (tests cover another learner's
   ids and every route without sign-in).
 - **Push:** "A new clue arrived" and "Your move wasn't sent" open the case.
+- **Invite codes:** ten characters from a cryptographic source (`secrets`, about 49 bits), never
+  the game's own random source, which picks codenames and cases. A learner may try ten wrong codes
+  a day (`halves_redeem_day`, migration 0291); after that every code is refused with a calm
+  "try again tomorrow" (`limit`) until the next day, so a code cannot be guessed. Added after an
+  automated security review found six characters from `random.Random` and no cap on guesses.
 
 ## What needs the owner
 

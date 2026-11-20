@@ -1,6 +1,6 @@
 """Two Halves' storage, in memory and on PostgreSQL: both keep the same things."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -121,6 +121,15 @@ def test_a_move_is_kept_whole_and_found_by_case_learner_and_state(store: HalvesR
     assert [m.id for m in store.expired(NOON + timedelta(days=31), 10)] == [MOVE]
     store.save_move(move(delete_after=NOON, transcript="", audio_key=None, veil_key=None))
     assert store.expired(NOON + timedelta(days=31), 10) == []
+
+
+def test_wrong_codes_are_counted_per_day_up_to_the_limit(store: HalvesRepository) -> None:
+    day = date(2026, 11, 20)
+
+    assert [store.note_wrong_code(USER, day, 2) for _ in range(3)] == [True, True, False]
+    assert store.wrong_codes(USER, day) == 2
+    assert store.wrong_codes(USER, day + timedelta(days=1)) == 0
+    assert store.wrong_codes(UUID(int=2), day) == 0
 
 
 def test_one_invite_per_learner_until_it_expires(store: HalvesRepository) -> None:
