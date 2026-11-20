@@ -2488,7 +2488,7 @@ export interface components {
             /** Id */
             id: string;
             /** Picture */
-            picture?: ("waiting_room" | "bus_stop") | null;
+            picture?: ("waiting_room" | "bus_stop" | "waiting_pair") | null;
             /** Prompts */
             prompts: string[];
             /** Title */
@@ -2545,7 +2545,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience";
+            kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience" | "interview" | "describe_picture" | "phone_call" | "role_play" | "obtain_information" | "point_of_view" | "persuade" | "long_turn" | "compare_pictures" | "collaborate" | "listen_repeat";
             /** Phrases */
             phrases?: components["schemas"]["ExamPhraseOut"][];
             /** Seconds */
@@ -2594,6 +2594,25 @@ export interface components {
             provider: string;
             /** Skippedturns */
             skippedTurns: number;
+        };
+        /**
+         * ExamScaleOut
+         * @description How the test reports a result: a band, points out of a maximum, or a level.
+         */
+        ExamScaleOut: {
+            /** High */
+            high: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "band" | "points" | "level";
+            /** Levels */
+            levels: string[];
+            /** Low */
+            low: number;
+            /** Step */
+            step: number;
         };
         /**
          * ExamWeekOut
@@ -3638,7 +3657,7 @@ export interface components {
              * Function
              * @enum {string}
              */
-            function: "introduce" | "ask" | "request" | "tell" | "suggest" | "agree" | "disagree" | "opinion" | "structure" | "describe" | "react" | "time";
+            function: "introduce" | "ask" | "request" | "tell" | "suggest" | "agree" | "disagree" | "opinion" | "structure" | "describe" | "react" | "time" | "compare" | "speculate" | "phone";
             /** Phrases */
             phrases: components["schemas"]["ExamPhraseOut"][];
         };
@@ -4352,6 +4371,8 @@ export interface components {
         };
         /** SimulationResultOut */
         SimulationResultOut: {
+            /** Estimate */
+            estimate?: string | null;
             /** Parts */
             parts: components["schemas"]["PartScoreOut"][];
             /** Passshare */
@@ -4473,6 +4494,11 @@ export interface components {
             exam: string;
             /** Id */
             id: string;
+            /**
+             * Language
+             * @default de
+             */
+            language: string;
             /** Levels */
             levels: string[];
             /** Name */
@@ -4483,6 +4509,7 @@ export interface components {
             passShare: number;
             /** Prepseconds */
             prepSeconds: number;
+            scale?: components["schemas"]["ExamScaleOut"] | null;
             /** Series */
             series?: string | null;
             /** Stage */
@@ -4814,7 +4841,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience";
+            kind: "introduce" | "ask_answer" | "requests" | "questions_about_you" | "talk_about_life" | "plan_together" | "present_topic" | "feedback_questions" | "talk" | "discussion" | "topic_conversation" | "picture_experience" | "interview" | "describe_picture" | "phone_call" | "role_play" | "obtain_information" | "point_of_view" | "persuade" | "long_turn" | "compare_pictures" | "collaborate" | "listen_repeat";
             /** Number */
             number: number;
         };
