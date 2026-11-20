@@ -4781,6 +4781,11 @@ export interface components {
              */
             premium: boolean;
             purpose: components["schemas"]["CallPurpose"];
+            /**
+             * Rang
+             * @default false
+             */
+            rang: boolean;
             /** Scenario */
             scenario?: string | null;
             /** Sdp */
