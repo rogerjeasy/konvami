@@ -1943,7 +1943,7 @@ export const fr: Translation = {
     title: 'Ton coach',
     body: 'Ce qui t’aiderait le plus maintenant, et pourquoi. Il lit tes conversations, tes cartes, tes sons et tes objectifs.',
     todayTitle: 'Ton coach te propose',
-    all: 'Tout voir',
+    all: 'Toutes les suggestions',
     loading: 'Chargement de ton coach',
     loadFailed: 'Ton coach n’a pas pu être chargé.',
     writing: 'Ton coach met ça en mots…',

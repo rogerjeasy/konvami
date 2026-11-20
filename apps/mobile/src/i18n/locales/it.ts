@@ -1932,7 +1932,7 @@ export const it: Translation = {
     title: 'Il tuo coach',
     body: 'Cosa ti aiuterebbe di più adesso, e perché. Legge le tue conversazioni, carte, suoni e obiettivi.',
     todayTitle: 'Il tuo coach ti propone',
-    all: 'Vedi tutto',
+    all: 'Tutti i suggerimenti',
     loading: 'Caricamento del tuo coach',
     loadFailed: 'Non è stato possibile caricare il tuo coach.',
     writing: 'Il tuo coach lo sta mettendo in parole…',

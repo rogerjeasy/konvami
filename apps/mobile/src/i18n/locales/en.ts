@@ -1915,7 +1915,7 @@ export const en = {
     title: 'Your coach',
     body: 'What would help you most now, and why. It reads your conversations, cards, sounds and goals.',
     todayTitle: 'Your coach suggests',
-    all: 'See all',
+    all: 'All suggestions',
     loading: 'Loading your coach',
     loadFailed: 'Your coach couldn’t be loaded.',
     writing: 'Your coach is putting this into words…',

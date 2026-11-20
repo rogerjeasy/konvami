@@ -1942,7 +1942,7 @@ export const de: Translation = {
     title: 'Dein Coach',
     body: 'Was dir jetzt am meisten hilft, und warum. Er liest deine Gespräche, Karten, Laute und Ziele.',
     todayTitle: 'Dein Coach schlägt vor',
-    all: 'Alle ansehen',
+    all: 'Alle Vorschläge',
     loading: 'Dein Coach wird geladen',
     loadFailed: 'Dein Coach konnte nicht geladen werden.',
     writing: 'Dein Coach formuliert das gerade…',

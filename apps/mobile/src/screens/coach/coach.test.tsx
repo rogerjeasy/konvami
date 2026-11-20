@@ -219,7 +219,7 @@ describe('The Coach on 5.1 Today', () => {
     const card = await screen.findByText('Your coach suggests');
     expect(card).toBeTruthy();
     expect(screen.getByText('Review 20 cards')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'See all' }));
+    fireEvent.press(screen.getByRole('button', { name: 'All suggestions' }));
     expect(router.push).toHaveBeenCalledWith('/coach');
   });
 
