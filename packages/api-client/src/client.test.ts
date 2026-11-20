@@ -802,6 +802,35 @@ describe('api client', () => {
     expect(calls[5]?.body).toEqual({ audio: 'AAEC', format: 'm4a', durationMs: 4200 });
   });
 
+  it('reads the stories, asks for an episode, and answers its question out loud', async () => {
+    const episode = { id: 's/1', status: 'pending' };
+    const { fetch, calls } = fakeFetch(
+      json(200, { episodes: [], leftToday: 3, perDay: 3, available: true }),
+      json(200, episode),
+      json(200, episode),
+      json(200, episode),
+      json(200, { question: 0, heard: 'Herr Keller', right: true }),
+    );
+    const { api } = client(fetch);
+
+    await api.getStories();
+    await api.makeStory(['p/1']);
+    await api.getStory('s/1');
+    await api.listenedToStory('s/1');
+    expect(
+      await api.answerStoryQuestion('s/1', 0, { audio: 'AAEC', format: 'm4a', durationMs: 900 }),
+    ).toEqual({ question: 0, heard: 'Herr Keller', right: true });
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET https://api.example.test/v1/stories',
+      'POST https://api.example.test/v1/stories',
+      'GET https://api.example.test/v1/stories/s%2F1',
+      'POST https://api.example.test/v1/stories/s%2F1/listened',
+      'POST https://api.example.test/v1/stories/s%2F1/answers/0',
+    ]);
+    expect(calls[1]?.body).toEqual({ cast: ['p/1'] });
+  });
+
   it('reads where a card’s sound plays from', async () => {
     const { fetch, calls } = fakeFetch(json(200, { url: 'https://files/card.mp3' }));
 
