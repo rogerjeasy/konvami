@@ -29,7 +29,7 @@ from konvami_api.domain.host import HostScript
 from konvami_api.domain.levels import LevelService
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.motivation import MotivationService
-from konvami_api.domain.motivation_sources import motivation_sources, winback_question
+from konvami_api.domain.motivation_sources import motivation_sources
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import PersonaService
@@ -616,15 +616,15 @@ def services(
             reports=reports,
             penpal=pen_pal,
             conversation_review=conversation_review,
+            memories=memories,
+            conversations=conversations,
             clock=clock,
         ),
         clock=clock,
     )
     push.use_motivation(
         paused=motivation.reminders_paused,
-        winback=winback_question(
-            profiles=profiles, memories=memories, conversations=conversations, clock=clock
-        ),
+        has_question=motivation.has_question,
     )
     home = HomeService(
         profiles=profiles,

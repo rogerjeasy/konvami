@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 
 from konvami_api.domain.memories import Memory
+from konvami_api.domain.profile import Change, Origin, Source
 from konvami_api.domain.push import MAX_PHONES, PushDevice, PushRequestError
 from tests.domain import test_exam_centre as exam_centre
 from tests.domain import test_reports as reports
@@ -206,32 +207,62 @@ def test_a_learner_who_paused_reminders_is_not_nudged() -> None:
     assert world.push.nudge() == 0
 
 
-def test_the_nudge_asks_about_what_the_partner_remembers() -> None:
+INTERVIEW = Memory(
+    id=UUID(int=7),
+    kind="event",
+    text="A un entretien d’embauche.",
+    day=(NOON + 3 * DAY).date(),
+    importance=3,
+    persona_id=None,
+    source_call_id=None,
+    created_at=NOON,
+    updated_at=NOON,
+    ask="Comment s’est passé ton entretien ?",
+)
+
+
+def test_a_remembered_question_never_reaches_a_notification() -> None:
     world = World()
     lena, _ = world.onboard()
     world.talk(lena, at=NOON)
     phone(world)
-    world.memory_store.add(
-        USER,
-        "entretien",
-        Memory(
-            id=UUID(int=7),
-            kind="event",
-            text="A un entretien d’embauche.",
-            day=(NOON + 3 * DAY).date(),
-            importance=3,
-            persona_id=None,
-            source_call_id=None,
-            created_at=NOON,
-            updated_at=NOON,
-            ask="Comment s’est passé ton entretien ?",
-        ),
-        100,
-    )
+    world.memory_store.add(USER, "entretien", INTERVIEW, 100)
 
     world.clock.now = at_zurich(NOON + 7 * DAY, 18)
     assert world.push.nudge() == 1
 
-    assert [m.body for m in world.push_sender.sent] == [
-        "Comment s’est passé ton entretien ? Tu as cinq minutes pour me raconter ?"
+    # A push shows on the lock screen and passes through Expo, Apple and Google: it says that
+    # the partner has a question, in fixed words, and nothing the partner remembers.
+    sent = world.push_sender.sent
+    assert [(m.title, m.body) for m in sent] == [
+        ("Lena", "J’ai une question pour toi. Tu as cinq minutes ?")
     ]
+    for message in sent:
+        text = " ".join((message.title, message.body, *message.data.values()))
+        assert "entretien" not in text.casefold()
+
+    # The question waits inside the app, on Today's welcome back.
+    welcome = world.motivation.view(USER, None).welcome_back
+    assert welcome is not None
+    assert welcome.question == INTERVIEW.ask
+
+
+def test_a_question_about_an_off_limits_topic_is_never_asked() -> None:
+    world = World()
+    lena, _ = world.onboard()
+    world.talk(lena, at=NOON)
+    phone(world)
+    world.memory_store.add(USER, "entretien", INTERVIEW, 100)
+    world.profiles.apply(
+        USER, [Change("avoid_topics", ["Entretien"])], source=Source.ASKED, origin=Origin.FORM
+    )
+
+    world.clock.now = at_zurich(NOON + 7 * DAY, 18)
+    world.push.nudge()
+
+    assert [m.body for m in world.push_sender.sent] == [
+        "Ça fait un moment ! Tu as cinq minutes pour parler ?"
+    ]
+    welcome = world.motivation.view(USER, None).welcome_back
+    assert welcome is not None
+    assert welcome.question is None

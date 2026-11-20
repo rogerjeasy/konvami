@@ -8837,11 +8837,23 @@
               }
             ],
             "title": "Partnerid"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
           }
         },
         "required": [
           "days",
-          "partnerId"
+          "partnerId",
+          "question"
         ],
         "title": "WelcomeBackOut",
         "type": "object"

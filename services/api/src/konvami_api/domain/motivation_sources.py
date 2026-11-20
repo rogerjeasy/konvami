@@ -22,30 +22,42 @@ CORRECTION_WEEKS = 4
 _RECENT = dt.timedelta(days=30)
 
 
-def winback_question(
+def follow_up_question(
     *,
     profiles: ProfileService,
     memories: MemoryService,
     conversations: ConversationService,
     clock: Callable[[], dt.datetime],
-) -> Callable[[UUID, UUID | None, str], str | None]:
+) -> Callable[[UUID, UUID | None], str | None]:
     """What a partner would ask a learner who has gone quiet: the follow-up it remembers about
-    something in their life ("How did the interview go?"), when memory is on and the question
-    is in the phone's language. None otherwise, and the nudge says its usual line."""
+    something in their life ("How did the interview go?"), in the explanation language. None
+    while memory is off, without one, and for one that touches a topic the learner put off
+    limits (6.10): a memory written before the topic was added can still mention it.
 
-    def ask(user_id: UUID, partner: UUID | None, language: str) -> str | None:
+    The question is shown only inside the app (Today's welcome back). A push only learns that
+    there is one (`has_question`), never its words."""
+
+    def ask(user_id: UUID, partner: UUID | None) -> str | None:
         if partner is None:
             return None
-        profile = profiles.get(user_id)
-        explains = profile.value(profile.target_language or "", "explanation_language")
-        if explains != language:
-            return None
+        avoid = [topic.casefold() for topic in profiles.get(user_id).avoid_topics if topic]
         last = conversations.listed(user_id, limit=1).conversations
         last_day = last[0].started_at.date() if last else None
         recall = memories.recall(user_id, partner, clock().date(), last_day)
         if recall is None:
             return None
-        return next((memory.ask for memory in recall.follow_ups if memory.ask), None)
+        return next(
+            (
+                memory.ask
+                for memory in recall.follow_ups
+                if memory.ask
+                and not any(
+                    topic in memory.text.casefold() or topic in memory.ask.casefold()
+                    for topic in avoid
+                )
+            ),
+            None,
+        )
 
     return ask
 
@@ -59,6 +71,8 @@ def motivation_sources(
     reports: ReportService,
     penpal: PenPalService,
     conversation_review: ConversationReview,
+    memories: MemoryService,
+    conversations: ConversationService,
     clock: Callable[[], dt.datetime],
 ) -> Sources:
     def language(user_id: UUID) -> str:
@@ -117,4 +131,7 @@ def motivation_sources(
         cards=deck,
         most_words=lambda user_id: reports.totals(user_id, clock()).most_words,
         mistakes_by_week=mistakes,
+        follow_up=follow_up_question(
+            profiles=profiles, memories=memories, conversations=conversations, clock=clock
+        ),
     )

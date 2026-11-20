@@ -54,12 +54,14 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "A répondu à ton message vocal.",
         "it": "Ha risposto al tuo messaggio vocale.",
     },
-    # After a question the partner remembered to ask (`winback` below).
-    "nudge_ask": {
-        "en": "Got five minutes to tell me?",
-        "de": "Hast du fünf Minuten, um mir davon zu erzählen?",
-        "fr": "Tu as cinq minutes pour me raconter ?",
-        "it": "Hai cinque minuti per raccontarmelo?",
+    # When the partner remembers something to ask about (`has_question` below). The question
+    # itself never goes into a push: a notification shows on the lock screen and passes through
+    # Expo, Apple and Google, so it stays generic and the question waits inside the app.
+    "nudge_question": {
+        "en": "I have a question for you. Got five minutes?",
+        "de": "Ich habe eine Frage an dich. Hast du fünf Minuten?",
+        "fr": "J’ai une question pour toi. Tu as cinq minutes ?",  # noqa: RUF001
+        "it": "Ho una domanda per te. Hai cinque minuti?",
     },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
@@ -155,14 +157,14 @@ class PushService:
         conversations: ConversationService,
         clock: Callable[[], dt.datetime],
         paused: Callable[[UUID], bool] | None = None,
-        winback: Callable[[UUID, UUID | None, str], str | None] | None = None,
+        has_question: Callable[[UUID, UUID | None], bool] | None = None,
     ) -> None:
         """`paused` tells a learner who paused reminders (motivation's "pause for a month"), who
-        gets no nudge; `winback` finds what the partner would ask about (a follow-up it
-        remembers, in the phone's language), so the nudge is about the learner's life rather
-        than about the app."""
+        gets no nudge; `has_question` tells whether the partner remembers something to ask
+        them about. The push then says so in general words; the question itself is only shown
+        in the app (Today's welcome back)."""
         self._paused = paused
-        self._winback = winback
+        self._has_question = has_question
         self._repository = repository
         self._sender = sender
         self._personas = personas
@@ -173,12 +175,12 @@ class PushService:
         self,
         *,
         paused: Callable[[UUID], bool],
-        winback: Callable[[UUID, UUID | None, str], str | None],
+        has_question: Callable[[UUID, UUID | None], bool],
     ) -> None:
         """For a backend that builds motivation after push (pen-pal notes need push first): the
-        same `paused` and `winback` as the constructor takes."""
+        same `paused` and `has_question` as the constructor takes."""
         self._paused = paused
-        self._winback = winback
+        self._has_question = has_question
 
     def register(
         self,
@@ -201,23 +203,14 @@ class PushService:
         self._repository.remove(token, user_id)
 
     def _send(
-        self,
-        devices: Sequence[PushDevice],
-        kind: str,
-        title: str,
-        data: Mapping[str, str],
-        bodies: Mapping[str, str | None] | None = None,
+        self, devices: Sequence[PushDevice], kind: str, title: str, data: Mapping[str, str]
     ) -> None:
-        """`bodies` replaces the usual words, per app language, where it has some."""
         if not devices:
             return
+        # The body is always one of the fixed `_WORDS`: nothing the learner said or a partner
+        # remembers is put into a notification.
         messages = [
-            PushMessage(
-                device.token,
-                title,
-                (bodies or {}).get(device.language) or _WORDS[kind][device.language],
-                data,
-            )
+            PushMessage(device.token, title, _WORDS[kind][device.language], data)
             for device in devices
         ]
         try:
@@ -262,10 +255,6 @@ class PushService:
             {"open": "pen_pal", "id": str(persona_id)},
         )
 
-    def _winback_line(self, user_id: UUID, partner: UUID | None, language: str) -> str | None:
-        asked = self._winback(user_id, partner, language) if self._winback else None
-        return f"{asked} {_WORDS['nudge_ask'][language]}" if asked else None
-
     def nudge(self) -> int:
         """Once an hour: each phone whose reminder hour it is now, of a learner who has not
         talked for a week and was not nudged in that week, gets one gentle push from the partner
@@ -292,16 +281,13 @@ class PushService:
             if now - quiet_from < QUIET_FOR or (self._paused and self._paused(user_id)):
                 continue
             partner = last[0].persona_id if last else None
-            asks = {
-                device.language: self._winback_line(user_id, partner, device.language)
-                for device in devices
-            }
+            # Fixed words only: what the partner remembers stays inside the app.
+            asking = self._has_question is not None and self._has_question(user_id, partner)
             self._send(
                 devices,
-                "nudge",
+                "nudge_question" if asking else "nudge",
                 self._partner_name(user_id, partner),
                 {"open": "today"},
-                bodies=asks,
             )
             for device in devices:
                 self._repository.nudged(device.token, now)

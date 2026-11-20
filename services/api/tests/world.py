@@ -26,7 +26,7 @@ from konvami_api.domain.levels import LevelFit, LevelService
 from konvami_api.domain.live_call import Turn
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.motivation import MotivationService
-from konvami_api.domain.motivation_sources import motivation_sources, winback_question
+from konvami_api.domain.motivation_sources import motivation_sources
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import Persona, PersonaService
@@ -391,12 +391,7 @@ class World:
             clock=self.clock,
             # Motivation is built further down; the nudge asks it only when it runs.
             paused=lambda user_id: self.motivation.reminders_paused(user_id),
-            winback=winback_question(
-                profiles=self.profiles,
-                memories=self.memories,
-                conversations=self.conversations,
-                clock=self.clock,
-            ),
+            has_question=lambda user_id, partner: self.motivation.has_question(user_id, partner),
         )
         self.files = InMemoryFileStore()
         self.speech = FakeSpeechModel()
@@ -696,6 +691,8 @@ class World:
                 reports=self.reports,
                 penpal=self.penpal,
                 conversation_review=self.conversation_review,
+                memories=self.memories,
+                conversations=self.conversations,
                 clock=self.clock,
             ),
             clock=self.clock,

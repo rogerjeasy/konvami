@@ -41,7 +41,7 @@ from konvami_api.domain.live_speech import LiveSpeech
 from konvami_api.domain.memories import MemoryService
 from konvami_api.domain.moderation import TextGuard
 from konvami_api.domain.motivation import MotivationService
-from konvami_api.domain.motivation_sources import motivation_sources, winback_question
+from konvami_api.domain.motivation_sources import motivation_sources
 from konvami_api.domain.onboarding import OnboardingService
 from konvami_api.domain.penpal import PenPalService
 from konvami_api.domain.personas import PersonaService
@@ -564,6 +564,8 @@ def build_backend(
             reports=reports,
             penpal=pen_pal,
             conversation_review=conversation_review,
+            memories=memories,
+            conversations=conversations,
             clock=_now,
         ),
         clock=_now,
@@ -571,9 +573,7 @@ def build_backend(
     # The nudge (built before motivation) asks it whether a learner paused their reminders.
     push.use_motivation(
         paused=motivation.reminders_paused,
-        winback=winback_question(
-            profiles=profiles, memories=memories, conversations=conversations, clock=_now
-        ),
+        has_question=motivation.has_question,
     )
     home = HomeService(
         profiles=profiles,

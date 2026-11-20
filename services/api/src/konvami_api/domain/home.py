@@ -110,7 +110,7 @@ class HomeService:
         activity = self._conversations.activity(user_id, timezone, self._clock())
         if self._streak is not None:
             activity = replace(activity, streak_days=self._streak(user_id, timezone))
-        history =self._conversations.partner_history(user_id)
+        history = self._conversations.partner_history(user_id)
         partners = tuple(
             PartnerView(
                 persona=persona,

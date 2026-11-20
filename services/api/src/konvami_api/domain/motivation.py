@@ -453,6 +453,9 @@ class WelcomeBack:
     days: int
     # The partner talked to last; None without one.
     partner_id: UUID | None
+    # What that partner remembers to ask about, in the explanation language (shown in the app
+    # only, never in a push); None without one.
+    question: str | None = None
 
 
 def improved_kinds(
@@ -550,6 +553,8 @@ class Sources:
     cards: Callable[[UUID], tuple[int, int]]
     most_words: Callable[[UUID], int]
     mistakes_by_week: Callable[[UUID, str | None, dt.date], Sequence[tuple[dt.date, str, int]]]
+    # What a partner remembers to ask the learner about (`motivation_sources.py`).
+    follow_up: Callable[[UUID, UUID | None], str | None] = lambda _user, _partner: None
 
 
 class MotivationService:
@@ -601,8 +606,9 @@ class MotivationService:
         welcome = None
         if last_spoken is not None and (today - last_spoken).days >= WELCOME_BACK_DAYS:
             latest = self._conversations.listed(user_id, limit=1).conversations
+            partner = latest[0].persona_id if latest else None
             welcome = WelcomeBack(
-                (today - last_spoken).days, latest[0].persona_id if latest else None
+                (today - last_spoken).days, partner, self._sources.follow_up(user_id, partner)
             )
         paused = self._repository.reminders_paused_until(user_id)
         return MotivationView(
@@ -638,6 +644,11 @@ class MotivationService:
         until = self._clock() + dt.timedelta(days=days) if days else None
         self._repository.pause_reminders(user_id, until)
         return until
+
+    def has_question(self, user_id: UUID, partner: UUID | None) -> bool:
+        """Whether `partner` remembers something to ask the learner about. Only this yes or no
+        leaves for a push; the question is shown in the app."""
+        return self._sources.follow_up(user_id, partner) is not None
 
     def reminders_paused(self, user_id: UUID) -> bool:
         until = self._repository.reminders_paused_until(user_id)

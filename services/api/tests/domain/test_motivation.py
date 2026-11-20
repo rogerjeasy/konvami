@@ -2,6 +2,7 @@
 
 import datetime as dt
 
+from konvami_api.domain.conversations import Conversation
 from konvami_api.domain.levels import LevelFit, LevelPoint
 from konvami_api.domain.motivation import (
     LONG_CALL_SECONDS,
@@ -19,7 +20,6 @@ from konvami_api.domain.motivation import (
     quest_progress,
     speaking_streak,
 )
-from konvami_api.domain.conversations import Conversation
 from konvami_api.domain.profile import Source
 
 # Monday 2 November 2026; a habit of Monday, Tuesday, Thursday and Saturday.

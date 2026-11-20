@@ -5162,6 +5162,8 @@ export interface components {
             days: number;
             /** Partnerid */
             partnerId: string | null;
+            /** Question */
+            question: string | null;
         };
         /**
          * WordDetailsOut

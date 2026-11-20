@@ -3252,6 +3252,9 @@ class RecapOut(ApiModel):
 class WelcomeBackOut(ApiModel):
     days: int
     partner_id: UUID | None
+    # What the partner remembers to ask about, in the explanation language; shown in the app
+    # only (a push says just that there is a question). Null without one.
+    question: str | None
 
 
 class MotivationOut(ApiModel):
@@ -3314,7 +3317,9 @@ class MotivationOut(ApiModel):
             )
             if recap
             else None,
-            welcome_back=WelcomeBackOut(days=welcome.days, partner_id=welcome.partner_id)
+            welcome_back=WelcomeBackOut(
+                days=welcome.days, partner_id=welcome.partner_id, question=welcome.question
+            )
             if welcome
             else None,
             reminders_paused_until=view.reminders_paused_until,
