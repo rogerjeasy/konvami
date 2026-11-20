@@ -60,6 +60,8 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.radio import RadioService
+from konvami_api.domain.radio_check import ModelBrain as RadioBrain
 from konvami_api.domain.real_life import RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -76,6 +78,7 @@ from konvami_api.domain.two_partners import GuestSpeech
 from konvami_api.domain.video_avatars import VideoAvatarService
 from konvami_api.domain.vocabulary import VocabularyService
 from konvami_api.domain.voice import CallPurpose, VoiceCallService
+from konvami_api.domain.voice_messages import MessageChecker
 from konvami_api.domain.voice_review import VoiceReviewService
 from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.web_deletion import WebDeletionService
@@ -88,6 +91,7 @@ from konvami_api.persistence.halves_repository import SqlHalvesRepository
 from konvami_api.persistence.migrations import migrate_when_awake
 from konvami_api.persistence.motivation_repository import SqlMotivationRepository
 from konvami_api.persistence.pronunciation_repository import SqlPronunciationRepository
+from konvami_api.persistence.radio_repository import SqlRadioRepository
 from konvami_api.persistence.repositories import (
     SqlAccountRepository,
     SqlAlertLog,
@@ -137,6 +141,7 @@ from konvami_api.providers.aws import (
     LambdaFitStarter,
     LambdaHalvesStarter,
     LambdaPenPalStarter,
+    LambdaRadioStarter,
     LambdaReportStarter,
     LambdaStoryStarter,
     LambdaWeekReviewStarter,
@@ -163,6 +168,7 @@ from konvami_api.settings import (
     HALVES_VARIABLE,
     PLANS_VARIABLE,
     PREMIUM_VOICES_VARIABLE,
+    RADIO_VARIABLE,
     TEXT_MODELS_VARIABLE,
     VIDEO_AVATARS_VARIABLE,
     VOICE_VARIABLE,
@@ -170,6 +176,7 @@ from konvami_api.settings import (
     halves_settings,
     plan_settings,
     premium_voice_settings,
+    radio_settings,
     text_models,
     video_avatar_settings,
     voice_settings,
@@ -725,8 +732,45 @@ def build_backend(
         clock=_now,
         announce=push.halves,
     )
+    radio_config = radio_settings(environment.get(RADIO_VARIABLE))
+    radio = RadioService(
+        profiles=profiles,
+        accounts=directory,
+        repository=SqlRadioRepository(sql),
+        listener=listener,
+        brain=RadioBrain(
+            # The same check as a Two Halves move; corrections judge the learner's language, as
+            # a report does.
+            checker=MessageChecker(
+                moderator=OpenAiModerator(openai_key, meter=meter),
+                text_model=text,
+                check_model=models.memory,
+                review_model=models.report,
+                language_name=CATALOG.english_name,
+            ),
+            text_model=text,
+            write_model=models.week or models.memory,
+            speech=speech,
+            speech_model=models.speech,
+            files=files,
+            language_name=CATALOG.english_name,
+        ),
+        files=files,
+        starter=LambdaRadioStarter(clients.functions, worker),
+        enabled=radio_config.enabled,
+        allowed=lambda user_id: radio_config.open_to_testers or user_id in costs.owners,
+        owners=costs.owners,
+        clock=_now,
+        save_card=lambda user_id, phrase, meaning, explained_in: cards.save_phrase(
+            user_id, phrase, meaning, explained_in
+        ),
+        # Past the month's spend target, the show is put together without a model.
+        affordable=lambda: guard.level() is Level.NORMAL,
+        announce=push.radio,
+    )
     services = Services(
         halves=halves,
+        radio=radio,
         catalog=CATALOG,
         profiles=profiles,
         questions=ProfileQuestionService(
@@ -940,7 +984,8 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
     an exam simulation (`exam`); and, once an hour, nudging learners who have been quiet for a
     week (`nudges`, from the schedule), and the partners' voice notes: the ones due, sent by the
     same hourly run (spec §6.16), and writing a note or an answer that is waiting (`pen_pal`);
-    and writing a listening story's episode (`story`, 5.29)."""
+    writing a listening story's episode (`story`, 5.29); and Radio Konvami's calls and shows
+    (`radio`, section 8)."""
     if "nudges" in event:
         # One failing does not stop the others.
         try:
@@ -949,10 +994,16 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
             try:
                 backend.services.pen_pal.send_due()
             finally:
-                backend.services.halves.tick()
+                try:
+                    backend.services.halves.tick()
+                finally:
+                    backend.services.radio.tick()
         return
     if "halves" in event:
         _halves_job(backend, event["halves"], UUID(event["id"]))
+        return
+    if "radio" in event:
+        _radio_job(backend, event["radio"], UUID(event["id"]))
         return
     if "pen_pal" in event:
         backend.services.pen_pal.write(UUID(event["pen_pal"]))
@@ -1000,6 +1051,15 @@ def run_worker(backend: Backend, event: dict[str, Any]) -> None:
                             services.memories.write(call_id)
     else:
         asyncio.run(follow_call(backend.services.voice, backend.realtime, event["call_id"]))
+
+
+def _radio_job(backend: Backend, job: str, item_id: UUID) -> None:
+    """Radio Konvami's jobs (section 8): check a call, build a show."""
+    radio = backend.services.radio
+    if job == "check":
+        radio.check(item_id)
+    elif job == "build":
+        radio.build(item_id)
 
 
 def _halves_job(backend: Backend, job: str, item_id: UUID) -> None:

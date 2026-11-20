@@ -14,7 +14,11 @@ import { successFeedback } from '@/lib/haptics';
 import { diffWords, type DiffPart } from '@/lib/word-diff';
 import { usePracticeServices } from '@/practice/services';
 import { useTheme } from '@/theme';
+import type { SentenceRecording } from '@/voice/sentence-recorder';
 import { useSpokenAttempt } from '@/voice/use-spoken-attempt';
+
+/** What the sheet needs to know of a checked attempt. */
+export type SpokenCheck = { heard: string; right: boolean };
 
 /** Why an attempt failed, as the sheet says it; any other reason reads as "unavailable". */
 const FAILURE_KEY = {
@@ -64,6 +68,7 @@ function Marked({ parts, tone }: { parts: readonly DiffPart[]; tone: 'primary' |
  */
 export function SayItBetterSheet({
   conversationId,
+  check,
   index,
   said,
   sentence,
@@ -71,7 +76,12 @@ export function SayItBetterSheet({
   onClose,
   onRight,
 }: {
-  conversationId: string;
+  conversationId?: string;
+  /**
+   * Checks an attempt somewhere else than a conversation's report (a Radio Konvami call, 8.4);
+   * without it, the attempt is checked against the report of `conversationId`.
+   */
+  check?: (index: number, recording: SentenceRecording) => Promise<SpokenCheck>;
   /** The correction's position in the report; null while the sheet is closed. */
   index: number | null;
   /** What the learner said, and the same put right. */
@@ -89,7 +99,8 @@ export function SayItBetterSheet({
     (recording) => {
       // Recording is offered only while the sheet is open on a correction.
       if (index === null) return Promise.reject(new Error('closed'));
-      return retryCorrection(conversationId, index, recording);
+      if (check) return check(index, recording);
+      return retryCorrection(conversationId ?? '', index, recording);
     },
     (result) => {
       if (result.right && index !== null) {

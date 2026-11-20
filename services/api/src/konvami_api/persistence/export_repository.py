@@ -116,6 +116,19 @@ EXPORTED: tuple[ExportedTable, ...] = (
     ExportedTable("halves_block", f"WHERE t.blocker = {USER}"),
     ExportedTable("halves_duo", f"WHERE t.user_a = {USER} OR t.user_b = {USER}"),
     ExportedTable("halves_report", f"WHERE t.reporter = {USER}"),
+    # Radio Konvami (8.x): the learner's own profile, calls, applause, reports, strikes and "Say
+    # it better" counts. Never another caller's words; the shows themselves are not theirs.
+    *(
+        ExportedTable(name, f"WHERE t.user_id = {USER}")
+        for name in (
+            "radio_profile",
+            "radio_call",
+            "radio_applause",
+            "radio_retry_day",
+            "radio_strike",
+        )
+    ),
+    ExportedTable("radio_report", f"WHERE t.reporter = {USER}"),
     *(
         ExportedTable(name, OF_CALL)
         for name in ("level_step", "memory_extraction", "session_report", "voice_turn")
@@ -125,6 +138,11 @@ EXPORTED: tuple[ExportedTable, ...] = (
 # Tables that are not a learner's data, and why.
 NOT_EXPORTED: Mapping[str, str] = {
     "deleted_user": "A note that an account was deleted; a learner who asks has no such note.",
+    "radio_episode": "A day's Radio Konvami show, the same for every listener of a language.",
+    "radio_segment": (
+        "A show's playlist: the host's and AI callers' lines and other learners' calls; the "
+        "learner's own calls are in radio_call."
+    ),
     "schema_migration": "Which database migrations were applied.",
     "spend_alert": "The owner's budget alerts; they are about Konvami's bill, not a learner.",
 }

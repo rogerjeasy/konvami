@@ -16,6 +16,7 @@ from konvami_api.api.auth import CurrentUser, recently_signed_in
 from konvami_api.api.errors import ApiError, ErrorBody, install_error_handlers
 from konvami_api.api.halves import halves_router
 from konvami_api.api.public import public_router
+from konvami_api.api.radio import radio_router
 from konvami_api.api.schemas import (
     AccountDeletedOut,
     AccountOut,
@@ -193,6 +194,7 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationError, PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.radio import RadioError, RadioService
 from konvami_api.domain.real_life import RealLifeError, RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
@@ -262,6 +264,8 @@ class Services:
     stories: StoryService
     # Two Halves (section 7).
     halves: HalvesService
+    # Radio Konvami (section 8).
+    radio: RadioService
 
     feedback: FeedbackService
 
@@ -1514,6 +1518,10 @@ def _router(services: Services) -> APIRouter:
     # as every other route.
     router.include_router(
         halves_router(lambda: services.halves, lambda move: recorded(move, HalvesError))
+    )
+    # Radio Konvami (section 8): under /v1/radio, the same way.
+    router.include_router(
+        radio_router(lambda: services.radio, lambda call: recorded(call, RadioError))
     )
     return router
 

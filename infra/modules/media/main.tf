@@ -19,6 +19,9 @@ locals {
   # Two Halves' moves, stand-in lines and recaps (section 7). The same prefix as in services/api
   # (domain/halves.py, FOLDER).
   halves_prefix = "halves/"
+  # Radio Konvami's calls and shows (section 8). The same prefix as in services/api
+  # (domain/radio.py, FOLDER).
+  radio_prefix = "radio/"
 }
 
 resource "aws_s3_bucket" "media" {
@@ -98,6 +101,21 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
 
     expiration {
       days = var.halves_expiry_days
+    }
+  }
+
+  # A Radio Konvami call is a learner's voice heard by other learners, and a show holds calls:
+  # kept 30 days at most (the API also deletes them 30 days after the show).
+  rule {
+    id     = "delete-radio-audio"
+    status = "Enabled"
+
+    filter {
+      prefix = local.radio_prefix
+    }
+
+    expiration {
+      days = var.radio_expiry_days
     }
   }
 

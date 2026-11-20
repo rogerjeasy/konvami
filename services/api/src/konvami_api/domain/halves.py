@@ -698,6 +698,11 @@ def found_right(case: Case, state: SeatState) -> bool:
     return found.answer in state.final_answers or len(state.final_answers) >= FINAL_TRIES
 
 
+def make_codename(rng: random.Random) -> str:
+    """A word and a number, neutral in the four languages (Two Halves, Radio Konvami)."""
+    return f"{rng.choice(_CODE_WORDS)}-{rng.randint(2, 99)}"
+
+
 def stand_in_for(language: str) -> str:
     return STAND_IN_NAMES.get(language, "Sam")
 
@@ -838,7 +843,7 @@ class HalvesService:
         return profile
 
     def _codename(self) -> str:
-        return f"{self._rng.choice(_CODE_WORDS)}-{self._rng.randint(2, 99)}"
+        return make_codename(self._rng)
 
     def reroll(self, user_id: UUID) -> Profile:
         profile = self._require(user_id)

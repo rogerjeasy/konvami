@@ -1,5 +1,6 @@
 import { api } from '@/api';
 import { HalvesProvider } from '@/halves/services';
+import { RadioProvider } from '@/radio/services';
 import '../../global.css';
 import '@/i18n';
 import { useEffect, useState } from 'react';
@@ -86,6 +87,7 @@ function RootLayout() {
         <OnboardingProvider store={onboardingStore}>
           <PracticeProvider services={practiceServices}>
             <HalvesProvider api={api}>
+              <RadioProvider api={api}>
               <ProfileProvider services={profileServices}>
                 <PlanProvider device={appPurchaseDevice}>
                   <RemindersProvider device={appReminderDevice}>
@@ -108,6 +110,7 @@ function RootLayout() {
                   </RemindersProvider>
                 </PlanProvider>
               </ProfileProvider>
+              </RadioProvider>
             </HalvesProvider>
           </PracticeProvider>
         </OnboardingProvider>

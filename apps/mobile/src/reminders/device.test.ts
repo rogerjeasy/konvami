@@ -12,13 +12,21 @@ describe('what a tapped notification opens', () => {
       open: 'simulation',
       id: 'rtc_2',
     });
+    expect(openTargetOf({ open: 'radio', id: 'show_1' })).toEqual({ open: 'radio', id: 'show_1' });
+    expect(openTargetOf({ open: 'radio_call', id: 'call_1' })).toEqual({
+      open: 'radio_call',
+      id: 'call_1',
+    });
     expect(openTargetOf({ open: 'report' })).toEqual({ open: 'today' });
     expect(openTargetOf({ open: 'elsewhere', id: 'x' })).toEqual({ open: 'today' });
     expect(openTargetOf(undefined)).toEqual({ open: 'today' });
   });
 
   it('opens a partner’s ring with who rings and their question', () => {
-    expect(openTargetOf({ open: 'call', partner: 'p_1' })).toEqual({ open: 'call', partner: 'p_1' });
+    expect(openTargetOf({ open: 'call', partner: 'p_1' })).toEqual({
+      open: 'call',
+      partner: 'p_1',
+    });
     expect(openTargetOf({ open: 'call', partner: 'p_1', ask: 'Und, das Interview?' })).toEqual({
       open: 'call',
       partner: 'p_1',

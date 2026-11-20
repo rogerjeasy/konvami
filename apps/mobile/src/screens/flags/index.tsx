@@ -1,4 +1,5 @@
 import { HalvesQueue } from './halves-queue';
+import { RadioQueue } from './radio-queue';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -185,6 +186,7 @@ export function FlagQueueScreen() {
             />
           )}
           <HalvesQueue />
+          <RadioQueue />
         </>
       )}
     </ProfilePage>

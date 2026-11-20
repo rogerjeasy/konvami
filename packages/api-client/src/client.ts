@@ -66,6 +66,22 @@ export type HalvesInvite = Schemas['HalvesInviteOut'];
 export type HalvesReaction = Schemas['HalvesReactionIn']['reaction'];
 export type HalvesReportReason = Schemas['HalvesReportIn']['reason'];
 export type HalvesQueueItem = Schemas['HalvesQueueItemOut'];
+// Radio Konvami (section 8).
+export type Radio = Schemas['RadioOut'];
+export type RadioProfile = Schemas['RadioProfileOut'];
+export type RadioJoin = Schemas['RadioJoinIn'];
+export type RadioEpisodeCard = Schemas['RadioEpisodeCardOut'];
+export type RadioNextShow = Schemas['RadioNextShowOut'];
+export type RadioEpisode = Schemas['RadioEpisodeOut'];
+export type RadioSegment = Schemas['RadioSegmentOut'];
+export type RadioCall = Schemas['RadioCallOut'];
+export type RadioCallStatus = RadioCall['status'];
+export type RadioCallInput = Schemas['RadioCallIn'];
+export type RadioCorrection = Schemas['RadioCorrectionOut'];
+export type RadioApplauseCard = NonNullable<Schemas['RadioApplauseIn']['card']>;
+export type RadioReportReason = Schemas['RadioReportIn']['reason'];
+export type RadioRetried = Schemas['RadioRetriedOut'];
+export type RadioQueueItem = Schemas['RadioQueueItemOut'];
 /** A card answered out loud (voice review): what was heard, how close, the rating it points to. */
 export type AnsweredCard = Schemas['AnsweredOut'];
 export type AnswerOutcome = AnsweredCard['outcome'];
@@ -386,6 +402,45 @@ export interface ApiClient {
     id: string,
     action: 'remove' | 'dismiss',
   ): Promise<void>;
+  /** Radio Konvami's hub (8.1). */
+  getRadio(): Promise<Radio>;
+  /** Joins the show or changes the join answers (8.6). */
+  joinRadio(answers: RadioJoin): Promise<Radio>;
+  changeRadio(changes: { veilDefault?: boolean | null }): Promise<Radio>;
+  rerollRadioCodename(): Promise<Radio>;
+  /** Withdraws the voice-sharing consent and deletes the learner's calls (8.6). */
+  leaveRadio(): Promise<void>;
+  /** The last two weeks of shows (8.5). */
+  getRadioArchive(): Promise<{ episodes: RadioEpisodeCard[] }>;
+  getRadioEpisode(episodeId: string): Promise<RadioEpisode>;
+  getRadioSegmentAudio(episodeId: string, index: number): Promise<{ url: string }>;
+  /** One of the four applause cards for a call, or none to take it back. */
+  applaudRadioSegment(
+    episodeId: string,
+    index: number,
+    card: RadioApplauseCard | null,
+  ): Promise<RadioEpisode>;
+  reportRadioSegment(
+    episodeId: string,
+    index: number,
+    report: { reason: RadioReportReason; note?: string | null },
+  ): Promise<RadioEpisode>;
+  /** Calls in to the next show (8.3): checked on the server before anyone else hears it. */
+  sendRadioCall(call: RadioCallInput): Promise<RadioCall>;
+  /** One of the learner's own calls, privately (8.4). */
+  getRadioCall(callId: string): Promise<RadioCall>;
+  getRadioCallAudio(callId: string): Promise<{ url: string }>;
+  withdrawRadioCall(callId: string): Promise<void>;
+  sayRadioCorrectionBetter(
+    callId: string,
+    index: number,
+    recording: SpokenRecording,
+  ): Promise<RadioRetried>;
+  saveRadioCorrectionCard(callId: string, index: number): Promise<Card>;
+  /** The owner's Radio queue (6.15). */
+  getRadioQueue(): Promise<{ items: RadioQueueItem[] }>;
+  decideRadioItem(kind: 'held' | 'report', id: string, action: 'remove' | 'dismiss'): Promise<void>;
+  pullRadioEpisode(episodeId: string): Promise<void>;
   getCatalog(): Promise<Catalog>;
   getProfile(): Promise<Profile>;
   /** Applies all changes or none. Fails with `invalid_value` and the field for a refused one. */
@@ -898,6 +953,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   const halvesCase = (id: string) => `/v1/halves/cases/${encodeURIComponent(id)}`;
   const halvesMove = (id: string) => `/v1/halves/moves/${encodeURIComponent(id)}`;
+  const radioEpisode = (id: string) => `/v1/radio/episodes/${encodeURIComponent(id)}`;
+  const radioCall = (id: string) => `/v1/radio/calls/${encodeURIComponent(id)}`;
 
   return {
     getCatalog: () => request('GET', '/v1/catalog'),
@@ -933,6 +990,31 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     getHalvesQueue: () => request('GET', '/v1/halves/queue'),
     decideHalvesItem: (kind, id, action) =>
       request('POST', `/v1/halves/queue/${kind}/${encodeURIComponent(id)}`, { action }),
+    getRadio: () => request('GET', '/v1/radio'),
+    joinRadio: (answers) => request('PUT', '/v1/radio/profile', answers),
+    changeRadio: (changes) => request('PATCH', '/v1/radio/profile', changes),
+    rerollRadioCodename: () => request('POST', '/v1/radio/profile/codename'),
+    leaveRadio: () => request('DELETE', '/v1/radio/profile'),
+    getRadioArchive: () => request('GET', '/v1/radio/episodes'),
+    getRadioEpisode: (episodeId) => request('GET', radioEpisode(episodeId)),
+    getRadioSegmentAudio: (episodeId, index) =>
+      request('GET', `${radioEpisode(episodeId)}/segments/${index}/audio`),
+    applaudRadioSegment: (episodeId, index, card) =>
+      request('POST', `${radioEpisode(episodeId)}/segments/${index}/applause`, { card }),
+    reportRadioSegment: (episodeId, index, report) =>
+      request('POST', `${radioEpisode(episodeId)}/segments/${index}/report`, report),
+    sendRadioCall: (call) => request('POST', '/v1/radio/calls', call),
+    getRadioCall: (callId) => request('GET', radioCall(callId)),
+    getRadioCallAudio: (callId) => request('GET', `${radioCall(callId)}/audio`),
+    withdrawRadioCall: (callId) => request('DELETE', radioCall(callId)),
+    sayRadioCorrectionBetter: (callId, index, recording) =>
+      request('POST', `${radioCall(callId)}/corrections/${index}/retry`, recording),
+    saveRadioCorrectionCard: (callId, index) =>
+      request('POST', `${radioCall(callId)}/corrections/${index}/card`),
+    getRadioQueue: () => request('GET', '/v1/radio/queue'),
+    decideRadioItem: (kind, id, action) =>
+      request('POST', `/v1/radio/queue/${kind}/${encodeURIComponent(id)}`, { action }),
+    pullRadioEpisode: (episodeId) => request('POST', `${radioEpisode(episodeId)}/pull`),
     getProfile: () => request('GET', '/v1/profile'),
     updateProfile: (changes) => request('PATCH', '/v1/profile', { changes }),
     getProfileChanges: () => request('GET', '/v1/profile/changes'),

@@ -65,3 +65,10 @@ openai_api_key = "sk-..."
 #   enabled         = true
 #   open_to_testers = false
 # }
+
+# Radio Konvami (section 8): off until enabled. Turn it on for the owners first, then for every
+# tester with open_to_testers.
+# radio = {
+#   enabled         = true
+#   open_to_testers = false
+# }
