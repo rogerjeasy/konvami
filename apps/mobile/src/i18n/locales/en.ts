@@ -1,4 +1,5 @@
 import { EXAM_ACOUSTICS } from '../exam-acoustics';
+import { CHAIN } from '../chain';
 import { HALVES } from '../halves';
 import { EXAM_STAGES } from '../exam-stages';
 import { pronunciationComparison } from '../pronunciation-comparison';
@@ -15,6 +16,7 @@ import { TARGET_LANGUAGE_LABELS } from '../target-language-labels';
 export const en = {
   examAcoustics: EXAM_ACOUSTICS.en,
   halves: HALVES.en,
+  chain: CHAIN.en,
   captionLookup: CAPTION_LOOKUP.en,
   examStages: EXAM_STAGES.en,
   offlineLibrary: offlineLibrary.en,
@@ -2527,6 +2529,9 @@ export const en = {
       halves_listen: 'Two Halves moves written down',
       halves: 'Two Halves checks and writing',
       halves_audio: 'Two Halves sounds',
+      chain_listen: 'Story chain lines written down',
+      chain: 'Story chain checks and narrator',
+      chain_audio: 'Story chain sounds',
     },
   },
   plan: {
