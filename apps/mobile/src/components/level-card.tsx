@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import type { HomeLevel, LevelPoint } from '@konvami/api-client';
+import type { HomeLevel, LevelOutlook, LevelPoint } from '@konvami/api-client';
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { LevelBadge } from '@/components/level-badge';
@@ -55,9 +55,12 @@ function History({ points }: { points: readonly LevelPoint[] }) {
 export function LevelCard({
   level,
   history = [],
+  outlook = null,
 }: {
   level: HomeLevel;
   history?: readonly LevelPoint[];
+  /** How close the next level is, once a conversation points to it (motivation). */
+  outlook?: LevelOutlook | null;
 }) {
   const { t } = useTranslation();
   return (
@@ -76,8 +79,41 @@ export function LevelCard({
           </View>
         </View>
       </View>
+      {outlook ? <OutlookLine outlook={outlook} /> : null}
       {level.skills ? <SkillLevels levels={level.skills} fallback={level.level} /> : null}
       {history.length > 1 ? <History points={history} /> : null}
     </Card>
+  );
+}
+
+/**
+ * The next level coming into view: "3 of 5 conversations point to B1", on the butter "almost
+ * there" chip, and what moves the level. Only ever upwards: a level going down is never
+ * announced ahead (spec §6.9).
+ */
+export function OutlookLine({ outlook }: { outlook: LevelOutlook }) {
+  const { t } = useTranslation();
+  const words = {
+    pointing: outlook.pointing,
+    needed: outlook.needed,
+    agreeing: outlook.agreeing,
+    next: outlook.next,
+  };
+  return (
+    <View className="gap-1.5">
+      <View className="flex-row flex-wrap items-center gap-2">
+        <View className="rounded-pill bg-butter px-2.5 py-0.5">
+          <Text variant="captionStrong" tone="onButter">
+            {t('motivation.outlook.almost')}
+          </Text>
+        </View>
+        <Text variant="label" className="shrink">
+          {t('motivation.outlook.line', words)}
+        </Text>
+      </View>
+      <Text variant="small" tone="muted">
+        {t('motivation.outlook.hint', words)}
+      </Text>
+    </View>
   );
 }

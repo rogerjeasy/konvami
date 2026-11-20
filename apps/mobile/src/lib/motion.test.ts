@@ -1,5 +1,8 @@
+import { motion } from '@konvami/design-tokens';
 import {
   assertValidKeyframes,
+  burstKeyframes,
+  burstOffset,
   fillKeyframes,
   growKeyframes,
   pct,
@@ -44,5 +47,28 @@ describe('keyframes', () => {
       to: { transform: [{ scaleX: 1 }] },
     });
     expect(fillKeyframes(true)).toEqual({ from: { opacity: 0 }, to: { opacity: 1 } });
+  });
+});
+
+describe('a celebration burst', () => {
+  it('spreads its pieces around the middle, some nearer than others', () => {
+    const pieces = Array.from({ length: 8 }, (_, i) => burstOffset(i, 8));
+    expect(pieces[0]).toEqual({ x: motion.burstReach, y: 0 });
+    const distances = pieces.map(({ x, y }) => Math.round(Math.hypot(x, y)));
+    expect(Math.max(...distances)).toBe(motion.burstReach);
+    expect(Math.min(...distances)).toBeLessThan(motion.burstReach);
+  });
+
+  it('flies out and fades, and with reduced motion only fades where it lands', () => {
+    const full = burstKeyframes(40, -20, false);
+    const reduced = burstKeyframes(40, -20, true);
+    assertValidKeyframes(full);
+    assertValidKeyframes(reduced);
+    expect(full.to).toMatchObject({ opacity: 0 });
+    expect(JSON.stringify(reduced)).not.toContain('rotate');
+    expect(reduced.from).toEqual({
+      opacity: 0,
+      transform: [{ translateX: 40 }, { translateY: -20 }],
+    });
   });
 });

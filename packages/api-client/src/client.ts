@@ -133,6 +133,7 @@ export type QuestKind = Schemas['QuestOut']['kind'];
 export type QuestWeek = Schemas['QuestWeekOut'];
 export type Celebration = Schemas['CelebrationOut'];
 export type Recap = Schemas['RecapOut'];
+export type RepairOffer = Schemas['RepairOfferOut'];
 export type WelcomeBack = Schemas['WelcomeBackOut'];
 /** The exam centre (spec §6.13): the learner's exam, the speaking tests, simulations, readiness. */
 export type ExamCentre = Schemas['ExamCentreOut'];
