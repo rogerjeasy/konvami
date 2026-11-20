@@ -1319,6 +1319,11 @@ def _router(services: Services) -> APIRouter:
         """Writes a copy of everything kept for the learner and says where to read it."""
         return DataExportOut.of(services.exports.export(user))
 
+    # Two Halves (section 7): under /v1/halves, behind the same sign-in and deleted-account guard
+    # as every other route.
+    router.include_router(
+        halves_router(lambda: services.halves, lambda move: recorded(move, HalvesError))
+    )
     return router
 
 
@@ -1339,9 +1344,6 @@ def _deletion_router(services: Services) -> APIRouter:
         services.accounts.delete(user)
         return AccountDeletedOut()
 
-    router.include_router(
-        halves_router(lambda: services.halves, lambda move: recorded(move, HalvesError))
-    )
     return router
 
 

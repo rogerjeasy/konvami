@@ -190,3 +190,98 @@ def test_leaving_deletes_the_profile(call: Call) -> None:
     assert call("GET", "/v1/halves/cases/00000000-0000-4000-8000-000000000000").body["error"][
         "code"
     ] == ("not_joined")
+
+
+def test_the_last_token_of_a_deleted_account_cannot_play(call: Call) -> None:
+    """A deleted (or half-deleted) account is refused on Two Halves exactly as on every other
+    route that changes something."""
+    call("PUT", "/v1/halves/profile", JOIN)
+    call("DELETE", "/v1/account")
+    case = "00000000-0000-4000-8000-000000000001"
+    for method, path, body in [
+        ("PUT", "/v1/halves/profile", JOIN),
+        ("POST", "/v1/halves/cases", {}),
+        ("POST", "/v1/halves/invites", {}),
+        ("POST", f"/v1/halves/cases/{case}/moves", {"audio": AUDIO, "format": "m4a"}),
+        ("DELETE", "/v1/halves/profile", None),
+    ]:
+        response = call(method, path, body)
+        assert response.status == 401, (method, path)
+        assert response.body == {"error": {"code": "not_authenticated", "field": None}}
+    assert call("PATCH", "/v1/halves/profile", {"paused": True}).status == 401
+
+
+def test_every_two_halves_route_needs_a_signed_in_learner(call: Call, services: Services) -> None:
+    from konvami_api.api.app import create_app
+
+    any_id = "00000000-0000-4000-8000-000000000002"
+    paths = create_app(services).openapi()["paths"]
+    routes = [
+        (method.upper(), path)
+        for path, operations in paths.items()
+        if path.startswith("/v1/halves")
+        for method in operations
+    ]
+    assert len(routes) >= 25
+    for method, path in routes:
+        target = (
+            path.replace("{case_id}", any_id)
+            .replace("{move_id}", any_id)
+            .replace("{duo_id}", any_id)
+            .replace("{block_id}", any_id)
+            .replace("{item_id}", any_id)
+            .replace("{kind}", "held")
+            .replace("{line}", "0")
+        )
+        response = call(method, target, {}, subject=None)
+        assert response.status == 401, (method, path)
+
+
+def test_a_learner_reaches_only_their_own_cases_and_the_moves_sent_to_them(
+    call: Call,
+    services: Services,
+    text_model: ScriptedTextModel,
+    directory: FakeAccountDirectory,
+    halves_transcriber: ScriptedTranscriber,
+    halves_starter: RecordingHalvesStarter,
+) -> None:
+    adults(directory)
+    onboarded(call, text_model)
+    call("PUT", "/v1/halves/profile", JOIN)
+    case_id = call("POST", "/v1/halves/cases", {"templateId": "lost_cello"}).body["id"]
+    run(services, halves_starter)
+    halves_transcriber.answers.append("Ein Schaffner hat um 14 Uhr 20 einen Kasten gesehen")
+    mine = call("POST", f"/v1/halves/cases/{case_id}/moves", {"audio": AUDIO, "format": "m4a"})
+    run(services, halves_starter)
+    theirs = call("GET", f"/v1/halves/cases/{case_id}").body["rounds"][0]["theirs"]["id"]
+
+    # Another learner, joined, knowing both ids, gets nothing of either.
+    call("PUT", "/v1/halves/profile", JOIN, subject=OTHER_USER)
+    elsewhere: list[tuple[str, str, object]] = [
+        ("GET", f"/v1/halves/cases/{case_id}", None),
+        ("POST", f"/v1/halves/cases/{case_id}/moves", {"audio": AUDIO, "format": "m4a"}),
+        ("POST", f"/v1/halves/cases/{case_id}/final", {"option": 0}),
+        ("POST", f"/v1/halves/cases/{case_id}/again", {"yes": True}),
+        ("POST", f"/v1/halves/cases/{case_id}/hand-over", None),
+        ("POST", f"/v1/halves/cases/{case_id}/block", None),
+        ("GET", f"/v1/halves/cases/{case_id}/recap/0/audio", None),
+        ("GET", f"/v1/halves/moves/{mine.body['id']}/audio", None),
+        ("GET", f"/v1/halves/moves/{theirs}/audio", None),
+        ("POST", f"/v1/halves/moves/{theirs}/answer", {"option": 1}),
+        ("POST", f"/v1/halves/moves/{theirs}/reaction", {"reaction": "bravo"}),
+        ("POST", f"/v1/halves/moves/{theirs}/report", {"reason": "other"}),
+    ]
+    for method, path, body in elsewhere:
+        response = call(method, path, body, subject=OTHER_USER)
+        assert response.status == 404, (method, path)
+    # Nor can a learner act on their own move as if they had heard it.
+    own: list[tuple[str, object]] = [
+        (f"/v1/halves/moves/{mine.body['id']}/answer", {"option": 1}),
+        (f"/v1/halves/moves/{mine.body['id']}/report", {"reason": "other"}),
+    ]
+    for path, body in own:
+        assert call("POST", path, body).status == 404, path
+    # And only the owner sees or decides the queue.
+    decide = f"/v1/halves/queue/held/{mine.body['id']}"
+    assert call("GET", "/v1/halves/queue", subject=OTHER_USER).status == 403
+    assert call("POST", decide, {"action": "remove"}, subject=OTHER_USER).status == 403
