@@ -3,11 +3,16 @@ by what they do (suggesting, disagreeing, structuring a talk…), each with the 
 suits and its meaning in every explanation language.
 
 Written by hand: original phrases, not copied exam answers, and the same for every learner, so
-no model request and no second check. German explanations show the phrase itself.
+no model request and no second check. Every phrase is written in all four languages Konvami
+teaches, so one table serves each language's exams: an English test shows the English line, with
+the German, French and Italian ones as meanings. A few lines read better in a language as a
+phrase to learn than as a meaning (`_AS_PHRASE`), and two name the language itself
+(`_LANGUAGE_NAMED`). An explanation in the test's own language shows the phrase itself.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from functools import cache
 from typing import Literal
 
 from konvami_api.domain.exams import SpeakingExam
@@ -28,6 +33,9 @@ Function = Literal[
     "describe",
     "react",
     "time",
+    "compare",
+    "speculate",
+    "phone",
 ]
 
 # How many phrases the preparation screen shows under one part; the bank (5.25) shows all.
@@ -526,6 +534,139 @@ FUNCTIONS: Mapping[Function, tuple[ExamPhrase, ...]] = {
             "Mi lasci dire in un altro modo: …",
         ),
     ),
+    "compare": (
+        _p(
+            "A2",
+            "Auf Bild A …, auf Bild B …",
+            "In photo A …, in photo B …",
+            "Sur la photo A …, sur la photo B …",
+            "Nella foto A …, nella foto B …",
+        ),
+        _p(
+            "A2",
+            "Beide Bilder zeigen …",
+            "Both pictures show …",
+            "Les deux photos montrent …",
+            "Tutte e due le foto mostrano …",
+        ),
+        _p(
+            "B1",
+            "Im Gegensatz zu Bild A …",
+            "Unlike photo A, …",
+            "Contrairement à la photo A, …",
+            "A differenza della foto A, …",
+        ),
+        _p(
+            "B1",
+            "Der größte Unterschied ist, dass …",
+            "The biggest difference is that …",
+            "La plus grande différence, c'est que …",
+            "La differenza più grande è che …",
+        ),
+        _p(
+            "B2",
+            "Während das erste Bild … zeigt, sieht man auf dem zweiten …",
+            "Whereas the first picture shows …, the second one …",
+            "Alors que la première photo montre …, la seconde …",
+            "Mentre la prima foto mostra …, la seconda …",
+        ),
+        _p(
+            "C1",
+            "Was beide Situationen verbindet, ist …",
+            "What both situations have in common is …",
+            "Ce que les deux situations ont en commun, c'est …",
+            "Ciò che accomuna le due situazioni è …",
+        ),
+    ),
+    "speculate": (
+        _p("A2", "Vielleicht …", "Maybe …", "Peut-être que …", "Forse …"),
+        _p(
+            "B1",
+            "Wahrscheinlich warten sie auf …",
+            "They're probably waiting for …",
+            "Ils attendent probablement …",
+            "Probabilmente aspettano …",
+        ),
+        _p(
+            "B1",
+            "Ich glaube, sie sind ein bisschen müde.",
+            "I think they might be a bit tired.",
+            "Je crois qu'ils sont un peu fatigués.",
+            "Credo che siano un po' stanchi.",
+        ),
+        _p(
+            "B2",
+            "Es könnte sein, dass …",
+            "It could be that …",
+            "Il se pourrait que …",
+            "Potrebbe darsi che …",
+        ),
+        _p(
+            "B2",
+            "Sie sehen aus, als ob sie es eilig hätten.",
+            "They look as if they're in a hurry.",
+            "On dirait qu'ils sont pressés.",
+            "Sembra che abbiano fretta.",
+        ),
+        _p(
+            "C1",
+            "Ich würde vermuten, dass …",
+            "I'd imagine that …",
+            "J'imagine que …",
+            "Immagino che …",
+        ),
+    ),
+    "phone": (
+        _p(
+            "A1",
+            "Guten Tag, hier spricht …",
+            "Hello, this is …",
+            "Bonjour, c'est …",
+            "Buongiorno, sono …",
+        ),
+        _p(
+            "A1",
+            "Auf Wiederhören!",
+            "Goodbye, thanks for your help.",
+            "Au revoir, merci !",
+            "Arrivederci, grazie!",
+        ),
+        _p(
+            "A2",
+            "Ich möchte gern einen Termin vereinbaren.",
+            "I'd like to make an appointment.",
+            "Je voudrais prendre rendez-vous.",
+            "Vorrei fissare un appuntamento.",
+        ),
+        _p(
+            "A2",
+            "Ich muss meinen Termin leider absagen.",
+            "Unfortunately I have to cancel my appointment.",
+            "Je dois malheureusement annuler mon rendez-vous.",
+            "Purtroppo devo disdire il mio appuntamento.",
+        ),
+        _p(
+            "A2",
+            "Können wir den Termin verschieben?",
+            "Could we move the appointment?",
+            "Est-ce qu'on peut déplacer le rendez-vous ?",
+            "Possiamo spostare l'appuntamento?",
+        ),
+        _p(
+            "A2",
+            "Passt Ihnen Dienstag um zehn Uhr?",
+            "Would Tuesday at ten suit you?",
+            "Mardi à dix heures, ça vous convient ?",
+            "Le va bene martedì alle dieci?",
+        ),
+        _p(
+            "B1",
+            "Ich rufe an, weil …",
+            "I'm calling because …",
+            "Je vous appelle parce que …",
+            "La chiamo perché …",
+        ),
+    ),
 }
 
 # What each kind of part asks for, most useful first.
@@ -542,7 +683,107 @@ _KIND_FUNCTIONS: Mapping[str, tuple[Function, ...]] = {
     "discussion": ("opinion", "agree", "disagree"),
     "topic_conversation": ("opinion", "tell", "agree", "disagree"),
     "picture_experience": ("describe", "tell", "time"),
+    "interview": ("introduce", "tell", "react"),
+    "describe_picture": ("describe", "speculate", "time"),
+    "phone_call": ("phone", "request", "time"),
+    "role_play": ("request", "ask", "react"),
+    "obtain_information": ("ask", "request", "react"),
+    "point_of_view": ("opinion", "structure", "react"),
+    "persuade": ("suggest", "opinion", "disagree"),
+    "long_turn": ("structure", "tell", "time"),
+    "compare_pictures": ("compare", "speculate", "describe"),
+    "collaborate": ("suggest", "agree", "disagree"),
+    "listen_repeat": ("time",),
 }
+
+# Lines that read better as a phrase to learn than the meaning written for German learners, by
+# language and the German line.
+_AS_PHRASE: Mapping[tuple[str, str], str] = {
+    ("en", "Wäre es möglich, dass …?"): "Would it be possible to …?",
+    ("en", "Darf ich noch einmal nachfragen: Wie haben Sie das gemeint?"): (
+        "Sorry, what exactly did you mean by that?"
+    ),
+    ("en", "Was hältst du davon, wenn wir …?"): "What do you think about …?",
+    ("en", "Das passt mir gut."): "That suits me.",
+    ("en", "Ein wichtiges Argument dafür ist, dass …"): (
+        "One important argument in favour is that …"
+    ),
+    ("en", "Wenn man alle Argumente gegeneinander abwägt, komme ich zu dem Schluss, dass …"): (
+        "Weighing up all the arguments, I conclude that …"
+    ),
+    ("en", "Ausschlaggebend ist für mich letztlich …"): "In the end, what matters most to me is …",
+    ("en", "Ich komme nun zum nächsten Punkt."): "Moving on to my next point, …",
+    ("en", "Zusammenfassend lässt sich festhalten, dass …"): "To sum up, …",
+    ("en", "Wie bitte?"): "Sorry, could you repeat that?",
+    ("en", "Noch einmal, bitte."): "Could you say that again, please?",
+    ("fr", "Was hältst du davon, wenn wir …?"): "Et si nous … ?",
+    ("fr", "Wollen wir am Samstag …?"): "Si on … samedi ?",
+    ("fr", "Ich weiß nicht …"): "Je ne suis pas sûr(e) que …",
+    ("fr", "Ein wichtiges Argument dafür ist, dass …"): (
+        "Un argument important en faveur de cette idée, c'est que …"
+    ),
+    ("fr", "Ich habe damit gute Erfahrungen gemacht."): "J'en ai une bonne expérience.",
+    ("it", "Was hältst du davon, wenn wir …?"): "E se noi …?",
+    ("it", "Ich weiß nicht …"): "Non sono sicuro/a che …",
+    ("it", "Noch einmal, bitte."): "Può ripetere, per favore?",
+}
+
+# How each language learned is named in German, English, French and Italian.
+_LANGUAGE_NAMES = {
+    "de": ("Deutsch", "German", "allemand", "tedesco"),
+    "en": ("Englisch", "English", "anglais", "inglese"),
+    "fr": ("Französisch", "French", "français", "francese"),
+    "it": ("Italienisch", "Italian", "italien", "italiano"),
+}
+
+
+def _speak_a_little(language: str, level: Level) -> ExamPhrase:
+    de, en, fr, it = _LANGUAGE_NAMES[language]
+    article = "d'" if fr[0] in "aeiou" else "de "
+    return _p(
+        level,
+        f"Ich spreche … und ein bisschen {de}.",
+        f"I speak … and a little {en}.",
+        f"Je parle … et un peu {article}{fr}.",
+        f"Parlo … e un po' di {it}.",
+    )
+
+
+def _how_do_you_say(language: str, level: Level) -> ExamPhrase:
+    de, en, fr, it = _LANGUAGE_NAMES[language]
+    return _p(
+        level,
+        f"Wie sagt man … auf {de}?",
+        f"How do you say … in {en}?",
+        f"Comment dit-on … en {fr} ?",
+        f"Come si dice … in {it}?",
+    )
+
+
+# The two lines that name the language learned, by their German line.
+_LANGUAGE_NAMED: Mapping[str, Callable[[str, Level], ExamPhrase]] = {
+    "Ich spreche … und ein bisschen Deutsch.": _speak_a_little,
+    "Wie sagt man … auf Deutsch?": _how_do_you_say,
+}
+
+
+def _in(language: str, phrase: ExamPhrase) -> ExamPhrase:
+    """A phrase as a learner of `language` sees it: its line in that language, with the other
+    languages' lines as its meanings."""
+    named = _LANGUAGE_NAMED.get(phrase.meanings["de"])
+    if named is not None:
+        phrase = named(language, phrase.level)
+    text = _AS_PHRASE.get((language, phrase.meanings["de"]), phrase.meanings[language])
+    return ExamPhrase(text, {**phrase.meanings, language: text}, phrase.level)
+
+
+@cache
+def functions_in(language: str) -> Mapping[Function, tuple[ExamPhrase, ...]]:
+    """The whole table for the exams of one language learned."""
+    return {
+        function: tuple(_in(language, phrase) for phrase in phrases)
+        for function, phrases in FUNCTIONS.items()
+    }
 
 
 def _fits(phrase: ExamPhrase, levels: Sequence[str]) -> bool:
@@ -550,15 +791,15 @@ def _fits(phrase: ExamPhrase, levels: Sequence[str]) -> bool:
     return LEVELS.index(phrase.level) <= top
 
 
-def _at(function: Function, levels: Sequence[str]) -> tuple[ExamPhrase, ...]:
-    return tuple(phrase for phrase in FUNCTIONS[function] if _fits(phrase, levels))
+def _at(function: Function, levels: Sequence[str], language: str) -> tuple[ExamPhrase, ...]:
+    return tuple(phrase for phrase in functions_in(language)[function] if _fits(phrase, levels))
 
 
-def phrases_for(kind: str, levels: Sequence[str]) -> tuple[ExamPhrase, ...]:
+def phrases_for(kind: str, levels: Sequence[str], language: str = "de") -> tuple[ExamPhrase, ...]:
     """A few phrases for one part, taking turns between its functions: those of the exam's own
     level first (what the learner aims at), each level in the bank's order."""
     columns = [
-        sorted(_at(function, levels), key=lambda phrase: -LEVELS.index(phrase.level))
+        sorted(_at(function, levels, language), key=lambda phrase: -LEVELS.index(phrase.level))
         for function in _KIND_FUNCTIONS.get(kind, ())
     ]
     found: list[ExamPhrase] = []
@@ -583,5 +824,6 @@ def bank_for(*exams: SpeakingExam) -> tuple[PhraseGroup, ...]:
                 if function not in seen:
                     seen.append(function)
     levels = tuple({level for exam in exams for level in exam.levels})
-    groups = (PhraseGroup(function, _at(function, levels)) for function in seen)
+    language = exams[0].language if exams else "de"
+    groups = (PhraseGroup(function, _at(function, levels, language)) for function in seen)
     return tuple(group for group in groups if group.phrases)
