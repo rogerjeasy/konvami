@@ -229,6 +229,8 @@ export function createFakeHalves(
     },
     async redeemHalvesInvite(code) {
       await record('redeemHalvesInvite', code);
+      // Stands for a learner past the day's wrong codes.
+      if (code.toUpperCase() === 'TOOMANY') throw new ApiError('limit', 429);
       if (code.toUpperCase() !== FAKE_FRIEND_CODE) throw new ApiError('not_found', 404);
       return start({ mode: 'friend', partner: { name: 'Vega-3', ai: false, place: 'city:Lyon' } });
     },

@@ -236,6 +236,10 @@ describe('7.12 Invite a friend', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Start the case' }));
     expect(await screen.findByText(/That code doesn’t work/)).toBeTruthy();
 
+    await fireEvent.changeText(screen.getByLabelText('Friend’s code'), 'TOOMANY');
+    await fireEvent.press(screen.getByRole('button', { name: 'Start the case' }));
+    expect(await screen.findByText(/a lot of codes for today/)).toBeTruthy();
+
     await fireEvent.changeText(screen.getByLabelText('Friend’s code'), FAKE_FRIEND_CODE);
     await fireEvent.press(screen.getByRole('button', { name: 'Start the case' }));
     await waitFor(() =>

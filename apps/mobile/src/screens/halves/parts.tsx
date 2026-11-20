@@ -60,6 +60,7 @@ export function failureKey(code: string) {
 const INVITE = [
   'not_found',
   'own_code',
+  'limit',
   'adults_only',
   'no_shared_language',
   'too_many_cases',

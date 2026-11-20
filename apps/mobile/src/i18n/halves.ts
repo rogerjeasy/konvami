@@ -227,6 +227,7 @@ const en = {
     failed: {
       not_found: 'That code doesn’t work. Check it, or ask for a new one.',
       own_code: 'That’s your own code. Give it to a friend.',
+      limit: 'That’s a lot of codes for today. Try again tomorrow.',
       adults_only: 'Playing with a friend is open to adults for now.',
       no_shared_language:
         'You couldn’t follow each other: each of you needs to know the language the other learns.',
@@ -484,6 +485,7 @@ const de: HalvesStrings = {
     failed: {
       not_found: 'Dieser Code funktioniert nicht. Prüf ihn oder bitte um einen neuen.',
       own_code: 'Das ist dein eigener Code. Gib ihn einer Freundin oder einem Freund.',
+      limit: 'Das waren heute viele Codes. Versuch es morgen wieder.',
       adults_only: 'Mit Freund*innen spielen können vorerst nur Erwachsene.',
       no_shared_language:
         'Ihr könntet einander nicht folgen: Jede Seite muss die Sprache kennen, die die andere lernt.',
@@ -739,6 +741,7 @@ const fr: HalvesStrings = {
     failed: {
       not_found: 'Ce code ne fonctionne pas. Vérifie-le ou demandes-en un nouveau.',
       own_code: 'C’est ton propre code. Donne-le à un ou une amie.',
+      limit: 'Ça fait beaucoup de codes pour aujourd’hui. Réessaie demain.',
       adults_only: 'Jouer avec un ou une amie est réservé aux adultes pour l’instant.',
       no_shared_language:
         'Vous ne pourriez pas vous suivre : chacun doit connaître la langue que l’autre apprend.',
@@ -992,6 +995,7 @@ const it: HalvesStrings = {
     failed: {
       not_found: 'Questo codice non funziona. Controllalo o chiedine uno nuovo.',
       own_code: 'È il tuo codice. Dallo a un amico o a un’amica.',
+      limit: 'Sono tanti codici per oggi. Riprova domani.',
       adults_only: 'Per ora giocare con amici è riservato agli adulti.',
       no_shared_language:
         'Non potreste seguirvi: ciascuno deve conoscere la lingua che l’altro impara.',
