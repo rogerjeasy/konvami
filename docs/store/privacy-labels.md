@@ -96,6 +96,22 @@ table above.
 | Device or other IDs                                                                                                                | Device or other IDs          | Yes       | No     | Optional                                             | App functionality (push token, with reminders on)                   |
 | Location, Financial info, Health and fitness, Messages, Contacts, Calendar, Files and docs, Web browsing, App info and performance | all                          | No        |        |                                                      |                                                                     |
 
+## Two Halves (section 7)
+
+When Two Halves is switched on, a learner's moves (their voice, or their exact words in a neutral
+voice with "Veil my voice") are heard by **one other learner** of the case, at the learner's own
+request and with a separate consent given when joining. Nothing new is collected that the labels
+above do not list: Audio Data and Other User Content already cover the moves, and the codename,
+first language and chosen place are Other Data Types.
+
+- **App Store:** no new data type. Say in the review notes that user content is checked before
+  delivery, can be reported and blocked, and that there are no direct messages.
+- **Google Play:** re-read whether a recording heard by another user at the learner's direction
+  counts as "shared" in the Data safety form; the owner decides (release checklist H5).
+- **Retention:** moves are deleted 30 days after their case ends and at most 30 days after they
+  were recorded (the bucket rule `delete-halves-audio`); leaving Two Halves or deleting the account
+  deletes them at once.
+
 ## Retention, as the policy states it
 
 Kept until the learner deletes the account or the item. Account deletion removes the sign-in and

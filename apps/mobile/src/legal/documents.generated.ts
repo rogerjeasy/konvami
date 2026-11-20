@@ -241,6 +241,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Two Halves",
+              "bold": true
+            },
+            {
+              "text": ", if you join it. A codename Konvami makes up for you, your first language, the place you choose to show (a city from a list, a country, or nothing), your age group, and your agreement to share your voice. For each case: the moves you record (the recording and what you said, written down word for word), the results of the safety check, the private corrections for you, your answers on the board, your reactions, and the reports and blocks you make. Every move is checked before anyone hears it; a move the check stops is never delivered and is read by the person who runs Konvami."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Why, and on what legal basis"
         },
@@ -281,6 +293,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": ": crash reports on the basis of our legitimate interest in a working app (GDPR art. 6(1)(f)); anonymous usage counts only on the basis of your consent (art. 6(1)(a)), which you can withdraw at any time in Profile › Privacy and AI."
+              }
+            ],
+            [
+              {
+                "text": "To let the other player of a Two Halves case hear your moves",
+                "bold": true
+              },
+              {
+                "text": ": on the basis of your separate consent when you join (GDPR art. 6(1)(a)). You can withdraw it at any time in Two Halves › Settings › Leave, which deletes your moves."
+              }
+            ],
+            [
+              {
+                "text": "To keep Two Halves safe",
+                "bold": true
+              },
+              {
+                "text": " (the check of every move, reports, blocks): our legitimate interest in protecting the players (GDPR art. 6(1)(f))."
               }
             ]
           ]
@@ -415,6 +445,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "The other player of a Two Halves case",
+              "bold": true
+            },
+            {
+              "text": " hears your moves, as a recording or, with “Veil my voice”, your exact words in a neutral voice. They see your codename and the place you chose to show, never your name, email or corrections. In this first phase the other player is an AI, or a friend you invited with a code; strangers are not matched. The moves are checked with OpenAI's moderation and the AI provider above."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "How long data is kept"
         },
@@ -449,6 +491,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "OpenAI keeps what it receives for up to 30 days (see above)."
+              }
+            ],
+            [
+              {
+                "text": "Two Halves moves (the recording and its words) are deleted 30 days after their case ends, and in any case 30 days after they were recorded. Leaving Two Halves or deleting your account deletes them at once; the other player's case then goes on with an AI."
               }
             ]
           ]
@@ -1010,6 +1057,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Zwei Hälften",
+              "bold": true
+            },
+            {
+              "text": ", wenn du mitmachst. Ein Deckname, den Konvami für dich erfindet, deine Erstsprache, der Ort, den du zeigen willst (eine Stadt aus einer Liste, ein Land oder nichts), deine Altersgruppe und deine Zustimmung, deine Stimme zu teilen. Für jeden Fall: die Züge, die du aufnimmst (die Aufnahme und was du gesagt hast, Wort für Wort aufgeschrieben), die Ergebnisse der Sicherheitsprüfung, die privaten Korrekturen für dich, deine Antworten auf dem Spielbrett, deine Reaktionen sowie deine Meldungen und Blockierungen. Jeder Zug wird geprüft, bevor ihn jemand hört; ein Zug, den die Prüfung aufhält, wird nie zugestellt und von der Person gelesen, die Konvami betreibt."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Wozu, und auf welcher Rechtsgrundlage"
         },
@@ -1050,6 +1109,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": ": Absturzberichte auf Grundlage unseres berechtigten Interesses an einer funktionierenden App (Art. 6 Abs. 1 lit. f DSGVO); anonyme Nutzungszahlen nur auf Grundlage deiner Einwilligung (Art. 6 Abs. 1 lit. a), die du jederzeit in Profil › Datenschutz und KI widerrufen kannst."
+              }
+            ],
+            [
+              {
+                "text": "Damit die andere Person eines Falls von Zwei Hälften deine Züge hört",
+                "bold": true
+              },
+              {
+                "text": ": auf Grundlage deiner eigenen Einwilligung beim Mitmachen (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie jederzeit unter Zwei Hälften › Einstellungen › Verlassen widerrufen; deine Züge werden dann gelöscht."
+              }
+            ],
+            [
+              {
+                "text": "Damit Zwei Hälften sicher bleibt",
+                "bold": true
+              },
+              {
+                "text": " (Prüfung jedes Zugs, Meldungen, Blockierungen): unser berechtigtes Interesse, die Spielenden zu schützen (Art. 6 Abs. 1 lit. f DSGVO)."
               }
             ]
           ]
@@ -1184,6 +1261,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Die andere Person eines Falls von Zwei Hälften",
+              "bold": true
+            },
+            {
+              "text": " hört deine Züge, als Aufnahme oder, mit „Meine Stimme verschleiern“, deine genauen Worte mit einer neutralen Stimme. Sie sieht deinen Decknamen und den Ort, den du zeigen willst, nie deinen Namen, deine E-Mail-Adresse oder deine Korrekturen. In dieser ersten Phase ist die andere Person eine KI oder jemand, den du mit einem Code eingeladen hast; Fremde werden nicht zusammengebracht. Die Züge werden mit der Moderation von OpenAI und dem KI-Anbieter oben geprüft."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Wie lange Daten gespeichert bleiben"
         },
@@ -1218,6 +1307,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "OpenAI bewahrt, was es erhält, bis zu 30 Tage auf (siehe oben)."
+              }
+            ],
+            [
+              {
+                "text": "Züge von Zwei Hälften (die Aufnahme und ihre Worte) werden 30 Tage nach dem Ende ihres Falls gelöscht, spätestens aber 30 Tage nach der Aufnahme. Wenn du Zwei Hälften verlässt oder dein Konto löschst, werden sie sofort gelöscht; der Fall der anderen Person geht dann mit einer KI weiter."
               }
             ]
           ]
@@ -1794,6 +1888,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Deux moitiés",
+              "bold": true
+            },
+            {
+              "text": ", si tu y participes. Un nom de code que Konvami invente pour toi, ta première langue, le lieu que tu choisis de montrer (une ville d’une liste, un pays, ou rien), ta tranche d’âge et ton accord pour partager ta voix. Pour chaque enquête : les coups que tu enregistres (l’enregistrement et ce que tu as dit, transcrit mot à mot), les résultats du contrôle de sécurité, les corrections privées pour toi, tes réponses sur le plateau, tes réactions, ainsi que tes signalements et blocages. Chaque coup est vérifié avant que quiconque l’entende ; un coup que le contrôle retient n’est jamais transmis et est lu par la personne qui gère Konvami."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Pourquoi, et sur quelle base légale"
         },
@@ -1834,6 +1940,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " : les rapports de plantage sur la base de notre intérêt légitime à une app qui fonctionne (RGPD art. 6, par. 1, let. f) ; les comptages d’usage anonymes uniquement sur la base de ton consentement (art. 6, par. 1, let. a), que tu peux retirer à tout moment dans Profil › Confidentialité et IA."
+              }
+            ],
+            [
+              {
+                "text": "Pour que l’autre joueur d’une enquête de Deux moitiés entende tes coups",
+                "bold": true
+              },
+              {
+                "text": " : sur la base de ton consentement distinct quand tu participes (art. 6(1)(a) RGPD). Tu peux le retirer à tout moment dans Deux moitiés › Réglages › Quitter, ce qui efface tes coups."
+              }
+            ],
+            [
+              {
+                "text": "Pour que Deux moitiés reste sûr",
+                "bold": true
+              },
+              {
+                "text": " (contrôle de chaque coup, signalements, blocages) : notre intérêt légitime à protéger les joueurs (art. 6(1)(f) RGPD)."
               }
             ]
           ]
@@ -1968,6 +2092,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "L’autre joueur d’une enquête de Deux moitiés",
+              "bold": true
+            },
+            {
+              "text": " entend tes coups, en enregistrement ou, avec « Voiler ma voix », tes mots exacts lus par une voix neutre. Il voit ton nom de code et le lieu que tu as choisi de montrer, jamais ton nom, ton e-mail ni tes corrections. Dans cette première phase, l’autre joueur est une IA, ou un ou une amie que tu as invité avec un code ; des inconnus ne sont pas mis ensemble. Les coups sont vérifiés avec la modération d’OpenAI et le fournisseur d’IA ci-dessus."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Combien de temps les données sont conservées"
         },
@@ -2002,6 +2138,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "OpenAI conserve ce qu’il reçoit jusqu’à 30 jours (voir ci-dessus)."
+              }
+            ],
+            [
+              {
+                "text": "Les coups de Deux moitiés (l’enregistrement et ses mots) sont effacés 30 jours après la fin de leur enquête, et au plus tard 30 jours après l’enregistrement. Quitter Deux moitiés ou supprimer ton compte les efface tout de suite ; l’enquête de l’autre joueur continue alors avec une IA."
               }
             ]
           ]
@@ -2578,6 +2719,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "Due metà",
+              "bold": true
+            },
+            {
+              "text": ", se partecipi. Un nome in codice che Konvami inventa per te, la tua prima lingua, il luogo che scegli di mostrare (una città da un elenco, un paese o niente), la tua fascia d’età e il tuo consenso a condividere la tua voce. Per ogni caso: le mosse che registri (la registrazione e quello che hai detto, trascritto parola per parola), i risultati del controllo di sicurezza, le correzioni private per te, le tue risposte sul tabellone, le tue reazioni e le tue segnalazioni e blocchi. Ogni mossa viene controllata prima che qualcuno la senta; una mossa fermata dal controllo non viene mai consegnata ed è letta dalla persona che gestisce Konvami."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Perché, e su quale base giuridica"
         },
@@ -2618,6 +2771,24 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": ": i rapporti di crash sulla base del nostro legittimo interesse a un’app funzionante (GDPR art. 6, par. 1, lett. f); i conteggi d’uso anonimi solo sulla base del tuo consenso (art. 6, par. 1, lett. a), che puoi revocare in qualsiasi momento in Profilo › Privacy e IA."
+              }
+            ],
+            [
+              {
+                "text": "Perché l’altro giocatore di un caso di Due metà senta le tue mosse",
+                "bold": true
+              },
+              {
+                "text": ": sulla base del tuo consenso separato quando partecipi (art. 6(1)(a) GDPR). Puoi ritirarlo in qualsiasi momento in Due metà › Impostazioni › Esci, che cancella le tue mosse."
+              }
+            ],
+            [
+              {
+                "text": "Perché Due metà resti sicuro",
+                "bold": true
+              },
+              {
+                "text": " (controllo di ogni mossa, segnalazioni, blocchi): il nostro legittimo interesse a proteggere i giocatori (art. 6(1)(f) GDPR)."
               }
             ]
           ]
@@ -2752,6 +2923,18 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
           ]
         },
         {
+          "kind": "paragraph",
+          "spans": [
+            {
+              "text": "L’altro giocatore di un caso di Due metà",
+              "bold": true
+            },
+            {
+              "text": " sente le tue mosse, come registrazione o, con «Vela la mia voce», le tue parole esatte lette da una voce neutra. Vede il tuo nome in codice e il luogo che hai scelto di mostrare, mai il tuo nome, la tua email o le tue correzioni. In questa prima fase l’altro giocatore è un’IA, o un amico o un’amica che hai invitato con un codice; gli sconosciuti non vengono messi insieme. Le mosse sono controllate con la moderazione di OpenAI e il fornitore di IA qui sopra."
+            }
+          ]
+        },
+        {
           "kind": "heading",
           "text": "Per quanto tempo vengono conservati i dati"
         },
@@ -2786,6 +2969,11 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
             [
               {
                 "text": "OpenAI conserva ciò che riceve fino a 30 giorni (vedi sopra)."
+              }
+            ],
+            [
+              {
+                "text": "Le mosse di Due metà (la registrazione e le sue parole) vengono cancellate 30 giorni dopo la fine del loro caso, e comunque entro 30 giorni dalla registrazione. Uscire da Due metà o cancellare il tuo account le cancella subito; il caso dell’altro giocatore continua allora con un’IA."
               }
             ]
           ]

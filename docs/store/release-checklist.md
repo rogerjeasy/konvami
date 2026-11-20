@@ -105,6 +105,20 @@ the store forms and the testing tracks.
 | G5  | Staged rollout: Switzerland, Germany, France first (spec §6.21.6), the rest of the EU later                                                                                                                 | needs owner |
 | G6  | The owner reads the **Reports queue** (6.15) and answers flags, and watches the budget emails (target $150, ceiling $250)                                                                                   | needs owner |
 
+## H. Two Halves (section 7, phase 1)
+
+Learner-to-learner voice, off until switched on. Phase 1 pairs a learner with a labelled AI or a
+friend they invite by code (adults only); strangers are never matched.
+
+| #   | Step                                                                                                                                                                                                                             | Status      |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| H1  | Plan and apply the Terraform: `KONVAMI_HALVES` for the API and the 30-day `delete-halves-audio` rule on the media bucket (`infra/modules/media`). Turn it on with `halves = { enabled = true }`, for the owners first            | needs owner |
+| H2  | A **support email** (A6) before any learner outside the owners plays: Apple guideline 1.2 asks apps with user content for published contact details                                                                              | needs owner |
+| H3  | Read and decide the **held moves and reports** on 6.15 within 24 hours, every day, while Two Halves is open to testers                                                                                                           | needs owner |
+| H4  | **Legal review before phase 2** (strangers): learner-to-learner voice under GDPR and the revFADP, the EU Digital Services Act duties for user content (notice and action, statement of reasons), and the ages of digital consent | needs owner |
+| H5  | Answer the store forms for user content: App Review notes on the safeguards (check before delivery, report, block, no messages, codenames), Play's Data safety ("Audio" also heard by another user at the learner's request)     | needs owner |
+| H6  | A trained second moderator and a written escalation path before the 16–17 band opens (phase 3)                                                                                                                                   | needs owner |
+
 ## Critical path
 
 G1 (14 days) cannot start until a Play account exists (A2), a closed-test build exists (C1, C2, C9)
