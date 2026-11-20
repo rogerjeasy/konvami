@@ -16,6 +16,13 @@ days after the case ends.
 Nothing here is free text a learner types: a codename the server makes up, a native language, a
 place from a fixed list, template reactions and answers chosen from options. The only words a
 learner gives are their moves, which are checked; a report's note goes only to the owner.
+
+Phase 2 (design note 2026-11-20-two-halves-phase2-design.md) adds, behind switches of their own:
+matching adults who are strangers (`strangers`, off until the legal review; `halves_match.py`),
+the Bridge for same-language mode, native nudges (a short phrase a native suggests, read by a
+verifier before the speaker sees it), the strand map, a share card, owner warnings and
+suspensions with the queue's numbers, the native-intelligibility count, a case the Learning
+Director suggests once a week, and a case written from the learner's own course import.
 """
 
 import datetime as dt
@@ -40,6 +47,14 @@ from konvami_api.domain.halves_cases import (
     template,
     text_in,
 )
+from konvami_api.domain.halves_match import Seeker, pairs
+from konvami_api.domain.halves_writer import (
+    CaseMaterial,
+    CaseWriter,
+    NoCaseWriter,
+    word_case,
+)
+from konvami_api.domain.moderation import local_problem
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import ProfileService
 from konvami_api.domain.reports import words_in
@@ -48,7 +63,18 @@ from konvami_api.domain.spoken import Listener, SpokenError
 from konvami_api.domain.storage import FileStore
 
 type Band = Literal["adult", "minor"]
-type Mode = Literal["ai", "friend", "duo"]
+# `match`: two adults paired by the matching rules (phase 2, only while `strangers` is on).
+type Mode = Literal["ai", "friend", "duo", "match"]
+# A nudge (phase 2): `checking` until the verifier answers; only `passed` reaches the speaker.
+# `dropped`: wrong or no better, quietly. `held`: it broke a safety rule; the owner's queue.
+type NudgeStatus = Literal["checking", "passed", "dropped", "held"]
+# What a nudge breaks that the owner sees, rather than a quiet drop.
+NUDGE_HOLDS: frozenset[str] = frozenset({"unsafe", "off_topic", "contact", "instructions", "link"})
+# What the owner recorded about a learner (6.15): a strike counts towards suspension.
+type StrikeKind = Literal["strike", "warning", "suspension"]
+# The owner's decisions on an item of the queue.
+type Decision = Literal["remove", "dismiss", "warn", "suspend"]
+DECISIONS: tuple[str, ...] = ("remove", "dismiss", "warn", "suspend")
 type CaseStatus = Literal["open", "solved", "unsolved"]
 # `checking`: on the server, nobody hears it yet. `held`: the check stopped it; it is never
 # delivered and goes to the owner's queue. `failed`: it could not be checked (fails closed).
@@ -104,6 +130,78 @@ WRONG_CODES_PER_DAY = 10
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 SOUND_TYPE = "audio/mpeg"
 FOLDER = "halves"
+
+# --- Phase 2
+# How long a learner keeps looking for a partner (7.3): they choose, in steps of hours.
+SEARCH_HOURS_DEFAULT = 12
+SEARCH_HOURS_MIN = 2
+SEARCH_HOURS_MAX = 48
+# After this long without a partner, the search offers an AI (concept §3.10).
+AI_OFFER_AFTER = dt.timedelta(hours=12)
+# A native nudge (7.7): a short phrase, never a message.
+NUDGE_MIN = 2
+NUDGE_MAX = 120
+# A nudge the verifier could not read this many times is dropped (fails closed).
+NUDGE_ATTEMPTS = 3
+NUDGE_STALE = dt.timedelta(minutes=5)
+# The Bridge (same-language mode, 7.7), in the order it is offered.
+BRIDGE_STEPS: tuple[str, ...] = ("slower", "simpler", "gist")
+# Cases written from a course import a learner may start in a day: each is a strong-model request.
+IMPORT_CASES_PER_DAY = 3
+# The owner's numbers (6.15) look back this far.
+STATS_WINDOW = dt.timedelta(days=30)
+# How far back the hub counts the clues the other understood at the first try.
+HEARD_WINDOW = dt.timedelta(days=30)
+
+# Where the strand map (7.14) draws a place: latitude and longitude of the listed cities and of
+# each country's middle. Nothing finer than a city is ever kept or drawn.
+CITY_POINTS: Mapping[str, tuple[float, float]] = {
+    "Basel": (47.56, 7.59),
+    "Bern": (46.95, 7.45),
+    "Genève": (46.20, 6.14),
+    "Lausanne": (46.52, 6.63),
+    "Lugano": (46.00, 8.95),
+    "Luzern": (47.05, 8.31),
+    "St. Gallen": (47.42, 9.37),
+    "Zürich": (47.37, 8.54),
+    "Berlin": (52.52, 13.40),
+    "Frankfurt": (50.11, 8.68),
+    "Hamburg": (53.55, 9.99),
+    "Köln": (50.94, 6.96),
+    "Leipzig": (51.34, 12.37),
+    "München": (48.14, 11.58),
+    "Stuttgart": (48.78, 9.18),
+    "Wien": (48.21, 16.37),
+    "Bordeaux": (44.84, -0.58),
+    "Lille": (50.63, 3.06),
+    "Lyon": (45.76, 4.84),
+    "Marseille": (43.30, 5.37),
+    "Nantes": (47.22, -1.55),
+    "Paris": (48.86, 2.35),
+    "Strasbourg": (48.57, 7.75),
+    "Toulouse": (43.60, 1.44),
+    "Bologna": (44.49, 11.34),
+    "Firenze": (43.77, 11.26),
+    "Milano": (45.46, 9.19),
+    "Napoli": (40.85, 14.27),
+    "Roma": (41.90, 12.50),
+    "Torino": (45.07, 7.69),
+    "London": (51.51, -0.13),
+    "Bruxelles": (50.85, 4.35),
+}
+COUNTRY_POINTS: Mapping[str, tuple[float, float]] = {
+    "CH": (46.80, 8.23),
+    "DE": (51.17, 10.45),
+    "AT": (47.52, 14.55),
+    "FR": (46.60, 2.21),
+    "IT": (42.83, 12.83),
+    "BE": (50.50, 4.47),
+    "LU": (49.82, 6.13),
+    "GB": (52.36, -1.17),
+    "IE": (53.41, -8.24),
+    "US": (39.83, -98.58),
+    "CA": (56.13, -106.35),
+}
 
 _AUDIO_TYPES = {"m4a": "audio/mp4", "webm": "audio/webm", "wav": "audio/wav", "mp3": "audio/mpeg"}
 
@@ -240,6 +338,8 @@ class Case:
     # One recap per learner's seat, in the language that seat speaks.
     recaps: Mapping[str, tuple[RecapLine, ...]] = field(default_factory=dict)
     recap_status: RecapStatus = "none"
+    # A case written for this one case (from a course import, 7.17); None: from the library.
+    custom: CaseTemplate | None = None
 
     def seat(self, seat: Seat) -> SeatState:
         return self.seats[0] if seat == "A" else self.seats[1]
@@ -288,6 +388,65 @@ class Move:
     # Reported by the listener: no longer shown to them.
     hidden: bool = False
     delete_after: dt.datetime | None = None
+    # The Bridge's help for the listener (same-language mode): "simpler", "gist".
+    bridge: Mapping[str, str] = field(default_factory=dict)
+    # When the owner decided on it, for the queue's time to decision.
+    decided_at: dt.datetime | None = None
+
+
+@dataclass(frozen=True)
+class Ticket:
+    """A learner looking for a partner (7.3)."""
+
+    user_id: UUID
+    created_at: dt.datetime
+    # They keep looking until then.
+    until: dt.datetime
+    # Tell them by push when a partner is found or the search ends.
+    remind: bool = True
+    # When the search offered an AI; None until it did.
+    ai_offered_at: dt.datetime | None = None
+
+
+@dataclass(frozen=True)
+class Nudge:
+    """A short phrase a native suggests for one move they heard (7.7)."""
+
+    id: UUID
+    move_id: UUID
+    user_id: UUID
+    text: str
+    status: NudgeStatus
+    created_at: dt.datetime
+    attempts: int = 0
+    # Why it was dropped (owner's numbers only; the one who wrote it is not told).
+    reason: str | None = None
+    delivered_at: dt.datetime | None = None
+
+
+@dataclass(frozen=True)
+class Strike:
+    id: UUID
+    user_id: UUID
+    kind: StrikeKind
+    reason: str
+    move_id: UUID | None
+    at: dt.datetime
+
+
+@dataclass(frozen=True)
+class SafetyCounts:
+    """What happened in Two Halves since a moment, for the owner's numbers (6.15)."""
+
+    moves: int
+    held: int
+    reports: int
+    cases: int
+    blocks: int
+    # Hours from a held move or a report to the owner's decision, for each decided one.
+    decision_hours: tuple[float, ...]
+    nudges: int = 0
+    nudges_dropped: int = 0
 
 
 @dataclass(frozen=True)
@@ -409,6 +568,38 @@ class HalvesRepository(Protocol):
 
     def open_reports(self, limit: int) -> list[Report]: ...
 
+    # --- Phase 2
+
+    def ticket(self, user_id: UUID) -> Ticket | None: ...
+
+    def save_ticket(self, ticket: Ticket) -> None:
+        """Stores the ticket in place of the learner's earlier one."""
+
+    def delete_ticket(self, user_id: UUID) -> None: ...
+
+    def tickets(self, limit: int) -> list[Ticket]:
+        """Everyone looking, the longest waiting first."""
+
+    def add_nudge(self, nudge: Nudge) -> bool:
+        """Stores the nudge unless the learner already nudged that move; True when stored."""
+
+    def nudge(self, nudge_id: UUID) -> Nudge | None: ...
+
+    def save_nudge(self, nudge: Nudge) -> None: ...
+
+    def nudges_of(self, move_id: UUID) -> list[Nudge]: ...
+
+    def held_nudges(self, limit: int) -> list[Nudge]: ...
+
+    def stale_nudges(self, before: dt.datetime, limit: int) -> list[Nudge]:
+        """Nudges still being checked that were made before `before`."""
+
+    def add_strike(self, strike: Strike) -> None: ...
+
+    def strikes_of(self, user_id: UUID) -> list[Strike]: ...
+
+    def counts(self, since: dt.datetime) -> SafetyCounts: ...
+
 
 class HalvesStarter(Protocol):
     def start(self, job: str, item_id: UUID) -> None:
@@ -444,6 +635,19 @@ class Brain(Protocol):
         """The ending as a short scene for `seat`, in the language it speaks; `voices` names
         the two characters and their voices by seat."""
 
+    def simplify(self, move: Move, language: str, listener: UUID) -> str | None:
+        """The Bridge's second step: the move said again more simply, in its own language,
+        keeping every number; moderated before it is shown. None when it could not be
+        written."""
+
+    def gist(self, move: Move, language: str, listener: UUID) -> str | None:
+        """The Bridge's last step: what the move says, in one sentence in `language` (the
+        listener's explanation language). None when it could not be written."""
+
+    def verify_nudge(self, nudge: Nudge, move: Move, language: str) -> str | None:
+        """The Nudge Verifier: "" when the phrase is right, more natural here and only about the
+        wording; a reason it is dropped otherwise; None when it could not be judged."""
+
 
 # --- What the app is shown ------------------------------------------------------------------------
 
@@ -475,6 +679,17 @@ class DuoView:
 
 
 @dataclass(frozen=True)
+class SearchView:
+    """A learner's search for a partner (7.3)."""
+
+    since: dt.datetime
+    until: dt.datetime
+    remind: bool
+    # The search has gone on long enough to offer an AI, or it is over.
+    offer_ai: bool
+
+
+@dataclass(frozen=True)
 class Overview:
     available: bool
     profile: Profile | None
@@ -485,6 +700,21 @@ class Overview:
     duos: tuple[DuoView, ...]
     invite: Invite | None
     blocks: tuple[Block, ...]
+    # Phase 2. Whether this learner may look for a stranger (the switch is on and they are an
+    # adult), and their search when they are looking.
+    strangers: bool = False
+    search: SearchView | None = None
+    # Of the clues they told a human or an AI in the last 30 days, how many were understood at
+    # the first try (private: only they see it).
+    understood_first: int = 0
+    told: int = 0
+
+
+@dataclass(frozen=True)
+class NudgeView:
+    text: str
+    # The codename of the native who suggested it.
+    by: str
 
 
 @dataclass(frozen=True)
@@ -498,6 +728,8 @@ class MineView:
     # Whether the other got it at the first try; None while they have not answered.
     understood: bool | None
     corrections: tuple[Correction, ...]
+    # The nudges the verifier passed (7.9).
+    nudges: tuple[NudgeView, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -510,6 +742,15 @@ class TheirsView:
     # The right option once the round is over for this listener; None before.
     solution: int | None
     reaction: str | None
+    # The move's checked words, for captions (7.7); empty once reported.
+    caption: str = ""
+    # The listener grew up with the language of the move: they may suggest a better way.
+    can_nudge: bool = False
+    nudged: bool = False
+    # Same-language mode: the Bridge helps, step by step; what it gave so far.
+    bridge: bool = False
+    simpler: str | None = None
+    gist: str | None = None
 
 
 @dataclass(frozen=True)
@@ -555,11 +796,20 @@ class CaseView:
     recap_status: RecapStatus
     veil_default: bool
     ending: str | None
+    # Native intelligibility (private): of the clues this seat told, how many the other
+    # understood at the first try, and how many they answered.
+    understood_first: int = 0
+    told: int = 0
+    # Both seats speak the same language (same-language mode): the Bridge helps the listener.
+    same_language: bool = False
+    # The case was written from the learner's course import (7.17).
+    from_import: bool = False
 
 
 @dataclass(frozen=True)
 class QueueItem:
-    kind: Literal["held", "report"]
+    # `nudge`: a native's suggestion that broke a safety rule (phase 2).
+    kind: Literal["held", "report", "nudge"]
     id: UUID
     move_id: UUID
     transcript: str
@@ -569,6 +819,73 @@ class QueueItem:
     note: str | None
     band: Band
     created_at: dt.datetime
+    # The sender's strikes so far, and whether they are suspended.
+    strikes: int = 0
+    suspended: bool = False
+
+
+@dataclass(frozen=True)
+class SafetyStats:
+    """The owner's numbers for the last 30 days (6.15): rates per 1,000 and decision times."""
+
+    moves: int
+    cases: int
+    held_per_1000: float
+    reports_per_1000: float
+    blocks_per_1000_cases: float
+    nudges: int
+    nudges_dropped: int
+    # The median hours from a held move or report to a decision; None before any decision.
+    median_decision_hours: float | None
+    open_items: int
+
+
+@dataclass(frozen=True)
+class StrandPoint:
+    label: str
+    latitude: float
+    longitude: float
+
+
+@dataclass(frozen=True)
+class Strand:
+    """One person the learner played a case with, where they chose to say where they are."""
+
+    codename: str
+    point: StrandPoint
+    cases: int
+    duo: bool
+
+
+@dataclass(frozen=True)
+class StrandMap:
+    # The learner's own place, if they shared one.
+    me: StrandPoint | None
+    strands: tuple[Strand, ...]
+    # People they played with who did not share a place: counted, never drawn.
+    unplaced: int
+
+
+@dataclass(frozen=True)
+class ShareCard:
+    """What the share card (7.15) shows: no voice, no words of the learner, no name."""
+
+    title: str
+    week: str | None
+    status: CaseStatus
+    understood_first: int
+    told: int
+    # The learner's invite code (adults), so a friend can play with them.
+    code: str | None
+    codename: str
+
+
+@dataclass(frozen=True)
+class Suggestion:
+    """The case the Learning Director suggests this week (5.1)."""
+
+    template_id: str
+    title: str
 
 
 # --- Rules that need no storage ------------------------------------------------------------------
@@ -599,13 +916,47 @@ def iso_week(day: dt.date) -> str:
     return f"{year}-W{week:02d}"
 
 
+def template_of(case: Case) -> CaseTemplate | None:
+    """The case's template: its own when it was written for it, else the library's."""
+    return case.custom or template(case.template_id)
+
+
+def place_point(place: str | None) -> StrandPoint | None:
+    """Where the strand map draws a place: a listed city, or the middle of a country."""
+    if place is None:
+        return None
+    kind, _, value = place.partition(":")
+    found = CITY_POINTS.get(value) if kind == "city" else COUNTRY_POINTS.get(value)
+    return StrandPoint(value, found[0], found[1]) if found and value else None
+
+
+def heard_first(case: Case, moves: Sequence[Move], seat: Seat) -> tuple[int, int]:
+    """Native intelligibility for `seat`: of its delivered clues the other has answered, how
+    many were understood at the first try, and how many were answered."""
+    found = template_of(case)
+    if found is None:
+        return 0, 0
+    understood = told = 0
+    for move in moves:
+        if move.seat != seat or move.status != "delivered" or not move.answers:
+            continue
+        told += 1
+        if move.answers[0] == found.clue(seat, move.round).answer:
+            understood += 1
+    return understood, told
+
+
+def same_language(case: Case) -> bool:
+    return case.seats[0].speaks == case.seats[1].speaks
+
+
 def _settled(move: Move, clue_answer: int) -> bool:
     """Whether the listener is done with a move: answered right, out of tries, or reported."""
     return move.hidden or clue_answer in move.answers or len(move.answers) >= ANSWER_TRIES
 
 
 def _answer_of(case: Case, move: Move) -> int:
-    found = template(case.template_id)
+    found = template_of(case)
     return found.clue(move.seat, move.round).answer if found else -1
 
 
@@ -662,7 +1013,7 @@ def final_open(case: Case, moves: Sequence[Move], seat: Seat) -> bool:
 
 def outcome(case: Case) -> CaseStatus:
     """Open while either seat may still answer; then solved when both got it right."""
-    found = template(case.template_id)
+    found = template_of(case)
     answer = found.answer if found else -1
     right = [answer in seat.final_answers for seat in case.seats]
     if all(right):
@@ -692,7 +1043,7 @@ def what_next(case: Case, moves: Sequence[Move], seat: Seat) -> Next:
 
 
 def found_right(case: Case, state: SeatState) -> bool:
-    found = template(case.template_id)
+    found = template_of(case)
     if found is None:
         return False
     return found.answer in state.final_answers or len(state.final_answers) >= FINAL_TRIES
@@ -724,10 +1075,18 @@ class HalvesService:
         announce: Callable[[UUID, UUID, str], None] = lambda *_: None,
         new_id: Callable[[], UUID] = uuid4,
         rng: random.Random | None = None,
+        strangers: bool = False,
+        writer: CaseWriter | None = None,
+        material: Callable[[UUID, UUID], CaseMaterial | None] = lambda *_: None,
     ) -> None:
         """`enabled` turns Two Halves on (`KONVAMI_HALVES`); `allowed` says who may play while
         it is in the testers' hands. `announce` tells a learner by push that a move came
-        ("move") or that theirs was held ("held"), with the case's id."""
+        ("move"), that theirs was held ("held"), that a partner was found ("match"), that the
+        search ended without one ("search_over") or that the owner warned them ("warning"),
+        with the case's id (a zero id when there is no case).
+
+        Phase 2: `strangers` lets adults be matched with strangers (off until the legal review);
+        `writer` writes a case from a course import, which `material` reads (learner, import)."""
         self._profiles = profiles
         self._personas = personas
         self._accounts = accounts
@@ -743,6 +1102,9 @@ class HalvesService:
         self._announce = announce
         self._new_id = new_id
         self._rng = rng or random.Random()  # noqa: S311 - codenames, not secrets
+        self._strangers = strangers
+        self._writer = writer or NoCaseWriter()
+        self._material = material
 
     # --- Joining and settings (7.2, 7.11)
 
@@ -780,11 +1142,17 @@ class HalvesService:
         profile = self._repository.profile(user_id) if available else None
         cases: list[CaseSummary] = []
         duos: list[DuoView] = []
+        understood = told = 0
         if profile is not None:
+            since = self._clock() - HEARD_WINDOW
             for case in self._repository.cases_of(user_id, 20):
                 summary = self._summary(case, user_id, language)
                 if summary is not None:
                     cases.append(summary)
+                state = case.seat_of(user_id)
+                if state is not None and case.created_at >= since:
+                    got, said = heard_first(case, self._repository.moves_of(case.id), state.seat)
+                    understood, told = understood + got, told + said
             for duo in self._repository.duos_of(user_id):
                 other = self._repository.profile(duo.other(user_id))
                 if other is not None:
@@ -799,6 +1167,10 @@ class HalvesService:
             duos=tuple(duos),
             invite=self._repository.invite_of(user_id) if profile else None,
             blocks=tuple(self._repository.blocks_of(user_id)) if profile else (),
+            strangers=self._strangers and profile is not None and self._band(user_id) == "adult",
+            search=self._search_view(user_id) if profile else None,
+            understood_first=understood,
+            told=told,
         )
 
     def join(
@@ -876,7 +1248,10 @@ class HalvesService:
         does: their moves' words and sounds, their invite, their duos and their profile. Their
         open cases go on with an AI in their seat. Blocks stay, so they keep protecting both."""
         for move in self._repository.moves_by(user_id):
-            self._forget(move, "removed")
+            # A held move stays in the owner's queue until the owner decides: a learner's own
+            # action never takes it out (deleting the account still does, with everything).
+            if move.status != "held":
+                self._forget(move, "removed")
         for case in self._repository.cases_of(user_id, 100):
             state = case.seat_of(user_id)
             if case.status == "open" and state is not None:
@@ -889,6 +1264,7 @@ class HalvesService:
             self._repository.delete_invite(invite.code)
         for duo in self._repository.duos_of(user_id):
             self._repository.remove_duo(user_id, duo.other(user_id))
+        self._repository.delete_ticket(user_id)
         self._repository.delete_profile(user_id)
 
     def _forget(self, move: Move, status: MoveStatus) -> None:
@@ -935,9 +1311,25 @@ class HalvesService:
         self._room(user_id)
         target = self._target(user_id)
         chosen = self._template(template_id, season)
+        # Playing the AI ends a search: the learner has a game.
+        self._repository.delete_ticket(user_id)
+        return self._against_ai(profile, target, chosen, season=season)
+
+    def _against_ai(
+        self,
+        profile: Profile,
+        target: str,
+        chosen: CaseTemplate,
+        *,
+        season: bool = False,
+        custom: bool = False,
+        mirror: bool = True,
+    ) -> Case:
         native = profile.native_language
-        ai_speaks = native if native in LANGUAGES and native != target else target
+        mirrored = mirror and native in LANGUAGES and native != target
+        ai_speaks = native if mirrored else target
         now = self._clock()
+        user_id = profile.user_id
         case = Case(
             id=self._new_id(),
             template_id=chosen.id,
@@ -949,16 +1341,47 @@ class HalvesService:
                 SeatState("B", None, stand_in_for(ai_speaks), ai_speaks, target, last_active=now),
             ),
             season=iso_week(now.date()) if season else None,
+            custom=chosen if custom else None,
         )
         self._repository.save_case(case)
         self._start("ai", case.id)
         return case
 
+    def play_import(self, user_id: UUID, import_id: UUID) -> Case:
+        """A case against the AI written from one of the learner's course imports (7.17): by the
+        Case Writer when it can, else the word case from the import's words. Refused calmly for
+        an import that is not theirs (`not_found`), one with too few words when no case could
+        be written (`too_few_words`), and past `IMPORT_CASES_PER_DAY` (`limit`)."""
+        profile = self._require(user_id)
+        if profile.paused:
+            raise HalvesError("paused")
+        self._room(user_id)
+        target = self._target(user_id)
+        material = self._material(user_id, import_id)
+        if material is None or material.language != target:
+            raise HalvesError("not_found")
+        since = self._clock() - dt.timedelta(days=1)
+        written_today = sum(
+            1
+            for c in self._repository.cases_of(user_id, 50)
+            if c.custom is not None and c.created_at >= since
+        )
+        if written_today >= IMPORT_CASES_PER_DAY:
+            raise HalvesError("limit")
+        written = self._writer.write(user_id, material)
+        if written is not None:
+            return self._against_ai(profile, target, written, custom=True)
+        fallback = word_case(material)
+        if fallback is None:
+            raise HalvesError("too_few_words")
+        # The word case's words are in the language learned, so the AI speaks it too.
+        return self._against_ai(profile, target, fallback, custom=True, mirror=False)
+
     def invite(self, user_id: UUID, template_id: str | None = None) -> Invite:
         """A code a friend redeems to play with the learner (adults only in phase 1). Replaces
         the learner's earlier one."""
-        profile = self._require(user_id)
-        if profile.band != "adult":
+        self._require(user_id)
+        if self._band(user_id) != "adult":
             raise HalvesError("adults_only")
         if template_id is not None and template(template_id) is None:
             raise HalvesError("not_found")
@@ -1020,8 +1443,112 @@ class HalvesService:
             raise HalvesError("not_found")
         self._repository.remove_duo(user_id, duo.other(user_id))
 
+    # --- Finding a partner (7.3, phase 2)
+
+    def look(self, user_id: UUID, hours: int, remind: bool = True) -> SearchView | Case:
+        """Looks for a stranger to play with for `hours`: pairs at once when someone fits (the
+        case), else waits (the search). Only adults, and only while `strangers` is on: the
+        minor band is never matched (`adults_only`), and without the switch `unavailable`."""
+        profile = self._require(user_id)
+        if not self._strangers:
+            raise HalvesError("unavailable")
+        if self._band(user_id) != "adult":
+            raise HalvesError("adults_only")
+        if profile.paused:
+            raise HalvesError("paused")
+        if not SEARCH_HOURS_MIN <= hours <= SEARCH_HOURS_MAX:
+            raise HalvesError("invalid_value")
+        self._room(user_id)
+        self._target(user_id)
+        now = self._clock()
+        current = self._repository.ticket(user_id)
+        # "Keep looking" runs from now; the wait so far still counts towards the AI offer.
+        ticket = Ticket(
+            user_id=user_id,
+            created_at=current.created_at if current else now,
+            until=now + dt.timedelta(hours=hours),
+            remind=remind,
+            ai_offered_at=current.ai_offered_at if current else None,
+        )
+        self._repository.save_ticket(ticket)
+        made = self._match(only=user_id)
+        if made is not None:
+            return made
+        return self._search_view(user_id) or SearchView(now, ticket.until, remind, False)
+
+    def stop_looking(self, user_id: UUID) -> None:
+        self._require(user_id)
+        self._repository.delete_ticket(user_id)
+
+    def _search_view(self, user_id: UUID) -> SearchView | None:
+        ticket = self._repository.ticket(user_id)
+        if ticket is None:
+            return None
+        now = self._clock()
+        offer = now - ticket.created_at >= AI_OFFER_AFTER or now >= ticket.until
+        return SearchView(ticket.created_at, ticket.until, ticket.remind, offer)
+
+    def _seeker(self, ticket: Ticket) -> Seeker | None:
+        profile = self._repository.profile(ticket.user_id)
+        if profile is None or profile.suspended or profile.paused:
+            return None
+        try:
+            target = self._target(ticket.user_id)
+        except HalvesError:
+            return None
+        return Seeker(
+            ticket.user_id,
+            self._band(ticket.user_id),
+            profile.native_language,
+            target,
+            ticket.created_at,
+        )
+
+    def _match(self, only: UUID | None = None) -> Case | None:
+        """Pairs everyone who fits (`halves_match.pairs`). With `only`, answers the case made
+        for that learner, if one was."""
+        if not self._strangers:
+            return None
+        now = self._clock()
+        seekers = [
+            seeker
+            for ticket in self._repository.tickets(TICK_SCAN)
+            if ticket.until > now and (seeker := self._seeker(ticket)) is not None
+        ]
+        mine: Case | None = None
+        for first, second, _ in pairs(seekers, self._repository.blocked):
+            one = self._repository.profile(first.user_id)
+            other = self._repository.profile(second.user_id)
+            if one is None or other is None:
+                continue
+            try:
+                case = self._pair(one, other, None, "match")
+            except HalvesError:
+                continue
+            for seeker in (first, second):
+                ticket = self._repository.ticket(seeker.user_id)
+                self._repository.delete_ticket(seeker.user_id)
+                if seeker.user_id == only:
+                    mine = case
+                elif ticket is None or ticket.remind:
+                    self._announce(seeker.user_id, case.id, "match")
+        return mine
+
+    def _end_searches(self) -> None:
+        """Searches that ran long enough offer an AI once; ended ones go."""
+        now = self._clock()
+        for ticket in self._repository.tickets(TICK_SCAN):
+            if now >= ticket.until:
+                self._repository.delete_ticket(ticket.user_id)
+                if ticket.remind:
+                    self._announce(ticket.user_id, UUID(int=0), "search_over")
+            elif ticket.ai_offered_at is None and now - ticket.created_at >= AI_OFFER_AFTER:
+                self._repository.save_ticket(replace(ticket, ai_offered_at=now))
+                if ticket.remind:
+                    self._announce(ticket.user_id, UUID(int=0), "ai_offer")
+
     def _pair(self, first: Profile, second: Profile, template_id: str | None, mode: Mode) -> Case:
-        if first.band != "adult" or second.band != "adult":
+        if self._band(first.user_id) != "adult" or self._band(second.user_id) != "adult":
             raise HalvesError("adults_only")
         if self._repository.blocked(first.user_id, second.user_id):
             raise HalvesError("not_found")
@@ -1130,7 +1657,7 @@ class HalvesService:
         """The learner acts on a clue they heard: an option of the board's question. Wrong
         answers may be tried again until `ANSWER_TRIES`; then the right one is shown."""
         move, case, state = self._theirs(user_id, move_id)
-        found = template(case.template_id)
+        found = template_of(case)
         if found is None:
             raise HalvesError("not_found")
         clue = found.clue(move.seat, move.round)
@@ -1149,7 +1676,7 @@ class HalvesService:
         """The learner's answer to the case's question (two tries)."""
         self._require(user_id)
         case, state = self._case(user_id, case_id)
-        found = template(case.template_id)
+        found = template_of(case)
         moves = self._repository.moves_of(case.id)
         if found is None or not final_open(case, moves, state.seat):
             raise HalvesError("not_your_turn")
@@ -1169,7 +1696,7 @@ class HalvesService:
 
     def again(self, user_id: UUID, case_id: UUID, yes: bool) -> CaseView:
         """Play again with them? Private: only when both say yes do the two become a duo."""
-        profile = self._require(user_id)
+        self._require(user_id)
         case, state = self._case(user_id, case_id)
         other = case.seat(other_seat(state.seat))
         if case.status == "open" or case.mode == "ai" or other.ai:
@@ -1180,7 +1707,8 @@ class HalvesService:
             yes
             and other.again
             and other.user_id is not None
-            and profile.band == "adult"
+            and self._band(user_id) == "adult"
+            and self._band(other.user_id) == "adult"
             and not self._repository.blocked(user_id, other.user_id)
         ):
             self._repository.add_duo(Duo(self._new_id(), user_id, other.user_id, self._clock()))
@@ -1242,6 +1770,166 @@ class HalvesService:
         if not 0 <= line < len(lines) or not lines[line].audio_key:
             raise HalvesError("not_found")
         return self._files.address(lines[line].audio_key or "", ADDRESS_SECONDS)
+
+    # --- The Bridge (7.7, same-language mode)
+
+    def bridge(self, user_id: UUID, move_id: UUID, step: str) -> CaseView:
+        """Helps the listener with a move in a language both are learning, in order: a slower
+        replay (the app plays it slower), then the move said more simply, then its gist in the
+        listener's explanation language. Mirror mode needs none: the listener hears their own
+        language. Raises `HalvesError`: `not_your_turn` out of order or in mirror mode,
+        `not_written` when the model could not write it."""
+        if step not in BRIDGE_STEPS:
+            raise HalvesError("invalid_value")
+        move, case, state = self._theirs(user_id, move_id)
+        if not same_language(case):
+            raise HalvesError("not_your_turn")
+        if step == "slower" or step in move.bridge:
+            return self.view(user_id, case.id)
+        if step == "gist" and "simpler" not in move.bridge:
+            raise HalvesError("not_your_turn")
+        written = (
+            self._brain.simplify(move, state.hears, user_id)
+            if step == "simpler"
+            else self._brain.gist(move, self._explanation(user_id, state.hears), user_id)
+        )
+        if not written or local_problem(written) is not None:
+            raise HalvesError("not_written")
+        self._repository.save_move(replace(move, bridge={**move.bridge, step: written}))
+        return self.view(user_id, case.id)
+
+    # --- Native nudges (7.7, 7.9)
+
+    def _can_nudge(self, case: Case, move: Move, listener: Profile | None) -> bool:
+        """A native of the move's language who heard it, an adult, may suggest a better way for
+        a human's move. The AI's moves are not nudged."""
+        return (
+            listener is not None
+            and self._band(listener.user_id) == "adult"
+            and move.user_id is not None
+            and move.status == "delivered"
+            and not move.hidden
+            and listener.native_language == case.seat(move.seat).speaks
+        )
+
+    def nudge(self, user_id: UUID, move_id: UUID, text: str) -> CaseView:
+        """Suggests a better way to say the move (a short phrase). It reaches the speaker only
+        if the verifier passes it; a dropped one is never shown, and its writer is not told.
+        One per move. Raises `HalvesError`."""
+        profile = self._require(user_id)
+        move, case, _ = self._theirs(user_id, move_id)
+        if not self._can_nudge(case, move, profile):
+            raise HalvesError("not_your_turn")
+        phrase = " ".join(text.split())
+        if not NUDGE_MIN <= len(phrase) <= NUDGE_MAX:
+            raise HalvesError("invalid_value")
+        made = Nudge(self._new_id(), move.id, user_id, phrase, "checking", self._clock())
+        if not self._repository.add_nudge(made):
+            raise HalvesError("answered")
+        self._start("nudge", made.id)
+        return self.view(user_id, case.id)
+
+    def check_nudge(self, nudge_id: UUID) -> None:
+        """The Nudge Verifier, in the worker. Fails closed: a nudge that cannot be judged is
+        tried again, then dropped; only a passed one is ever shown."""
+        nudge = self._repository.nudge(nudge_id)
+        if nudge is None or nudge.status != "checking":
+            return
+        move = self._repository.move(nudge.move_id)
+        case = self._repository.case(move.case_id) if move else None
+        attempt = replace(nudge, attempts=nudge.attempts + 1)
+        if move is None or case is None or move.status != "delivered":
+            self._repository.save_nudge(replace(attempt, status="dropped", reason="gone"))
+            return
+        problem = local_problem(nudge.text)
+        if problem is not None:
+            self._repository.save_nudge(replace(attempt, status="held", reason=problem))
+            return
+        self._repository.save_nudge(attempt)
+        verdict = self._brain.verify_nudge(attempt, move, case.seat(move.seat).speaks)
+        if verdict is None:
+            if attempt.attempts >= NUDGE_ATTEMPTS:
+                self._repository.save_nudge(
+                    replace(attempt, status="dropped", reason="unavailable")
+                )
+            return
+        if verdict:
+            status: NudgeStatus = "held" if verdict in NUDGE_HOLDS else "dropped"
+            self._repository.save_nudge(replace(attempt, status=status, reason=verdict))
+            return
+        self._repository.save_nudge(replace(attempt, status="passed", delivered_at=self._clock()))
+
+    # --- The strand map (7.14) and the share card (7.15)
+
+    def strands(self, user_id: UUID) -> StrandMap:
+        """The people the learner played a case with, where each chose to say where they are,
+        and the learner's own place. Nothing finer than a city; AI stand-ins are not drawn."""
+        profile = self._require(user_id)
+        duos = {duo.other(user_id) for duo in self._repository.duos_of(user_id)}
+        played: dict[UUID, int] = {}
+        for case in self._repository.cases_of(user_id, 100):
+            state = case.seat_of(user_id)
+            if state is None or case.mode == "ai":
+                continue
+            other = case.seat(other_seat(state.seat))
+            if other.user_id is not None and other.stand_in is None:
+                played[other.user_id] = played.get(other.user_id, 0) + 1
+        strands: list[Strand] = []
+        unplaced = 0
+        for other_id, count in played.items():
+            if self._repository.blocked(user_id, other_id):
+                continue
+            known = self._repository.profile(other_id)
+            point = place_point(known.place) if known else None
+            if known is None or point is None:
+                unplaced += 1
+                continue
+            strands.append(Strand(known.codename, point, count, other_id in duos))
+        strands.sort(key=lambda s: (not s.duo, -s.cases, s.codename))
+        return StrandMap(place_point(profile.place), tuple(strands), unplaced)
+
+    def share(self, user_id: UUID, case_id: UUID) -> ShareCard:
+        """What the share card of an ended case shows (7.15). It is shared only when the learner
+        asks; it carries no voice and none of their words. An adult's card carries an invite
+        code (made if they have none) so a friend can play with them."""
+        profile = self._require(user_id)
+        case, state = self._case(user_id, case_id)
+        found = template_of(case)
+        if found is None or case.status == "open":
+            raise HalvesError("not_your_turn")
+        understood, told = heard_first(case, self._repository.moves_of(case.id), state.seat)
+        code: str | None = None
+        if self._band(user_id) == "adult":
+            invite = self._repository.invite_of(user_id)
+            if invite is None or invite.expires_at <= self._clock():
+                invite = self.invite(user_id)
+            code = invite.code
+        return ShareCard(
+            title=text_in(found.title, self._language(user_id)),
+            week=case.season,
+            status=case.status,
+            understood_first=understood,
+            told=told,
+            code=code,
+            codename=profile.codename,
+        )
+
+    # --- The Learning Director's suggestion (5.1)
+
+    def suggestion(self, user_id: UUID, monday: dt.date) -> Suggestion | None:
+        """The week's case, suggested at most once a week: to a learner who joined, is not
+        paused, has no open case and started none this week."""
+        if not self.available(user_id):
+            return None
+        profile = self._repository.profile(user_id)
+        if profile is None or profile.paused or profile.suspended:
+            return None
+        for case in self._repository.cases_of(user_id, 20):
+            if case.status == "open" or case.created_at.date() >= monday:
+                return None
+        year, week, _ = monday.isocalendar()
+        chosen = season_case(year, week)
+        return Suggestion(chosen.id, text_in(chosen.title, self._language(user_id)))
 
     # --- Safety (7.10)
 
@@ -1314,6 +2002,8 @@ class HalvesService:
                     None,
                     sender.band if sender else "minor",
                     move.created_at,
+                    strikes=sender.strikes if sender else 0,
+                    suspended=sender.suspended if sender else False,
                 )
             )
         for report in self._repository.open_reports(QUEUE_LIMIT):
@@ -1334,50 +2024,154 @@ class HalvesService:
                     report.note,
                     sender.band if sender else "minor",
                     report.created_at,
+                    strikes=sender.strikes if sender else 0,
+                    suspended=sender.suspended if sender else False,
+                )
+            )
+        for nudge in self._repository.held_nudges(QUEUE_LIMIT):
+            nudger = self._repository.profile(nudge.user_id)
+            items.append(
+                QueueItem(
+                    "nudge",
+                    nudge.id,
+                    nudge.move_id,
+                    nudge.text,
+                    (nudge.reason or "unsafe",),
+                    nudger.codename if nudger else "",
+                    None,
+                    None,
+                    self._band(nudge.user_id),
+                    nudge.created_at,
+                    strikes=nudger.strikes if nudger else 0,
+                    suspended=nudger.suspended if nudger else False,
                 )
             )
         return sorted(items, key=lambda item: item.created_at, reverse=True)
 
+    def _decide_nudge(self, item_id: UUID, action: str) -> None:
+        nudge = self._repository.nudge(item_id)
+        if nudge is None or nudge.status != "held":
+            raise HalvesError("not_found")
+        # Never delivered later, whatever the decision.
+        self._repository.save_nudge(replace(nudge, status="dropped", delivered_at=None))
+        reason = nudge.reason or "unsafe"
+        if action == "remove":
+            self._strike(nudge.user_id, "strike", reason, None)
+        elif action == "warn":
+            self._record(nudge.user_id, "warning", reason, None)
+            self._announce(nudge.user_id, UUID(int=0), "warning")
+        elif action == "suspend":
+            self._strike(nudge.user_id, "suspension", reason, None)
+
     def decide(self, user_id: UUID, kind: str, item_id: UUID, action: str) -> None:
-        """The owner removes a move (a strike for its sender; three suspend them) or dismisses
-        the item. A held move is never delivered later: its sender recorded the round again."""
+        """The owner's decision on a held or reported move:
+
+        - `remove`: the move goes and its sender gets a strike (three suspend them);
+        - `warn`: the move goes and the sender is warned by push, without a strike;
+        - `suspend`: the move goes and the sender is suspended at once (a grave case);
+        - `dismiss`: a report is closed and the move stays; a held move still goes.
+
+        A held move is never delivered later, whatever the decision: its sender recorded the
+        round again (phase 1's call)."""
         if not self.is_owner(user_id):
             raise HalvesError("not_owner")
-        if action not in ("remove", "dismiss"):
+        if action not in DECISIONS:
             raise HalvesError("invalid_value")
+        if kind == "nudge":
+            self._decide_nudge(item_id, action)
+            return
         now = self._clock()
+        reason = "held"
         if kind == "report":
             report = self._repository.report(item_id)
-            if report is None:
+            if report is None or report.status != "open":
                 raise HalvesError("not_found")
             self._repository.save_report(
                 replace(
-                    report, status="removed" if action == "remove" else "dismissed", resolved_at=now
+                    report,
+                    status="dismissed" if action == "dismiss" else "removed",
+                    resolved_at=now,
                 )
             )
             move = self._repository.move(report.move_id)
+            reason = report.reason
         elif kind == "held":
             move = self._repository.move(item_id)
             if move is None or move.status != "held":
                 raise HalvesError("not_found")
+            reason = move.reasons[0] if move.reasons else "held"
         else:
             raise HalvesError("invalid_value")
         if move is None:
             return
+        if action == "dismiss" and kind == "report":
+            return
+        # A report's decision is timed on the report; a held move's on the move.
+        self._forget(replace(move, decided_at=now) if kind == "held" else move, "removed")
+        sender = move.user_id
+        if sender is None or action == "dismiss":
+            return
         if action == "remove":
-            self._forget(move, "removed")
-            if move.user_id is not None:
-                self._strike(move.user_id)
-        elif kind == "held":
-            self._forget(move, "removed")
+            self._strike(sender, "strike", reason, move.id)
+        elif action == "warn":
+            self._record(sender, "warning", reason, move.id)
+            self._announce(sender, move.case_id, "warning")
+        elif action == "suspend":
+            self._strike(sender, "suspension", reason, move.id)
 
-    def _strike(self, user_id: UUID) -> None:
+    def _record(self, user_id: UUID, kind: StrikeKind, reason: str, move_id: UUID | None) -> None:
+        self._repository.add_strike(
+            Strike(self._new_id(), user_id, kind, reason, move_id, self._clock())
+        )
+
+    def _strike(
+        self,
+        user_id: UUID,
+        kind: StrikeKind = "strike",
+        reason: str = "held",
+        move_id: UUID | None = None,
+    ) -> None:
         profile = self._repository.profile(user_id)
         if profile is None:
             return
-        strikes = profile.strikes + 1
-        self._repository.save_profile(
-            replace(profile, strikes=strikes, suspended=strikes >= STRIKES_TO_SUSPEND)
+        self._record(user_id, kind, reason, move_id)
+        strikes = profile.strikes + (1 if kind == "strike" else 0)
+        suspended = kind == "suspension" or strikes >= STRIKES_TO_SUSPEND or profile.suspended
+        self._repository.save_profile(replace(profile, strikes=strikes, suspended=suspended))
+        if suspended:
+            # A suspended learner is no longer matched.
+            self._repository.delete_ticket(user_id)
+
+    def stats(self, user_id: UUID) -> SafetyStats:
+        """The owner's numbers for the last 30 days (6.15)."""
+        if not self.is_owner(user_id):
+            raise HalvesError("not_owner")
+        counts = self._repository.counts(self._clock() - STATS_WINDOW)
+
+        def per_1000(part: int, whole: int) -> float:
+            return round(1000 * part / whole, 1) if whole else 0.0
+
+        hours = sorted(counts.decision_hours)
+        median: float | None = None
+        if hours:
+            middle = len(hours) // 2
+            median = hours[middle] if len(hours) % 2 else (hours[middle - 1] + hours[middle]) / 2
+            median = round(median, 1)
+        open_items = (
+            len(self._repository.held(QUEUE_LIMIT))
+            + len(self._repository.open_reports(QUEUE_LIMIT))
+            + len(self._repository.held_nudges(QUEUE_LIMIT))
+        )
+        return SafetyStats(
+            moves=counts.moves,
+            cases=counts.cases,
+            held_per_1000=per_1000(counts.held, counts.moves),
+            reports_per_1000=per_1000(counts.reports, counts.moves),
+            blocks_per_1000_cases=per_1000(counts.blocks, counts.cases),
+            nudges=counts.nudges,
+            nudges_dropped=counts.nudges_dropped,
+            median_decision_hours=median,
+            open_items=open_items,
         )
 
     # --- The worker
@@ -1393,9 +2187,20 @@ class HalvesService:
             return
         attempt = replace(move, attempts=move.attempts + 1)
         self._repository.save_move(attempt)
-        sender = self._repository.profile(move.user_id)
-        band = sender.band if sender else self._band(move.user_id)
+        # The band is read from the account at every delivery, never from what was stored: an
+        # age group corrected since the case began counts at once.
+        band = self._band(move.user_id)
         speaks = case.seat(move.seat).speaks
+        listener_seat = case.seat(other_seat(move.seat))
+        if (
+            not listener_seat.ai
+            and listener_seat.user_id is not None
+            and (band != "adult" or self._band(listener_seat.user_id) != "adult")
+        ):
+            # Two learners hear each other only when both are adults.
+            self._repository.save_move(replace(attempt, status="held", reasons=("age_band",)))
+            self._announce(move.user_id, case.id, "held")
+            return
         labels = self._brain.check(attempt, band, speaks)
         if labels is None:
             self._unchecked(attempt)
@@ -1437,7 +2242,7 @@ class HalvesService:
         """The stand-in does what it owes: it answers the moves it heard, sends its next move,
         and answers the case's question when it may. Runs in the worker (it speaks)."""
         case = self._repository.case(case_id)
-        found = template(case.template_id) if case else None
+        found = template_of(case) if case else None
         if case is None or found is None or case.status != "open":
             return
         ai = next((s for s in case.seats if s.ai), None)
@@ -1533,11 +2338,18 @@ class HalvesService:
             else:
                 self._start("check", move.id)
         for move in self._repository.expired(now, TICK_SCAN):
+            if move.status == "held":
+                continue  # the owner decides first; the bucket's 30 days still apply to sound
             self._forget(move, "removed" if move.status != "delivered" else "delivered")
         self._repository.delete_expired_invites(now)
         for case in self._repository.open_cases(TICK_SCAN):
             if any(seat.ai for seat in case.seats):
                 self._start("ai", case.id)
+        for nudge in self._repository.stale_nudges(now - NUDGE_STALE, TICK_SCAN):
+            self._start("nudge", nudge.id)
+        # Phase 2: pair who fits, then offer an AI to those who waited long enough.
+        self._match()
+        self._end_searches()
 
     def _start(self, job: str, item_id: UUID) -> None:
         try:
@@ -1558,7 +2370,7 @@ class HalvesService:
 
     def _summary(self, case: Case, user_id: UUID, language: str) -> CaseSummary | None:
         state = case.seat_of(user_id)
-        found = template(case.template_id)
+        found = template_of(case)
         if state is None or found is None:
             return None
         moves = self._repository.moves_of(case.id)
@@ -1576,12 +2388,14 @@ class HalvesService:
         )
 
     def _view(self, case: Case, state: SeatState, moves: Sequence[Move], user_id: UUID) -> CaseView:
-        found = template(case.template_id)
+        found = template_of(case)
         if found is None:
             raise HalvesError("not_found")
         language = self._language(user_id)
         rounds: list[RoundView] = []
         record_round = next_round(case, moves, state.seat)
+        profile = self._repository.profile(user_id)
+        bridged = same_language(case)
         for round_number in range(1, ROUNDS + 1):
             clue = found.clue(state.seat, round_number)
             mine_move = next(
@@ -1606,6 +2420,7 @@ class HalvesService:
                     reaction=mine_move.reaction,
                     understood=understood,
                     corrections=mine_move.corrections,
+                    nudges=self._passed_nudges(mine_move.id),
                 )
             theirs_move = _delivered(moves, other_seat(state.seat), round_number)
             theirs = None
@@ -1620,6 +2435,14 @@ class HalvesService:
                     answers=theirs_move.answers,
                     solution=their_clue.answer if settled else None,
                     reaction=theirs_move.reaction,
+                    caption="" if theirs_move.hidden else theirs_move.transcript,
+                    can_nudge=self._can_nudge(case, theirs_move, profile),
+                    nudged=any(
+                        n.user_id == user_id for n in self._repository.nudges_of(theirs_move.id)
+                    ),
+                    bridge=bridged,
+                    simpler=theirs_move.bridge.get("simpler") if bridged else None,
+                    gist=theirs_move.bridge.get("gist") if bridged else None,
                 )
             # A clue is shown for the round being played and the ones before.
             shown = round_number <= (record_round or ROUNDS) or mine is not None
@@ -1642,7 +2465,7 @@ class HalvesService:
             other_answered=bool(other.final_answers),
             solution=found.answer if ended or found_right(case, state) else None,
         )
-        profile = self._repository.profile(user_id)
+        understood_first, told = heard_first(case, moves, state.seat)
         return CaseView(
             id=case.id,
             template_id=case.template_id,
@@ -1664,7 +2487,19 @@ class HalvesService:
             recap_status=case.recap_status,
             veil_default=profile.veil_default if profile else True,
             ending=text_in(found.ending, state.speaks) if ended else None,
+            understood_first=understood_first,
+            told=told,
+            same_language=bridged,
+            from_import=case.custom is not None,
         )
+
+    def _passed_nudges(self, move_id: UUID) -> tuple[NudgeView, ...]:
+        views: list[NudgeView] = []
+        for nudge in self._repository.nudges_of(move_id):
+            if nudge.status == "passed":
+                known = self._repository.profile(nudge.user_id)
+                views.append(NudgeView(nudge.text, known.codename if known else ""))
+        return tuple(views)
 
     # --- The briefing (7.5)
 
@@ -1673,7 +2508,7 @@ class HalvesService:
         next, in the language they speak. None when there is nothing to rehearse."""
         case = self._repository.case(case_id)
         state = case.seat_of(user_id) if case else None
-        found = template(case.template_id) if case else None
+        found = template_of(case) if case else None
         if case is None or state is None or found is None or case.status != "open":
             return None
         round_number = next_round(case, self._repository.moves_of(case.id), state.seat)

@@ -32,10 +32,12 @@ from konvami_api.domain.halves import (
     Case,
     Correction,
     Move,
+    Nudge,
     RecapLine,
     SeatState,
+    template_of,
 )
-from konvami_api.domain.halves_cases import other_seat, template, text_in
+from konvami_api.domain.halves_cases import other_seat, text_in
 from konvami_api.domain.moderation import (
     CONTACT,
     INSTRUCTIONS,
@@ -141,6 +143,30 @@ _UNDERSTOOD_SCHEMA = answer_object(
     }
 )
 _SAID_SCHEMA = answer_object({"text": _STRING})
+
+# The listener waits for the Bridge on 7.7.
+BRIDGE_SECONDS = 12.0
+type NudgeVerdict = Literal["pass", "wrong", "not_better", "off_topic", "unsafe"]
+
+
+class _Judged(_Answer):
+    verdict: NudgeVerdict
+
+
+_NUDGE_SCHEMA = answer_object(
+    {"verdict": {"type": "string", "enum": list(get_args(NudgeVerdict.__value__))}}
+)
+_NUDGE_INSTRUCTIONS = """A native speaker of {language} heard a learner's voice message in a
+two-player language game and suggests a better way to say part of it. Judge the suggestion
+before the learner sees it:
+- pass: it is correct {language}, it says what the learner meant, and it is clearly more natural
+  or more correct here;
+- wrong: it has a mistake, or changes what the learner meant;
+- not_better: it is no better than what the learner said;
+- off_topic: it is not a way to say the message (a question, a remark about the person, a
+  message to them, contact details);
+- unsafe: it is rude, flirting, or harmful.
+Be strict: when unsure, it is not a pass. Answer as JSON."""
 _SCENE_SCHEMA = answer_object(
     {
         "lines": answer_list(
@@ -405,12 +431,15 @@ class ModelBrain:
                 written = _clip(
                     _Said.model_validate(self._text_model.answer(task)).text, LINE_MAX * 2
                 )
-                said = written if words_in(written) and _keeps_numbers(text, written) else text
+                kept = words_in(written) and _keeps_numbers(text, written)
+                # What the model wrote is heard by the learner: it is read like a move first,
+                # and the hand-written clue is said when it cannot be (fails closed).
+                said = written if kept and self._safe([written], user) else text
             except (TextModelError, ValidationError):
                 said = text
         folder = f"{FOLDER}/{user}/{case.id}" if user else f"{FOLDER}/cases/{case.id}"
         key = self._speak(user, voice, said, f"{folder}/{move_id}.mp3")
-        found = template(case.template_id)
+        found = template_of(case)
         number = next(
             (
                 clue.round
@@ -438,7 +467,7 @@ class ModelBrain:
     def recap(
         self, case: Case, seat: SeatState, voices: Mapping[str, tuple[str, str]]
     ) -> tuple[RecapLine, ...]:
-        found = template(case.template_id)
+        found = template_of(case)
         user = seat.user_id
         if found is None or user is None:
             return ()
@@ -475,7 +504,7 @@ class ModelBrain:
                     for line in scene[:MAX_RECAP_LINES]
                     if words_in(line.text)
                 ]
-                if written:
+                if written and self._safe([text for _, text in written], user):
                     lines = written
             except (TextModelError, ValidationError):
                 logger.warning("halves recap not written; the ending is used")
@@ -488,6 +517,97 @@ class ModelBrain:
             recap.append(RecapLine("A" if speaker == "A" else "B", text, key))
         return tuple(recap)
 
+    # --- The Bridge (same-language mode, phase 2)
+
+    def _safe(self, texts: Sequence[str], user: UUID) -> bool:
+        """Whether text a model wrote may reach a learner: the local rules and the moderation
+        provider. When the provider cannot say, it may not (fails closed)."""
+        if any(local_problem(text) is not None for text in texts):
+            return False
+        try:
+            return not self._moderator.check(list(texts), Charge(user, Feature.MODERATION)).flagged
+        except ModeratorError:
+            return False
+
+    def _line(self, move: Move, listener: UUID, instructions: str, name: str) -> str | None:
+        if not self._write_model:
+            return None
+        task = TextTask(
+            model=self._write_model,
+            instructions=instructions,
+            content=json.dumps({"message": move.transcript}, ensure_ascii=False),
+            answer_name=name,
+            answer_schema=_SAID_SCHEMA,
+            max_seconds=BRIDGE_SECONDS,
+            charge=Charge(listener, Feature.HALVES),
+        )
+        try:
+            written = _clip(_Said.model_validate(self._text_model.answer(task)).text, LINE_MAX)
+        except (TextModelError, ValidationError):
+            return None
+        if not words_in(written) or not _keeps_numbers(move.transcript, written):
+            return None
+        return written if self._safe([written], listener) else None
+
+    def simplify(self, move: Move, language: str, listener: UUID) -> str | None:
+        """The move again in simpler words of the same language, every number kept. Without a
+        model, or when what it wrote may not be shown, code cuts the checked move into short
+        sentences instead."""
+        written = self._line(
+            move,
+            listener,
+            (
+                f"A learner of {self._language_name(language)} sent this voice message in a game; "
+                "the listener is a learner too and could not follow it. Say the same thing again "
+                f"in {self._language_name(language)}, in one or two very simple, short sentences "
+                "(level A1-A2). Keep every fact, number and name exactly; add nothing."
+            ),
+            "halves_bridge_simpler",
+        )
+        return written or short_sentences(move.transcript)
+
+    def gist(self, move: Move, language: str, listener: UUID) -> str | None:
+        """What the move says, in one sentence of the listener's explanation language. None
+        when it cannot be written or shown: there is no code fallback for a translation."""
+        return self._line(
+            move,
+            listener,
+            (
+                "A language learner sent this voice message in a game. Say what it means in one "
+                f"short sentence in {self._language_name(language)}. Keep every number and name; "
+                "add nothing."
+            ),
+            "halves_bridge_gist",
+        )
+
+    # --- The Nudge Verifier (phase 2)
+
+    def verify_nudge(self, nudge: Nudge, move: Move, language: str) -> str | None:
+        """'' to pass, a reason to drop, None when it could not be judged (fails closed)."""
+        if not self._review_model:
+            return None
+        try:
+            verdict = self._moderator.check([nudge.text], Charge(nudge.user_id, Feature.MODERATION))
+        except ModeratorError:
+            return None
+        if verdict.flagged:
+            return "unsafe"
+        task = TextTask(
+            model=self._review_model,
+            instructions=_NUDGE_INSTRUCTIONS.format(language=self._language_name(language)),
+            content=json.dumps(
+                {"message": move.transcript, "suggestion": nudge.text}, ensure_ascii=False
+            ),
+            answer_name="halves_nudge_check",
+            answer_schema=_NUDGE_SCHEMA,
+            charge=Charge(nudge.user_id, Feature.HALVES),
+        )
+        try:
+            judged = _Judged.model_validate(self._text_model.answer(task))
+        except (TextModelError, ValidationError):
+            return None
+        return "" if judged.verdict == "pass" else judged.verdict
+
 
 def heard_option(transcript: str, options: Sequence[str]) -> int:
     """The option whose words or numbers the message says most of, or the first."""
@@ -499,6 +619,23 @@ def heard_option(transcript: str, options: Sequence[str]) -> int:
         if score > best_score:
             best, best_score = number, score
     return best
+
+
+# The Bridge's code fallback cuts a move into pieces of at most this many words.
+SHORT_WORDS = 7
+
+
+def short_sentences(transcript: str) -> str | None:
+    """The checked move cut into short pieces at its commas and full stops, one a line: no new
+    words, so nothing to check again. None when it is short already."""
+    pieces: list[str] = []
+    for part in transcript.replace(";", ",").replace(".", ",").replace("!", ",").split(","):
+        words = part.split()
+        while words:
+            pieces.append(" ".join(words[:SHORT_WORDS]))
+            words = words[SHORT_WORDS:]
+    pieces = [piece for piece in pieces if piece]
+    return "\n".join(pieces) if len(pieces) > 1 else None
 
 
 def _keeps_numbers(clue: str, written: str) -> bool:

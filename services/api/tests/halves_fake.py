@@ -13,10 +13,14 @@ from konvami_api.domain.halves import (
     Duo,
     Invite,
     Move,
+    Nudge,
     Profile,
     RecapLine,
     Report,
+    SafetyCounts,
     SeatState,
+    Strike,
+    Ticket,
 )
 from konvami_api.domain.halves_check import heard_option
 
@@ -31,6 +35,9 @@ class InMemoryHalvesRepository:
         self.duos: dict[UUID, Duo] = {}
         self.reports: dict[UUID, Report] = {}
         self.wrong: dict[tuple[UUID, dt.date], int] = {}
+        self.tickets_by: dict[UUID, Ticket] = {}
+        self.nudges: dict[UUID, Nudge] = {}
+        self.strikes: list[Strike] = []
 
     def profile(self, user_id: UUID) -> Profile | None:
         return self.profiles.get(user_id)
@@ -85,6 +92,7 @@ class InMemoryHalvesRepository:
             for m in self.moves.values()
             if m.delete_after is not None
             and m.delete_after <= now
+            and m.status != "held"
             and (m.transcript or m.audio_key or m.veil_key)
         ][:limit]
 
@@ -156,6 +164,78 @@ class InMemoryHalvesRepository:
     def open_reports(self, limit: int) -> list[Report]:
         return [r for r in self.reports.values() if r.status == "open"][:limit]
 
+    def ticket(self, user_id: UUID) -> Ticket | None:
+        return self.tickets_by.get(user_id)
+
+    def save_ticket(self, ticket: Ticket) -> None:
+        self.tickets_by[ticket.user_id] = ticket
+
+    def delete_ticket(self, user_id: UUID) -> None:
+        self.tickets_by.pop(user_id, None)
+
+    def tickets(self, limit: int) -> list[Ticket]:
+        return sorted(self.tickets_by.values(), key=lambda t: (t.created_at, str(t.user_id)))[
+            :limit
+        ]
+
+    def add_nudge(self, nudge: Nudge) -> bool:
+        if any(
+            n.move_id == nudge.move_id and n.user_id == nudge.user_id for n in self.nudges.values()
+        ):
+            return False
+        self.nudges[nudge.id] = nudge
+        return True
+
+    def nudge(self, nudge_id: UUID) -> Nudge | None:
+        return self.nudges.get(nudge_id)
+
+    def save_nudge(self, nudge: Nudge) -> None:
+        self.nudges[nudge.id] = nudge
+
+    def nudges_of(self, move_id: UUID) -> list[Nudge]:
+        return sorted(
+            (n for n in self.nudges.values() if n.move_id == move_id), key=lambda n: n.created_at
+        )
+
+    def held_nudges(self, limit: int) -> list[Nudge]:
+        return [n for n in self.nudges.values() if n.status == "held"][:limit]
+
+    def stale_nudges(self, before: dt.datetime, limit: int) -> list[Nudge]:
+        return [
+            n for n in self.nudges.values() if n.status == "checking" and n.created_at < before
+        ][:limit]
+
+    def add_strike(self, strike: Strike) -> None:
+        self.strikes.append(strike)
+
+    def strikes_of(self, user_id: UUID) -> list[Strike]:
+        return [s for s in self.strikes if s.user_id == user_id]
+
+    def counts(self, since: dt.datetime) -> SafetyCounts:
+        moves = [m for m in self.moves.values() if m.created_at >= since and m.user_id]
+        reports = [r for r in self.reports.values() if r.created_at >= since]
+        hours = [
+            (m.decided_at - m.created_at).total_seconds() / 3600
+            for m in moves
+            if m.decided_at is not None
+        ]
+        hours += [
+            (r.resolved_at - r.created_at).total_seconds() / 3600
+            for r in reports
+            if r.resolved_at is not None
+        ]
+        nudges = [n for n in self.nudges.values() if n.created_at >= since]
+        return SafetyCounts(
+            moves=len(moves),
+            held=sum(1 for m in moves if m.reasons and m.status in ("held", "removed")),
+            reports=len(reports),
+            cases=sum(1 for c in self.cases.values() if c.created_at >= since),
+            blocks=sum(1 for b in self.blocks.values() if b.created_at >= since),
+            decision_hours=tuple(hours),
+            nudges=len(nudges),
+            nudges_dropped=sum(1 for n in nudges if n.status == "dropped"),
+        )
+
 
 class RecordingHalvesStarter:
     def __init__(self) -> None:
@@ -182,6 +262,10 @@ class FakeBrain:
         self.picks: list[int] = []
         self.checked: list[tuple[UUID, Band]] = []
         self.said: list[str] = []
+        # The Bridge's answers (None: could not be written) and the verifier's verdicts.
+        self.simpler: str | None = "Es ist um 14 Uhr 20."
+        self.gist_text: str | None = "It is at 14:20."
+        self.verdicts: list[str | None] = []
 
     def check(self, move: Move, band: Band, language: str) -> tuple[str, ...] | None:
         self.checked.append((move.id, band))
@@ -204,9 +288,10 @@ class FakeBrain:
 
     def say(self, case: Case, seat: SeatState, text: str, voice: str, move_id: UUID) -> Move:
         self.said.append(text)
-        from konvami_api.domain.halves_cases import template, text_in
+        from konvami_api.domain.halves import template_of
+        from konvami_api.domain.halves_cases import text_in
 
-        found = template(case.template_id)
+        found = template_of(case)
         number = next(
             c.round
             for c in (found.clues if found else ())
@@ -232,3 +317,12 @@ class FakeBrain:
             RecapLine("A", f"{voices['A'][0]}: fertig!", f"halves/r/{case.id}/{seat.seat}-0.mp3"),
             RecapLine("B", f"{voices['B'][0]}: bravo!", None),
         )
+
+    def simplify(self, move: Move, language: str, listener: UUID) -> str | None:
+        return self.simpler
+
+    def gist(self, move: Move, language: str, listener: UUID) -> str | None:
+        return self.gist_text
+
+    def verify_nudge(self, nudge: Nudge, move: Move, language: str) -> str | None:
+        return self.verdicts.pop(0) if self.verdicts else ""
