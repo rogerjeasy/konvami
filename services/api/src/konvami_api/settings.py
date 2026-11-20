@@ -18,6 +18,8 @@ COSTS_VARIABLE = "KONVAMI_COSTS"
 PREMIUM_VOICES_VARIABLE = "KONVAMI_PREMIUM_VOICES"
 
 PLANS_VARIABLE = "KONVAMI_PLANS"
+# Two Halves (section 7): {"enabled": true, "open_to_testers": true}. Off without it.
+HALVES_VARIABLE = "KONVAMI_HALVES"
 
 
 class _Voice(BaseModel):
@@ -270,3 +272,30 @@ def video_avatar_settings(raw: str | None) -> VideoAvatars:
         vendor=parsed.vendor,
         faces=tuple(VideoAvatarFace(face.id, face.name) for face in parsed.faces),
     )
+
+
+@dataclass(frozen=True)
+class HalvesSettings:
+    """Two Halves (section 7, phase 1). Off until turned on; while it is in the testers' hands
+    (`open_to_testers`) every learner may play, else the owners only."""
+
+    enabled: bool = False
+    open_to_testers: bool = False
+
+
+class _Halves(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    enabled: bool = False
+    open_to_testers: bool = False
+
+
+def halves_settings(raw: str | None) -> HalvesSettings:
+    """Two Halves' switches from the `KONVAMI_HALVES` JSON. Without it, Two Halves is off."""
+    if not raw:
+        return HalvesSettings()
+    try:
+        parsed = _Halves.model_validate(json.loads(raw))
+    except (ValueError, ValidationError) as error:
+        raise RuntimeError(f"{HALVES_VARIABLE} is not valid") from error
+    return HalvesSettings(parsed.enabled, parsed.open_to_testers)

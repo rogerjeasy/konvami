@@ -54,6 +54,18 @@ _WORDS: Mapping[str, Mapping[str, str]] = {
         "fr": "A répondu à ton message vocal.",
         "it": "Ha risposto al tuo messaggio vocale.",
     },
+    "halves_move": {
+        "en": "A new clue arrived in Two Halves.",
+        "de": "Ein neuer Hinweis ist bei Zwei Hälften angekommen.",
+        "fr": "Un nouvel indice est arrivé dans Deux moitiés.",
+        "it": "È arrivato un nuovo indizio in Due metà.",
+    },
+    "halves_held": {
+        "en": "Your Two Halves move wasn’t sent. Open the case to see why.",  # noqa: RUF001
+        "de": "Dein Zug bei Zwei Hälften wurde nicht gesendet. Öffne den Fall, um zu sehen, warum.",
+        "fr": "Ton coup dans Deux moitiés n’a pas été envoyé. Ouvre l’enquête pour voir pourquoi.",  # noqa: RUF001
+        "it": "La tua mossa in Due metà non è stata inviata. Apri il caso per vedere perché.",
+    },
     "nudge": {
         "en": "It’s been a while. Got five minutes to talk?",  # noqa: RUF001
         "de": "Wir haben lange nicht gesprochen. Hast du fünf Minuten?",
@@ -223,6 +235,16 @@ class PushService:
             "pen_pal_reply" if reply else "pen_pal",
             self._partner_name(user_id, persona_id),
             {"open": "pen_pal", "id": str(persona_id)},
+        )
+
+    def halves(self, user_id: UUID, case_id: UUID, kind: str) -> None:
+        """Two Halves: a move arrived in a case (`move`), or the learner's own was held
+        (`held`). Opens the case."""
+        self._send(
+            self._repository.of(user_id),
+            "halves_held" if kind == "held" else "halves_move",
+            APP_NAME,
+            {"open": "halves", "id": str(case_id)},
         )
 
     def nudge(self) -> int:

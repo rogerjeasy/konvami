@@ -1,6 +1,7 @@
 """Push from the server (spec §6.18): reports, scores and a weekly nudge."""
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 import pytest
 
@@ -190,3 +191,25 @@ def test_a_phone_that_cannot_be_read_does_not_stop_the_nudge() -> None:
 
     assert world.push.nudge() >= 1
     assert PHONE in {message.token for message in world.push_sender.sent}
+
+
+def test_a_two_halves_clue_or_a_held_move_opens_the_case() -> None:
+    world = World()
+    phone(world)
+    case = "33333333-3333-4333-8333-333333333333"
+
+    world.push.halves(USER, UUID(case), "move")
+    world.push.halves(USER, UUID(case), "held")
+
+    assert [(m.title, m.body, dict(m.data)) for m in world.push_sender.sent] == [
+        (
+            "Konvami",
+            "Un nouvel indice est arrivé dans Deux moitiés.",
+            {"open": "halves", "id": case},
+        ),
+        (
+            "Konvami",
+            "Ton coup dans Deux moitiés n’a pas été envoyé. Ouvre l’enquête pour voir pourquoi.",
+            {"open": "halves", "id": case},
+        ),
+    ]
