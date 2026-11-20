@@ -76,6 +76,11 @@ class Feature(StrEnum):
     PEN_PAL = "pen_pal"
     PEN_PAL_AUDIO = "pen_pal_audio"
     PEN_PAL_LISTEN = "pen_pal_listen"
+    # Two Halves (7.x): a move written down, the checks, stand-in and recap writing, and the
+    # sounds (a veiled move, the stand-in, the recap).
+    HALVES_LISTEN = "halves_listen"
+    HALVES = "halves"
+    HALVES_AUDIO = "halves_audio"
 
 
 @dataclass(frozen=True)
