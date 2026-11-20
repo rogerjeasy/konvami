@@ -33,10 +33,10 @@ from konvami_api.domain.exam_centre import ExamService
 from konvami_api.domain.fluency import recording_fluency
 from konvami_api.domain.grammar_map import GrammarMapService
 from konvami_api.domain.levels import LEVEL_FIELD, LevelService, leaning
+from konvami_api.domain.motivation import Streak
 from konvami_api.domain.onboarding import OnboardingError, OnboardingService, Stage
 from konvami_api.domain.personas import PersonaService
 from konvami_api.domain.profile import ProfileService, Source
-from konvami_api.domain.progress import longest_streak
 from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.reports import ReportService
 from konvami_api.domain.retries import RetryService
@@ -71,7 +71,10 @@ class CoachFacts:
         personas: PersonaService,
         imports: CourseImportService,
         director: DirectorService,
+        # The learner's streak, from motivation (`motivation.py`), which owns it for every screen.
+        streak: Callable[[UUID, str | None], Streak],
     ) -> None:
+        self._streak = streak
         self._profiles = profiles
         self._onboarding = onboarding
         self._conversations = conversations
@@ -100,6 +103,7 @@ class CoachFacts:
         days = self._conversations.days(user_id, timezone, now)
         today = days.today
         activity = self._conversations.activity(user_id, timezone, now)
+        streak = self._streak(user_id, timezone)
         practised = [day.day for day in days.days if day.seconds > 0]
         partners = self._partners(user_id, now)
         met = [p for p in partners if p.days_since is not None]
@@ -145,9 +149,10 @@ class CoachFacts:
             remembered_7_days=week_cards.remembered,
             sounds=self._sound_facts(user_id),
             **self._pace(user_id),
-            streak=activity.streak_days,
-            best_streak=longest_streak(days),
-            practised_today=activity.practised_today,
+            streak=streak.days,
+            best_streak=streak.longest,
+            planned_today=streak.planned_today,
+            practised_today=activity.practised_today or streak.spoke_today,
             days_since_practice=(today - max(practised)).days if practised else None,
             level=level,
             level_up=up,

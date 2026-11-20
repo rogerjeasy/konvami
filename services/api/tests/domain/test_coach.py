@@ -246,6 +246,14 @@ def test_a_run_of_days_is_worth_keeping_late_in_the_day() -> None:
     assert Kind.STREAK_AT_RISK not in kinds(done)
 
 
+def test_a_day_the_plan_leaves_free_never_puts_the_streak_at_risk() -> None:
+    rest = find_signals(
+        inputs(streak=4, hour=19, cards_due=3, days_since_practice=1, planned_today=False)
+    )
+
+    assert Kind.STREAK_AT_RISK not in kinds(rest)
+
+
 def test_a_partner_not_met_for_long_is_suggested() -> None:
     partners = (
         PartnerFact(LENA, "Lena", 8, 0),

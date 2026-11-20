@@ -799,6 +799,7 @@ class World:
             personas=self.personas,
             imports=self.course_imports,
             director=self.director,
+            streak=self.motivation.streak,
         )
         self.coach = coach_service(
             profiles=self.profiles,

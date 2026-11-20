@@ -248,6 +248,8 @@ class CoachInputs:
     pace_after: float | None = None
     streak: int = 0
     best_streak: int = 0
+    # Whether the learner's weekly habit plans today: a free day never puts the streak at risk.
+    planned_today: bool = True
     practised_today: bool = False
     # Days since the last practice; None before any.
     days_since_practice: int | None = None
@@ -584,7 +586,12 @@ def _rhythm(inputs: CoachInputs) -> list[Signal]:
                 SHORT_CALL_MINUTES,
             )
         )
-    elif inputs.streak >= STREAK_DAYS and not inputs.practised_today and inputs.hour >= STREAK_HOUR:
+    elif (
+        inputs.streak >= STREAK_DAYS
+        and inputs.planned_today
+        and not inputs.practised_today
+        and inputs.hour >= STREAK_HOUR
+    ):
         action = (
             Action("review_cards", count=min(inputs.cards_due, 5))
             if inputs.cards_due

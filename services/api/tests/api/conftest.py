@@ -919,6 +919,7 @@ def services(
                 personas=personas,
                 imports=course_imports,
                 director=director,
+                streak=motivation.streak,
             ),
             reports=reports,
             accounts=directory,

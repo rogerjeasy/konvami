@@ -670,6 +670,7 @@ def build_backend(
         personas=personas,
         imports=course_imports,
         director=director,
+        streak=motivation.streak,
     )
     coach = coach_service(
         profiles=profiles,
