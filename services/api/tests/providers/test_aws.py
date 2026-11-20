@@ -11,6 +11,7 @@ from botocore.stub import Stubber
 from konvami_api.domain.voice import CallPurpose
 from konvami_api.providers.aws import (
     LambdaCallStarter,
+    LambdaCoachStarter,
     LambdaDetailsStarter,
     LambdaExamStarter,
     LambdaFitStarter,
@@ -102,6 +103,22 @@ def test_a_learners_review_log_is_handed_to_the_worker_to_be_fitted(functions: S
     )
 
     LambdaFitStarter(functions.client, "kv-dev-call-worker").start(USER)
+
+
+def test_the_coachs_suggestions_are_handed_to_the_worker_to_be_worded(
+    functions: Stubber,
+) -> None:
+    functions.add_response(
+        "invoke",
+        {"StatusCode": 202},
+        {
+            "FunctionName": "kv-dev-call-worker",
+            "InvocationType": "Event",
+            "Payload": json.dumps({"coach": str(USER), "day": "2026-11-20"}).encode(),
+        },
+    )
+
+    LambdaCoachStarter(functions.client, "kv-dev-call-worker").start(USER, date(2026, 11, 20))
 
 
 def test_a_weekly_check_in_is_handed_to_the_worker_to_be_written(functions: Stubber) -> None:

@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException
 from konvami_api.domain.accounts import AccountError
 from konvami_api.domain.caption_lookup import CaptionLookupError
 from konvami_api.domain.cards import CardError
+from konvami_api.domain.coach import CoachError
 from konvami_api.domain.conversations import ConversationError
 from konvami_api.domain.costs import CostError
 from konvami_api.domain.course_import import CourseImportError
@@ -275,6 +276,10 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ExamError)
     async def _exam_error(_: Request, error: ExamError) -> JSONResponse:
         return _response(_EXAM_STATUS.get(error.code, _UNAVAILABLE), error.code)
+
+    @app.exception_handler(CoachError)
+    async def _coach_error(_: Request, error: CoachError) -> JSONResponse:
+        return _response(404, error.code)
 
     @app.exception_handler(WeekReviewError)
     async def _week_error(_: Request, error: WeekReviewError) -> JSONResponse:

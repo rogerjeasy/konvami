@@ -543,6 +543,7 @@ Memory comes in three layers:
 - **Daily "Today" card:** "15 minutes: 5 minutes of review conversation with Lena + a 10-minute role-play at the doctor's (focus: Dativ, body parts)."
 - **Weekly check-in (voice):** your chosen persona gives you a 2-minute spoken weekly review ("This week you spoke for 94 minutes, three more than last week…") and asks whether to adjust the plan.
 - **Adaptive re-planning:** if you skip days or progress faster or slower than expected, the plan adjusts automatically and tells you why.
+- **The Coach** (added 2026-11-20, screen 5.26): on top of the Director, it reads the evidence of every other part (mistakes, grammar map, cards, sounds, level, exam, partners, imports) and suggests at most three things to do next, each with its evidence and a one-tap action; it learns from "Not now" and "Not for me", and its focus of the day goes first in calls (§8.2). Design: `docs/superpowers/specs/2026-11-20-coach-design.md`.
 
 ### 6.13 Exam preparation (P1)
 

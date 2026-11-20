@@ -14,6 +14,7 @@ from konvami_api.domain.caption_lookup import CaptionLookupService
 from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.coach_facts import CoachFacts, coach_service
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
 from konvami_api.domain.costs import Budget, CostService, SpendGuard
@@ -76,6 +77,7 @@ from tests.fakes import (
     InMemoryAlertLog,
     InMemoryCardRepository,
     InMemoryChargeRepository,
+    InMemoryCoachRepository,
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
@@ -106,6 +108,7 @@ from tests.fakes import (
     InMemoryVoiceSessionRepository,
     InMemoryWeekReviewRepository,
     RecordingCallStarter,
+    RecordingCoachStarter,
     RecordingExamStarter,
     RecordingNotifier,
     RecordingPenPalStarter,
@@ -344,6 +347,16 @@ def week_starter() -> RecordingWeekStarter:
 
 
 @pytest.fixture
+def coach_starter() -> RecordingCoachStarter:
+    return RecordingCoachStarter()
+
+
+@pytest.fixture
+def coach_store() -> InMemoryCoachRepository:
+    return InMemoryCoachRepository()
+
+
+@pytest.fixture
 def level_store(calls: InMemoryVoiceSessionRepository) -> InMemoryLevelRepository:
     """The level engine's steps, for tests that need the level to have moved."""
     return InMemoryLevelRepository(calls)
@@ -389,6 +402,8 @@ def services(
     answer_transcriber: ScriptedTranscriber,
     pronunciation_transcriber: ScriptedTranscriber,
     week_starter: RecordingWeekStarter,
+    coach_starter: RecordingCoachStarter,
+    coach_store: InMemoryCoachRepository,
     exam_starter: RecordingExamStarter,
     pen_pal_transcriber: ScriptedTranscriber,
     pen_pal_starter: RecordingPenPalStarter,
@@ -608,6 +623,32 @@ def services(
         clock=clock,
         new_id=lambda: next(upload_ids),
     )
+    retries = RetryService(
+        reports=reports,
+        repository=InMemoryRetryRepository(),
+        listener=Listener(
+            profiles=profiles,
+            accounts=directory,
+            transcriber=retry_transcriber,
+            model="gpt-4o-transcribe",
+        ),
+        clock=clock,
+    )
+    pronunciation = PronunciationService(
+        conversations=conversations,
+        sessions=calls,
+        profiles=profiles,
+        personas=personas,
+        listener=Listener(
+            profiles=profiles,
+            accounts=directory,
+            transcriber=pronunciation_transcriber,
+            model="gpt-4o-transcribe",
+        ),
+        repository=InMemoryPronunciationRepository(),
+        sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
+        clock=clock,
+    )
     return Services(
         vocabulary=VocabularyService(
             profiles=profiles,
@@ -772,30 +813,32 @@ def services(
                 user_id, persona_id, reply=reply
             ),
         ),
-        retries=RetryService(
-            reports=reports,
-            repository=InMemoryRetryRepository(),
-            listener=Listener(
-                profiles=profiles,
-                accounts=directory,
-                transcriber=retry_transcriber,
-                model="gpt-4o-transcribe",
-            ),
-            clock=clock,
-        ),
-        pronunciation=PronunciationService(
-            conversations=conversations,
-            sessions=calls,
+        retries=retries,
+        pronunciation=pronunciation,
+        coach=coach_service(
             profiles=profiles,
-            personas=personas,
-            listener=Listener(
+            facts=CoachFacts(
                 profiles=profiles,
-                accounts=directory,
-                transcriber=pronunciation_transcriber,
-                model="gpt-4o-transcribe",
+                onboarding=onboarding,
+                conversations=conversations,
+                reports=reports,
+                retries=retries,
+                cards=cards,
+                grammar=grammar,
+                pronunciation=pronunciation,
+                levels=levels,
+                exams=exams,
+                personas=personas,
+                imports=course_imports,
+                director=director,
             ),
-            repository=InMemoryPronunciationRepository(),
-            sounds=Sounds(speech=speech, model="gpt-4o-mini-tts", files=files),
+            reports=reports,
+            accounts=directory,
+            repository=coach_store,
+            starter=coach_starter,
+            text_model=text_model,
+            model="gpt-6-luna",
+            affordable=lambda: True,
             clock=clock,
         ),
         conversation_review=conversation_review,

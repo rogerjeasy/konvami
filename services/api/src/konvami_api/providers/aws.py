@@ -137,6 +137,23 @@ class LambdaPenPalStarter:
         )
 
 
+class LambdaCoachStarter:
+    """Has a learner's suggestions of the day worded by the worker function, in an invocation of
+    its own, so opening Today does not wait for the text model (`domain/coach.py`)."""
+
+    def __init__(self, functions: LambdaClient, function_name: str) -> None:
+        self._functions = functions
+        self._function_name = function_name
+
+    def start(self, user_id: UUID, day: dt.date) -> None:
+        # The worker words only a day whose brief is waiting in the database for this learner.
+        self._functions.invoke(
+            FunctionName=self._function_name,
+            InvocationType="Event",
+            Payload=json.dumps({"coach": str(user_id), "day": day.isoformat()}).encode(),
+        )
+
+
 class LambdaWeekReviewStarter:
     """Has a learner's weekly check-in written by the worker function, in an invocation of its
     own, so opening Progress does not wait for the text model."""

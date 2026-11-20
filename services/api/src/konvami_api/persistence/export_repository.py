@@ -45,6 +45,8 @@ EXPORTED: tuple[ExportedTable, ...] = (
         for name in (
             "card",
             "card_schedule",
+            "coach_brief",
+            "coach_suggestion",
             "content_flag",
             "course_import",
             "data_export",

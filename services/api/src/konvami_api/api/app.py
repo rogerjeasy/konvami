@@ -28,6 +28,8 @@ from konvami_api.api.schemas import (
     CardOut,
     CardsAheadOut,
     CatalogOut,
+    CoachFeedbackIn,
+    CoachOut,
     ConversationAssessmentIn,
     ConversationsOut,
     CostsOut,
@@ -145,6 +147,7 @@ from konvami_api.domain.card_schedule import CardScheduleService
 from konvami_api.domain.cards import PAGE_DEFAULT as CARDS_PAGE_DEFAULT
 from konvami_api.domain.cards import QUEUE_DEFAULT, CardError, CardService, OfflineReview
 from konvami_api.domain.catalog import Catalog
+from konvami_api.domain.coach import CoachService
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import PAGE_DEFAULT, ConversationQuery, ConversationService
 from konvami_api.domain.costs import CostService
@@ -230,6 +233,7 @@ class Services:
     pronunciation: PronunciationService
 
     pen_pal: PenPalService
+    coach: CoachService
 
     feedback: FeedbackService
 
@@ -566,6 +570,28 @@ def _router(services: Services) -> APIRouter:
     ) -> ProgressOut:
         progress = services.progress.view(user, tz)
         return ProgressOut.of(progress, services.week_reviews.last_week(user, tz))
+
+    @router.get("/coach", operation_id="getCoach", responses=CONFLICT)
+    def get_coach(
+        user: CurrentUser,
+        # The device's time zone, as for `/home`: the Coach's day is the learner's.
+        tz: Annotated[str | None, Query(max_length=MAX_TIME_ZONE_LENGTH)] = None,
+    ) -> CoachOut:
+        """Today's suggestions from the Coach, with what holds the learner back, what went well
+        and earlier suggestions (5.1, 5.26)."""
+        return CoachOut.of(services.coach.view(user, tz))
+
+    @router.post(
+        "/coach/suggestions/{suggestion_id}/feedback",
+        operation_id="answerCoachSuggestion",
+        status_code=204,
+        responses=NOT_FOUND,
+    )
+    def answer_coach_suggestion(
+        user: CurrentUser, suggestion_id: UUID, body: CoachFeedbackIn
+    ) -> None:
+        """The learner's answer: do it, not now, or not for me (with why)."""
+        services.coach.respond(user, suggestion_id, body.response, body.reason)
 
     @router.post(
         "/weeks/{week}/review",

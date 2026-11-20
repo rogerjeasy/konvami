@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import type { Home, PushDevice } from '@konvami/api-client';
+import type { Coach, Home, PushDevice } from '@konvami/api-client';
 import { useAuthServices, useSession } from '@/auth';
 import {
   incomingCallRoute,
@@ -12,18 +12,30 @@ import {
 } from '@/lib/routes';
 import { usePracticeServices } from '@/practice/services';
 import { usePreferences } from '@/preferences';
+import { useCoachWords } from '@/screens/coach/words';
 import type { OpenTarget, ScheduledReminder } from './device';
 import { upcomingReminders, type Reminder } from './schedule';
 import { useReminderDevice, useReminderPermission } from './services';
+
+/** The learner's date of a moment, on the device's calendar ("2026-11-20"). */
+function localDay(at: Date): string {
+  const month = String(at.getMonth() + 1).padStart(2, '0');
+  const day = String(at.getDate()).padStart(2, '0');
+  return `${at.getFullYear()}-${month}-${day}`;
+}
 
 /**
  * A reminder's words: from the partner Today suggests, in the app's language, never a reproach.
  * The word of the day joins the day's reminder on a line of its own, or comes alone. A ring
  * (5.28) comes from that partner, with their question when it is about an event; without a
- * partner to ring, the day keeps a plain reminder.
+ * partner to ring, the day keeps a plain reminder. On the Coach's day, a plain reminder to
+ * practise carries its first suggestion instead (at most one a day: there is one reminder a day).
  */
-function useReminderWords(home: Home | null) {
+function useReminderWords(home: Home | null, coach: Coach | null) {
   const { t } = useTranslation();
+  const { words: coachWords } = useCoachWords();
+  const suggestion = coach?.suggestions.find(({ status }) => status === 'open');
+  const coachTitle = suggestion ? coachWords(suggestion).title : '';
   const partner =
     home?.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ??
     home?.partners[0];
@@ -56,8 +68,14 @@ function useReminderWords(home: Home | null) {
         card: word.id,
       };
     }
-    const body =
-      reminder.kind === 'followUp' && reminder.ask
+    const fromCoach =
+      coachTitle &&
+      coach &&
+      (reminder.kind === 'today' || reminder.kind === 'practice') &&
+      localDay(reminder.at) === coach.day;
+    const body = fromCoach
+      ? t('reminders.body.coach', { title: coachTitle })
+      : reminder.kind === 'followUp' && reminder.ask
         ? reminder.ask
         : reminder.kind === 'today'
           ? t('reminders.body.today', {
@@ -82,12 +100,12 @@ function useReminderWords(home: Home | null) {
  * whenever the plan, the cards or the learner's choice change, once the phone allows them.
  * Turned off, none is left scheduled.
  */
-export function useReminderSchedule(home: Home | null, now: Date) {
+export function useReminderSchedule(home: Home | null, now: Date, coach: Coach | null = null) {
   const { t } = useTranslation();
   const device = useReminderDevice();
   const { permission } = useReminderPermission();
   const { reminders: settings } = usePreferences();
-  const words = useReminderWords(home);
+  const words = useReminderWords(home, coach);
   const scheduled =
     home && settings && permission === 'granted'
       ? upcomingReminders({

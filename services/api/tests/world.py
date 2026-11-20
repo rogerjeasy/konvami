@@ -11,9 +11,10 @@ from konvami_api.domain.card_details import CardDetailsService
 from konvami_api.domain.card_schedule import CardScheduleService
 from konvami_api.domain.cards import CardService
 from konvami_api.domain.catalog import CATALOG
+from konvami_api.domain.coach_facts import CoachFacts, coach_service
 from konvami_api.domain.conversation_review import ConversationReview
 from konvami_api.domain.conversations import ConversationService
-from konvami_api.domain.costs import Budget, CostService, Meter, SpendGuard
+from konvami_api.domain.costs import Budget, CostService, Level, Meter, SpendGuard
 from konvami_api.domain.course_import import CourseImportService
 from konvami_api.domain.director import DirectorService
 from konvami_api.domain.exam_centre import ExamScript, ExamService
@@ -86,6 +87,7 @@ from tests.fakes import (
     InMemoryAlertLog,
     InMemoryCardRepository,
     InMemoryChargeRepository,
+    InMemoryCoachRepository,
     InMemoryConversationRepository,
     InMemoryDailyAllowance,
     InMemoryDraftLog,
@@ -117,6 +119,7 @@ from tests.fakes import (
     InMemoryVoiceSessionRepository,
     InMemoryWeekReviewRepository,
     RecordingCallStarter,
+    RecordingCoachStarter,
     RecordingDetailsStarter,
     RecordingExamStarter,
     RecordingFitStarter,
@@ -367,7 +370,10 @@ class World:
             reports=self.reports,
             cards=self.cards,
             # The Director is built after the calls it reads the voice minutes from.
-            week_topic=lambda user_id, today: self.director.topic_for_call(user_id, today),
+            week_topic=lambda user_id, today: (
+                self.coach.focus_topic(user_id, today)
+                or self.director.topic_for_call(user_id, today)
+            ),
             # The imports are built after the file store they read photos from.
             imports=lambda user_id, import_id, rehearse: self.course_imports.material(
                 user_id, import_id, rehearse
@@ -680,6 +686,35 @@ class World:
         )
         self.voices = VoiceSampleService(
             profiles=self.profiles, files=self.files, speech=self.speech, model="gpt-4o-mini-tts"
+        )
+        self.coach_store = InMemoryCoachRepository()
+        self.coach_starter = RecordingCoachStarter()
+        self.coach_facts = CoachFacts(
+            profiles=self.profiles,
+            onboarding=self.onboarding,
+            conversations=self.conversations,
+            reports=self.reports,
+            retries=self.retries,
+            cards=self.cards,
+            grammar=self.grammar,
+            pronunciation=self.pronunciation,
+            levels=self.levels,
+            exams=self.exams,
+            personas=self.personas,
+            imports=self.course_imports,
+            director=self.director,
+        )
+        self.coach = coach_service(
+            profiles=self.profiles,
+            facts=self.coach_facts,
+            reports=self.reports,
+            accounts=self.accounts,
+            repository=self.coach_store,
+            starter=self.coach_starter,
+            text_model=self.text,
+            model="gpt-6-luna",
+            affordable=lambda: self.guard.level() is Level.NORMAL,
+            clock=self.clock,
         )
         self.account = AccountService(
             records=InMemoryAccountRepository(),

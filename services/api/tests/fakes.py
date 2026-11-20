@@ -1,6 +1,6 @@
 """In-memory stand-ins for the persistence layer, checked against the same contract tests as SQL."""
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, cast
@@ -10,6 +10,7 @@ from konvami_api.domain import plans
 from konvami_api.domain.accounts import DELETION_MEMORY, Account, AccountNotFound
 from konvami_api.domain.card_schedule import FitState
 from konvami_api.domain.cards import Card, CardTotals, WordDetails
+from konvami_api.domain.coach import SHOWN, Brief, Suggestion
 from konvami_api.domain.conversations import (
     ActivityDays,
     Conversation,
@@ -1822,3 +1823,145 @@ class InMemoryPackRepository:
 
     def record_quota(self, user_id: UUID, week: date, quota_seconds: int) -> None:
         self.quotas[(user_id, week)] = quota_seconds
+
+
+class InMemoryCoachRepository:
+    """`CoachRepository` in memory, as `SqlCoachRepository` behaves."""
+
+    def __init__(self) -> None:
+        self.briefs: dict[tuple[UUID, str, date], Brief] = {}
+        self.requests: dict[tuple[UUID, str, date], tuple[int, datetime | None]] = {}
+        # id -> (user, language, suggestion)
+        self.rows: dict[UUID, tuple[UUID, str, Suggestion]] = {}
+
+    def brief(self, user_id: UUID, language: str, day: date) -> Brief | None:
+        return self.briefs.get((user_id, language, day))
+
+    def save(
+        self, user_id: UUID, language: str, brief: Brief, suggestions: Sequence[Suggestion]
+    ) -> None:
+        self.briefs[(user_id, language, brief.day)] = replace(brief, wording="template")
+        self.requests.setdefault((user_id, language, brief.day), (0, None))
+        for sid, (user, lang, row) in list(self.rows.items()):
+            if (user, lang, row.day) == (user_id, language, brief.day) and row.status == "open":
+                del self.rows[sid]
+        for suggestion in suggestions:
+            self.rows[suggestion.id] = (user_id, language, suggestion)
+
+    def _of(self, user_id: UUID, language: str) -> list[Suggestion]:
+        return [
+            row for user, lang, row in self.rows.values() if (user, lang) == (user_id, language)
+        ]
+
+    def suggestions(self, user_id: UUID, language: str, day: date) -> list[Suggestion]:
+        return sorted(
+            (s for s in self._of(user_id, language) if s.day == day),
+            key=lambda s: (s.rank, str(s.id)),
+        )
+
+    def respond(
+        self,
+        user_id: UUID,
+        suggestion_id: UUID,
+        status: str,
+        reason: str | None,
+        at: datetime,
+    ) -> bool:
+        found = self.rows.get(suggestion_id)
+        if found is None or found[0] != user_id:
+            return False
+        user, lang, row = found
+        self.rows[suggestion_id] = (
+            user,
+            lang,
+            replace(row, status=status, reason=reason, responded_at=at),  # type: ignore[arg-type]
+        )
+        return True
+
+    def answered(self, user_id: UUID, language: str, since: date) -> list[Suggestion]:
+        return sorted(
+            (s for s in self._of(user_id, language) if s.day >= since and s.status != "open"),
+            key=lambda s: (s.day, s.responded_at or datetime.min.replace(tzinfo=UTC)),
+            reverse=True,
+        )
+
+    def unsettled(self, user_id: UUID, language: str, before: date) -> list[Suggestion]:
+        return sorted(
+            (
+                s
+                for s in self._of(user_id, language)
+                if s.day < before
+                and s.outcome is None
+                and s.status != "dismissed"
+                and (s.rank < SHOWN or s.status != "open")
+            ),
+            key=lambda s: (s.day, s.rank),
+        )
+
+    def settle(
+        self, user_id: UUID, suggestion_id: UUID, outcome: str, acted: bool, at: datetime
+    ) -> None:
+        user, lang, row = self.rows[suggestion_id]
+        self.rows[suggestion_id] = (
+            user,
+            lang,
+            replace(row, outcome=outcome, acted=acted),  # type: ignore[arg-type]
+        )
+
+    def history(self, user_id: UUID, language: str, before: date, limit: int) -> list[Suggestion]:
+        shown = [
+            s
+            for s in self._of(user_id, language)
+            if s.day < before and (s.rank < SHOWN or s.status != "open")
+        ]
+        return sorted(shown, key=lambda s: (-s.day.toordinal(), s.rank))[:limit]
+
+    def request_wording(
+        self,
+        user_id: UUID,
+        language: str,
+        day: date,
+        *,
+        at: datetime,
+        stale_before: datetime,
+        max_requests: int,
+    ) -> bool:
+        key = (user_id, language, day)
+        brief = self.briefs.get(key)
+        count, requested = self.requests.get(key, (0, None))
+        if brief is None or count >= max_requests:
+            return False
+        if brief.wording == "template" or (
+            brief.wording == "pending" and requested is not None and requested < stale_before
+        ):
+            self.briefs[key] = replace(brief, wording="pending")
+            self.requests[key] = (count + 1, at)
+            return True
+        return False
+
+    def worded(
+        self,
+        user_id: UUID,
+        language: str,
+        day: date,
+        wording: str,
+        words: Mapping[UUID, tuple[int, str, str]],
+    ) -> None:
+        for sid, (rank, title, why) in words.items():
+            user, lang, row = self.rows[sid]
+            if row.status == "open":
+                self.rows[sid] = (
+                    user,
+                    lang,
+                    replace(row, rank=rank, title=title or None, why=why or None),
+                )
+        key = (user_id, language, day)
+        self.briefs[key] = replace(self.briefs[key], wording=wording)  # type: ignore[arg-type]
+
+
+class RecordingCoachStarter:
+    def __init__(self) -> None:
+        self.started: list[tuple[UUID, date]] = []
+
+    def start(self, user_id: UUID, day: date) -> None:
+        self.started.append((user_id, day))

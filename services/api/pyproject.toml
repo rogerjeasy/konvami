@@ -50,6 +50,7 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "S", "C4", "SIM", "RUF", "PT", "DT
 "src/konvami_api/persistence/repositories.py" = ["S608"]
 "src/konvami_api/persistence/pronunciation_repository.py" = ["S608"]
 "src/konvami_api/persistence/schedule_repository.py" = ["S608"]
+"src/konvami_api/persistence/coach_repository.py" = ["S608"]
 
 [tool.mypy]
 strict = true
