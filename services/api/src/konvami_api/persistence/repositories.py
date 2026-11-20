@@ -44,6 +44,7 @@ from konvami_api.domain.placement import PlacementResult
 from konvami_api.domain.plan import SessionPlan
 from konvami_api.domain.profile import ChangeRecord, FieldValue, Origin, Profile, Source
 from konvami_api.domain.profile_questions import QuestionState, QuestionStatus
+from konvami_api.domain.real_life import OwnGoal, OwnScenario, Scene
 from konvami_api.domain.reports import (
     Mistake,
     Report,
@@ -419,7 +420,9 @@ _CONVERSATION = f"""
                WHERE t.call_id = s.call_id AND t.speaker = 'learner'
            ) AS learner_turns,
            s.scenario, CAST(s.goals_reached AS text) AS goals_reached,
-           COALESCE(CAST(s.plan ->> 'review' AS boolean), false) AS review
+           COALESCE(CAST(s.plan ->> 'review' AS boolean), false) AS review,
+           s.plan -> 'debrief' ->> 'memory_id' AS debrief_of,
+           s.plan -> 'debrief' ->> 'text' AS debrief
     FROM voice_session s
 """
 
@@ -1530,6 +1533,8 @@ def _conversation(row: dict[str, Any]) -> Conversation:
         goals_reached=tuple(json.loads(row["goals_reached"])) if row["goals_reached"] else (),
         review=row["review"],
         guest_id=UUID(row["guest_persona_id"]) if row.get("guest_persona_id") else None,
+        debrief_of=UUID(hex=row["debrief_of"]) if row.get("debrief_of") else None,
+        debrief=row.get("debrief"),
     )
 
 
@@ -2555,6 +2560,151 @@ def _phrase(row: dict[str, Any]) -> Phrase:
         explained_in=row["explained_in"],
         created_at=from_epoch_micros(row["created_at"]),
     )
+
+
+# --- Own role-plays (5.31) ----------------------------------------------------------------------
+
+_OWN_SCENARIO_COLUMNS = f"""
+    CAST(id AS text) AS id, language, source, CAST(memory_id AS text) AS memory_id, title,
+    character, situation, CAST(goals AS text) AS goals, level,
+    {epoch_micros("created_at")} AS created_at, {epoch_micros("updated_at")} AS updated_at
+"""
+
+_ADD_OWN_SCENARIO = f"""
+    WITH {_ENSURE_USER}
+    INSERT INTO own_scenario
+        (id, user_id, language, source, memory_id, title, character, situation, goals, level,
+         created_at, updated_at)
+    SELECT CAST(:id AS uuid), CAST(:user_id AS uuid), :language, :source,
+           CAST(:memory_id AS uuid), :title, :character, :situation, CAST(:goals AS jsonb),
+           :level, CAST(:created_at AS timestamptz), CAST(:updated_at AS timestamptz)
+    WHERE (SELECT count(*) FROM own_scenario
+           WHERE user_id = CAST(:user_id AS uuid) AND language = :language) < :limit
+    ON CONFLICT (user_id, memory_id) DO NOTHING
+    RETURNING id
+"""
+
+_OWN_SCENARIO_BY_ID = f"""
+    SELECT {_OWN_SCENARIO_COLUMNS} FROM own_scenario
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+"""
+
+_OWN_SCENARIO_BY_MEMORY = f"""
+    SELECT {_OWN_SCENARIO_COLUMNS} FROM own_scenario
+    WHERE memory_id = CAST(:memory_id AS uuid) AND user_id = CAST(:user_id AS uuid)
+"""
+
+_LIST_OWN_SCENARIOS = f"""
+    SELECT {_OWN_SCENARIO_COLUMNS} FROM own_scenario
+    WHERE user_id = CAST(:user_id AS uuid) AND language = :language
+    ORDER BY updated_at DESC, id DESC
+"""
+
+_REPLACE_OWN_SCENARIO = """
+    UPDATE own_scenario
+    SET title = :title, character = :character, situation = :situation,
+        goals = CAST(:goals AS jsonb), level = :level,
+        updated_at = CAST(:updated_at AS timestamptz)
+    WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+    RETURNING id
+"""
+
+_REMOVE_OWN_SCENARIO = """
+    DELETE FROM own_scenario WHERE id = CAST(:id AS uuid) AND user_id = CAST(:user_id AS uuid)
+    RETURNING id
+"""
+
+
+def _own_goals(scenario: OwnScenario) -> str:
+    return json.dumps(
+        [{"id": goal.id, "text": goal.text} for goal in scenario.scene.goals], ensure_ascii=False
+    )
+
+
+def _own_scenario(row: dict[str, Any]) -> OwnScenario:
+    return OwnScenario(
+        id=UUID(row["id"]),
+        language=row["language"],
+        scene=Scene(
+            title=row["title"],
+            character=row["character"],
+            situation=row["situation"],
+            goals=tuple(OwnGoal(goal["id"], goal["text"]) for goal in json.loads(row["goals"])),
+            level=row["level"],
+        ),
+        source=row["source"],
+        memory_id=UUID(row["memory_id"]) if row["memory_id"] else None,
+        created_at=from_epoch_micros(row["created_at"]),
+        updated_at=from_epoch_micros(row["updated_at"]),
+    )
+
+
+class SqlOwnScenarioRepository:
+    def __init__(self, client: SqlClient) -> None:
+        self._client = client
+
+    def add(self, user_id: UUID, scenario: OwnScenario, limit: int) -> bool:
+        scene = scenario.scene
+        rows = self._client.execute(
+            _ADD_OWN_SCENARIO,
+            {
+                "id": str(scenario.id),
+                "user_id": str(user_id),
+                "language": scenario.language,
+                "source": scenario.source,
+                "memory_id": str(scenario.memory_id) if scenario.memory_id else None,
+                "title": scene.title,
+                "character": scene.character,
+                "situation": scene.situation,
+                "goals": _own_goals(scenario),
+                "level": scene.level,
+                "created_at": scenario.created_at.isoformat(),
+                "updated_at": scenario.updated_at.isoformat(),
+                "limit": limit,
+            },
+        )
+        return bool(rows)
+
+    def get(self, user_id: UUID, scenario_id: UUID) -> OwnScenario | None:
+        rows = self._client.execute(
+            _OWN_SCENARIO_BY_ID, {"id": str(scenario_id), "user_id": str(user_id)}
+        )
+        return _own_scenario(rows[0]) if rows else None
+
+    def listed(self, user_id: UUID, language: str) -> list[OwnScenario]:
+        rows = self._client.execute(
+            _LIST_OWN_SCENARIOS, {"user_id": str(user_id), "language": language}
+        )
+        return [_own_scenario(row) for row in rows]
+
+    def by_memory(self, user_id: UUID, memory_id: UUID) -> OwnScenario | None:
+        rows = self._client.execute(
+            _OWN_SCENARIO_BY_MEMORY, {"memory_id": str(memory_id), "user_id": str(user_id)}
+        )
+        return _own_scenario(rows[0]) if rows else None
+
+    def replace(self, user_id: UUID, scenario: OwnScenario) -> bool:
+        scene = scenario.scene
+        rows = self._client.execute(
+            _REPLACE_OWN_SCENARIO,
+            {
+                "id": str(scenario.id),
+                "user_id": str(user_id),
+                "title": scene.title,
+                "character": scene.character,
+                "situation": scene.situation,
+                "goals": _own_goals(scenario),
+                "level": scene.level,
+                "updated_at": scenario.updated_at.isoformat(),
+            },
+        )
+        return bool(rows)
+
+    def remove(self, user_id: UUID, scenario_id: UUID) -> bool:
+        rows = self._client.execute(
+            _REMOVE_OWN_SCENARIO, {"id": str(scenario_id), "user_id": str(user_id)}
+        )
+        return bool(rows)
 
 
 # --- Flags on AI turns and corrections --------------------------------------------------------

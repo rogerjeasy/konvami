@@ -21,6 +21,7 @@ import { partnerNames } from '@/lib/partner-names';
 import { practiceSentence } from '@/lib/practice-sentence';
 import { relativeDayLabel } from '@/lib/relative-day';
 import { callRoute, conversationRoute, explainRoute, ROUTES } from '@/lib/routes';
+import { useRolePlays } from '@/hooks/use-role-plays';
 import { useConversation, usePracticeServices, useReport } from '@/practice/services';
 import { useFlags } from '@/practice/use-flags';
 import { useTheme } from '@/theme';
@@ -97,15 +98,46 @@ function usePractised(id: string): [ReadonlySet<number>, (index: number) => void
 }
 
 /** The report itself, read from top to bottom: what happened, what to polish, what to keep. */
+/**
+ * A conversation about the learner's own life (spec §7 "rehearse, then debrief"): what it was
+ * for, and, after the event, that the hard moments below are worth keeping as cards.
+ */
+function RealLifeNote({ conversation }: { conversation: Conversation | null }) {
+  const { t } = useTranslation();
+  const rolePlays = useRolePlays();
+  if (!conversation) return null;
+  if (conversation.debrief) {
+    return (
+      <NoticeBox
+        icon="message"
+        tone="primary"
+        title={t('realLife.reportDebrief', { event: conversation.debrief })}
+      >
+        {t('realLife.reportDebriefBody')}
+      </NoticeBox>
+    );
+  }
+  const own = conversation.scenario ? rolePlays.find(conversation.scenario)?.own : null;
+  if (own?.source !== 'event') return null;
+  return (
+    <NoticeBox icon="calendar" tone="primary">
+      {t('realLife.reportRehearsal', { event: own.scene.title })}
+    </NoticeBox>
+  );
+}
+
 function Report({
   id,
   report,
   partner,
   turns,
+  conversation,
 }: {
   id: string;
   report: SessionReport;
   partner: string;
+  /** The conversation, once it is read: a debrief or a rehearsal says so first. */
+  conversation: Conversation | null;
   /** What was said in the conversation, once it is read; for saying a correction better. */
   turns: readonly TranscriptTurn[];
 }) {
@@ -135,6 +167,9 @@ function Report({
       )
     : '';
   const parts = [
+    conversation?.debrief || conversation?.scenario?.startsWith('own-') ? (
+      <RealLifeNote key="real-life" conversation={conversation} />
+    ) : null,
     report.levelStep ? <LevelStepNote key="level" step={report.levelStep} /> : null,
     <Text key="summary" tone="muted">
       {report.summary}
@@ -260,6 +295,7 @@ export function ReportScreen() {
             turns={reading.phase === 'ready' ? reading.transcript.turns : []}
             report={view.report}
             partner={partner?.name ?? t('conversations.formerPartner')}
+            conversation={conversation}
           />
         </>
       ) : (

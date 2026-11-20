@@ -90,6 +90,19 @@ class DrillMaterial:
 
 
 @dataclass(frozen=True)
+class DebriefMaterial:
+    """Something that happened in the learner's life, to talk over afterwards (a debrief, spec
+    §7 signature feature "rehearse, then debrief"): an event the partners wrote down."""
+
+    # The event memory's id as 32 hex digits.
+    memory_id: str
+    # The memory's words, in the learner's explanation language: untrusted text.
+    text: str
+    # Its day (ISO), when it has one.
+    day: str | None = None
+
+
+@dataclass(frozen=True)
 class SessionPlan:
     # The language practised (an ISO 639-1 code): what the words are in.
     language: str = ""
@@ -105,6 +118,8 @@ class SessionPlan:
     material: ImportMaterial | None = None
     # A hands-free drill (5.30): the words and corrections are drilled, not talked about.
     drill: DrillMaterial | None = None
+    # An event of the learner's life that has happened: the conversation talks it over.
+    debrief: DebriefMaterial | None = None
 
     def document(self) -> dict[str, Any]:
         """The plan as JSON, as it is stored with the call."""
@@ -164,6 +179,15 @@ class SessionPlan:
             ),
             "drill": (
                 {"polish": [list(pair) for pair in self.drill.polish]} if self.drill else None
+            ),
+            "debrief": (
+                {
+                    "memory_id": self.debrief.memory_id,
+                    "text": self.debrief.text,
+                    "day": self.debrief.day,
+                }
+                if self.debrief
+                else None
             ),
         }
 
@@ -228,6 +252,13 @@ class SessionPlan:
                     polish=tuple((said, better) for said, better in drill.get("polish", []))
                 )
                 if (drill := document.get("drill")) is not None
+                else None
+            ),
+            debrief=(
+                DebriefMaterial(
+                    memory_id=debrief["memory_id"], text=debrief["text"], day=debrief.get("day")
+                )
+                if (debrief := document.get("debrief"))
                 else None
             ),
         )

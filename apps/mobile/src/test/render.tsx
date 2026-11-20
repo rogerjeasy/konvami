@@ -21,6 +21,7 @@ import { createFakeApi, FAKE_NOW, type FakeApi } from '@/test/fake-api';
 import { createFakeVoiceEngine, type FakeVoiceEngine } from '@/test/fake-voice-engine';
 import { ThemeProvider } from '@/theme';
 import { VoiceProvider } from '@/voice/services';
+import type { LibraryTools } from '@/offline/library';
 import { RecorderProvider } from '@/voice/sentence-recorder';
 import { createFakeRecorder, type FakeRecorder } from '@/test/fake-recorder';
 import { createFakeReminderDevice, type FakeReminderDevice } from '@/test/fake-reminder-device';
@@ -66,6 +67,7 @@ export async function renderScreen(
     photos,
     documents,
     offline,
+    libraryTools,
 
     purchases,
     signedIn = false,
@@ -84,6 +86,8 @@ export async function renderScreen(
     documents?: ImportDocuments;
     /** The phone's offline store: given, the API reads and reviews offline as in the app. */
     offline?: OfflineCache;
+    /** The recording library's tools (pins, exports, a PDF to share). */
+    libraryTools?: LibraryTools;
 
     /** The store: unavailable unless a test brings one that can sell. */
     purchases?: FakePurchaseDevice;
@@ -114,7 +118,11 @@ export async function renderScreen(
     // As in the app: one audio player for samples and recordings.
     profileDevice.samples,
     importPhotos,
-    offlineApi ? { documents, offline: offlineApi } : { documents },
+    {
+      documents,
+      ...(offlineApi ? { offline: offlineApi } : {}),
+      ...(libraryTools ? { libraryTools } : {}),
+    },
   );
   const engine = voice ?? createFakeVoiceEngine();
   const sentences = recorder ?? createFakeRecorder();

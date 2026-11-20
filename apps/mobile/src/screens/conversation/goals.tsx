@@ -1,22 +1,27 @@
 import { useTranslation } from 'react-i18next';
-import type { Scenario } from '@konvami/api-client';
 import { ProgressChips } from '@/components/progress-chips';
+import type { RolePlayGoal } from '@/hooks/use-role-plays';
 
 /** A role-play's goals, each ticked off when the partner says the learner reached it. */
-export function Goals({ scenario, reached }: { scenario: Scenario; reached: readonly string[] }) {
+export function Goals({
+  goals,
+  reached,
+}: {
+  goals: readonly RolePlayGoal[];
+  reached: readonly string[];
+}) {
   const { t } = useTranslation();
   return (
     <ProgressChips
-      items={scenario.goals.map((goal) => {
-        const done = reached.includes(goal);
-        const label = t(`scenarios.${scenario.id}.goals.${goal}` as 'scenarios.bakery.goals.order');
+      items={goals.map((goal) => {
+        const done = reached.includes(goal.id);
         return {
-          key: goal,
-          label,
+          key: goal.id,
+          label: goal.label,
           done,
           accessibilityLabel: t(
             done ? 'conversation.goals.chipDone' : 'conversation.goals.chipOpen',
-            { goal: label },
+            { goal: goal.label },
           ),
         };
       })}

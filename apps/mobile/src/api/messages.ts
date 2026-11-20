@@ -19,7 +19,7 @@ const MODERATION_KEYS = {
   moderation_limit: 'errors.moderation.moderation_limit',
 } as const;
 
-function isModerationCode(code: string): code is keyof typeof MODERATION_KEYS {
+export function isModerationCode(code: string): code is keyof typeof MODERATION_KEYS {
   return code in MODERATION_KEYS;
 }
 

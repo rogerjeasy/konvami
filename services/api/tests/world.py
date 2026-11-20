@@ -47,6 +47,7 @@ from konvami_api.domain.profile_questions import ProfileQuestionService
 from konvami_api.domain.progress import ProgressService
 from konvami_api.domain.pronunciation import PronunciationService
 from konvami_api.domain.push import PushService
+from konvami_api.domain.real_life import RealLifeService
 from konvami_api.domain.recordings import RecordingService
 from konvami_api.domain.reminders import ReminderService
 from konvami_api.domain.reports import (
@@ -63,6 +64,7 @@ from konvami_api.domain.sounds import Sounds
 from konvami_api.domain.spoken import Listener
 from konvami_api.domain.spotter import LiveCheck, LiveSpotter
 from konvami_api.domain.stories import StoryService
+from konvami_api.domain.teacher_report import TeacherReportService
 from konvami_api.domain.text import TextModelError
 from konvami_api.domain.then_vs_now import ThenVsNowService
 from konvami_api.domain.tutor import TutorService
@@ -79,6 +81,7 @@ from konvami_api.domain.voices import VoiceSampleService
 from konvami_api.domain.week_review import WeekReviewService
 from tests.fakes import (
     FakeAccountDirectory,
+    FakeModerator,
     FakePageFetcher,
     FakeSpeechModel,
     FakeTranscriber,
@@ -102,6 +105,7 @@ from tests.fakes import (
     InMemoryLevelRepository,
     InMemoryMemoryRepository,
     InMemoryOnboardingRepository,
+    InMemoryOwnScenarioRepository,
     InMemoryPackRepository,
     InMemoryPenPalRepository,
     InMemoryPersonaRepository,
@@ -323,6 +327,14 @@ class World:
             schedule=self.card_schedule,
         )
         self.grammar = GrammarMapService(profiles=self.profiles, reports=self.reports)
+        self.teacher_report = TeacherReportService(
+            profiles=self.profiles,
+            conversations=self.conversations,
+            reports=self.reports,
+            grammar=self.grammar,
+            levels=self.levels,
+            clock=self.clock,
+        )
         self.feedback = FeedbackService(
             repository=InMemoryFeedbackRepository(),
             owners=frozenset({OWNER}),
@@ -380,6 +392,8 @@ class World:
             imports=lambda user_id, import_id, rehearse: self.course_imports.material(
                 user_id, import_id, rehearse
             ),
+            # Real life is built after the memories it reads the events from.
+            events=lambda user_id, memory_id: self.real_life.debrief(user_id, memory_id),
         )
         self.memory_store = InMemoryMemoryRepository(self.sessions)
         # Memory ids in the order they are handed out: ...0001, ...0002, and so on.
@@ -472,6 +486,30 @@ class World:
             clock=self.clock,
             new_id=lambda: next(import_ids),
         )
+        # Own role-play ids in the order they are handed out: ...0001, ...0002, and so on.
+        own_ids = (UUID(f"abababab-abab-4bab-8bab-{n:012d}") for n in range(1, 10_000))
+        self.own_scenario_store = InMemoryOwnScenarioRepository()
+        self.scene_transcriber = ScriptedTranscriber()
+        self.real_life_moderator = FakeModerator()
+        self.real_life = RealLifeService(
+            profiles=self.profiles,
+            accounts=self.accounts,
+            memories=self.memories,
+            conversations=self.conversations,
+            repository=self.own_scenario_store,
+            limit=self.tutor_store,
+            guard=text_guard(self.clock, self.real_life_moderator),
+            text_model=self.text,
+            model="gpt-6.1-sol",
+            clock=self.clock,
+            listener=Listener(
+                profiles=self.profiles,
+                accounts=self.accounts,
+                transcriber=self.scene_transcriber,
+                model="gpt-4o-transcribe",
+            ),
+            new_id=lambda: next(own_ids),
+        )
         self.practice = PracticeScript(
             profiles=self.profiles,
             onboarding=self.onboarding,
@@ -484,6 +522,7 @@ class World:
             tutor=self.tutor,
             sessions=self.sessions,
             planner=self.planner,
+            own_scenarios=lambda user_id, scenario: self.real_life.scenario(user_id, scenario),
         )
         self.questions = ProfileQuestionService(
             profiles=self.profiles,

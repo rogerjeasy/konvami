@@ -59,6 +59,7 @@ const FEATURE = {
   story: 'costs.feature.story',
   story_audio: 'costs.feature.story_audio',
   story_listen: 'costs.feature.story_listen',
+  role_play: 'costs.feature.role_play',
 } as const;
 
 // Providers go by their own names, which are not translated.

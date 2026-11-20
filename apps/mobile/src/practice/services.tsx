@@ -70,6 +70,7 @@ import { createDeckStore, type DeckState, type DeckStore } from './deck-store';
 import { createHomeStore, type HomeState, type HomeStore } from './home-store';
 import { createLibraryStore, type LibraryState, type LibraryStore } from './library-store';
 import { createReportFollower, type ReportFollower, type ReportView } from './report-follower';
+import { createRealLifeServices, type RealLifeServices } from './real-life-services';
 import { createResourceStore, type ResourceState, type ResourceStore } from './resource-store';
 import { createReviewSession, type ReviewSession, type ReviewState } from './review-session';
 import { createSimulationFollower, type SimulationFollower } from './simulation-follower';
@@ -95,7 +96,7 @@ export interface PronunciationLab {
  * backend: what Today shows, the list of past conversations, one conversation by its id and
  * the report on it.
  */
-export interface PracticeServices {
+export interface PracticeServices extends RealLifeServices {
   libraryTools?: LibraryTools;
   offline?: { pendingReviews(): Promise<number>; syncReviews(): Promise<void> };
   home: HomeStore;
@@ -416,6 +417,15 @@ export function createPracticeServices(
     | 'getSimulation'
     | 'rescoreSimulation'
     | 'getModelAnswerAudio'
+    | 'getOwnScenarios'
+    | 'draftOwnScenario'
+    | 'hearScenarioDescription'
+    | 'saveOwnScenario'
+    | 'changeOwnScenario'
+    | 'removeOwnScenario'
+    | 'getRealLife'
+    | 'rehearseEvent'
+    | 'getTeacherReport'
   >,
   clock: DeviceClock,
   clips: ClipPlayer,
@@ -641,6 +651,7 @@ export function createPracticeServices(
       ),
     clock,
     clips,
+    ...createRealLifeServices(api, clock.now),
   };
 }
 
@@ -672,6 +683,8 @@ export function PracticeProvider({
     services.exams.reset();
     services.tutor.reset();
     services.phrasebook.reset();
+    services.ownScenarios.reset();
+    services.realLife.reset();
     services.pronunciation.reset();
 
     services.imports.reset();

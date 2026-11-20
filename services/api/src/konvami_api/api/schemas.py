@@ -147,6 +147,19 @@ from konvami_api.domain.pronunciation import (
 )
 from konvami_api.domain.pronunciation import Attempt, SoundDetail, SoundSummary
 from konvami_api.domain.push import Platform
+from konvami_api.domain.real_life import (
+    CHARACTER_MAX,
+    GOAL_MAX,
+    GOALS,
+    TITLE_MAX,
+    LifeEvent,
+    OwnGoal,
+    OwnScenario,
+    RealLife,
+    Scene,
+)
+from konvami_api.domain.real_life import DESCRIPTION_MAX as SCENE_DESCRIPTION_MAX
+from konvami_api.domain.real_life import SITUATION_MAX as SCENE_SITUATION_MAX
 from konvami_api.domain.reminders import ReminderNotes
 from konvami_api.domain.reports import Report, ReportState, Severity
 from konvami_api.domain.reports import Status as ReportStatus
@@ -154,6 +167,7 @@ from konvami_api.domain.retries import Retried
 from konvami_api.domain.stories import MAX_PER_DAY as MAX_STORIES_PER_DAY
 from konvami_api.domain.stories import EpisodeView, Series, StoryAnswer
 from konvami_api.domain.stories import Status as StoryStatus
+from konvami_api.domain.teacher_report import TeacherReport
 from konvami_api.domain.then_vs_now import ThenVsNow
 from konvami_api.domain.tutor import MAX_QUESTION as TUTOR_QUESTION_MAX
 from konvami_api.domain.tutor import Source as TutorSource
@@ -954,6 +968,8 @@ class ConversationOut(ApiModel):
     # The role-play it rehearsed, and the goals reached in it; null and [] for free talk.
     scenario: str | None
     goals_reached: list[str]
+    # A debrief (5.31): the event of the learner's life it talked over; null for any other.
+    debrief: str | None = None
 
     @classmethod
     def of(cls, conversation: Conversation) -> "ConversationOut":
@@ -968,6 +984,7 @@ class ConversationOut(ApiModel):
             learner_turns=conversation.learner_turns,
             scenario=conversation.scenario,
             goals_reached=list(conversation.goals_reached),
+            debrief=conversation.debrief,
         )
 
 
@@ -3486,3 +3503,221 @@ class CoachFeedbackIn(ApiModel):
     response: CoachResponse
     # Why the learner turned it down; only with `dismissed`.
     reason: CoachReason | None = None
+
+
+# --- Real life: own role-plays, rehearsals and debriefs (5.13, 5.31) ---------------------------
+
+
+class OwnGoalIn(ApiModel):
+    # "g1".."g3" for a scene the learner described; a standard goal's id for a rehearsal.
+    id: str = Field(min_length=1, max_length=16)
+    # Empty for a standard goal the app words itself.
+    text: str = Field(max_length=GOAL_MAX)
+
+
+class SceneIn(ApiModel):
+    """A role-play as the learner reads and edits it, in their explanation language."""
+
+    title: str = Field(max_length=TITLE_MAX)
+    # Empty only for a rehearsal's standard part, which the app words itself.
+    character: str = Field(max_length=CHARACTER_MAX)
+    situation: str = Field(max_length=SCENE_SITUATION_MAX)
+    goals: list[OwnGoalIn] = Field(min_length=GOALS, max_length=GOALS)
+    level: StartingLevel
+
+    def scene(self) -> Scene:
+        return Scene(
+            title=self.title,
+            character=self.character,
+            situation=self.situation,
+            goals=tuple(OwnGoal(goal.id, goal.text) for goal in self.goals),
+            level=self.level,
+        )
+
+
+class SceneOut(ApiModel):
+    title: str
+    character: str
+    situation: str
+    goals: list[OwnGoalIn]
+    level: str
+
+    @classmethod
+    def of(cls, scene: Scene) -> "SceneOut":
+        return cls(
+            title=scene.title,
+            character=scene.character,
+            situation=scene.situation,
+            goals=[OwnGoalIn(id=goal.id, text=goal.text) for goal in scene.goals],
+            level=scene.level,
+        )
+
+
+class SceneDraftIn(ApiModel):
+    # What the learner described, in their own words.
+    description: str = Field(min_length=1, max_length=SCENE_DESCRIPTION_MAX)
+
+
+class HeardOut(ApiModel):
+    # What a description said out loud says, to edit before a scene is written from it.
+    text: str
+
+
+class OwnScenarioOut(ApiModel):
+    id: UUID
+    # How a call names it (`scenario` of a voice call).
+    scenario: str
+    scene: SceneOut
+    # "custom": the learner described it; "event": it rehearses an event of their life.
+    source: Literal["custom", "event"]
+    memory_id: UUID | None
+    updated_at: dt.datetime
+
+    @classmethod
+    def of(cls, found: OwnScenario) -> "OwnScenarioOut":
+        return cls(
+            id=found.id,
+            scenario=found.scenario_id,
+            scene=SceneOut.of(found.scene),
+            source=found.source,
+            memory_id=found.memory_id,
+            updated_at=found.updated_at,
+        )
+
+
+class OwnScenariosOut(ApiModel):
+    scenarios: list[OwnScenarioOut]
+
+
+class LifeEventOut(ApiModel):
+    # The event memory: what the partners wrote down, in the learner's explanation language.
+    memory_id: UUID
+    text: str
+    day: dt.date
+    # The partner who heard about it, while the learner still has them.
+    partner_id: UUID | None
+    # Its rehearsal role-play, once there is one.
+    rehearsal: OwnScenarioOut | None
+    # Rehearsed already (an event to come), or talked over (one that happened).
+    done: bool
+
+    @classmethod
+    def of(cls, event: LifeEvent) -> "LifeEventOut":
+        memory = event.memory
+        # Only events with a day are listed.
+        day = memory.day or memory.created_at.date()
+        return cls(
+            memory_id=memory.id,
+            text=memory.text,
+            day=day,
+            partner_id=event.partner_id,
+            rehearsal=OwnScenarioOut.of(event.rehearsal) if event.rehearsal else None,
+            done=event.done,
+        )
+
+
+class RealLifeOut(ApiModel):
+    # Events still to come, the soonest first: to rehearse.
+    coming_up: list[LifeEventOut]
+    # Events that happened lately, the latest first: to talk over (`practise="debrief:<id>"`).
+    to_debrief: list[LifeEventOut]
+
+    @classmethod
+    def of(cls, life: RealLife) -> "RealLifeOut":
+        return cls(
+            coming_up=[LifeEventOut.of(event) for event in life.coming_up],
+            to_debrief=[LifeEventOut.of(event) for event in life.to_debrief],
+        )
+
+
+# --- A report for the learner's teacher (6.23) --------------------------------------------------
+
+
+class TeacherMistakeOut(ApiModel):
+    original: str
+    corrected: str
+    explanation: str
+
+
+class TeacherMistakeKindOut(ApiModel):
+    # One of the language pack's error categories, or "other"; the app names it.
+    category: str
+    count: int
+    examples: list[TeacherMistakeOut]
+
+
+class TeacherConversationOut(ApiModel):
+    id: str
+    started_at: dt.datetime
+    seconds: int
+    partner_name: str | None
+    scenario: str | None
+
+
+class TeacherFitOut(ApiModel):
+    at: dt.datetime
+    grammar: str
+    vocabulary: str
+    speaking: str
+
+
+class TeacherReportOut(ApiModel):
+    language: str
+    level: str
+    since: dt.datetime
+    until: dt.datetime
+    seconds: int
+    conversations: list[TeacherConversationOut]
+    mistakes: list[TeacherMistakeKindOut]
+    topics: list[GrammarTopicOut]
+    levels: list[LevelPointOut]
+    fits: list[TeacherFitOut]
+
+    @classmethod
+    def of(cls, report: TeacherReport) -> "TeacherReportOut":
+        return cls(
+            language=report.language,
+            level=report.level,
+            since=report.since,
+            until=report.until,
+            seconds=report.seconds,
+            conversations=[
+                TeacherConversationOut(
+                    id=c.id,
+                    started_at=c.started_at,
+                    seconds=c.seconds,
+                    partner_name=c.partner.name if c.partner else None,
+                    scenario=c.scenario,
+                )
+                for c in report.conversations
+            ],
+            mistakes=[
+                TeacherMistakeKindOut(
+                    category=kind.category,
+                    count=kind.count,
+                    examples=[
+                        TeacherMistakeOut(
+                            original=m.original, corrected=m.corrected, explanation=m.explanation
+                        )
+                        for m in kind.examples
+                    ],
+                )
+                for kind in report.mistakes
+            ],
+            topics=[GrammarTopicOut.of(state) for state in report.topics],
+            levels=[
+                LevelPointOut(
+                    at=point.at, level=cast(StartingLevel, point.level), source=point.source
+                )
+                for point in report.levels
+            ],
+            fits=[
+                TeacherFitOut(
+                    at=dated.at,
+                    grammar=dated.fit.grammar,
+                    vocabulary=dated.fit.vocabulary,
+                    speaking=dated.fit.speaking,
+                )
+                for dated in report.fits
+            ],
+        )

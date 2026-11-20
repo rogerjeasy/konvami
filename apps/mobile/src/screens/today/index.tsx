@@ -29,6 +29,7 @@ import { CoachCard } from './coach-card';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
 import { isKnownQuestion, ProfileQuestion } from './profile-question';
+import { RealLifeCard, useRealLifeOffer } from './real-life-card';
 import { CallsOffer, ReminderOffer } from './reminder-offer';
 import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
@@ -116,6 +117,8 @@ function Day({ home, now }: { home: Home; now: Date }) {
   const writer = waiting
     ? home.partners.find(({ persona }) => persona.id === waiting.personaId)?.persona
     : undefined;
+  // An event of the learner's life to rehearse, or to talk over (spec §7).
+  const lifeOffer = useRealLifeOffer(home.partners, now);
   const asking =
     question.phase === 'ready' &&
     question.data.question !== null &&
@@ -156,6 +159,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
         />
       </ListGroup>
     ) : null,
+    lifeOffer ? <RealLifeCard key="real-life" offer={lifeOffer} now={now} /> : null,
     <Bento key="bento" home={home} />,
     // Once there was a first conversation, reminders are worth offering.
     partner && home.activity.conversations > 0 ? (

@@ -16,6 +16,9 @@ A conversation about something the learner imported (spec §6.17, `practise="imp
 `"letter:<id>"` to rehearse a letter's reply) is the material alone, with the learner's own
 mistakes still showing.
 
+A debrief (spec §7 "rehearse, then debrief", `practise="debrief:<memory>"`) talks over an event
+of the learner's life that has happened, with the learner's own mistakes still showing.
+
 A review conversation (spec §6.7, `practise=PRACTISE_WORDS`) is built around the words instead:
 more of them, the due ones only (or the next ones when none is due), and no structure to
 compete with them.
@@ -37,6 +40,7 @@ from konvami_api.domain.catalog import LanguagePack
 from konvami_api.domain.grammar_map import GrammarMapError
 from konvami_api.domain.grammar_topics import GrammarTopic
 from konvami_api.domain.plan import (
+    DebriefMaterial,
     DrillMaterial,
     FocusPoint,
     ImportMaterial,
@@ -66,6 +70,8 @@ LESSON_PREFIX = "lesson:"
 # letter, to rehearse its reply or phone call (spec §6.17).
 IMPORT_PREFIX = "import:"
 LETTER_PREFIX = "letter:"
+# What precedes an event memory's id (32 hex digits) when a learner talks over how it went.
+DEBRIEF_PREFIX = "debrief:"
 # The conversations whose mistakes count; older ones are what the learner may since have learnt.
 RECENT_REPORTS = 5
 RECENT_TOPICS = 3
@@ -144,6 +150,10 @@ def polish_items(reports: Sequence[Report]) -> tuple[tuple[str, str], ...]:
 # for rehearsing a letter's reply; None when they have no such import.
 type ImportReader = Callable[[UUID, UUID, bool], ImportMaterial | None]
 
+# An event of the learner's life that has happened, to talk over; None when they have no such
+# event (or memory is off).
+type EventReader = Callable[[UUID, UUID], DebriefMaterial | None]
+
 # The topic of the learner's week a call on a given day puts first (the Learning Director's
 # `topic_for_call`); None when the week has none.
 type WeekTopic = Callable[[UUID, dt.date], str | None]
@@ -158,12 +168,14 @@ class SessionPlanner:
         cards: CardService,
         week_topic: WeekTopic | None = None,
         imports: ImportReader | None = None,
+        events: EventReader | None = None,
     ) -> None:
         self._profiles = profiles
         self._reports = reports
         self._cards = cards
         self._week_topic = week_topic
         self._imports = imports
+        self._events = events
 
     def plan(
         self, user_id: UUID, practise: str | None = None, today: dt.date | None = None
@@ -179,6 +191,8 @@ class SessionPlanner:
             return self._import_plan(user_id, language, pack, practise)
         if practise == PRACTISE_DRILL:
             return self._drill_plan(user_id, language)
+        if practise is not None and practise.startswith(DEBRIEF_PREFIX):
+            return self._debrief_plan(user_id, language, pack, practise)
         review = practise == PRACTISE_WORDS
         lesson = practise is not None and practise.startswith(LESSON_PREFIX)
         if lesson and practise is not None:
@@ -242,4 +256,24 @@ class SessionPlanner:
             language=language,
             focus=choose_focus(reports, pack, None)[:1] if pack else (),
             material=material,
+        )
+
+    def _debrief_plan(
+        self, user_id: UUID, language: str, pack: LanguagePack | None, practise: str
+    ) -> SessionPlan:
+        """A call that talks over an event of the learner's life: the event alone, with one of
+        the learner's own mistakes still showing. Raises `GrammarMapError` (`not_found`) for an
+        event they do not have."""
+        try:
+            memory_id = UUID(hex=practise[len(DEBRIEF_PREFIX) :])
+        except ValueError:
+            raise GrammarMapError("not_found") from None
+        event = self._events(user_id, memory_id) if self._events else None
+        if event is None:
+            raise GrammarMapError("not_found")
+        reports = self._reports.recent(user_id, RECENT_REPORTS)
+        return SessionPlan(
+            language=language,
+            focus=choose_focus(reports, pack, None)[:1] if pack else (),
+            debrief=event,
         )

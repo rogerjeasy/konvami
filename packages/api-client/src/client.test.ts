@@ -640,6 +640,50 @@ describe('api client', () => {
     expect(calls[1]?.body).toEqual({ phrase: 'Guten Tag.', meaning: 'Hello.' });
   });
 
+  it('drafts, keeps, changes and removes own role-plays, and reads real life', async () => {
+    const scene = {
+      title: 'A coat',
+      character: 'A shop assistant',
+      situation: 'You return a coat.',
+      goals: [
+        { id: 'g1', text: 'Explain' },
+        { id: 'g2', text: 'Ask' },
+        { id: 'g3', text: 'Close' },
+      ],
+      level: 'A2' as const,
+    };
+    const kept = { id: 's/1', scenario: 'own-1', scene, source: 'custom' };
+    const { fetch, calls } = fakeFetch(
+      json(200, scene),
+      json(200, kept),
+      json(200, kept),
+      json(200, { scenarios: [] }),
+      json(200, { comingUp: [], toDebrief: [] }),
+      json(200, kept),
+      json(200, { conversations: [] }),
+    );
+    const { api } = client(fetch);
+
+    expect(await api.draftOwnScenario('a broken coat')).toEqual(scene);
+    expect(await api.saveOwnScenario(scene)).toEqual(kept);
+    await api.changeOwnScenario('s/1', scene);
+    await api.removeOwnScenario('s/1');
+    await api.getRealLife('2026-10-09');
+    await api.rehearseEvent('m/1');
+    await api.getTeacherReport(30);
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'POST https://api.example.test/v1/own-scenarios/drafts',
+      'POST https://api.example.test/v1/own-scenarios',
+      'PUT https://api.example.test/v1/own-scenarios/s%2F1',
+      'DELETE https://api.example.test/v1/own-scenarios/s%2F1',
+      'GET https://api.example.test/v1/real-life?localDate=2026-10-09',
+      'POST https://api.example.test/v1/real-life/events/m%2F1/rehearsal',
+      'GET https://api.example.test/v1/teacher-report?days=30',
+    ]);
+    expect(calls[0]?.body).toEqual({ description: 'a broken coat' });
+  });
+
   it('reads the pronunciation lab, hears a drill and remembers a pick', async () => {
     const { fetch, calls } = fakeFetch(
       json(200, { sounds: [{ id: 'ue' }] }),

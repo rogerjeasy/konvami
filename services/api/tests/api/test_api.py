@@ -630,6 +630,7 @@ def test_home_adds_up_practice_and_lists_the_latest_conversations(
             "learnerTurns": 1,
             "scenario": None,
             "goalsReached": [],
+            "debrief": None,
         },
         {
             "id": "rtc_a",
@@ -641,6 +642,7 @@ def test_home_adds_up_practice_and_lists_the_latest_conversations(
             "learnerTurns": 1,
             "scenario": None,
             "goalsReached": [],
+            "debrief": None,
         },
     ]
 
@@ -744,6 +746,7 @@ def test_a_transcript_is_read_with_its_conversation(
             "learnerTurns": 1,
             "scenario": None,
             "goalsReached": [],
+            "debrief": None,
         },
         "turns": [
             {

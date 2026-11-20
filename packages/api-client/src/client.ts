@@ -213,7 +213,15 @@ export type Phrase = Schemas['PhraseOut'];
 export type PhraseSuggestion = Schemas['PhraseSuggestionOut'];
 /** A phrase to keep; `situation` is what it was suggested for, if anything. */
 export type PhraseDraft = { phrase: string; meaning: string; situation?: string | null };
-/** What the learner brought (course companion): one import worked out, and its list entry. */
+/** The learner's own role-plays (5.31) and the events of their life to rehearse and talk over. */
+export type OwnScenario = Schemas['OwnScenarioOut'];
+export type Scene = Schemas['SceneOut'];
+export type SceneDraft = Schemas['SceneIn'];
+export type RealLife = Schemas['RealLifeOut'];
+export type LifeEvent = Schemas['LifeEventOut'];
+/** What the conversations of a period showed, for the learner's own teacher (6.23). */
+export type TeacherReport = Schemas['TeacherReportOut'];
+/** What a learner brought (course companion): one import worked out, and its list entry. */
 export type CourseImport = Schemas['ImportOut'];
 export type CourseImportSummary = Schemas['ImportSummaryOut'];
 export type CourseImports = Schemas['ImportsOut'];
@@ -644,6 +652,26 @@ export interface ApiClient {
   removePhrase(id: string): Promise<{ phrases: Phrase[] }>;
   /** Two recorded conversations of one kind, weeks apart, to hear side by side (spec §7). */
   getThenVsNow(): Promise<ThenVsNow>;
+  /** The learner's own role-plays in the language they learn now, the latest first. */
+  getOwnScenarios(): Promise<{ scenarios: OwnScenario[] }>;
+  /**
+   * A role-play written from a situation the learner described; nothing is kept. Fails with
+   * `invalid_value`, `scenario_limit`, `consent_required`, `unavailable` or a moderation code.
+   */
+  draftOwnScenario(description: string): Promise<Scene>;
+  /** What a situation described out loud says. Fails with `invalid_value` or `unavailable`. */
+  hearScenarioDescription(recording: SpokenRecording): Promise<{ text: string }>;
+  /** Keeps a role-play. Fails with `invalid_value`, `too_many` or a moderation code. */
+  saveOwnScenario(scene: SceneDraft): Promise<OwnScenario>;
+  changeOwnScenario(id: string, scene: SceneDraft): Promise<OwnScenario>;
+  /** Removes a role-play and answers with the rest. Fails with `not_found`. */
+  removeOwnScenario(id: string): Promise<{ scenarios: OwnScenario[] }>;
+  /** Events to rehearse and to talk over; `localDate` is today on the device. */
+  getRealLife(localDate?: string): Promise<RealLife>;
+  /** The role-play that rehearses an event, written the first time. Fails with `not_found`. */
+  rehearseEvent(memoryId: string): Promise<OwnScenario>;
+  /** What the last `days` days (7, 30 or 90) showed, for the learner's teacher. */
+  getTeacherReport(days: number): Promise<TeacherReport>;
 
   /** What the learner brought for the language they are learning, newest first. */
   getImports(): Promise<CourseImports>;
@@ -965,6 +993,21 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     makePhraseCard: (id) => request('POST', `/v1/phrasebook/${encodeURIComponent(id)}/card`),
     removePhrase: (id) => request('DELETE', `/v1/phrasebook/${encodeURIComponent(id)}`),
     getThenVsNow: () => request('GET', '/v1/then-vs-now'),
+    getOwnScenarios: () => request('GET', '/v1/own-scenarios'),
+    draftOwnScenario: (description) => request('POST', '/v1/own-scenarios/drafts', { description }),
+    hearScenarioDescription: (recording) => request('POST', '/v1/own-scenarios/heard', recording),
+    saveOwnScenario: (scene) => request('POST', '/v1/own-scenarios', scene),
+    changeOwnScenario: (id, scene) =>
+      request('PUT', `/v1/own-scenarios/${encodeURIComponent(id)}`, scene),
+    removeOwnScenario: (id) => request('DELETE', `/v1/own-scenarios/${encodeURIComponent(id)}`),
+    getRealLife: (localDate) =>
+      request(
+        'GET',
+        localDate ? `/v1/real-life?localDate=${encodeURIComponent(localDate)}` : '/v1/real-life',
+      ),
+    rehearseEvent: (memoryId) =>
+      request('POST', `/v1/real-life/events/${encodeURIComponent(memoryId)}/rehearsal`),
+    getTeacherReport: (days) => request('GET', `/v1/teacher-report?days=${days}`),
 
     getImports: () => request('GET', '/v1/imports'),
     startImportUpload: (kind = 'photo') => request('POST', `/v1/imports/upload?kind=${kind}`),

@@ -84,6 +84,10 @@ class Feature(StrEnum):
     STORY_AUDIO = "story_audio"
     STORY_LISTEN = "story_listen"
 
+    # A role-play the learner described, or an event to rehearse, written as a scene (5.31), and
+    # a description said out loud written down.
+    ROLE_PLAY = "role_play"
+
 
 @dataclass(frozen=True)
 class Charge:
