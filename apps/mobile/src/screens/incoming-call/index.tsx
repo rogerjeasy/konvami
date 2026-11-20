@@ -121,7 +121,9 @@ export function IncomingCallScreen() {
                 failed={home.phase === 'failed'}
                 loadingLabel={t('call.status.connecting')}
                 slowLabel={t('common.wakingUp')}
-                failedLabel={t(home.error === 'network' ? 'errors.network' : 'onboarding.partners.loadFailed')}
+                failedLabel={t(
+                  home.error === 'network' ? 'errors.network' : 'onboarding.partners.loadFailed',
+                )}
                 retryLabel={t('common.retry')}
                 onRetry={() => void store.reload()}
               />
@@ -188,12 +190,13 @@ export function IncomingCallScreen() {
               </Reveal>
             ) : null}
             {later ? (
-              <View accessibilityLiveRegion="polite">
-                <NoticeBox icon={later === 'failed' ? 'alert' : 'clock'}>
+              // Drawn like the question above it: the block's veil, its own text colour.
+              <View accessibilityLiveRegion="polite" className="rounded-field bg-surface px-4 py-3">
+                <Text variant="bodySmall">
                   {later === 'failed'
                     ? t('incomingCall.laterFailed')
                     : t('incomingCall.laterDone', { name, time: time(later.at) })}
-                </NoticeBox>
+                </Text>
               </View>
             ) : null}
           </>
@@ -206,7 +209,8 @@ export function IncomingCallScreen() {
               <Reveal delay={staggerDelay(ORDER.accept)}>
                 <Button
                   label={t('incomingCall.accept')}
-                  leading={<Icon name="mic" color={color.onPrimary} size={size.iconMd} />}
+                  // On the forest block the main action is lime: its ink is lime's own.
+                  leading={<Icon name="mic" color={color.onLime} size={size.iconMd} />}
                   onPress={accept}
                 />
               </Reveal>
