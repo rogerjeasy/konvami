@@ -21,9 +21,10 @@ import { commitFeedback } from '@/lib/haptics';
 import { staggerDelay } from '@/lib/motion';
 import { sessionRoute } from '@/lib/plan';
 import { callRoute, conversationRoute, penPalRoute, ROUTES } from '@/lib/routes';
-import { useHome, usePenPal, usePracticeServices } from '@/practice/services';
+import { useCoach, useHome, usePenPal, usePracticeServices } from '@/practice/services';
 import { useAccount, useProfileQuestion, useProfileServices } from '@/profile/services';
 import { useReminderSchedule } from '@/reminders/use-reminders';
+import { CoachCard } from './coach-card';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
 import { isKnownQuestion, ProfileQuestion } from './profile-question';
@@ -94,8 +95,11 @@ function Bento({ home }: { home: Home }) {
 function Day({ home, now }: { home: Home; now: Date }) {
   const { t } = useTranslation();
   const { split } = useScreenLayout();
+  // The Coach's day: its first suggestion on Today, and in the next reminder.
+  const coachState = useCoach();
+  const coach = coachState.phase === 'ready' ? coachState.data : null;
   // Today is where the plan is read: the device's reminders follow it from here.
-  useReminderSchedule(home, now);
+  useReminderSchedule(home, now, coach);
   const partner =
     home.partners.find(({ persona }) => persona.id === home.suggestedPartnerId) ?? home.partners[0];
   // A question about a setting, when the server finds one due (progressive profiling).
@@ -112,8 +116,12 @@ function Day({ home, now }: { home: Home; now: Date }) {
     question.data.question !== null &&
     isKnownQuestion(question.data.question.id);
 
+  // The Coach comes before the week's plan only when it leads (an exam close with no recent
+  // simulation); otherwise right after it. A Coach that cannot be read leaves Today as it was.
+  const coachCard = coach ? <CoachCard key="coach" coach={coach} /> : null;
   // The cards in reading order; each one enters a beat after the one before it.
   const talk = [
+    coach?.leads ? coachCard : null,
     partner ? (
       <TalkCard
         key="talk"
@@ -132,6 +140,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
         onOthers={() => router.navigate(ROUTES.talk)}
       />
     ) : null,
+    coach?.leads ? null : coachCard,
     waiting && writer ? (
       <ListGroup key="pen-pal">
         <ListRow
@@ -219,7 +228,7 @@ function Day({ home, now }: { home: Home; now: Date }) {
 export function TodayScreen() {
   const { t } = useTranslation();
   const { status } = useSession();
-  const { home: store, penPal, clock } = usePracticeServices();
+  const { home: store, penPal, coach, clock } = usePracticeServices();
   const { question } = useProfileServices();
   const home = useHome();
   const signedIn = status === 'signedIn';
@@ -236,7 +245,8 @@ export function TodayScreen() {
       void store.revisit();
       void question.revisit();
       void penPal.revisit();
-    }, [store, question, penPal]),
+      void coach.revisit();
+    }, [store, question, penPal, coach]),
   );
 
   if (!signedIn) return <Redirect href={ROUTES.welcome} />;

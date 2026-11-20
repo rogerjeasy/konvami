@@ -613,6 +613,48 @@ describe('5.1 Today', () => {
       });
     });
 
+    it('carry the Coach’s first suggestion on its day', async () => {
+      await setReminders(DEFAULT_REMINDERS);
+      const device = createFakeReminderDevice('granted');
+      const api = inApp();
+      api.coaches({
+        day: '2026-10-09',
+        suggestions: [
+          {
+            id: 's1',
+            day: '2026-10-09',
+            kind: 'review_due',
+            evidence: { count: 8 },
+            action: {
+              type: 'review_conversation',
+              partnerId: LENA.id,
+              topic: null,
+              sound: null,
+              exam: null,
+              callId: null,
+              importId: null,
+              count: null,
+            },
+            minutes: 10,
+            urgent: false,
+            status: 'open',
+            title: null,
+            why: null,
+            outcome: null,
+            acted: null,
+          },
+        ],
+      });
+      await open(api, new Date(2026, 9, 9, 9, 0), device);
+
+      await waitFor(() =>
+        expect(device.scheduled[0]).toMatchObject({
+          id: 'reminder-2026-10-09',
+          body: 'Your coach suggests: Talk through your 8 due words',
+        }),
+      );
+    });
+
     it('let a partner ask how an event went, and bring a word of the day', async () => {
       await setReminders({ ...DEFAULT_REMINDERS, word: true });
       const device = createFakeReminderDevice('granted');
