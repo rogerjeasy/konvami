@@ -89,6 +89,18 @@ EXPORTED: tuple[ExportedTable, ...] = (
     # to the phone, so the copy says which devices are registered but not their tokens.
     ExportedTable("push_device", f"WHERE t.user_id = {USER}", document="to_jsonb(t) - 'token'"),
     ExportedTable("card_review", f"JOIN card c ON c.id = t.card_id WHERE c.user_id = {USER}"),
+    # Two Halves (7.x): the learner's own profile, seats, moves, invite and reports, and the cases
+    # they sat in. Never the other learner's moves.
+    *(
+        ExportedTable(name, f"WHERE t.user_id = {USER}")
+        for name in ("halves_profile", "halves_seat", "halves_move", "halves_invite")
+    ),
+    ExportedTable(
+        "halves_case", f"JOIN halves_seat s ON s.case_id = t.id WHERE s.user_id = {USER}"
+    ),
+    ExportedTable("halves_block", f"WHERE t.blocker = {USER}"),
+    ExportedTable("halves_duo", f"WHERE t.user_a = {USER} OR t.user_b = {USER}"),
+    ExportedTable("halves_report", f"WHERE t.reporter = {USER}"),
     *(
         ExportedTable(name, OF_CALL)
         for name in ("level_step", "memory_extraction", "session_report", "voice_turn")
