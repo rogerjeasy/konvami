@@ -378,6 +378,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               {
                 "text": " is optional and off until you turn it on in Profile › Read-aloud voice. If you do, it receives only the text it has to read aloud (a card, a weekly check-in), never your voice."
               }
+            ],
+            [
+              {
+                "text": "Microsoft (Azure AI Speech)",
+                "bold": true
+              },
+              {
+                "text": " is optional and receives nothing until you ask for a pronunciation score: for one pronunciation drill, one exam simulation or one saved conversation turn. Then it receives that recording and the words you meant to say, to score your pronunciation, under Microsoft's data processing terms."
+              }
             ]
           ]
         },
@@ -1137,6 +1146,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " ist optional und bleibt aus, bis du es in Profil › Vorlese-Stimme einschaltest. Dann erhält es nur den Text, den es vorlesen soll (eine Karte, ein Wochen-Check-in), nie deine Stimme."
+              }
+            ],
+            [
+              {
+                "text": "Microsoft (Azure AI Speech)",
+                "bold": true
+              },
+              {
+                "text": " ist optional und erhält nichts, bis du eine Aussprachebewertung anforderst: für eine Ausspracheübung, eine Prüfungssimulation oder einen gespeicherten Gesprächsbeitrag. Dann erhält es diese Aufnahme und die Wörter, die du sagen wolltest, um deine Aussprache zu bewerten, nach den Datenverarbeitungsbedingungen von Microsoft."
               }
             ]
           ]
@@ -1913,6 +1931,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               {
                 "text": " est facultatif et reste désactivé jusqu’à ce que tu l’actives dans Profil › Voix de lecture. Dans ce cas, il ne reçoit que le texte à lire à voix haute (une carte, un bilan hebdomadaire), jamais ta voix."
               }
+            ],
+            [
+              {
+                "text": "Microsoft (Azure AI Speech)",
+                "bold": true
+              },
+              {
+                "text": " est facultatif et ne reçoit rien tant que tu ne demandes pas d’évaluation de ta prononciation : pour un exercice de prononciation, une simulation d’examen ou une réplique enregistrée d’une conversation. Il reçoit alors cet enregistrement et les mots que tu voulais dire, pour évaluer ta prononciation, selon les conditions de traitement des données de Microsoft."
+              }
             ]
           ]
         },
@@ -2687,6 +2714,15 @@ export const LEGAL_DOCUMENTS: LegalDocuments = {
               },
               {
                 "text": " è facoltativo e resta disattivato finché non lo attivi in Profilo › Voce di lettura. In tal caso riceve solo il testo da leggere ad alta voce (una scheda, un check-in settimanale), mai la tua voce."
+              }
+            ],
+            [
+              {
+                "text": "Microsoft (Azure AI Speech)",
+                "bold": true
+              },
+              {
+                "text": " è facoltativo e non riceve nulla finché non chiedi una valutazione della pronuncia: per un esercizio di pronuncia, una simulazione d’esame o una battuta salvata di una conversazione. Allora riceve quella registrazione e le parole che volevi dire, per valutare la tua pronuncia, secondo le condizioni di trattamento dei dati di Microsoft."
               }
             ]
           ]

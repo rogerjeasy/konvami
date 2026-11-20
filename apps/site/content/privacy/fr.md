@@ -65,6 +65,7 @@ Nous faisons appel à des prestataires qui traitent les données uniquement sur 
 - **Expo** (le service de notifications push d’Expo) reçoit le jeton de notification de ton appareil et le texte d’une notification quand Konvami t’en envoie une : un bilan écrit, une simulation d’examen notée ou un rappel après une semaine calme.
 - **RevenueCat** reçoit ton numéro de compte et tes achats, pour dire à Konvami quelle offre tu as. L’App Store et Google Play traitent eux-mêmes le paiement.
 - **ElevenLabs** est facultatif et reste désactivé jusqu’à ce que tu l’actives dans Profil › Voix de lecture. Dans ce cas, il ne reçoit que le texte à lire à voix haute (une carte, un bilan hebdomadaire), jamais ta voix.
+- **Microsoft (Azure AI Speech)** est facultatif et ne reçoit rien tant que tu ne demandes pas d’évaluation de ta prononciation : pour un exercice de prononciation, une simulation d’examen ou une réplique enregistrée d’une conversation. Il reçoit alors cet enregistrement et les mots que tu voulais dire, pour évaluer ta prononciation, selon les conditions de traitement des données de Microsoft.
 
 OpenAI traite les données aux États-Unis. Le transfert est protégé par les clauses contractuelles types de la Commission européenne, avec les adaptations pour la Suisse, dans l’accord de traitement des données d’OpenAI.
 

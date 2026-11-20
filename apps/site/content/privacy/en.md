@@ -65,6 +65,7 @@ We use service providers who process data only on our instructions, under a data
 - **Expo** (Expo's push notification service) receives your device's notification token and the text of a notification when Konvami sends you one: a written report, a scored exam simulation or a reminder after a quiet week.
 - **RevenueCat** receives your account number and your purchases, to tell Konvami which plan you have. The App Store and Google Play process the payment themselves.
 - **ElevenLabs** is optional and off until you turn it on in Profile › Read-aloud voice. If you do, it receives only the text it has to read aloud (a card, a weekly check-in), never your voice.
+- **Microsoft (Azure AI Speech)** is optional and receives nothing until you ask for a pronunciation score: for one pronunciation drill, one exam simulation or one saved conversation turn. Then it receives that recording and the words you meant to say, to score your pronunciation, under Microsoft's data processing terms.
 
 OpenAI processes data in the United States. The transfer is protected by the European Commission's standard contractual clauses, with the amendments for Switzerland, in OpenAI's data processing agreement.
 

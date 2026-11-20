@@ -65,6 +65,7 @@ Wir nutzen Dienstleister, die Daten nur nach unseren Weisungen verarbeiten, auf 
 - **Expo** (der Push-Dienst von Expo) erhält das Benachrichtigungs-Token deines Geräts und den Text einer Benachrichtigung, wenn Konvami dir eine sendet: ein geschriebener Bericht, eine bewertete Prüfungssimulation oder eine Erinnerung nach einer ruhigen Woche.
 - **RevenueCat** erhält deine Kontonummer und deine Käufe, um Konvami mitzuteilen, welchen Plan du hast. Die Zahlung wickeln der App Store und Google Play selbst ab.
 - **ElevenLabs** ist optional und bleibt aus, bis du es in Profil › Vorlese-Stimme einschaltest. Dann erhält es nur den Text, den es vorlesen soll (eine Karte, ein Wochen-Check-in), nie deine Stimme.
+- **Microsoft (Azure AI Speech)** ist optional und erhält nichts, bis du eine Aussprachebewertung anforderst: für eine Ausspracheübung, eine Prüfungssimulation oder einen gespeicherten Gesprächsbeitrag. Dann erhält es diese Aufnahme und die Wörter, die du sagen wolltest, um deine Aussprache zu bewerten, nach den Datenverarbeitungsbedingungen von Microsoft.
 
 OpenAI verarbeitet Daten in den USA. Die Übermittlung ist durch die Standardvertragsklauseln der Europäischen Kommission, mit den Anpassungen für die Schweiz, im Auftragsverarbeitungsvertrag von OpenAI geschützt.
 
