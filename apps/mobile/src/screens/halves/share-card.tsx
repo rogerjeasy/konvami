@@ -40,7 +40,8 @@ interface CardWords {
 }
 
 /**
- * The case card as a picture (7.15): the two halves, the case, whether it was solved and how
+ * The case card as a picture (7.15), on the forest block in light and dark alike: a picture
+ * that is shared looks the same whatever the sender's theme: the two halves, the case, whether it was solved and how
  * many clues were understood the first time. No voice, no words of the learner, no name: their
  * codename is not on it either, only the invite code when they have one.
  */
@@ -60,7 +61,7 @@ const HalvesShareArt = forwardRef<SvgRef, { card: HalvesShare; words: CardWords 
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       >
-        <Rect x={0} y={0} width={WIDTH} height={HEIGHT} rx={RADIUS} fill={color.inverse} />
+        <Rect x={0} y={0} width={WIDTH} height={HEIGHT} rx={RADIUS} fill={color.forest} />
         <G>
           <Path
             d={`M${middle - DISC_GAP / 2} ${DISC_TOP} a${half} ${half} 0 0 0 0 ${DISC} z`}
@@ -74,7 +75,7 @@ const HalvesShareArt = forwardRef<SvgRef, { card: HalvesShare; words: CardWords 
         <SvgText
           x={MARGIN}
           y={ROW.kicker}
-          fill={color.tomato}
+          fill={color.butter}
           fontFamily={fontFamily.bodyBold}
           fontSize={TYPE.kicker}
         >
@@ -83,7 +84,7 @@ const HalvesShareArt = forwardRef<SvgRef, { card: HalvesShare; words: CardWords 
         <SvgText
           x={MARGIN}
           y={ROW.title}
-          fill={color.onInverse}
+          fill={color.onForest}
           fontFamily={fontFamily.display}
           fontSize={TYPE.title}
         >
@@ -101,7 +102,7 @@ const HalvesShareArt = forwardRef<SvgRef, { card: HalvesShare; words: CardWords 
         <SvgText
           x={MARGIN}
           y={ROW.label}
-          fill={color.onInverse}
+          fill={color.onForest}
           fontFamily={fontFamily.bodyBold}
           fontSize={TYPE.label}
         >
@@ -111,7 +112,7 @@ const HalvesShareArt = forwardRef<SvgRef, { card: HalvesShare; words: CardWords 
           <SvgText
             x={MARGIN}
             y={ROW.code}
-            fill={color.butter}
+            fill={color.onForest}
             fontFamily={fontFamily.bodyBold}
             fontSize={TYPE.code}
           >

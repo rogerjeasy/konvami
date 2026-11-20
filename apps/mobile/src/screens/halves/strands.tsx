@@ -32,8 +32,9 @@ const STROKE = 2;
 const GRID_STEP = 6;
 
 /**
- * The strand map as a drawing: a faint grid, the learner's place in lime, and a thread to each
- * person they played with, in tomato (butter for a duo). Decorative: the list under it says the
+ * The strand map as a drawing on the forest block (dark in both themes): a faint grid, the
+ * learner's place in lime, and a thread to each person they played with, in tomato (butter for
+ * a duo). Decorative: the list under it says the
  * same in words for a screen reader.
  */
 function StrandDrawing({ map }: { map: HalvesStrands }) {
@@ -44,10 +45,11 @@ function StrandDrawing({ map }: { map: HalvesStrands }) {
   const latitudes: number[] = [];
   for (let lat = MAP_BOUNDS.south + 2; lat < MAP_BOUNDS.north; lat += GRID_STEP)
     latitudes.push(lat);
-  const label = (x: number, y: number, text: string, ink: string) => (
+  // Other places are named above their dot, the learner's own below, so the two rarely meet.
+  const label = (x: number, y: number, text: string, ink: string, below = false) => (
     <SvgText
       x={x}
-      y={y - LABEL_GAP}
+      y={below ? y + LABEL + LABEL_GAP : y - LABEL_GAP}
       fill={ink}
       fontFamily={fontFamily.bodyBold}
       fontSize={LABEL}
@@ -74,21 +76,14 @@ function StrandDrawing({ map }: { map: HalvesStrands }) {
                 y1={0}
                 x2={x}
                 y2={MAP_HEIGHT}
-                stroke={color.onInverse}
+                stroke={color.onForest}
               />
             );
           })}
           {latitudes.map((lat) => {
             const y = project(lat, MAP_BOUNDS.west).y;
             return (
-              <Line
-                key={`lat${lat}`}
-                x1={0}
-                y1={y}
-                x2={MAP_WIDTH}
-                y2={y}
-                stroke={color.onInverse}
-              />
+              <Line key={`lat${lat}`} x1={0} y1={y} x2={MAP_WIDTH} y2={y} stroke={color.onForest} />
             );
           })}
         </G>
@@ -107,14 +102,14 @@ function StrandDrawing({ map }: { map: HalvesStrands }) {
                 />
               ) : null}
               <Circle cx={at.x} cy={at.y} r={DOT} fill={ink} />
-              {label(at.x, at.y, strand.point.label, color.onInverse)}
+              {label(at.x, at.y, strand.point.label, color.onForest)}
             </G>
           );
         })}
         {me ? (
           <G>
             <Circle cx={me.x} cy={me.y} r={ME_DOT} fill={color.lime} />
-            {label(me.x, me.y, map.me?.label ?? '', color.lime)}
+            {label(me.x, me.y, map.me?.label ?? '', color.lime, true)}
           </G>
         ) : null}
       </Svg>
@@ -167,7 +162,7 @@ export function HalvesStrandsScreen() {
       ) : (
         <>
           <Pop delay={staggerDelay(1)}>
-            <Tile color="ink" className="p-3">
+            <Tile color="forest" className="p-3">
               <StrandDrawing map={map} />
             </Tile>
           </Pop>
