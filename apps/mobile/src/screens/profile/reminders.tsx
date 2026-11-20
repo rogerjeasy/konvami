@@ -163,6 +163,17 @@ export function RemindersScreen() {
                   />
                 </Card>
               </Section>
+              {/* 5.28: a partner rings in place of the day's reminder (off until turned on). */}
+              <Card className="mt-3 gap-2 p-5">
+                <ToggleRow
+                  label={t('profile.reminders.calls')}
+                  value={settings.calls}
+                  onChange={(calls) => change({ calls, callsOffered: true })}
+                />
+                <Text variant="small" tone="muted">
+                  {t('profile.reminders.callsHint')}
+                </Text>
+              </Card>
               <Text variant="small" tone="muted" className="pt-3">
                 {t('profile.reminders.push')}
               </Text>

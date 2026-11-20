@@ -27,11 +27,14 @@ import { useReminderSchedule } from '@/reminders/use-reminders';
 import { ExamCard } from './exam-card';
 import { FocusCard } from './focus-card';
 import { isKnownQuestion, ProfileQuestion } from './profile-question';
-import { ReminderOffer } from './reminder-offer';
+import { CallsOffer, ReminderOffer } from './reminder-offer';
 import { LevelCard } from '@/components/level-card';
 import { TalkCard } from './talk-card';
 import { CardsTile } from './cards-tile';
 import { GoalTile, StreakTile, TopicsTile } from './week-card';
+
+// Partner calls are offered after this many conversations (5.28), not with the first reminder.
+const CALLS_OFFER_AFTER = 3;
 
 /** The greeting and the day, with the way to the account at the end. */
 function Header({ now }: { now: Date }) {
@@ -146,6 +149,10 @@ function Day({ home, now }: { home: Home; now: Date }) {
     // Once there was a first conversation, reminders are worth offering.
     partner && home.activity.conversations > 0 ? (
       <ReminderOffer key="reminders" partnerName={partner.persona.name} />
+    ) : null,
+    // Partner calls (5.28) once a few conversations show the learner keeps coming back.
+    partner && home.activity.conversations >= CALLS_OFFER_AFTER ? (
+      <CallsOffer key="calls" partnerName={partner.persona.name} />
     ) : null,
   ];
   const about = [

@@ -71,3 +71,46 @@ export function ReminderOffer({ partnerName }: { partnerName: string }) {
     </Card>
   );
 }
+
+/**
+ * Offers partner calls once (5.28): a partner rings at the reminder time on planned days instead
+ * of the plain reminder. Only where reminders are on and the phone allows them, and either
+ * answer is final; 6.13 Reminders changes it later.
+ */
+export function CallsOffer({ partnerName }: { partnerName: string }) {
+  const { t, i18n } = useTranslation();
+  const { color } = useTheme();
+  const { reminders } = usePreferences();
+  const { permission } = useReminderPermission();
+  if (!reminders?.on || reminders.callsOffered || permission !== 'granted') return null;
+
+  const answer = (calls: boolean) => {
+    if (calls) commitFeedback();
+    void setReminders({ ...reminders, calls, callsOffered: true });
+  };
+
+  return (
+    <Card className="gap-3 p-4">
+      <View className="flex-row items-start gap-3">
+        <View className="pt-0.5" aria-hidden>
+          <Icon name="mic" color={color.primaryText} size={size.iconMd} />
+        </View>
+        <View className="flex-1 gap-1">
+          <Text variant="label" accessibilityRole="header">
+            {t('today.calls.title')}
+          </Text>
+          <Text variant="small" tone="muted">
+            {t('today.calls.body', {
+              name: partnerName,
+              time: formatTimeOfDay(i18n.language, reminders.time),
+            })}
+          </Text>
+        </View>
+      </View>
+      <View className="gap-1">
+        <Button variant="secondary" label={t('today.calls.yes')} onPress={() => answer(true)} />
+        <TextButton tone="primary" label={t('today.calls.no')} onPress={() => answer(false)} />
+      </View>
+    </Card>
+  );
+}

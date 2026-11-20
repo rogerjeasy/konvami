@@ -70,6 +70,31 @@ describe('6.13 Reminders', () => {
     expect(device.scheduled[0]?.id).toBe('reminder-2026-10-10');
   });
 
+  it('lets a partner ring in place of the day’s reminder, once turned on (5.28)', async () => {
+    await setReminders(DEFAULT_REMINDERS);
+    const device = createFakeReminderDevice('granted');
+    await open(device);
+
+    expect(toggle('My partner calls me').props.accessibilityState?.checked ?? false).toBe(false);
+    await fireEvent.press(toggle('My partner calls me'));
+
+    await waitFor(() =>
+      expect(getPreferences().reminders).toEqual({
+        ...DEFAULT_REMINDERS,
+        calls: true,
+        callsOffered: true,
+      }),
+    );
+    await waitFor(() =>
+      expect(device.scheduled[0]).toMatchObject({
+        id: 'reminder-2026-10-09',
+        title: 'Lena is calling',
+        call: { partner: expect.any(String) },
+      }),
+    );
+    expect(screen.getByText(/not a phone call/)).toBeTruthy();
+  });
+
   it('turned off, leaves nothing scheduled', async () => {
     await setReminders(DEFAULT_REMINDERS);
     const device = createFakeReminderDevice('granted');
