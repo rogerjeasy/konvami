@@ -22,7 +22,7 @@ describe('deck store', () => {
       'die Ausstellung',
       'das Wochenende',
     ]);
-    expect(state.summary).toEqual({ total: 3, due: 3 });
+    expect(state.summary).toEqual({ total: 3, due: 3, tuned: false });
   });
 
   it('is empty for a learner without cards', async () => {
@@ -33,7 +33,7 @@ describe('deck store', () => {
     expect(store.getState()).toMatchObject({
       phase: 'ready',
       items: [],
-      summary: { total: 0, due: 0 },
+      summary: { total: 0, due: 0, tuned: false },
     });
   });
 
@@ -47,7 +47,7 @@ describe('deck store', () => {
       'Ich habe nach Berlin gefahren',
       'die Ausstellung',
     ]);
-    expect(store.getState().summary).toEqual({ total: 2, due: 2 });
+    expect(store.getState().summary).toEqual({ total: 2, due: 2, tuned: false });
   });
 
   it('says why a card could not be removed, and keeps it', async () => {
@@ -67,6 +67,6 @@ describe('deck store', () => {
 
     await store.refresh();
 
-    expect(store.getState().summary).toEqual({ total: 3, due: 2 });
+    expect(store.getState().summary).toEqual({ total: 3, due: 2, tuned: false });
   });
 });

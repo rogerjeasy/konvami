@@ -1267,6 +1267,8 @@ export const it: Translation = {
   learn: {
     title: 'Impara',
     headline: 'Le tue parole, la tua grammatica.',
+    tuned:
+      'Il tuo calendario di ripasso è su misura per te: le schede tornano poco prima che tu le dimentichi.',
     stats: {
       total: 'schede',
       due: 'da ripassare',

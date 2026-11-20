@@ -1273,6 +1273,8 @@ export const de: Translation = {
   learn: {
     title: 'Lernen',
     headline: 'Deine Wörter, deine Grammatik.',
+    tuned:
+      'Dein Wiederholungsplan ist auf dich abgestimmt: Karten kommen zurück, kurz bevor du sie vergessen würdest.',
     stats: {
       total: 'Karten',
       due: 'zu wiederholen',

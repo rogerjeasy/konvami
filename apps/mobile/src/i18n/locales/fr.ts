@@ -1273,6 +1273,8 @@ export const fr: Translation = {
   learn: {
     title: 'Apprendre',
     headline: 'Tes mots, ta grammaire.',
+    tuned:
+      'Ton planning de révision est adapté à toi : les cartes reviennent juste avant que tu les oublies.',
     stats: {
       total: 'cartes',
       due: 'à réviser',
